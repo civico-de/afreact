@@ -139,7 +139,14 @@ describe("FacadeForm", () => {
     const calls = renderForm(() => [{}], "");
     await userEvent.click(await screen.findByRole("button", { name: "Save" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Please fill all required fields.");
+    expect(screen.getByRole("textbox", { name: "First Name" })).toHaveFocus();
     expect(calls.map(({ call }) => call)).not.toContain("Afform.submit");
+  });
+
+  it("submits with Enter in a text field", async () => {
+    const calls = renderForm(() => [{}]);
+    await userEvent.type(await screen.findByRole("textbox", { name: "First Name" }), "{Enter}");
+    await waitFor(() => expect(calls.map(({ call }) => call)).toContain("Afform.submit"));
   });
 
   it("keeps the form with a Saved status when there is no confirmation message", async () => {
@@ -183,6 +190,12 @@ describe("FacadeForm", () => {
 
     await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
     expect(screen.getAllByRole("textbox", { name: "Email" })).toHaveLength(1);
+
+    const remaining = screen.getByRole("radio", { name: "Primary" });
+    await userEvent.click(remaining);
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(remaining).not.toBeChecked();
+    expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
   });
 
   it("reports a form that cannot be loaded", async () => {
@@ -256,7 +269,9 @@ describe("FacadeForm", () => {
     });
     renderWithQuery(<FacadeForm name="afformTest" location={{ search: "", hash: "" }} />);
     const input = await screen.findByRole("textbox", { name: "Nick" });
-    expect(input.closest(".af-field-nick_name")).toHaveClass("facade-field-wrapper", "wide");
+    const element = input.closest("af-field");
+    expect(element).toHaveAttribute("name", "nick_name");
+    expect(element).toHaveClass("af-field-type-text", "wide");
     expect(screen.getByRole("note")).toHaveTextContent("placeholder on nick_name");
   });
 
@@ -302,6 +317,8 @@ describe("FacadeForm", () => {
             "#tag": "div",
             "af-fieldset": "Activity1",
             "af-repeat": "",
+            "af-copy": "Copy",
+            "add-icon": "fa-user-plus",
             min: "1",
             "#children": [field("details", { label: "Details", input_type: "TextArea" })],
           },
@@ -326,12 +343,15 @@ describe("FacadeForm", () => {
     });
     renderWithQuery(<FacadeForm name="afformTest" location={{ search: "", hash: "" }} />);
     await userEvent.type(await screen.findByRole("textbox", { name: "Details" }), "x");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await userEvent.click(screen.getByRole("button", { name: "Copy" }));
+    const add = screen.getByRole("button", { name: "Add" });
+    expect(add.querySelector(".crm-i")).toHaveClass("fa-user-plus");
+    await userEvent.click(add);
     expect(
       screen
         .getAllByRole("textbox", { name: "Details" })
         .map((box) => (box as HTMLTextAreaElement).value),
-    ).toEqual(["x", ""]);
+    ).toEqual(["x", "x", ""]);
     expect(screen.getByRole("note")).toHaveTextContent('af-join="Email" outside a fieldset');
     expect(await screen.findByRole("cell", { name: "1" })).toBeInTheDocument();
     expect(calls.find(({ call }) => call === "SearchDisplay.run")?.params).toMatchObject({

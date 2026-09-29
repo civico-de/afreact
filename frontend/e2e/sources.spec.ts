@@ -16,7 +16,7 @@ async function rendered(page: Page, source: string): Promise<string> {
 
 test("every layout source renders the demo page identically", async ({ page }) => {
   const api = await rendered(page, "api");
-  expect(api).toContain("<form");
+  expect(api).toContain("<form novalidate");
   expect(api).not.toContain("crm-admin-block-context-dropdown");
   for (const source of ["page", "bundle"]) {
     expect(await rendered(page, source), source).toBe(api);

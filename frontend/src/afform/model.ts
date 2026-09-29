@@ -132,6 +132,21 @@ export function addRepeatItem(data: FormData, scope: Scope): FormData {
   return next;
 }
 
+/** afRepeat's copyItem(): appends a copy of the last item; an entity's copy leaves its joins out. */
+export function copyRepeatItem(data: FormData, scope: Scope): FormData {
+  const next = structuredClone(data);
+  if (scope.join === undefined) {
+    const items = next[scope.entity] ?? [];
+    const last = items.at(-1);
+    if (last) items.push({ fields: structuredClone(last.fields), joins: {} });
+    return next;
+  }
+  const records = entityItemAt(next, scope)?.joins?.[scope.join] ?? [];
+  const last = records.at(-1);
+  if (last) records.push(structuredClone(last));
+  return next;
+}
+
 export function removeRepeatItem(data: FormData, scope: Scope, position: number): FormData {
   const next = structuredClone(data);
   if (scope.join === undefined) {

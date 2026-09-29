@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { useMemo, useState, type FormEvent } from "react";
+import { createElement, useMemo, useRef, useState } from "react";
 import { api4, errorMessage } from "../api/civi";
 import { FormContext, Nodes, type FormState } from "./Layout";
 import {
@@ -96,6 +96,7 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
   const entities = useMemo(() => entityDeclarations(form.layout), [form]);
   // A redirect keeps the form busy until the browser leaves the page.
   const busy = save.isPending || !!save.data?.redirect;
+  const root = useRef<HTMLFormElement>(null);
   const state: FormState = {
     data,
     update: (change) => setData(change),
@@ -105,12 +106,15 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
     formName: name,
   };
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const valid = event.currentTarget.checkValidity();
-    setIncomplete(!valid);
-    if (!valid) {
-      event.currentTarget.reportValidity();
+  function submit() {
+    const controls = root.current?.querySelectorAll<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >("input, select, textarea");
+    const invalid = [...(controls ?? [])].find((control) => !control.checkValidity());
+    setIncomplete(!!invalid);
+    if (invalid) {
+      invalid.focus();
+      invalid.reportValidity();
       return;
     }
     save.mutate(data);
@@ -144,8 +148,17 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
       </p>
       <FormContext.Provider value={state}>
         {isForm(form) ? (
-          <form noValidate onSubmit={submit} aria-label={form.title ?? undefined}>
-            <Nodes nodes={form.layout} />
+          // A form around af-form as on core's Afform page, so Enter submits and af-form theme rules apply.
+          <form
+            ref={root}
+            noValidate
+            aria-label={form.title ?? undefined}
+            onSubmit={(event) => {
+              event.preventDefault();
+              submit();
+            }}
+          >
+            {createElement("af-form", null, <Nodes nodes={form.layout} />)}
           </form>
         ) : (
           <Nodes nodes={form.layout} />

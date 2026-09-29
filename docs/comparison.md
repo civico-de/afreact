@@ -8,19 +8,45 @@ from the renderer.
 ## Behavioural parity
 
 `frontend/e2e/parity.spec.ts` runs the same scenarios against both pages and
-compares the outcomes through the API: validation, create with a joined email,
+compares the outcomes through the API: validation, create with a joined email
+(submitted with Enter, as the form element on core's Afform page allows),
 prefill and update from `#?Individual1=<id>`, the saved records field by field,
 and the table rows after sorting and paging. All of them pass on both
 renderers.
+
+## Visual parity
+
+The React renderer writes the markup of core's Angular templates — afField and
+its field templates, afRepeat, afTitle, the SearchKit table and its pager —
+with the same classes, and loads the stylesheets core's Angular modules bring
+for them (`crmUI.css`, `afCore.css`, the SearchKit display styles). The site
+theme therefore styles both renderers; `frontend/src/facade.css` only sizes the
+native controls that replace jQuery widgets.
+
+`frontend/e2e/visual.spec.ts` pairs the parts of both pages — titles, fields,
+labels, controls, clear links, buttons, table header, sort icons, rows, pager —
+and compares position, size and the main computed styles to within 2 px.
+Remaining differences must be listed in the spec with a reason, and an entry
+that no longer excuses anything fails the test.
 
 ### Differences by design
 
 | Area | Angular | React |
 |---|---|---|
-| Select fields | select2 | native `<select>` |
-| Date fields | jQuery UI datepicker, site input format | native `<input type="date">` |
-| Table pager | numbered pages | Previous / Next with row count |
+| Select fields | select2 | native `<select>`, sized and marked like select2 (warning border when required and empty) |
+| Date fields | jQuery UI datepicker, site input format | native `<input type="date">`, wider than the datepicker to fit its format and calendar icon |
+| Clear links | `<a>` without `href`, not reachable by keyboard | same link with `role="button"`, focusable, Enter and Space |
+| Admin block menus | gear menu per block for administrators | not rendered |
 | API calls | calls made together share one request | one request per call |
+
+## Accessibility
+
+`frontend/e2e/a11y.spec.ts` runs axe on both pages in light and dark mode and
+fails when the React page breaks a rule on more elements than the Angular page.
+Findings only on the Angular page: the select2 widgets carry roles their
+elements do not allow, the clear link carries `aria-label` without a role, and
+the primary-email radio has no label. Both pages share the theme's contrast
+findings listed under upstream bugs.
 
 ### Not implemented in the React renderer
 
@@ -103,7 +129,7 @@ includes responses served from the HTTP cache. The server needs 85–120 ms
 
 ## Upstream bugs found on the way
 
-Both are in core, so the Angular runtime and this renderer share them.
+All are in core, so the Angular runtime and this renderer share them.
 
 **Self-including block crashes PHP.** Saving a form that embeds a block which
 includes itself crashes the PHP process on CiviCRM up to 6.18:
@@ -122,3 +148,8 @@ runs on the page that shows the confirmation. Tokens inside the form itself
 as of 2026-09-29; not yet reported, and to go to the CiviCRM security team
 rather than the public tracker. The React renderer inserts the message as
 HTML as well, for parity.
+
+**Theme contrast below WCAG AA.** Riverlea (stream Minetta) links on the
+shaded rows of a striped table reach 4.2:1 (`#2c789b` on `#ededed`), and in
+dark mode white text on grey buttons reaches 3.1:1 (`#ffffff` on `#919297`);
+normal-size text needs 4.5:1. Measured with axe on CiviCRM 6.18.

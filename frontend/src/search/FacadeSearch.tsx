@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api4, errorMessage, get } from "../api/civi";
+import { onButtonKey } from "../keys";
+import { pageLinks } from "./pages";
 
 interface Column {
   type: string;
@@ -13,7 +15,7 @@ export interface DisplaySettings {
   columns: Column[];
   limit?: number;
   sort?: [string, "ASC" | "DESC"][];
-  pager?: false | { show_count?: boolean };
+  pager?: false | { show_count?: boolean; hide_single?: boolean };
   classes?: string[];
   noResultsText?: string;
   /** Placeholder rows while a page loads; SearchKit shows 5 unless set. */
@@ -105,17 +107,24 @@ export function FacadeSearch({ search, display, settings: given, afform }: Facad
   const label = loaded.data?.label ?? "";
   const rowCount = counted.data ?? null;
   const loading = rows.isPending;
-  const sort0 = activeSort[0];
 
-  const pages = rowCount !== null && limit ? Math.max(1, Math.ceil(rowCount / limit)) : null;
-  const toggleSort = (key: string) => {
-    const current = sort0?.[0] === key ? sort0[1] : null;
-    setSort([[key, current === "ASC" ? "DESC" : "ASC"]]);
+  const pages = rowCount !== null && limit ? Math.max(1, Math.ceil(rowCount / limit)) : 1;
+  const directionOf = (key: string | undefined) =>
+    activeSort.find(([sorted]) => sorted === key)?.[1] ?? null;
+  // setSort() of searchDisplaySortableTrait: Shift adds the column or flips it in place.
+  const toggleSort = (key: string, add: boolean) => {
+    const direction = directionOf(key) === "ASC" ? "DESC" : "ASC";
+    const next: Sort = add
+      ? activeSort.map(([sorted, current]) => [sorted, sorted === key ? direction : current])
+      : [];
+    if (!next.some(([sorted]) => sorted === key)) next.push([key, direction]);
+    setSort(next);
     setPage(1);
   };
 
+  const pager = settings.pager;
   return (
-    <div className="facade-search">
+    <div className="crm-search-display crm-search-display-table">
       <p role="status" className="sr-only">
         {loading ? ts("Loading…") : ""}
       </p>
@@ -124,34 +133,46 @@ export function FacadeSearch({ search, display, settings: given, afform }: Facad
         <thead>
           <tr>
             {settings.columns.map((column, index) => {
-              const direction = column.key && sort0?.[0] === column.key ? sort0[1] : null;
+              const direction = directionOf(column.key);
+              const sortKey = column.sortable === true ? column.key : undefined;
+              // ARIA allows aria-sort on one header: the column sorted first.
+              const primary = !!column.key && activeSort[0]?.[0] === column.key;
               return (
                 <th
                   key={index}
                   scope="col"
-                  aria-sort={
-                    direction === "ASC"
-                      ? "ascending"
-                      : direction === "DESC"
-                        ? "descending"
-                        : undefined
+                  className={sortKey ? "crm-sortable-col" : undefined}
+                  title={
+                    sortKey
+                      ? ts("Click to sort results (shift-click to sort by multiple).")
+                      : undefined
                   }
+                  aria-sort={
+                    primary ? (direction === "DESC" ? "descending" : "ascending") : undefined
+                  }
+                  // The whole cell sorts on click as in SearchKit; the label is the keyboard control.
+                  onClick={sortKey ? (event) => toggleSort(sortKey, event.shiftKey) : undefined}
                 >
-                  {column.sortable && column.key ? (
-                    <button
-                      type="button"
-                      className="facade-sort"
-                      onClick={() => toggleSort(column.key!)}
-                    >
-                      {column.label}
+                  {sortKey && (
+                    <>
                       <i
-                        className={`crm-i ${direction === "ASC" ? "fa-sort-asc" : direction === "DESC" ? "fa-sort-desc" : "fa-sort"}`}
+                        className={`crm-i crm-search-table-column-sort-icon ${direction === "ASC" ? "fa-sort-asc" : direction === "DESC" ? "fa-sort-desc" : "fa-sort disabled"}`}
                         aria-hidden="true"
-                      />
-                    </button>
-                  ) : (
-                    column.label
+                      />{" "}
+                    </>
                   )}
+                  <span
+                    className="crm-search-display-table-column-label"
+                    role={sortKey ? "button" : undefined}
+                    tabIndex={sortKey ? 0 : undefined}
+                    onKeyDown={
+                      sortKey
+                        ? onButtonKey((event) => toggleSort(sortKey, event.shiftKey))
+                        : undefined
+                    }
+                  >
+                    {column.label}
+                  </span>
                 </th>
               );
             })}
@@ -186,29 +207,84 @@ export function FacadeSearch({ search, display, settings: given, afform }: Facad
           ))}
         </tbody>
       </table>
-      {pages !== null && pages > 1 && (
-        <nav className="facade-pager" aria-label={ts("Pages")}>
-          <button
-            type="button"
-            className="btn btn-sm btn-secondary"
-            disabled={page <= 1}
-            onClick={() => setPage(page - 1)}
-          >
-            {ts("Previous")}
-          </button>
-          <span aria-live="polite">{ts("Page %1 of %2", { 1: page, 2: pages })}</span>
-          <button
-            type="button"
-            className="btn btn-sm btn-secondary"
-            disabled={page >= pages}
-            onClick={() => setPage(page + 1)}
-          >
-            {ts("Next")}
-          </button>
-        </nav>
+      {pager && !!rowCount && (
+        <div className="crm-flex-box crm-search-display-pager">
+          <div>
+            {pager.show_count && (
+              <div className="form-inline">
+                <label>{rowCount === 1 ? ts("1 result") : ts("%1 results", { 1: rowCount })}</label>
+              </div>
+            )}
+          </div>
+          {(!pager.hide_single || pages > 1) && (
+            <nav className="text-center crm-flex-2" aria-label={ts("Pages")}>
+              <ul className="pagination">
+                <PageItem
+                  className="pagination-prev"
+                  label="⬅"
+                  name={ts("Previous")}
+                  onSelect={page > 1 ? () => setPage(page - 1) : null}
+                />
+                {pageLinks(page, pages).map((link, index) => (
+                  <PageItem
+                    key={index}
+                    className="pagination-page"
+                    label={link.label}
+                    current={link.active}
+                    onSelect={link.active ? null : () => setPage(link.number)}
+                  />
+                ))}
+                <PageItem
+                  className="pagination-next"
+                  label="⮕"
+                  name={ts("Next")}
+                  onSelect={page < pages ? () => setPage(page + 1) : null}
+                />
+              </ul>
+            </nav>
+          )}
+          <div />
+        </div>
       )}
-      {rowCount !== null && <p className="facade-count">{ts("%1 results", { 1: rowCount })}</p>}
     </div>
+  );
+}
+
+interface PageItemProps {
+  className: string;
+  label: string;
+  name?: string;
+  current?: boolean;
+  onSelect: (() => void) | null;
+}
+
+/** An entry of SearchKit's pager; the theme styles its links and spans, so an inactive entry is a span. */
+function PageItem({ className, label, name, current = false, onSelect }: PageItemProps) {
+  const state = current ? " active" : onSelect ? "" : " disabled";
+  const content = name ? (
+    <>
+      <span aria-hidden="true">{label}</span>
+      <span className="sr-only">{name}</span>
+    </>
+  ) : (
+    label
+  );
+  return (
+    <li className={className + state}>
+      {onSelect ? (
+        <a
+          href="#"
+          onClick={(event) => {
+            event.preventDefault();
+            onSelect();
+          }}
+        >
+          {content}
+        </a>
+      ) : (
+        <span aria-current={current ? "page" : undefined}>{content}</span>
+      )}
+    </li>
   );
 }
 

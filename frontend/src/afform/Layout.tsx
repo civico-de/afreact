@@ -1,8 +1,9 @@
 import { createContext, createElement, useContext, useId, type ReactNode } from "react";
 import { FacadeSearch, type DisplaySettings } from "../search/FacadeSearch";
-import { Field } from "./Field";
+import { ClearButton, Field, fieldClasses } from "./Field";
 import {
   addRepeatItem,
+  copyRepeatItem,
   getValue,
   removeRepeatItem,
   repeatCount,
@@ -77,6 +78,8 @@ const HANDLED = new Set([
   "af-repeat-default",
   "af-title",
   "af-copy",
+  "add-icon",
+  "copy-icon",
   "min",
   "max",
   "actions",
@@ -138,12 +141,13 @@ function Element({ node, children }: { node: ElementNode; children?: ReactNode }
     if (attr === "class") props.className = value;
     else if (PASSTHROUGH.has(attr) || attr.startsWith("aria-")) props[attr] = value;
   }
+  // afTitle's elements.
   const title = typeof node["af-title"] === "string" ? node["af-title"] : null;
   const legend =
     title && node["#tag"] === "fieldset" ? (
-      <legend>{title}</legend>
+      <legend className="af-title">{title}</legend>
     ) : title ? (
-      <h3>{title}</h3>
+      <h4 className="af-title">{title}</h4>
     ) : null;
   return createElement(
     node["#tag"],
@@ -203,27 +207,29 @@ interface RepeatProps {
   count: number;
 }
 
-/** af-repeat: one copy of the children per item, with add/remove inside the min/max bounds. */
+/** af-repeat in afRepeat.html's markup: one copy of the children per item, with add/copy/remove inside the min/max bounds. */
 function Repeat({ node, scope, itemScope, count }: RepeatProps) {
   const form = useForm();
   // Same bounds as afRepeat's canAdd/canRemove: no min means every item can go.
   const min = Number(node.min ?? 0);
   const max = Number(node.max ?? 0);
-  const addLabel =
-    typeof node["af-repeat"] === "string" && node["af-repeat"] ? node["af-repeat"] : ts("Add");
+  const text = (attr: string) => (typeof node[attr] === "string" ? node[attr] : "");
+  const addLabel = text("af-repeat") || ts("Add");
+  const canAdd = !max || count < max;
   const items = Array.from({ length: count }, (_, position) => (
-    <div className="af-repeat-item" key={position}>
+    <div af-repeat-item="" key={position}>
       <ScopeContext.Provider value={itemScope(position)}>
         <Nodes nodes={node["#children"] ?? []} />
       </ScopeContext.Provider>
       {count > min && (
         <button
           type="button"
-          className="btn btn-xs btn-danger af-repeat-remove"
+          className="btn btn-xs af-repeat-remove-btn"
           disabled={form.disabled}
           onClick={() => form.update((data) => removeRepeatItem(data, scope, position))}
         >
-          <i className="crm-i fa-times" aria-hidden="true" /> {ts("Remove")}
+          <i className="crm-i fa-ban" aria-hidden="true" />
+          <span className="sr-only">{ts("Remove")}</span>
         </button>
       )}
     </div>
@@ -231,14 +237,25 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
   return (
     <Element node={node}>
       {items}
-      {(!max || count < max) && (
+      {canAdd && (
         <button
           type="button"
-          className="btn btn-sm btn-secondary af-repeat-add"
+          className="btn btn-sm af-repeat-add-btn"
           disabled={form.disabled}
           onClick={() => form.update((data) => addRepeatItem(data, scope))}
         >
-          <i className="crm-i fa-plus" aria-hidden="true" /> {addLabel}
+          <i className={`crm-i ${text("add-icon") || "fa-plus"}`} aria-hidden="true" /> {addLabel}
+        </button>
+      )}
+      {canAdd && text("af-copy") && count > 0 && (
+        <button
+          type="button"
+          className="btn btn-sm af-repeat-copy-btn"
+          disabled={form.disabled}
+          onClick={() => form.update((data) => copyRepeatItem(data, scope))}
+        >
+          <i className={`crm-i ${text("copy-icon") || "fa-copy"}`} aria-hidden="true" />{" "}
+          {text("af-copy")}
         </button>
       )}
     </Element>
@@ -261,28 +278,32 @@ function FieldNode({ node }: { node: ElementNode }) {
     scope.join === undefined &&
     !!autofill &&
     form.entities[scope.entity]?.actions[autofill] === false;
-  return (
-    <div
-      className={`af-field-${name} facade-field-wrapper ${typeof node.class === "string" ? node.class : ""}`.trim()}
-    >
-      {unknown.length > 0 && <Unsupported what={`${unknown.join(", ")} on ${name}`} />}
-      {name === "is_primary" && scope.repeated ? (
-        <PrimaryField
-          label={defn.label || ts("Primary")}
-          group={`${form.formName}-${scope.entity}-${scope.index}-${scope.join ?? ""}`}
-          checked={value === true}
-          disabled={form.disabled}
-          onSelect={() => form.update((data) => setPrimary(data, scope))}
-        />
-      ) : (
-        <Field
-          defn={defn}
-          value={value}
-          disabled={form.disabled || readonly}
-          onChange={(next) => form.update((data) => setValue(data, scope, name, next))}
-        />
-      )}
-    </div>
+  const primary = name === "is_primary" && scope.repeated;
+  return createElement(
+    "af-field",
+    {
+      name,
+      className:
+        `${primary ? "af-field-type-radio" : fieldClasses(defn)} ${typeof node.class === "string" ? node.class : ""}`.trim(),
+    },
+    unknown.length > 0 && <Unsupported what={`${unknown.join(", ")} on ${name}`} />,
+    primary ? (
+      <PrimaryField
+        label={defn.label || ts("Primary")}
+        group={`${form.formName}-${scope.entity}-${scope.index}-${scope.join ?? ""}`}
+        checked={value === true}
+        disabled={form.disabled}
+        onSelect={() => form.update((data) => setPrimary(data, scope))}
+        onClear={() => form.update((data) => setValue(data, scope, name, null))}
+      />
+    ) : (
+      <Field
+        defn={defn}
+        value={value}
+        disabled={form.disabled || readonly}
+        onChange={(next) => form.update((data) => setValue(data, scope, name, next))}
+      />
+    ),
   );
 }
 
@@ -292,24 +313,32 @@ interface PrimaryFieldProps {
   checked: boolean;
   disabled: boolean;
   onSelect: () => void;
+  onClear: () => void;
 }
 
 /** afField turns is_primary in a repeat into one radio per record; the records share a radio group. */
-function PrimaryField({ label, group, checked, disabled, onSelect }: PrimaryFieldProps) {
+function PrimaryField({ label, group, checked, disabled, onSelect, onClear }: PrimaryFieldProps) {
   const id = useId();
   return (
-    <div className="af-field-type-radio facade-field">
-      <input
-        id={id}
-        type="radio"
-        className="crm-form-radio"
-        name={group}
-        checked={checked}
-        disabled={disabled}
-        onChange={onSelect}
-      />
-      <label htmlFor={id}>{label}</label>
-    </div>
+    <>
+      <label className="crm-af-field-label" htmlFor={id}>
+        {label}
+      </label>
+      <div className="crm-af-field">
+        <label className="radio-inline">
+          <input
+            id={id}
+            type="radio"
+            className="crm-form-radio"
+            name={group}
+            checked={checked}
+            disabled={disabled}
+            onChange={onSelect}
+          />
+        </label>
+        {checked && !disabled && <ClearButton onClear={onClear} />}
+      </div>
+    </>
   );
 }
 

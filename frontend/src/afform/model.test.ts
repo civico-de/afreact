@@ -1,6 +1,7 @@
 import {
   addRepeatItem,
   applyPrefill,
+  copyRepeatItem,
   emptyData,
   entityDeclarations,
   ensurePrimary,
@@ -119,6 +120,19 @@ describe("repeats", () => {
     const data = addRepeatItem(addRepeatItem(emptyData(["Individual1"]), scope), scope);
     expect(repeatCount(data, scope)).toBe(2);
     expect(repeatCount(removeRepeatItem(data, scope, 1), scope)).toBe(1);
+  });
+
+  it("copies the last join record, and an entity item without its joins", () => {
+    let data = ensureRepeatItems(emptyData(["Individual1"]), joinScope, 1);
+    data = setValue(data, { ...joinScope, joinIndex: 0 }, "email", "a@example.org");
+    data = copyRepeatItem(data, joinScope);
+    expect(emails(data)).toEqual([{ email: "a@example.org" }, { email: "a@example.org" }]);
+
+    const scope = { entity: "Individual1", index: 0 };
+    data = setValue(data, scope, "first_name", "Ada");
+    const copied = copyRepeatItem(data, scope).Individual1?.[1];
+    expect(copied).toEqual({ fields: { first_name: "Ada" }, joins: {} });
+    expect(copyRepeatItem(emptyData(["Individual1"]), scope)).toEqual({ Individual1: [] });
   });
 });
 

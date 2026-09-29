@@ -9,7 +9,7 @@ export default defineConfig({
   timeout: 60_000,
   fullyParallel: false,
   workers: 1,
-  reporter: [["list"]],
+  reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: process.env.CIVICRM_BASE_URL ?? "http://localhost:8080",
     trace: "retain-on-failure",

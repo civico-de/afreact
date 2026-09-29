@@ -38,6 +38,11 @@ function runs(total: number) {
   });
 }
 
+/** The pager marks the page on show as current. */
+function currentPage(): Promise<HTMLElement> {
+  return screen.findByText(/^\d+$/, { selector: "[aria-current=page]" });
+}
+
 describe("FacadeSearch", () => {
   it("shows SearchKit placeholders, then rows, pages and the count", async () => {
     const calls = runs(5);
@@ -54,7 +59,14 @@ describe("FacadeSearch", () => {
     );
     expect(table).toHaveAttribute("aria-busy", "false");
     expect(screen.getByText("a1@example.org, b")).toBeInTheDocument();
-    expect(await screen.findByText("Page 1 of 3")).toBeInTheDocument();
+    expect(await currentPage()).toHaveTextContent("1");
+    expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "⬅Previous",
+      "1",
+      "2",
+      "3",
+      "⮕Next",
+    ]);
     expect(screen.getByText("5 results")).toBeInTheDocument();
     expect(calls.map(({ params }) => params)).toEqual([
       {
@@ -72,11 +84,12 @@ describe("FacadeSearch", () => {
   it("pages forward and back, answering known pages from the cache", async () => {
     const calls = runs(5);
     renderWithQuery(<FacadeSearch search="S" display="D" settings={settings} />);
-    await screen.findByText("Page 1 of 3");
-    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
-    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await currentPage();
+    expect(screen.queryByRole("link", { name: "Previous" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("link", { name: "Next" }));
     expect(await screen.findByRole("link", { name: "Name 3" })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Previous" }));
+    expect(await currentPage()).toHaveTextContent("2");
+    await userEvent.click(screen.getByRole("link", { name: "Previous" }));
     expect(await screen.findByRole("link", { name: "Name 1" })).toBeInTheDocument();
     expect(calls.map(({ params }) => params.return)).toEqual(["page:1", "row_count", "page:2"]);
   });
@@ -84,13 +97,16 @@ describe("FacadeSearch", () => {
   it("toggles the sort direction of a column and returns to page 1", async () => {
     const calls = runs(5);
     renderWithQuery(<FacadeSearch search="S" display="D" settings={settings} />);
-    await screen.findByText("Page 1 of 3");
-    await userEvent.click(screen.getByRole("button", { name: "Next" }));
-    await screen.findByText("Page 2 of 3");
+    await currentPage();
+    await userEvent.click(screen.getByRole("link", { name: "3" }));
+    await waitFor(() =>
+      expect(screen.getByText("3", { selector: "[aria-current]" })).toBeVisible(),
+    );
     const header = screen.getByRole("columnheader", { name: "Email" });
     await userEvent.click(within(header).getByRole("button"));
     await waitFor(() => expect(header).toHaveAttribute("aria-sort", "ascending"));
-    await userEvent.click(within(header).getByRole("button"));
+    within(header).getByRole("button").focus();
+    await userEvent.keyboard(" ");
     await waitFor(() => expect(header).toHaveAttribute("aria-sort", "descending"));
     expect(screen.getByRole("columnheader", { name: "Name" })).not.toHaveAttribute("aria-sort");
     const pages = calls
@@ -98,18 +114,70 @@ describe("FacadeSearch", () => {
       .map(({ params }) => [params.return, params.sort]);
     expect(pages).toEqual([
       ["page:1", [["sort_name", "ASC"]]],
-      ["page:2", [["sort_name", "ASC"]]],
+      ["page:3", [["sort_name", "ASC"]]],
       ["page:1", [["email", "ASC"]]],
       ["page:1", [["email", "DESC"]]],
+    ]);
+  });
+
+  it("adds columns to the sort with Shift, as SearchKit does", async () => {
+    const calls = runs(5);
+    const user = userEvent.setup();
+    renderWithQuery(<FacadeSearch search="S" display="D" settings={settings} />);
+    await currentPage();
+    const name = screen.getByRole("columnheader", { name: "Name" });
+    const email = screen.getByRole("columnheader", { name: "Email" });
+    await user.keyboard("{Shift>}");
+    await user.click(within(email).getByRole("button"));
+    await user.keyboard("{/Shift}");
+    await waitFor(() =>
+      expect(email.querySelector(".crm-search-table-column-sort-icon")).toHaveClass("fa-sort-asc"),
+    );
+    within(name).getByRole("button").focus();
+    await user.keyboard("{Shift>}{Enter}{/Shift}");
+    await waitFor(() => expect(name).toHaveAttribute("aria-sort", "descending"));
+    expect(email).not.toHaveAttribute("aria-sort");
+    await user.click(within(email).getByRole("button"));
+    await waitFor(() => expect(email).toHaveAttribute("aria-sort", "descending"));
+    expect(email).toHaveAttribute(
+      "title",
+      "Click to sort results (shift-click to sort by multiple).",
+    );
+    expect(
+      calls.filter(({ params }) => params.return !== "row_count").map(({ params }) => params.sort),
+    ).toEqual([
+      [["sort_name", "ASC"]],
+      [
+        ["sort_name", "ASC"],
+        ["email", "ASC"],
+      ],
+      [
+        ["sort_name", "DESC"],
+        ["email", "ASC"],
+      ],
+      [["email", "DESC"]],
     ]);
   });
 
   it("takes a short first page as the whole result without a count call", async () => {
     const calls = runs(1);
     renderWithQuery(<FacadeSearch search="S" display="D" settings={settings} />);
-    expect(await screen.findByText("1 results")).toBeInTheDocument();
-    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+    expect(await screen.findByText("1 result")).toBeInTheDocument();
+    expect(await currentPage()).toHaveTextContent("1");
     expect(calls).toHaveLength(1);
+  });
+
+  it("hides the page links of a single page when the display asks to", async () => {
+    runs(1);
+    renderWithQuery(
+      <FacadeSearch
+        search="S"
+        display="D"
+        settings={{ ...settings, pager: { show_count: true, hide_single: true } }}
+      />,
+    );
+    expect(await screen.findByText("1 result")).toBeInTheDocument();
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });
 
   it("shows the display's empty text", async () => {

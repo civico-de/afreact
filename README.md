@@ -38,9 +38,9 @@ and one SearchKit table, and measures both against the Angular runtime.
   which forms the page shows. `bundle` reads the static file the Angular runtime
   loads, which browsers cache across pages. That file is public, as it is for
   the Angular runtime; the page names only forms the user may open.
-- **Custom elements** are the entry point. They render into the light DOM, so
-  CiviCRM's theme (Riverlea classes, `--crm-*` variables) styles the output
-  like any other markup:
+- **Custom elements** are the entry point. They render into the light DOM the
+  markup and classes of core's Angular templates, so CiviCRM's theme (Riverlea
+  classes, `--crm-*` variables) styles them as it styles the Angular forms:
 
   | Element | Attributes | Renders |
   |---|---|---|
@@ -120,9 +120,11 @@ CIVICRM_BASE_URL=http://localhost:8080 npx playwright test
 
 | Spec | Checks |
 |---|---|
-| `e2e/parity.spec.ts` | the same scenarios against both renderers: empty submit is rejected client-side, create with a joined email, prefill and update from the URL, equal saved records, equal table rows after sorting and paging |
+| `e2e/parity.spec.ts` | the same scenarios against both renderers: empty submit is rejected client-side, create with a joined email submitted by Enter, prefill and update from the URL, equal saved records, equal table rows after sorting and paging |
 | `e2e/compare.spec.ts` | cold and warm load metrics for every React layout source and Angular (printed as a table), a cold request waterfall, and one round of the in-browser compare page |
 | `e2e/sources.spec.ts` | every layout source renders the demo page to the same DOM; `page` and `bundle` never call `getForm` |
+| `e2e/visual.spec.ts` | the React page matches the Angular page part by part in position, size and main styles; differences by design are listed with a reason |
+| `e2e/a11y.spec.ts` | axe in light and dark mode finds nothing on the React page that the Angular page passes |
 
 `compare.spec.ts` switches `debug_enabled` off for the measurement, so all
 pages load as in production, and restores the previous value afterwards.
@@ -139,7 +141,7 @@ pages load as in production, and restores the previous value afterwards.
 | `Civi/Facade/Pages.php`, `xml/Menu/facade.xml` | demo and compare routes |
 | `ang/` | demo form and search page |
 | `frontend/src/afform/` | form renderer (layout, fields, form model, layout sources, module file parser) |
-| `frontend/src/search/` | SearchKit table renderer |
+| `frontend/src/search/` | SearchKit table renderer and its pager |
 | `frontend/src/compare/` | comparison page and metric helpers |
 | `frontend/e2e/` | browser tests |
 | `scripts/gen-types.php` | APIv4 → TypeScript generator |

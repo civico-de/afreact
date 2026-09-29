@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { Field } from "./Field";
+import { Field, fieldClasses } from "./Field";
 import type { FieldDefn } from "./types";
 
 function Harness({
@@ -84,10 +84,42 @@ describe("Field", () => {
 
   it("offers Yes/No as real booleans for Boolean radios", async () => {
     const values = setup({ input_type: "Radio", data_type: "Boolean", required: true });
-    expect(screen.getByRole("group", { name: "Field" })).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Field" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("radio", { name: "No" }));
     expect(values).toEqual([false]);
     expect(screen.getByRole("radio", { name: "Yes" })).toBeRequired();
+  });
+
+  it("clears an optional radio from the keyboard", async () => {
+    const values = setup(
+      {
+        input_type: "Radio",
+        options: [
+          { id: 1, label: "A" },
+          { id: 2, label: "B" },
+        ],
+      },
+      2,
+    );
+    screen.getByRole("button", { name: "Clear" }).focus();
+    await userEvent.keyboard("{Enter}");
+    expect(values).toEqual([null]);
+    expect(screen.getByRole("radio", { name: "B" })).not.toBeChecked();
+    expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
+  });
+
+  it("offers no clearing for a required radio", () => {
+    setup({ input_type: "Radio", data_type: "Boolean", required: true }, false);
+    expect(screen.getByRole("radio", { name: "No" })).toBeChecked();
+    expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
+  });
+
+  it("clears a date and hides the clear link while it is empty", async () => {
+    const values = setup({ input_type: "Date", data_type: "Date" }, "2026-09-29");
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(values).toEqual([null]);
+    expect(screen.getByLabelText("Field")).toHaveValue("");
+    expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
   });
 
   it("toggles values in a checkbox list", async () => {
@@ -104,6 +136,12 @@ describe("Field", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: "B" }));
     await userEvent.click(screen.getByRole("checkbox", { name: "A" }));
     expect(values).toEqual([["a", "b"], ["b"]]);
+  });
+
+  it("unchecks a stored value whose type differs from the option ID", async () => {
+    const values = setup({ input_type: "CheckBox", options: [{ id: 1, label: "A" }] }, ["1"]);
+    await userEvent.click(screen.getByRole("checkbox", { name: "A" }));
+    expect(values).toEqual([[]]);
   });
 
   it("renders a single Boolean checkbox", async () => {
@@ -148,5 +186,15 @@ describe("Field", () => {
     expect(screen.getByRole("note")).toHaveTextContent(
       "Not supported by the React renderer: field type EntityRef (Field)",
     );
+  });
+
+  it("adds the multiple class only for fields afField treats as multi-value inputs", () => {
+    const defn = (extra: Partial<FieldDefn>) =>
+      ({ name: "f", label: "F", data_type: "String", ...extra }) as FieldDefn;
+    expect(fieldClasses(defn({ input_type: "ChainSelect" }))).toBe("af-field-type-chain-select");
+    expect(fieldClasses(defn({ input_type: "Select", input_attrs: { multiple: true } }))).toBe(
+      "af-field-type-select af-field-type-multiple",
+    );
+    expect(fieldClasses(defn({ input_type: "CheckBox" }))).toBe("af-field-type-check-box");
   });
 });

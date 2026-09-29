@@ -1,15 +1,11 @@
-.facade-field-wrapper { margin-bottom: 0.75rem; }
-.facade-field > label, .facade-field > legend { display: block; font-weight: 600; font-size: inherit; margin-bottom: 0.25rem; border: 0; }
-.facade-field.af-field-type-checkbox > label { display: inline; margin-left: 0.4rem; }
-.facade-option { margin-right: 1rem; }
-.facade-option > label { margin-left: 0.25rem; font-weight: normal; }
-.af-layout-inline { display: flex; flex-wrap: wrap; gap: 0 1rem; align-items: flex-end; }
-.af-repeat-item { margin-bottom: 0.5rem; }
 .facade-unsupported { border: 1px dashed currentColor; padding: 0.25rem 0.5rem; }
 .facade-status:empty { display: none; }
-.facade-sort .crm-i { margin-left: 0.3rem; }
-.facade-pager { display: flex; gap: 0.75rem; align-items: center; }
-#bootstrap-theme .facade-sort, .facade-sort { width: 100%; max-width: none; text-align: inherit; background: none; border: 0; padding: 0; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+/* Native selects take the size and warning border the theme gives select2 boxes. */
+.crm-container af-field .facade-select { display: inline-block; width: var(--crm-input-width); max-width: 100%; }
+.crm-container af-field .facade-select > select.form-control { width: 100%; }
+.crm-container af-field .facade-select > select.form-control:invalid { border-color: var(--crm-warning-color); }
+/* The native date field needs room for its format and calendar icon; the theme sizes for the datepicker. */
+.crm-container .crm-form-date-wrapper > input.crm-form-date { width: auto; }
 .facade-compare-controls { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
 .facade-compare-controls select { width: auto; }
 .facade-compare-frames { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }

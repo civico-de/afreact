@@ -31,12 +31,17 @@ class PagesHeadlessTest extends TestCase implements HeadlessInterface {
       '<crm-angular-js modules="afformFacadeDemoContact afsearchFacadeDemoContacts">',
       $angular,
     );
+    // Core's Afform page puts a form around the directive; React renders its own.
+    $this->assertStringContainsString(
+      '<form><afform-facade-demo-contact></afform-facade-demo-contact></form>',
+      $angular,
+    );
 
     $normalise = static fn (string $page): string => (
       preg_replace(
         [
           '#<crm-angular-js[^>]*>|</crm-angular-js>#',
-          '#<(facade-form|afform-[a-z-]+|afsearch-[a-z-]+)[^>]*></\1>#',
+          '#(<form>)?<(facade-form|afform-[a-z-]+|afsearch-[a-z-]+)[^>]*></\2>(?(1)</form>)#',
           '#data-renderer="\w+"#',
           '#<h1[^>]*>.*?</h1>#s',
         ],

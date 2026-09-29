@@ -22,10 +22,7 @@ interface Driver {
 
 function driver(page: Page, renderer: Renderer): Driver {
   const form = page.locator(".facade-demo section").first();
-  const field = (name: string) =>
-    renderer === "react"
-      ? form.locator(`.af-field-${name}`).first()
-      : form.locator(`af-field[name="${name}"]`).first();
+  const field = (name: string) => form.locator(`af-field[name="${name}"]`).first();
   return {
     field,
     fill: (name, value) => field(name).locator("input, textarea").first().fill(value),
@@ -160,7 +157,8 @@ for (const renderer of ["react", "angular"] as const) {
       await form.date("birth_date", "1980-05-17");
       await form.fill("email", `paula.${lastName.toLowerCase()}@example.org`);
       await form.select("location_type_id", "Work");
-      await page.getByRole("button", { name: "Save" }).click();
+      // Enter in a text field submits, as the form element on core's Afform page makes it.
+      await form.field("last_name").locator("input").press("Enter");
       await expect(page.getByText("Contact saved.")).toBeVisible();
 
       const [saved, ...more] = await savedContact(page, lastName);
@@ -233,17 +231,13 @@ test("both renderers show the same table pages and sort order", async ({ page })
     await answered;
     await expect(search.locator("tbody tr").first().locator("a[href]")).toBeVisible();
   };
-  const nextPage: Record<Renderer, () => Locator> = {
-    react: () => search.getByRole("button", { name: "Next" }),
-    angular: () => search.locator(".pagination-next a"),
-  };
   const rows = async (renderer: Renderer, ...clicks: string[]) => {
     await page.goto(PAGES[renderer]);
     await waitReady(page);
     for (const click of clicks) {
       await reload(() =>
         click === "Next"
-          ? nextPage[renderer]().click()
+          ? search.locator(".pagination-next a").click()
           : search.locator("th", { hasText: click }).click(),
       );
     }

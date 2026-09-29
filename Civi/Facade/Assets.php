@@ -26,8 +26,11 @@ final class Assets {
     \Civi::resources()
       ->addModuleFile(E::LONG_NAME, 'dist/facade.js')
       ->addStyleFile(E::LONG_NAME, 'dist/facade.css')
-      // SearchKit's own display styles, e.g. the loading placeholders.
-      ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchDisplay.css');
+      // The styles core's Angular modules bring for the markup the elements share with them.
+      ->addStyleFile('civicrm', 'ang/crmUI.css')
+      ->addStyleFile('org.civicrm.afform', 'ang/afCore.css')
+      ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchDisplay.css')
+      ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchDisplayTable.css');
   }
 
   /**

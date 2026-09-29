@@ -51,7 +51,8 @@ final class Pages {
     $loader->addModules(self::FORMS);
     $demo = self::demo(
       'angular',
-      '<afform-facade-demo-contact></afform-facade-demo-contact>',
+      // As core's AfformBase.tpl: the form element gives Enter its implicit submit.
+      '<form><afform-facade-demo-contact></afform-facade-demo-contact></form>',
       '<afsearch-facade-demo-contacts></afsearch-facade-demo-contacts>',
     );
     return self::inChrome('<crm-angular-js modules="' . implode(' ', self::FORMS) . '">' . $demo . '</crm-angular-js>');

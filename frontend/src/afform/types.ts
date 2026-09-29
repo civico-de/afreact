@@ -34,7 +34,12 @@ export interface FieldDefn {
     min?: number;
     max?: number;
     step?: number;
+    maxlength?: number;
+    rows?: number;
+    cols?: number;
   };
+  /** Classes for the inputs, e.g. "btn btn-default" for radio buttons styled as buttons. */
+  input_style?: string | null;
   help_pre?: string | null;
   help_post?: string | null;
   serialize?: number | null;
