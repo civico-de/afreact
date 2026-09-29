@@ -1,3 +1,4 @@
+import { asText, checkConditions, parseConditions } from "./conditions";
 import {
   ensurePrimary,
   ensureRepeatItems,
@@ -49,27 +50,23 @@ export function hasTokens(value: unknown): value is string {
   return typeof value === "string" && new RegExp(TOKEN.source).test(value);
 }
 
-/** afForm's replaceTokens(): each token becomes the referenced field's value, or "" when unset. */
+/** afForm's replaceTokens(): each token becomes the referenced field's value as replaceAll() writes it, or "" when unset. */
 export function replaceTokens(value: string, data: FormData): string {
   return value.replace(TOKEN, (token) => {
     const [entity = "", index = "", ...field] = token.slice(1, -1).split(".");
     const current = data[entity]?.[Number(index)]?.fields[field.join(".")];
-    return current === undefined ? "" : tokenText(current);
+    return current === undefined ? "" : asText(current);
   });
 }
 
-/** How String.replaceAll() writes a field value: a list comma-joined, its empty items blank. */
-function tokenText(value: unknown): string {
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => (item === null || item === undefined ? "" : tokenText(item)))
-      .join(",");
-  }
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  if (value === null) return "null";
-  throw new TypeError(`A token refers to a ${typeof value}, not a field value`);
+/** The distinct values a token default refers to, as afForm's getTokenValues() reads them. */
+export function tokenValues(value: string, data: FormData): string[] {
+  return [...new Set(value.match(TOKEN))].map((token) => replaceTokens(token, data));
+}
+
+/** Whether a token default refers to the field it fills, which would recalculate without end. */
+export function refersToItself(value: string, scope: Scope, field: string): boolean {
+  return scope.join === undefined && value.includes(`[${scope.entity}.${scope.index}.${field}]`);
 }
 
 /** A default without tokens; afField calculates token defaults live, see FieldNode. */
@@ -78,16 +75,59 @@ export function staticDefault(defn: FieldDefn | undefined): unknown {
   return hasTokens(value) ? undefined : value;
 }
 
+/** afField's isMultiple(): the field holds a list. */
+function isMultiple(defn: FieldDefn): boolean {
+  const type = defn.input_type;
+  return (
+    (["Select", "EntityRef", "ChainSelect"].includes(type) && !!defn.input_attrs?.multiple) ||
+    ((type === "CheckBox" || type === "Toggle") && defn.data_type !== "Boolean") ||
+    ((type === "Hidden" || type === "DisplayOnly") &&
+      (!!defn.serialize || defn.data_type === "Array"))
+  );
+}
+
+/** afField's correctValueType(): numbers and booleans from their text, item by item in a list. */
+function typed(value: unknown, dataType: string): unknown {
+  if (value === null) return value;
+  if (Array.isArray(value)) return value.map((item: unknown) => typed(item, dataType));
+  if (dataType === "Integer" || dataType === "Float") return Number(value);
+  if (dataType === "Boolean") return Number(value) === 1;
+  return value;
+}
+
+/** afField's setValue() for a default: a list split from its text, then typed like the field. */
+export function defaultValue(defn: FieldDefn, value: unknown): unknown {
+  const listed = typeof value === "string" && isMultiple(defn) ? value.split(",") : value;
+  if (defn.input_type === "DisplayOnly") return listed;
+  const correct = typed(listed, defn.data_type);
+  return defn.input_type === "Number" ? Number(correct) : correct;
+}
+
+/** An af-if the renderer cannot read renders nothing, so it initialises nothing either. */
+function conditionHolds(attribute: string, data: FormData): boolean {
+  try {
+    return checkConditions(parseConditions(attribute), data);
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Prepares loaded data the way the Angular directives do on init: creates the
- * item of every fieldset, pads every af-repeat to its initial count, marks a primary record in repeated joins,
- * and fills static defaults into empty fields.
+ * Prepares data the way the Angular directives do when they render: creates the item
+ * of every fieldset, pads every af-repeat to its initial count, marks a primary record in
+ * repeated joins, and fills static defaults into empty fields. Skips what an af-if hides.
  */
-export function initialiseData(layout: LayoutNode[], data: FormData): FormData {
+export function initialiseNodes(
+  nodes: LayoutNode[],
+  data: FormData,
+  start: Scope | null,
+  offsets: WeakMap<ElementNode, number>,
+): FormData {
   let next = data;
-  const offsets = joinOffsets(layout);
-  const walk = (nodes: LayoutNode[], scope: Scope | null) => {
-    for (const node of nodes.filter(isElement)) {
+  const walk = (children: LayoutNode[], scope: Scope | null) => {
+    for (const node of children.filter(isElement)) {
+      const condition = node["af-if"];
+      if (typeof condition === "string" && !conditionHolds(condition, next)) continue;
       const fieldset = node["af-fieldset"];
       const join = node["af-join"];
       const repeats = node["af-repeat"] !== undefined;
@@ -108,20 +148,25 @@ export function initialiseData(layout: LayoutNode[], data: FormData): FormData {
           );
           if (hasPrimary) next = ensurePrimary(next, joinScope);
           for (let joinIndex = 0; joinIndex < repeatCount(next, joinScope); joinIndex++)
-            walk(node["#children"] ?? [], { ...joinScope, joinIndex });
+            walk(node["#children"] ?? [], { ...joinScope, joinIndex, repeated: true });
         } else {
           walk(node["#children"] ?? [], { ...joinScope, joinIndex: offsets.get(node) ?? 0 });
         }
       } else if (node["#tag"] === "af-field" && scope) {
-        const value = staticDefault(isFieldDefn(node.defn) ? node.defn : undefined);
+        const defn = isFieldDefn(node.defn) ? node.defn : undefined;
+        const value = staticDefault(defn);
         const name = String(node.name);
-        if (value !== undefined && getValue(next, scope, name) === undefined)
-          next = setValue(next, scope, name, value);
+        if (defn && value !== undefined && getValue(next, scope, name) === undefined)
+          next = setValue(next, scope, name, defaultValue(defn, value));
       } else {
         walk(node["#children"] ?? [], scope);
       }
     }
   };
-  walk(layout, null);
+  walk(nodes, start);
   return next;
+}
+
+export function initialiseData(layout: LayoutNode[], data: FormData): FormData {
+  return initialiseNodes(layout, data, null, joinOffsets(layout));
 }

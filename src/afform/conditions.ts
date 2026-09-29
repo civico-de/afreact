@@ -22,18 +22,23 @@ export function parseConditions(attribute: string): Condition[] {
   return conditions;
 }
 
-export function checkConditions(conditions: Condition[], data: FormData, op = "AND"): boolean {
+export function checkConditions(
+  conditions: Condition[],
+  data: FormData,
+  op: unknown = "AND",
+): boolean {
+  const operator = op === "" || op === null || op === undefined ? "AND" : op;
   // OR and AND invert each other; NOT is OR flipped at the end.
-  let result = op === "AND";
+  let result = operator === "AND";
   const flip = !result;
   for (const clause of conditions) {
     const group = clause[1];
     const matches = isConditionList(group)
-      ? checkConditions(group, data, String(clause[0]))
+      ? checkConditions(group, data, clause[0])
       : compare(evaluate(clause[0], data), String(clause[1]), evaluate(clause[2], data));
     if (matches === flip) result = flip;
   }
-  return op === "NOT" ? !result : result;
+  return operator === "NOT" ? !result : result;
 }
 
 const PATH = /^[A-Za-z_$][\w$]*(?:\[[^\]]+\]|\.[A-Za-z_$][\w$]*)*$/;
@@ -75,15 +80,29 @@ function like(text: string, pattern: string): boolean {
 
 const lower = (value: unknown) => (typeof value === "string" ? value.toLowerCase() : value);
 
-/** JavaScript's relational comparison: two strings compare as text, anything else as numbers. */
-function order(left: unknown, right: unknown): number {
-  if (typeof left === "string" && typeof right === "string") {
-    return left < right ? -1 : left > right ? 1 : left === right ? 0 : Number.NaN;
-  }
-  return Number(left) - Number(right);
+/** String() over JSON form data: a list joins its items, an object reads "[object Object]". */
+export function asText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.join();
+  if (isIndexable(value)) return Object.prototype.toString.call(value);
+  if (value === null || value === undefined) return String(value);
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  throw new TypeError(`Form data holds no ${typeof value} value.`);
 }
 
-function compare(left: unknown, op: string, right: unknown): boolean {
+/** A list or object compares as its text, as JavaScript's relational operators convert it. */
+const primitive = (value: unknown) => (isIndexable(value) ? asText(value) : value);
+
+/** JavaScript's relational comparison: two strings compare as text, anything else as numbers. */
+function order(left: unknown, right: unknown): number {
+  const a = primitive(left);
+  const b = primitive(right);
+  if (typeof a === "string" && typeof b === "string") return a < b ? -1 : a > b ? 1 : 0;
+  return Number(a) - Number(b);
+}
+
+/** undefined for an operator afForm does not know (IS NULL, BETWEEN): the clause decides nothing. */
+function compare(left: unknown, op: string, right: unknown): boolean | undefined {
   const yes = op !== "!=" && !op.includes("NOT ");
   switch (op) {
     case "=":
@@ -117,6 +136,6 @@ function compare(left: unknown, op: string, right: unknown): boolean {
       if (typeof left === "string" && typeof right === "string") return like(left, right) === yes;
       return equals(left, right) === yes;
     default:
-      throw new Error(`Unknown condition operator ${op}`);
+      return undefined;
   }
 }

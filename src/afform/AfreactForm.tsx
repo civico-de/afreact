@@ -56,9 +56,9 @@ async function loadForm(
 
 /** ts() looks up the form's own translations first, then CiviCRM's page-wide strings; crmUrl() is CRM.url. */
 export function formExpressions(strings: FormDefinition["strings"]): ExpressionContext {
-  const own: Record<string, string> = Array.isArray(strings) ? {} : strings;
+  const own = new Map(Array.isArray(strings) ? [] : Object.entries(strings));
   return {
-    translate: (text) => own[text] ?? ts(text),
+    translate: (text) => own.get(text) ?? ts(text),
     url: (path, query) => window.CRM.url(path, query),
   };
 }

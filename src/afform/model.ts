@@ -125,6 +125,23 @@ export function deleteValue(data: FormData, scope: Scope, field: string): FormDa
   return next;
 }
 
+/** afField's validateValue(): a value, or list items, the visible options no longer offer leave the record. */
+export function keepOffered(
+  data: FormData,
+  scope: Scope,
+  field: string,
+  offered: unknown[],
+): FormData {
+  const current = getValue(data, scope, field);
+  if (Array.isArray(current)) {
+    const valid = current.filter((item) => offered.includes(item));
+    return valid.length < current.length ? setValue(data, scope, field, valid) : data;
+  }
+  return current === undefined || offered.includes(current)
+    ? data
+    : deleteValue(data, scope, field);
+}
+
 /** Items a repeat iterates: entity items for a fieldset, join records for a join. */
 export function repeatCount(data: FormData, scope: Scope): number {
   return scope.join === undefined

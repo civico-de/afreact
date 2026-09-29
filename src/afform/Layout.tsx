@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
 import { AfreactSearch, isDisplaySettings } from "../search/AfreactSearch";
@@ -18,13 +19,21 @@ import {
   copyRepeatItem,
   deleteValue,
   getValue,
+  keepOffered,
   removeRepeatItem,
   repeatCount,
   setPrimary,
   setValue,
   type EntityDeclaration,
 } from "./model";
-import { hasTokens, replaceTokens } from "./structure";
+import {
+  defaultValue,
+  hasTokens,
+  initialiseNodes,
+  refersToItself,
+  replaceTokens,
+  tokenValues,
+} from "./structure";
 import type { ElementNode, FieldDefn, FormData, LayoutNode, Scope } from "./types";
 import { isElement, isFieldDefn } from "./types";
 import { Unsupported } from "./Unsupported";
@@ -43,8 +52,11 @@ export interface FormState {
 
 export const FormContext = createContext<FormState | null>(null);
 const ScopeContext = createContext<Scope | null>(null);
-/** Set inside an af-if that turned false: fields drop their values as on afIfDestroy. */
-const HiddenContext = createContext(false);
+/**
+ * Inside an af-if that turned false: the data it last rendered with. Fields drop their values
+ * as on afIfDestroy; a nested af-if renders what it showed then.
+ */
+const HiddenContext = createContext<FormData | null>(null);
 
 function useForm(): FormState {
   const form = useContext(FormContext);
@@ -90,6 +102,7 @@ const HTML_TAGS = new Set([
 ]);
 /** Attributes the renderer interprets itself; other ng-*, af-* and crm-* attributes are reported. */
 const HANDLED = new Set([
+  "af-if",
   "api-entities",
   "af-fieldset",
   "af-join",
@@ -118,6 +131,7 @@ const FIELD_ATTRIBUTES = new Set([
   "class",
   "af-required",
   "af-disabled",
+  "af-if",
 ]);
 const PASSTHROUGH = new Set(["id", "href", "title", "role", "target", "type"]);
 
@@ -132,10 +146,14 @@ function Node({ node }: { node: LayoutNode }): ReactNode {
     return <Text text={node["#text"].replaceAll("&nbsp;", "\u00a0")} />;
   }
   if (typeof node["af-if"] === "string") return <Conditional node={node} />;
-  if (node["ng-if"] === "afform.showSubmitButton") {
-    const { "ng-if": _, ...rest } = node;
-    return <SubmitButtonCondition node={rest} />;
-  }
+  if (node["ng-if"] === SUBMIT_BUTTON_CONDITION) return <SubmitButtonCondition node={node} />;
+  return <Rendered node={node} />;
+}
+
+const SUBMIT_BUTTON_CONDITION = "afform.showSubmitButton";
+
+/** An element whose af-if or submit-button condition holds; the node itself goes on, so lookups by node still match. */
+function Rendered({ node }: { node: ElementNode }): ReactNode {
   const tag = node["#tag"];
   if (tag === "af-entity") return null;
   if (tag === "af-field") return <FieldNode node={node} />;
@@ -147,7 +165,10 @@ function Node({ node }: { node: LayoutNode }): ReactNode {
   if (tag === "crm-search-display-table") return <SearchNode node={node} />;
 
   const unknown = Object.keys(node).filter(
-    (attr) => /^(ng|af|crm)-/.test(attr) && !HANDLED.has(attr),
+    (attr) =>
+      /^(ng|af|crm)-/.test(attr) &&
+      !HANDLED.has(attr) &&
+      !(attr === "ng-if" && node[attr] === SUBMIT_BUTTON_CONDITION),
   );
   if (node["ng-click"] !== undefined) unknown.push(`ng-click=${JSON.stringify(node["ng-click"])}`);
   if (!HTML_TAGS.has(tag) || unknown.length) {
@@ -214,44 +235,51 @@ type Evaluated = { value: boolean } | { error: string };
 function evaluateConditions(attribute: string, data: FormData, name: string): Evaluated {
   try {
     return { value: checkConditions(parseConditions(attribute), data) };
-  } catch (error) {
-    console.warn(`[afreact] ${name} failed`, error);
+  } catch {
     return { error: `${name}="${attribute}"` };
   }
 }
 
 /**
- * afIf: the element renders while its conditions hold. Once shown and hidden again, its
- * subtree renders off-document so every field inside drops its value, as on afIfDestroy.
+ * afIf: the element renders while its conditions hold, and whatever it renders initialises
+ * its data then. Once hidden again, its subtree renders off-document so every field inside
+ * drops its value, as on afIfDestroy. A condition that cannot be read renders nothing.
  */
 function Conditional({ node }: { node: ElementNode }) {
   const form = useForm();
-  const { "af-if": attribute, ...rest } = node;
-  const result = evaluateConditions(String(attribute), form.data, "af-if");
+  const { update, joinOffsets } = form;
+  const scope = useContext(ScopeContext);
+  const hiddenWith = useContext(HiddenContext);
+  const data = hiddenWith ?? form.data;
+  const result = evaluateConditions(String(node["af-if"]), data, "af-if");
   const shown = "value" in result && result.value;
-  const [wasShown, setWasShown] = useState(shown);
+  const active = shown && hiddenWith === null;
+  const [shownWith, setShownWith] = useState<FormData | null>(null);
   const [detached] = useState(() => document.createElement("div"));
-  if (shown && !wasShown) setWasShown(true);
-  if ("error" in result) {
-    return (
-      <>
-        <Unsupported what={result.error} />
-        <Node node={rest} />
-      </>
-    );
-  }
-  if (shown) return <Node node={rest} />;
-  if (!wasShown) return null;
+  const initialised = useRef(false);
+  useEffect(() => {
+    if (!active) {
+      initialised.current = false;
+      return;
+    }
+    if (initialised.current) return;
+    initialised.current = true;
+    update((current) => initialiseNodes([node], current, scope, joinOffsets));
+  }, [active, update, node, scope, joinOffsets]);
+  if (active && shownWith !== form.data) setShownWith(form.data);
+  if ("error" in result) return <Unsupported what={result.error} />;
+  if (shown) return <Rendered node={node} />;
+  if (hiddenWith !== null || shownWith === null) return null;
   return createPortal(
-    <HiddenContext.Provider value={true}>
-      <Node node={rest} />
+    <HiddenContext.Provider value={shownWith}>
+      <Rendered node={node} />
     </HiddenContext.Provider>,
     detached,
   );
 }
 
 function SubmitButtonCondition({ node }: { node: ElementNode }) {
-  return useForm().showSubmitButton ? <Node node={node} /> : null;
+  return useForm().showSubmitButton ? <Rendered node={node} /> : null;
 }
 
 function FieldsetNode({ node }: { node: ElementNode }) {
@@ -304,19 +332,42 @@ interface RepeatProps {
   count: number;
 }
 
+/**
+ * A stable key per repeat item, as ng-repeat tracks items by identity: removing an item
+ * keeps the state of the items after it.
+ */
+function useItemKeys(count: number): [number[], (position: number) => void] {
+  const [keys, setKeys] = useState(() => Array.from({ length: count }, (_, key) => key));
+  let current = keys;
+  if (keys.length !== count) {
+    current = keys.slice(0, count);
+    for (let key = Math.max(-1, ...keys) + 1; current.length < count; key++) current.push(key);
+    setKeys(current);
+  }
+  const remove = (position: number) => {
+    setKeys((previous) => previous.filter((_, index) => index !== position));
+  };
+  return [current, remove];
+}
+
 /** af-repeat in afRepeat.html's markup: one copy of the children per item, with add/copy/remove inside the min/max bounds. */
 function Repeat({ node, scope, itemScope, count }: RepeatProps) {
   const form = useForm();
+  const [keys, removeKey] = useItemKeys(count);
   // Same bounds as afRepeat's canAdd/canRemove: no min means every item can go.
   const min = Number(node.min ?? 0);
   const max = Number(node.max ?? 0);
   const text = (attr: string) => (typeof node[attr] === "string" ? node[attr] : "");
   const addLabel = text("af-repeat") || ts("Add");
   const canAdd = !max || count < max;
-  const items = Array.from({ length: count }, (_, position) => (
-    <div af-repeat-item="" key={position}>
+  const children = node["#children"] ?? [];
+  // A new item's fields and repeats initialise as afField and afRepeat do on render.
+  const initialiseLast = (data: FormData) =>
+    initialiseNodes(children, data, itemScope(repeatCount(data, scope) - 1), form.joinOffsets);
+  const items = keys.map((key, position) => (
+    <div af-repeat-item="" key={key}>
       <ScopeContext.Provider value={itemScope(position)}>
-        <Nodes nodes={node["#children"] ?? []} />
+        <Nodes nodes={children} />
       </ScopeContext.Provider>
       {count > min && (
         <button
@@ -324,6 +375,7 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
           className="btn btn-xs af-repeat-remove-btn"
           disabled={form.disabled}
           onClick={() => {
+            removeKey(position);
             form.update((data) => removeRepeatItem(data, scope, position));
           }}
         >
@@ -342,7 +394,7 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
           className="btn btn-sm af-repeat-add-btn"
           disabled={form.disabled}
           onClick={() => {
-            form.update((data) => addRepeatItem(data, scope));
+            form.update((data) => initialiseLast(addRepeatItem(data, scope)));
           }}
         >
           <i className={`crm-i ${text("add-icon") || "fa-plus"}`} aria-hidden="true" /> {addLabel}
@@ -354,7 +406,7 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
           className="btn btn-sm af-repeat-copy-btn"
           disabled={form.disabled}
           onClick={() => {
-            form.update((data) => copyRepeatItem(data, scope));
+            form.update((data) => initialiseLast(copyRepeatItem(data, scope)));
           }}
         >
           <i className={`crm-i ${text("copy-icon") || "fa-copy"}`} aria-hidden="true" />{" "}
@@ -372,7 +424,7 @@ function FieldNode({ node }: { node: ElementNode }) {
   const name = String(node.name);
   if (!scope || !isFieldDefn(defn))
     return <Unsupported what={`field ${name} without entity or metadata`} />;
-  if (hidden) return <DroppedField scope={scope} name={name} defn={defn} />;
+  if (hidden !== null) return <DroppedField scope={scope} name={name} defn={defn} />;
   return <VisibleField node={node} scope={scope} name={name} defn={defn} />;
 }
 
@@ -398,48 +450,110 @@ function conditionResult(node: ElementNode, form: FormState, attr: string): Eval
   return typeof attribute === "string" ? evaluateConditions(attribute, form.data, attr) : null;
 }
 
+interface VisibleOptions {
+  options: FieldDefn["options"];
+  errors: string[];
+}
+
 /** afField's getOptions(): an option with conditions shows while they hold; a broken rule shows it. */
-function visibleOptions(defn: FieldDefn, data: FormData): FieldDefn["options"] {
-  if (!Array.isArray(defn.options)) return defn.options;
-  return defn.options.filter((option) => {
+function visibleOptions(defn: FieldDefn, data: FormData): VisibleOptions {
+  if (!Array.isArray(defn.options)) return { options: defn.options, errors: [] };
+  const errors: string[] = [];
+  const options = defn.options.filter((option) => {
     if (!option.if?.length) return true;
     try {
       return checkConditions(option.if, data);
-    } catch (error) {
-      console.warn("[afreact] option condition failed", option.id, error);
+    } catch {
+      errors.push(`option ${String(option.id)} if=${JSON.stringify(option.if)}`);
       return true;
     }
   });
+  return { options, errors };
+}
+
+/** The option IDs a conditional option list offers, typed as afField types them; null without conditions. */
+function offeredIds(given: FieldDefn, visible: FieldDefn["options"]): unknown[] | null {
+  const conditional =
+    Array.isArray(given.options) && given.options.some((option) => option.if?.length);
+  if (!conditional || !Array.isArray(visible)) return null;
+  return visible.map((option) => (given.data_type === "Boolean" ? Boolean(option.id) : option.id));
+}
+
+/**
+ * afField's calculated default: the token default is recalculated whenever a field it refers
+ * to changes, until the user has left one of this field's inputs (ng-touched).
+ */
+function useTokenDefault(
+  given: FieldDefn,
+  scope: Scope,
+  name: string,
+  element: RefObject<HTMLElement | null>,
+): string | null {
+  const form = useForm();
+  const { update } = form;
+  const template = hasTokens(given.afform_default) ? given.afform_default : null;
+  const loops = template !== null && refersToItself(template, scope, name);
+  const tokens = template === null ? null : JSON.stringify(tokenValues(template, form.data));
+  const touched = useRef(false);
+  const calculatedFor = useRef<string | null>(null);
+  useEffect(() => {
+    const target = element.current;
+    const touch = ({ target: left }: FocusEvent) => {
+      if (left instanceof HTMLElement && left.matches("input, select, textarea"))
+        touched.current = true;
+    };
+    target?.addEventListener("focusout", touch);
+    return () => {
+      target?.removeEventListener("focusout", touch);
+    };
+  }, [element]);
+  useEffect(() => {
+    if (template === null || loops || touched.current || calculatedFor.current === tokens) return;
+    calculatedFor.current = tokens;
+    update((data) =>
+      setValue(data, scope, name, defaultValue(given, replaceTokens(template, data))),
+    );
+  }, [template, loops, tokens, update, scope, name, given]);
+  return loops ? `afform_default ${JSON.stringify(template)} refers to its own field` : null;
+}
+
+/** afField's validateValue(): when the visible options change, a value they no longer offer goes. */
+function useOfferedValue(offered: unknown[] | null, scope: Scope, name: string) {
+  const { update } = useForm();
+  const key = offered === null ? null : JSON.stringify(offered);
+  const validatedFor = useRef(key);
+  useEffect(() => {
+    if (offered === null || validatedFor.current === key) return;
+    validatedFor.current = key;
+    update((data) => keepOffered(data, scope, name, offered));
+  }, [offered, key, update, scope, name]);
 }
 
 /**
  * afField's live rules: af-required and af-disabled conditions, conditional options,
- * and a token default recalculated from other fields until the user edits the field.
+ * and a token default recalculated from other fields until the user leaves the field.
  */
 function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { node: ElementNode }) {
   const form = useForm();
-  const { update } = form;
-  const edited = useRef(false);
+  const element = useRef<HTMLElement>(null);
   const required = conditionResult(node, form, "af-required");
   const disabled = conditionResult(node, form, "af-disabled");
+  const visible = visibleOptions(given, form.data);
   const defn: FieldDefn = {
     ...given,
-    options: visibleOptions(given, form.data),
+    options: visible.options,
     required: required && "value" in required ? required.value : given.required,
   };
-  const calculated = hasTokens(given.afform_default)
-    ? replaceTokens(given.afform_default, form.data)
-    : undefined;
+  const loop = useTokenDefault(given, scope, name, element);
+  useOfferedValue(offeredIds(given, visible.options), scope, name);
   const value = getValue(form.data, scope, name);
-  useEffect(() => {
-    if (calculated === undefined || edited.current || value === calculated) return;
-    update((data) => setValue(data, scope, name, calculated));
-  }, [calculated, value, update, scope, name]);
   const unknown = [
     ...Object.keys(node).filter((attr) => !FIELD_ATTRIBUTES.has(attr)),
     ...[required, disabled].flatMap((result) =>
       result && "error" in result ? [result.error] : [],
     ),
+    ...visible.errors,
+    ...(loop ? [loop] : []),
   ];
   const conditionallyDisabled = !!disabled && "value" in disabled && disabled.value;
   // afField: a field that selects a record (autofill) is read-only when the entity forbids that action.
@@ -452,6 +566,7 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
   return createElement(
     "af-field",
     {
+      ref: element,
       name,
       className:
         `${primary ? "af-field-type-radio" : fieldClasses(defn)} ${typeof node.class === "string" ? node.class : ""}`.trim(),
@@ -476,7 +591,6 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
         value={value}
         disabled={form.disabled || readonly || conditionallyDisabled}
         onChange={(next) => {
-          edited.current = true;
           form.update((data) => setValue(data, scope, name, next));
         }}
       />
@@ -537,7 +651,7 @@ function SubmitButton({ node }: { node: ElementNode }) {
 function SearchNode({ node }: { node: ElementNode }) {
   const form = useForm();
   // A display under a hidden af-if loads nothing.
-  if (useContext(HiddenContext)) return null;
+  if (useContext(HiddenContext) !== null) return null;
   const settings = node.settings;
   if (settings !== undefined && !isDisplaySettings(settings))
     return <Unsupported what="search display settings without columns" />;

@@ -8,6 +8,7 @@ import {
   ensurePrimary,
   ensureRepeatItems,
   getValue,
+  keepOffered,
   removeRepeatItem,
   repeatCount,
   routeArgs,
@@ -176,5 +177,26 @@ describe("deleteValue", () => {
     });
     expect(deleteValue(data, { entity: "Other", index: 0 }, "a")).toEqual(data);
     expect(data.Individual1[0]?.fields).toEqual({ a: 1, b: 2 });
+  });
+});
+
+describe("keepOffered", () => {
+  const scope = { entity: "Individual1", index: 0 };
+  const data = (value: unknown): FormData => ({
+    Individual1: [{ fields: { tags: value }, joins: {} }],
+  });
+
+  it("drops list items the options no longer offer and keeps the record otherwise", () => {
+    expect(getValue(keepOffered(data([1, 2, 3]), scope, "tags", [1, 3]), scope, "tags")).toEqual([
+      1, 3,
+    ]);
+    const unchanged = data([1, 3]);
+    expect(keepOffered(unchanged, scope, "tags", [1, 3])).toBe(unchanged);
+  });
+
+  it("drops a single value no longer offered", () => {
+    expect(getValue(keepOffered(data(2), scope, "tags", [1]), scope, "tags")).toBeUndefined();
+    const offered = data(1);
+    expect(keepOffered(offered, scope, "tags", [1])).toBe(offered);
   });
 });

@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace Civi\Afreact;
 
+use Civi\Api4\Afform;
 use Civi\Api4\Afreact;
 use Civi\Api4\WordReplacement;
 use Civi\API\Exception\UnauthorizedException;
@@ -21,6 +22,14 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
 
   public function setUpHeadless(): CiviEnvBuilder {
     return self::builder();
+  }
+
+  protected function tearDown(): void {
+    // Saved forms are files, which the transaction does not roll back.
+    Afform::revert(checkPermissions: FALSE)
+      ->addWhere('name', 'IN', ['afformAfreactTestHost', 'afblockAfreactTestNote'])
+      ->execute();
+    parent::tearDown();
   }
 
   /**
@@ -69,6 +78,30 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
     // ts() keeps the replacements it read in a static.
     unset(\Civi::$statics[\CRM_Core_I18n::class]);
     $this->assertSame(['Learn more...' => 'Read on'], $this->form('afsearchManageACLs')['strings']);
+  }
+
+  public function testStringsIncludeTheTextsOfEmbeddedBlocks(): void {
+    Afform::create(checkPermissions: FALSE)
+      ->setValues([
+        'name' => 'afblockAfreactTestNote',
+        'type' => 'block',
+        'title' => 'Note',
+        'layout' => '<p>{{:: ts(\'Block probe\') }}</p>',
+      ])
+      ->execute();
+    Afform::create(checkPermissions: FALSE)
+      ->setValues([
+        'name' => 'afformAfreactTestHost',
+        'type' => 'form',
+        'title' => 'Host',
+        'layout' => '<af-form ctrl="afform"><afblock-afreact-test-note></afblock-afreact-test-note></af-form>',
+      ])
+      ->execute();
+    WordReplacement::create(checkPermissions: FALSE)
+      ->setValues(['find_word' => 'Block probe', 'replace_word' => 'Block replaced', 'match_type' => 'exactMatch'])
+      ->execute();
+    unset(\Civi::$statics[\CRM_Core_I18n::class]);
+    $this->assertSame(['Block probe' => 'Block replaced'], $this->form('afformAfreactTestHost')['strings']);
   }
 
   public function testFormPermissionDecidesAccess(): void {

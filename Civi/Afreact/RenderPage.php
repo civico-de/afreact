@@ -18,8 +18,8 @@ final class RenderPage {
    * Route civicrm/afreact/render: one form with the renderer `?renderer=react|angular` names.
    */
   public static function render(): string {
-    $name = \CRM_Utils_Request::retrieveValue('name', 'String');
-    $renderer = \CRM_Utils_Request::retrieveValue('renderer', 'String');
+    $name = \CRM_Utils_Request::retrieveValue('name', 'String', method: 'GET');
+    $renderer = \CRM_Utils_Request::retrieveValue('renderer', 'String', method: 'GET');
     if (!is_string($name) || !in_array($renderer, ['react', 'angular'], TRUE)) {
       throw new \CRM_Core_Exception('The page needs a form name and renderer=react or renderer=angular.');
     }
@@ -44,11 +44,18 @@ final class RenderPage {
     }
     $module = Afforms::field($form, 'module_name');
     $directive = Afforms::field($form, 'directive_name');
+    if (preg_match('/^[a-z][a-z0-9-]*$/', $directive) !== 1) {
+      throw new \CRM_Core_Exception("Form \"{$name}\" has no usable directive name.");
+    }
     Chrome::angular()->addModules([$module]);
     // As core's AfformBase.tpl: the form element gives Enter its implicit submit.
     $element = "<form><{$directive}></{$directive}></form>";
     return Chrome::page(
-      '<crm-angular-js modules="' . $module . '">' . self::single('angular', $element) . '</crm-angular-js>',
+      '<crm-angular-js modules="'
+      . Chrome::escape($module)
+      . '">'
+      . self::single('angular', $element)
+      . '</crm-angular-js>',
     );
   }
 

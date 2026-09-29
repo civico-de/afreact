@@ -56,7 +56,22 @@ describe("Field", () => {
     expect(input).toHaveAccessibleDescription("Visible to members");
     await userEvent.type(input, "ab");
     await userEvent.clear(input);
-    expect(values).toEqual(["a", "ab", null]);
+    // ngModel sets no value while required fails.
+    expect(values).toEqual(["a", "ab", undefined]);
+  });
+
+  it("empties an optional text input to an empty string, as ngModel", async () => {
+    const text = setup({});
+    await userEvent.type(screen.getByRole("textbox", { name: "Field" }), "a");
+    await userEvent.clear(screen.getByRole("textbox", { name: "Field" }));
+    expect(text).toEqual(["a", ""]);
+  });
+
+  it("empties an optional number input to null, as ngModel", async () => {
+    const number = setup({ input_type: "Number", data_type: "Integer" });
+    await userEvent.type(screen.getByRole("spinbutton", { name: "Field" }), "4");
+    await userEvent.clear(screen.getByRole("spinbutton", { name: "Field" }));
+    expect(number).toEqual([4, null]);
   });
 
   it("keeps numeric option IDs in selects", async () => {

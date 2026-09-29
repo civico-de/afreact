@@ -1,11 +1,14 @@
 import { emptyData } from "./model";
 import {
+  defaultValue,
   hasTokens,
   initialiseData,
   joinOffsets,
   repeatMinimum,
+  refersToItself,
   replaceTokens,
   staticDefault,
+  tokenValues,
 } from "./structure";
 import type { ElementNode, FieldDefn } from "./types";
 
@@ -80,16 +83,83 @@ describe("replaceTokens", () => {
     expect(
       replaceTokens("[Individual1.0.tags]", { Individual1: [{ fields: { tags: [1, null, 3] } }] }),
     ).toBe("1,,3");
-    expect(() =>
-      replaceTokens("[Individual1.0.x]", { Individual1: [{ fields: { x: {} } }] }),
-    ).toThrow("not a field value");
+    expect(replaceTokens("[Individual1.0.x]", { Individual1: [{ fields: { x: {} } }] })).toBe(
+      "[object Object]",
+    );
+    expect(replaceTokens("[Individual1.0.x]", { Individual1: [{ fields: { x: null } }] })).toBe(
+      "null",
+    );
     expect(hasTokens("[Individual1.0.first_name]")).toBe(true);
     expect(hasTokens("[user_contact_id]")).toBe(false);
     expect(hasTokens(5)).toBe(false);
   });
 });
 
+describe("tokenValues and refersToItself", () => {
+  it("reads each distinct token once and spots a default that refers to its own field", () => {
+    const data = { Individual1: [{ fields: { first_name: "Ada" } }] };
+    expect(
+      tokenValues("[Individual1.0.first_name] [Individual1.0.first_name] [Individual1.0.x]", data),
+    ).toEqual(["Ada", ""]);
+    const scope = { entity: "Individual1", index: 0 };
+    expect(refersToItself("[Individual1.0.nick_name]x", scope, "nick_name")).toBe(true);
+    expect(refersToItself("[Individual1.0.first_name]", scope, "nick_name")).toBe(false);
+    expect(refersToItself("[Individual1.0.email]", { ...scope, join: "Email" }, "email")).toBe(
+      false,
+    );
+  });
+});
+
+describe("defaultValue", () => {
+  it("types a default as afField's setValue() does", () => {
+    const typed = (defn: Partial<FieldDefn>, value: unknown) =>
+      defaultValue({ name: "x", input_type: "Text", data_type: "String", ...defn }, value);
+    expect(typed({ data_type: "Integer" }, "42")).toBe(42);
+    expect(typed({ data_type: "Float" }, ["1.5", null])).toEqual([1.5, null]);
+    expect(typed({ data_type: "Boolean" }, "1")).toBe(true);
+    expect(typed({ data_type: "Boolean" }, "true")).toBe(false);
+    expect(typed({ input_type: "Number" }, "7")).toBe(7);
+    expect(
+      typed({ input_type: "Select", data_type: "Integer", input_attrs: { multiple: true } }, "1,2"),
+    ).toEqual([1, 2]);
+    expect(typed({ input_type: "CheckBox" }, "a,b")).toEqual(["a", "b"]);
+    expect(typed({ input_type: "DisplayOnly", data_type: "Integer" }, "42")).toBe("42");
+    expect(typed({}, "a,b")).toBe("a,b");
+  });
+});
+
 describe("initialiseData", () => {
+  it("leaves out what a false or unreadable af-if hides", () => {
+    const firstNameIs = (value: string) =>
+      `(${JSON.stringify([["Individual1[0][fields][first_name]", "=", JSON.stringify(value)]])})`;
+    const shownIf = (condition: string, child: ElementNode): ElementNode => ({
+      "#tag": "div",
+      "af-if": condition,
+      "#children": [child],
+    });
+    const layout: ElementNode[] = [
+      {
+        "#tag": "fieldset",
+        "af-fieldset": "Individual1",
+        "#children": [
+          field("first_name", { afform_default: "Ada" }),
+          shownIf(firstNameIs("bob"), field("nick_name", { afform_default: "B" })),
+          shownIf(firstNameIs("ada"), field("last_name", { afform_default: "L" })),
+          shownIf("(nope)", field("job_title", { afform_default: "J" })),
+        ],
+      },
+      shownIf(firstNameIs("bob"), {
+        "#tag": "div",
+        "af-fieldset": "Individual2",
+        "#children": [field("source")],
+      }),
+    ];
+    expect(initialiseData(layout, emptyData(["Individual1", "Individual2"]))).toEqual({
+      Individual1: [{ fields: { first_name: "Ada", last_name: "L" }, joins: {} }],
+      Individual2: [],
+    });
+  });
+
   it("pads repeats, marks a primary record and fills defaults into empty fields only", () => {
     const layout: ElementNode[] = [
       {

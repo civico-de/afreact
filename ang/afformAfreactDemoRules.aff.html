@@ -6,7 +6,7 @@
     <af-field name="last_name" af-required="([[&quot;Individual1[0][fields][first_name]&quot;,&quot;=&quot;,&quot;\&quot;ada\&quot;&quot;]])" />
     <af-field name="nick_name" defn="{afform_default: 'Dear [Individual1.0.first_name]'}" />
     <div class="af-container" af-if="([[&quot;Individual1[0][fields][first_name]&quot;,&quot;IS NOT EMPTY&quot;,&quot;&quot;]])">
-      <af-field name="job_title" />
+      <af-field name="job_title" defn="{afform_default: 'Staff'}" />
     </div>
     <af-field name="middle_name" af-disabled="([[&quot;Individual1[0][fields][first_name]&quot;,&quot;=&quot;,&quot;\&quot;lock\&quot;&quot;]])" />
   </fieldset>

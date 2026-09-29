@@ -59,7 +59,10 @@ describe("live rules", () => {
         {
           "#tag": "div",
           "af-if": when("first_name", "=", '"ada"'),
-          "#children": [field("nick_name"), field("job_title", { input_type: "DisplayOnly" })],
+          "#children": [
+            field("nick_name"),
+            field("job_title", { input_type: "DisplayOnly", afform_default: "Engineer" }),
+          ],
         },
       ]),
     );
@@ -72,7 +75,97 @@ describe("live rules", () => {
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
-        Individual1: [{ fields: { first_name: "Ada" }, joins: {} }],
+        Individual1: [{ fields: { first_name: "Ada", job_title: "Engineer" }, joins: {} }],
+      });
+    });
+  });
+
+  it("initialises what an af-if shows only once shown, and again on every re-show", async () => {
+    const calls = renderForm([
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+          { "#tag": "af-entity", type: "Contact", name: "Individual2" },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "#children": [
+              field("first_name"),
+              {
+                "#tag": "div",
+                "af-if": when("first_name", "=", '"ada"'),
+                "#children": [field("nick_name", { afform_default: "Default" })],
+              },
+            ],
+          },
+          {
+            "#tag": "div",
+            "af-if": when("first_name", "=", '"bob"'),
+            "#children": [
+              {
+                "#tag": "div",
+                "af-fieldset": "Individual2",
+                "#children": [field("last_name", { afform_default: "Second" })],
+              },
+            ],
+          },
+          submit,
+        ],
+      },
+    ]);
+    await userEvent.type(await screen.findByRole("textbox", { name: "first_name" }), "ada");
+    expect(box("nick_name")).toHaveValue("Default");
+    await userEvent.clear(box("nick_name"));
+    await userEvent.type(box("nick_name"), "Mine");
+    await userEvent.type(box("first_name"), "x");
+    await userEvent.type(box("first_name"), "{Backspace}");
+    expect(box("nick_name")).toHaveValue("Default");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({
+        Individual1: [{ fields: { first_name: "ada", nick_name: "Default" }, joins: {} }],
+        Individual2: [],
+      });
+    });
+  });
+
+  it("keeps a display-only value when its af-if hides it, as afField skips it on afIfDestroy", async () => {
+    const calls = mockApi({
+      "Afreact.getForm": () => [
+        {
+          name: "afformTest",
+          title: "Test",
+          type: "form",
+          strings: [],
+          layout: form([
+            field("first_name"),
+            {
+              "#tag": "div",
+              "af-if": when("first_name", "=", '"ada"'),
+              "#children": [field("nick_name"), field("job_title", { input_type: "DisplayOnly" })],
+            },
+          ]),
+        },
+      ],
+      "Afform.prefill": () => [
+        {
+          name: "Individual1",
+          values: [{ fields: { first_name: "Ada", nick_name: "A", job_title: "Engineer" } }],
+        },
+      ],
+      "Afform.submit": () => [{}],
+    });
+    renderWithQuery(
+      <AfreactForm name="afformTest" location={{ search: "?Individual1=1", hash: "" }} />,
+    );
+    await userEvent.type(await screen.findByRole("textbox", { name: "first_name" }), "x");
+    expect(screen.queryByRole("textbox", { name: "nick_name" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({
+        Individual1: [{ fields: { first_name: "Adax", job_title: "Engineer" }, joins: {} }],
       });
     });
   });
@@ -111,6 +204,82 @@ describe("live rules", () => {
     });
   });
 
+  it("drops what a nested af-if showed when an outer one hides, and fills nothing back", async () => {
+    const calls = renderForm(
+      form([
+        field("first_name"),
+        {
+          "#tag": "div",
+          "af-if": when("first_name", "=", '"ada"'),
+          "#children": [
+            {
+              "#tag": "div",
+              "af-if": when("first_name", "CONTAINS", '"a"'),
+              "#children": [field("nick_name", { afform_default: "Nick" })],
+            },
+            {
+              "#tag": "div",
+              "af-if": when("first_name", "=", '"ada"'),
+              "#children": [field("middle_name")],
+            },
+          ],
+        },
+      ]),
+    );
+    await userEvent.type(await screen.findByRole("textbox", { name: "first_name" }), "Ada");
+    expect(box("nick_name")).toHaveValue("Nick");
+    await userEvent.type(box("middle_name"), "Typed");
+    await userEvent.type(box("first_name"), "x");
+    expect(screen.queryByRole("textbox", { name: "nick_name" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({
+        Individual1: [{ fields: { first_name: "Adax" }, joins: {} }],
+      });
+    });
+  });
+
+  it("keeps what a nested af-if never showed when an outer one hides", async () => {
+    const calls = mockApi({
+      "Afreact.getForm": () => [
+        {
+          name: "afformTest",
+          title: "Test",
+          type: "form",
+          strings: [],
+          layout: form([
+            field("first_name"),
+            {
+              "#tag": "div",
+              "af-if": when("first_name", "=", '"ada"'),
+              "#children": [
+                {
+                  "#tag": "div",
+                  "af-if": when("first_name", "=", '"x"'),
+                  "#children": [field("nick_name")],
+                },
+              ],
+            },
+          ]),
+        },
+      ],
+      "Afform.prefill": () => [
+        { name: "Individual1", values: [{ fields: { first_name: "Ada", nick_name: "A" } }] },
+      ],
+      "Afform.submit": () => [{}],
+    });
+    renderWithQuery(
+      <AfreactForm name="afformTest" location={{ search: "?Individual1=1", hash: "" }} />,
+    );
+    await userEvent.type(await screen.findByRole("textbox", { name: "first_name" }), "b");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({
+        Individual1: [{ fields: { first_name: "Adab", nick_name: "A" }, joins: {} }],
+      });
+    });
+  });
+
   it("applies af-required, af-disabled and conditional options live", async () => {
     renderForm(
       form([
@@ -129,6 +298,7 @@ describe("live rules", () => {
     );
     const last = await screen.findByRole("textbox", { name: "last_name" });
     expect(last).not.toBeRequired();
+    expect(box("nick_name")).toBeEnabled();
     expect(screen.queryByRole("option", { name: "Prof." })).not.toBeInTheDocument();
     await userEvent.type(box("first_name"), "ada");
     expect(last).toBeRequired();
@@ -149,9 +319,101 @@ describe("live rules", () => {
     expect(nick).toHaveValue("Dear ");
     await userEvent.type(box("first_name"), "Ada");
     expect(nick).toHaveValue("Dear Ada");
+    await userEvent.clear(box("first_name"));
+    expect(nick).toHaveValue("Dear ");
+    await userEvent.type(box("first_name"), "Ada");
+    expect(nick).toHaveValue("Dear Ada");
     await userEvent.type(nick, "!");
     await userEvent.type(box("first_name"), "m");
     expect(nick).toHaveValue("Dear Ada!");
+  });
+
+  it("stops calculating a token default once the user leaves the field, even unchanged", async () => {
+    renderForm(
+      form([
+        field("first_name"),
+        field("nick_name", { afform_default: "Dear [Individual1.0.first_name]" }),
+      ]),
+    );
+    const nick = await screen.findByRole("textbox", { name: "nick_name" });
+    await userEvent.click(nick);
+    await userEvent.tab();
+    await userEvent.type(box("first_name"), "Ada");
+    expect(nick).toHaveValue("Dear ");
+  });
+
+  it("types a token default like the field and reports one that refers to itself", async () => {
+    const calls = renderForm(
+      form([
+        field("source"),
+        field("count", { data_type: "Integer", afform_default: "[Individual1.0.source]" }),
+        field("nick_name", { afform_default: "[Individual1.0.nick_name]x" }),
+      ]),
+    );
+    await userEvent.type(await screen.findByRole("textbox", { name: "source" }), "42");
+    expect(screen.getByRole("note")).toHaveTextContent(
+      'afform_default "[Individual1.0.nick_name]x" refers to its own field on nick_name',
+    );
+    expect(box("nick_name")).toHaveValue("");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({
+        Individual1: [{ fields: { source: "42", count: 42 }, joins: {} }],
+      });
+    });
+  });
+
+  it("drops a selected option once its condition hides it", async () => {
+    const calls = renderForm(
+      form([
+        field("first_name"),
+        field("prefix_id", {
+          input_type: "Select",
+          data_type: "Integer",
+          options: [
+            { id: 1, label: "Dr." },
+            { id: 2, label: "Prof.", if: [["Individual1[0][fields][first_name]", "=", '"ada"']] },
+          ],
+        }),
+      ]),
+    );
+    await userEvent.type(await screen.findByRole("textbox", { name: "first_name" }), "ada");
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "prefix_id" }), "Prof.");
+    await userEvent.type(box("first_name"), "x");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({
+        Individual1: [{ fields: { first_name: "adax" }, joins: {} }],
+      });
+    });
+  });
+
+  it("shows an option whose condition cannot be read, and says so", async () => {
+    renderForm(
+      form([
+        field("prefix_id", {
+          input_type: "Select",
+          data_type: "Integer",
+          options: [{ id: 2, label: "Prof.", if: [["a + b", "=", "1"]] }],
+        }),
+      ]),
+    );
+    expect(await screen.findByRole("option", { name: "Prof." })).toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent(
+      'option 2 if=[["a + b","=","1"]] on prefix_id',
+    );
+  });
+
+  it("shows the submit button when the route opens no stored submission", async () => {
+    const button: LayoutNode = {
+      "#tag": "button",
+      "ng-click": "afform.submit()",
+      "ng-if": "afform.showSubmitButton",
+      "#children": [{ "#text": "Submit" }],
+    };
+    renderForm(form([field("first_name")], [button]));
+    expect(await screen.findByRole("button", { name: "Submit" })).toBeInTheDocument();
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
   it("hides the submit button for a stored submission, as afForm does", async () => {
@@ -188,9 +450,151 @@ describe("live rules", () => {
     expect(screen.getByRole("note")).toHaveTextContent("Angular expression {{ cls }}");
   });
 
-  it("reports a condition it cannot read and still renders the element", async () => {
-    renderForm(form([{ "#tag": "div", "af-if": "(nope)", "#children": [field("nick_name")] }]));
+  it("reports a condition it cannot read and renders nothing of its element, as afIf", async () => {
+    const calls = renderForm(
+      form([
+        field("first_name"),
+        {
+          "#tag": "div",
+          "af-if": "(nope)",
+          "#children": [field("nick_name", { afform_default: "A" })],
+        },
+      ]),
+    );
     expect(await screen.findByRole("note")).toHaveTextContent('af-if="(nope)"');
-    expect(box("nick_name")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "nick_name" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({ Individual1: [{ fields: {}, joins: {} }] });
+    });
+  });
+
+  it("writes an Email block under an af-if to its own record", async () => {
+    const calls = renderForm(
+      form([
+        { "#tag": "div", "af-join": "Email", "#children": [field("email", { label: "First" })] },
+        {
+          "#tag": "div",
+          "af-join": "Email",
+          "af-if": "([])",
+          "#children": [field("email", { label: "Second" })],
+        },
+      ]),
+    );
+    await userEvent.type(await screen.findByRole("textbox", { name: "First" }), "a@example.org");
+    await userEvent.type(box("Second"), "b@example.org");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({
+        Individual1: [
+          {
+            fields: {},
+            joins: { Email: [{ email: "a@example.org" }, { email: "b@example.org" }] },
+          },
+        ],
+      });
+    });
+  });
+
+  it("keeps each repeat item's state when an earlier item is removed", async () => {
+    renderForm(
+      form([
+        field("first_name"),
+        {
+          "#tag": "div",
+          "af-join": "Email",
+          "af-repeat": "Add",
+          "af-repeat-default": "2",
+          "#children": [
+            field("email", { afform_default: "[Individual1.0.first_name]@example.org" }),
+          ],
+        },
+      ]),
+    );
+    await screen.findByRole("textbox", { name: "first_name" });
+    const second = screen.getAllByRole("textbox", { name: "email" })[1]!;
+    await userEvent.clear(second);
+    await userEvent.type(second, "mine@example.org");
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
+    await userEvent.type(box("first_name"), "ada");
+    expect(box("email")).toHaveValue("mine@example.org");
+  });
+
+  it("initialises a copied item's repeats as afRepeat renders them", async () => {
+    const calls = mockApi({
+      "Afreact.getForm": () => [
+        {
+          name: "afformTest",
+          title: "Test",
+          type: "form",
+          strings: [],
+          layout: [
+            {
+              "#tag": "af-form",
+              ctrl: "afform",
+              "#children": [
+                { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+                {
+                  "#tag": "div",
+                  "af-fieldset": "Individual1",
+                  "af-repeat": "Add",
+                  "af-copy": "Copy",
+                  "#children": [
+                    field("first_name"),
+                    {
+                      "#tag": "div",
+                      "af-join": "Email",
+                      "af-repeat": "Add email",
+                      "#children": [field("email")],
+                    },
+                  ],
+                },
+                submit,
+              ],
+            },
+          ],
+        },
+      ],
+      "Afform.prefill": () => [],
+      "Afform.submit": () => [{}],
+    });
+    renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />);
+    await userEvent.type(await screen.findByRole("textbox", { name: "first_name" }), "Ada");
+    await userEvent.click(screen.getByRole("button", { name: "Copy" }));
+    expect(screen.getAllByRole("textbox", { name: "email" })).toHaveLength(2);
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({
+        Individual1: [
+          { fields: { first_name: "Ada" }, joins: { Email: [{}] } },
+          { fields: { first_name: "Ada" }, joins: { Email: [{}] } },
+        ],
+      });
+    });
+  });
+
+  it("initialises an added repeat item as afRepeat renders it", async () => {
+    const calls = renderForm(
+      form([
+        {
+          "#tag": "div",
+          "af-join": "Email",
+          "af-repeat": "Add",
+          "#children": [
+            field("email"),
+            field("location_type_id", { data_type: "Integer", afform_default: "1" }),
+          ],
+        },
+      ]),
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Add" }));
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({
+        Individual1: [
+          { fields: {}, joins: { Email: [{ location_type_id: 1 }, { location_type_id: 1 }] } },
+        ],
+      });
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { checkConditions, evaluate, parseConditions, type Condition } from "./conditions";
+import { asText, checkConditions, evaluate, parseConditions, type Condition } from "./conditions";
 import type { FormData } from "./types";
 
 const data: FormData = {
@@ -73,7 +73,49 @@ describe("checkConditions", () => {
     expect(check([])).toBe(true);
   });
 
-  it("rejects an operator it does not know", () => {
-    expect(() => check([[name, "BETWEEN", "[1,2]"]])).toThrow("Unknown condition operator");
+  it("lets a clause with an operator afForm does not know decide nothing", () => {
+    const no: Condition = [name, "=", '"Bob"'];
+    for (const op of ["IS NULL", "IS NOT NULL", "BETWEEN", "NOT BETWEEN"]) {
+      const unknown: Condition = [name, op, "[1,2]"];
+      expect(check([unknown])).toBe(true);
+      expect(check([unknown, no])).toBe(false);
+      expect(check([["OR", [unknown, no]]])).toBe(false);
+      expect(check([["NOT", [unknown]]])).toBe(true);
+    }
+  });
+
+  it("treats an empty group operator as AND", () => {
+    const yes: Condition = [name, "=", '"Ada"'];
+    const no: Condition = [name, "=", '"Bob"'];
+    expect(check([["", [yes, no]]])).toBe(false);
+    expect(check([[null, [yes, yes]]])).toBe(true);
+  });
+
+  it("orders lists by their text, as JavaScript's relational operators do", () => {
+    const tags = "Individual1[0][fields][tags]";
+    expect(check([[tags, ">", '"1,2"']])).toBe(true);
+    expect(check([[tags, "<", '"1,4"']])).toBe(true);
+    expect(check([[tags, ">=", '"1,3"']])).toBe(true);
+    expect(check([[tags, ">", "0"]])).toBe(false);
+  });
+});
+
+describe("asText", () => {
+  it("writes form data as String() does", () => {
+    const cases: [unknown, string][] = [
+      ["a", "a"],
+      [1.5, "1.5"],
+      [false, "false"],
+      [null, "null"],
+      [undefined, "undefined"],
+      [[1, [2, null], "x"], "1,2,,x"],
+      [{ a: 1 }, "[object Object]"],
+      [[], ""],
+    ];
+    for (const [value, text] of cases) expect(asText(value)).toBe(text);
+  });
+
+  it("rejects a value JSON form data cannot hold", () => {
+    expect(() => asText(() => 1)).toThrow("Form data holds no function value.");
   });
 });

@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
-import { AfreactForm } from "./AfreactForm";
+import { AfreactForm, formExpressions } from "./AfreactForm";
 import type { FieldDefn, LayoutNode } from "./types";
 
 const field = (
@@ -87,7 +87,7 @@ function renderForm(
 ) {
   const calls = mockApi({
     "Afreact.getForm": () => [
-      { name: "afformTest", title: "Test form", type: "form", layout: contactForm },
+      { name: "afformTest", title: "Test form", type: "form", layout: contactForm, strings: [] },
     ],
     "Afform.prefill": () => (search ? prefill : []),
     "Afform.submit": submit,
@@ -238,7 +238,8 @@ describe("AfreactForm", () => {
   it("renders a search page without prefill and flags what it cannot render", async () => {
     const layout: LayoutNode[] = [
       { "#comment": "note" },
-      { "#tag": "div", "af-if": "x", "#children": [{ "#text": "{{ total }}" }] },
+      { "#tag": "div", "af-if": "x", "#children": [{ "#text": "never shown" }] },
+      { "#text": "{{ total }}" },
       { "#tag": "crm-search-display-grid", "#children": [] },
       { "#tag": "crm-search-display-table", settings: { limit: 5 } },
       {
@@ -249,7 +250,9 @@ describe("AfreactForm", () => {
       },
     ];
     const calls = mockApi({
-      "Afreact.getForm": () => [{ name: "afsearchTest", title: "Search", type: "search", layout }],
+      "Afreact.getForm": () => [
+        { name: "afsearchTest", title: "Search", type: "search", layout, strings: [] },
+      ],
     });
     renderWithQuery(<AfreactForm name="afsearchTest" location={{ search: "", hash: "" }} />);
     const notes = await screen.findAllByRole("note");
@@ -262,6 +265,7 @@ describe("AfreactForm", () => {
       "search display settings without columns",
       "field first_name without entity or metadata",
     ]);
+    expect(screen.queryByText("never shown")).not.toBeInTheDocument();
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
     expect(calls.map(({ call }) => call)).toEqual(["Afreact.getForm"]);
   });
@@ -276,7 +280,9 @@ describe("AfreactForm", () => {
       },
     ];
     mockApi({
-      "Afreact.getForm": () => [{ name: "afformTest", title: "Attrs", type: "form", layout }],
+      "Afreact.getForm": () => [
+        { name: "afformTest", title: "Attrs", type: "form", layout, strings: [] },
+      ],
       "Afform.prefill": () => [],
     });
     renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />);
@@ -306,7 +312,7 @@ describe("AfreactForm", () => {
     for (const update of [false, true]) {
       mockApi({
         "Afreact.getForm": () => [
-          { name: "afformTest", title: "Ids", type: "form", layout: layout(update) },
+          { name: "afformTest", title: "Ids", type: "form", layout: layout(update), strings: [] },
         ],
         "Afform.prefill": () => [],
       });
@@ -349,7 +355,9 @@ describe("AfreactForm", () => {
       },
     ];
     const calls = mockApi({
-      "Afreact.getForm": () => [{ name: "afformTest", title: "Mixed", type: "form", layout }],
+      "Afreact.getForm": () => [
+        { name: "afformTest", title: "Mixed", type: "form", layout, strings: [] },
+      ],
       "Afform.prefill": () => [],
       "SearchDisplay.run": () => [{ key: 1, columns: [{ val: 1 }] }],
     });
@@ -371,5 +379,14 @@ describe("AfreactForm", () => {
       display: "D",
       afform: "afformTest",
     });
+  });
+});
+
+describe("formExpressions", () => {
+  it("translates with the form's strings first and never returns an inherited property", () => {
+    const { translate } = formExpressions({ Save: "Speichern" });
+    expect(translate("Save")).toBe("Speichern");
+    expect(translate("constructor")).toBe("constructor");
+    expect(formExpressions([]).translate("toString")).toBe("toString");
   });
 });

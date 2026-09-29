@@ -23,6 +23,12 @@ const TEXT_TYPES: Record<string, string> = {
   Hidden: "hidden",
 };
 
+/** ngModel's value for an emptied input: "" as text, null as a number, none while required fails. */
+function emptied(required: boolean, numeric: boolean): string | null | undefined {
+  if (required) return undefined;
+  return numeric ? null : "";
+}
+
 /** The classes afField adds to its element: af-field-type-<kebab input type>, plus -multiple. */
 export function fieldClasses(defn: FieldDefn): string {
   const type = `af-field-type-${defn.input_type.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase()}`;
@@ -143,13 +149,9 @@ export function Field({ defn, value, onChange, disabled }: FieldProps) {
           max={attrs.max}
           step={numeric ? (attrs.step ?? 1) : undefined}
           onChange={(event) => {
-            onChange(
-              event.target.value === ""
-                ? null
-                : numeric
-                  ? Number(event.target.value)
-                  : event.target.value,
-            );
+            const text = event.target.value;
+            if (text === "") onChange(emptied(required, numeric));
+            else onChange(numeric ? Number(text) : text);
           }}
         />
       );
@@ -165,7 +167,8 @@ export function Field({ defn, value, onChange, disabled }: FieldProps) {
             maxLength={attrs.maxlength}
             value={textValue(value)}
             onChange={(event) => {
-              onChange(event.target.value);
+              const text = event.target.value;
+              onChange(text === "" ? emptied(required, false) : text);
             }}
           />
         );
