@@ -58,9 +58,9 @@ Sizes are rough estimates in lines of TypeScript or PHP including tests.
 - **Contact summary tabs and blocks, case summary blocks, contact actions**:
   listeners after core's placement listeners replace the template for listed
   forms.
-- **Not taken over**: the dashboard (its dashlets live inside core's Angular
-  dashboard), SearchKit and FormBuilder previews, and forms embedded in other
-  Angular screens.
+- **Dashboard**: see work package 8.
+- **Not taken over**: SearchKit and FormBuilder previews, which belong to the
+  Angular builders.
 - **Support report**: an admin page lists every form with what the React
   renderer cannot show yet, from the same walk the renderer uses. A listed
   form with an unsupported part shows the visible "Not supported" note.
@@ -104,7 +104,7 @@ header counts, and search filters bound to form fields.
   without Angular.
 - API tasks (delete, update, tag, download, …) are Angular dialogs.
 
-The API tasks need a decision (see below).
+The API tasks are rebuilt in React (≈ 600 more).
 
 ### 6. Other display types and layout (≈ 700)
 
@@ -120,7 +120,46 @@ One Playwright scenario over every form in the inventory:
 
 This replaces the demo-only `parity.spec.ts` as the gate for the takeover.
 
-Total: roughly 4,800 lines, several weeks of work.
+### 8. Dashboard (≈ 600)
+
+Core's dashboard is an Angular screen (`crmDashboard`). The React version
+must provide:
+- the same `Dashboard` / `DashboardContact` APIv4 data, columns and drag
+  between columns;
+- adding and removing dashlets;
+- Afform dashlets rendered by React;
+- URL dashlets loaded as core does, through `CRM.loadPage`.
+
+Total: roughly 6,000 lines, several weeks of work.
+
+## Libraries
+
+Browsers now provide the modal dialog (`<dialog>` with `showModal()`: focus
+trap, Escape, inert background) and light-dismiss popups (`popover`), so
+dialogs and menus need no library. Core provides `CRM.wysiwyg` for rich text
+and `CRM.loadForm` / `CRM.loadPage` for legacy screens.
+
+Three parts are hard to get right by hand, so they take a library; the two
+widgets are headless and render core's markup and classes:
+
+| Widget | Library | Size (min + gzip) | Replaces |
+|---|---|---|---|
+| EntityRef, multi-select (ARIA 1.2 combobox, async options) | Downshift | 13 kB | ≈ 300 lines |
+| drag to reorder (rows, dashlets) with keyboard and announcements | dnd-kit core + sortable | 15 kB | ≈ 250 lines |
+| URL state (see State above) | nuqs | 5 kB | ≈ 150 lines |
+
+Measured 2026-09-29 with esbuild over React 19 (downshift 9.4, @dnd-kit/core
+6.3, @dnd-kit/sortable 10.0). The current bundle is 89 kB. React Aria
+covers everything in one library but costs 87 kB for the needed hooks (44 kB
+for the combobox alone); Radix adds dialog, menu and tabs that the platform
+already provides.
+
+The two widget libraries load only on pages that need them. That needs code splitting, which
+`vite.config.ts` turns off today because chunks would miss CiviCRM's cache
+code. Content-hashed chunk names make that code unnecessary for chunks.
+
+No library covers the rest: Afform and SearchKit semantics (conditions,
+filters, tasks, placements) are where most of the work is.
 
 ## Initial state before the first request
 
@@ -151,18 +190,26 @@ The parity sweep pins each source: one search request, with the final
 filters, and no flash of unfiltered rows. `#35683`'s failure case is the
 test: stored filters, then reload.
 
-### No state library
+### State
 
-- **URL.** Core's links point at hash parameters (`#?Individual1=5`,
-  `#?_s=3`, tab `url-arg`). nuqs and TanStack Router read the query string or
-  want to own the page's routing; either would break those links or take over
-  a server-routed CiviCRM page.
-- **Reading and writing the hash** is a small `useSyncExternalStore` over
-  `hashchange` and `URLSearchParams`.
+- **URL: nuqs** (5 kB gzip, measured with 2.10.1) through a custom adapter over
+  the hash. Core's links use hash parameters (`#?Individual1=5`, `#?_s=3`,
+  the tab `url-arg`), and nuqs's built-in adapters only use the query string.
+  - `nuqs/adapters/custom` takes about 30 lines: read `URLSearchParams` from
+    `location.hash`, write with `replaceState`, listen to `hashchange`.
+  - Its API is marked `unstable_`, so the version is pinned.
+  - nuqs brings typed parsers, batching of several keys into one URL write,
+    defaults kept out of the URL, and `urlKeys` for per-display prefixes.
+- **More than core.** Core reads the hash but writes only the selected tab.
+  React also writes each display's filters, sort, page and page size, and the
+  selected tab, so reloads keep them and links share them. Keys carry the
+  display name when a page has more than one display.
 - **Fieldset state.** It is local to one form: a context with `useReducer`,
   shared by its filter fields and displays. Zustand or Jotai would add a
   dependency for the same thing.
-- **Server state** stays TanStack Query.
+- **Server state.** TanStack Query, one client shared by every element on the
+  page; saving invalidates the affected queries, where core fires jQuery
+  events (`crmPopupFormSuccess`).
 - **Form library.** Reconsider TanStack Form only if work package 2
   (conditions, `af-required`) outgrows the current model in
   `src/afform/model.ts`.
@@ -171,11 +218,7 @@ test: stored filters, then reload.
 
 - **React over waiting for core** (2026-09-29): the initial-state problem is
   structural in Angular's watcher model and solvable in React.
-
-## Open decisions
-
-1. **API task dialogs**: rebuild them in React (≈ 600 more) or load Angular
-   only when such a dialog opens.
-2. **Dashboard dashlets**: leave them Angular, or take over the dashboard.
-3. **Order**: search pages first (61 of 87 forms, highest reuse), or forms
-   first (fewer, but they are what visitors see on public pages).
+- **Everything in React** (2026-09-29): API task dialogs and the dashboard
+  included.
+- **Order**: search pages first (61 of 87 forms, the most reuse, and the
+  debounce gain), then forms, then the dashboard.
