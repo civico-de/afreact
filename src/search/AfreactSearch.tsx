@@ -1,50 +1,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api4, errorMessage, get } from "../api/civi";
+import { Unsupported } from "../afform/Unsupported";
+import { api4, errorMessage, get, type ApiResult } from "../api/civi";
 import { onButtonKey } from "../keys";
+import { BodyRows, ControlHeader, PlaceholderRows, TallyRow } from "./Body";
+import { useAutoOpen, useFormSuccess } from "./links";
 import { pageLinks } from "./pages";
-
-interface Column {
-  type: string;
-  key?: string;
-  label?: string;
-  sortable?: boolean;
-}
-
-export interface DisplaySettings {
-  columns: Column[];
-  limit?: number;
-  sort?: [string, "ASC" | "DESC"][];
-  pager?: false | { show_count?: boolean; hide_single?: boolean };
-  classes?: string[];
-  /** false hides the row SearchKit shows when nothing is found. */
-  noResultsText?: string | false;
-  /** Placeholder rows while a page loads; SearchKit shows 5 unless set. */
-  placeholder?: number;
-}
-
-/** SearchDisplay.settings as stored; the table needs at least its column list. */
-export function isDisplaySettings(value: unknown): value is DisplaySettings {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "columns" in value &&
-    Array.isArray(value.columns)
-  );
-}
-
-interface CellLink {
-  url?: string;
-  text?: string;
-  title?: string;
-  target?: string;
-}
-
-export interface Row {
-  key: string | number;
-  columns: { val?: unknown; links?: CellLink[]; title?: string; cssClass?: string }[];
-  cssClass?: string;
-}
+import { hasControlColumn, headerClass, isSortable, runPage, unsupportedFeatures } from "./rows";
+import { DisplayHeader } from "./Toolbar";
+import { isDisplaySettings, type DisplaySettings, type Row, type RunPage } from "./types";
 
 type Sort = [string, "ASC" | "DESC"][];
 
@@ -55,9 +19,17 @@ interface AfreactSearchProps {
   settings?: DisplaySettings;
   /** Embedding Afform, so SearchDisplay.run applies the form's access rules as in Angular. */
   afform?: string;
+  /** Fixed filters, e.g. those a subsearch column passes on from its row. */
+  filters?: Record<string, unknown> | unknown[];
 }
 
-export function AfreactSearch({ search, display, settings: given, afform }: AfreactSearchProps) {
+export function AfreactSearch({
+  search,
+  display,
+  settings: given,
+  afform,
+  filters,
+}: AfreactSearchProps) {
   const client = useQueryClient();
   const loaded = useQuery({
     queryKey: ["SearchDisplay", "get", search, display],
@@ -71,25 +43,35 @@ export function AfreactSearch({ search, display, settings: given, afform }: Afre
       });
       if (!found)
         throw new Error(ts("Search display %1 not found.", { 1: `${search}.${display}` }));
-      if (!isDisplaySettings(found.settings))
+      const settings = await withAutoColumns(search, found.settings);
+      if (!isDisplaySettings(settings))
         throw new Error(ts("Search display %1 has no columns.", { 1: `${search}.${display}` }));
-      return { label: found.label ?? "", settings: found.settings };
+      return { label: found.label ?? "", settings };
     },
     enabled: !given,
   });
   const settings = given ?? loaded.data?.settings;
   const [sort, setSort] = useState<Sort | null>(null);
   const [page, setPage] = useState(1);
+  // searchDisplayBaseTrait's uniqueId: keeps a RAND() sort stable across pages and reloads.
+  const [seed] = useState(() => Math.floor(Math.random() * 10e10));
 
   const activeSort = sort ?? settings?.sort ?? [];
   const limit = settings?.limit ?? 0;
-  const params = { savedSearch: search, display, limit, afform };
+  const params = {
+    savedSearch: search,
+    display,
+    limit,
+    seed,
+    afform,
+    ...(filters ? { filters } : {}),
+  };
   // The count ignores sort and page, so it is asked once per display.
   const countKey = ["SearchDisplay", "count", params];
   const rows = useQuery({
     queryKey: ["SearchDisplay", "run", params, activeSort, page],
     queryFn: async () => {
-      const result = await api4<Row>("SearchDisplay", "run", {
+      const result: ApiResult<Row> = await api4<Row>("SearchDisplay", "run", {
         ...params,
         sort: activeSort,
         return: `page:${page}`,
@@ -97,7 +79,7 @@ export function AfreactSearch({ search, display, settings: given, afform }: Afre
       // Same rule as searchDisplayBaseTrait: a short first page is the whole result, no count call needed.
       if (page === 1 && (!limit || result.length < limit))
         client.setQueryData(countKey, result.length);
-      return [...result];
+      return runPage(result);
     },
     enabled: !!settings,
   });
@@ -106,16 +88,31 @@ export function AfreactSearch({ search, display, settings: given, afform }: Afre
     queryFn: async () =>
       (await api4<unknown>("SearchDisplay", "run", { ...params, return: "row_count" })).count ??
       null,
-    enabled: rows.isSuccess && settings?.pager !== false,
+    enabled: rows.isSuccess && (!!settings?.pager || !!settings?.headerCount),
   });
+  // The totals row ignores sort and page, like the count.
+  const tallied = useQuery({
+    queryKey: ["SearchDisplay", "tally", params],
+    queryFn: async () =>
+      (
+        await api4<Record<string, unknown>>("SearchDisplay", "run", { ...params, return: "tally" })
+      )[0] ?? {},
+    enabled: rows.isSuccess && !!settings?.tally,
+  });
+  // A popup form of this display or of its form succeeded: reload as searchDisplayBaseTrait does.
+  const refresh = () => {
+    for (const kind of ["run", "count", "tally"])
+      void client.invalidateQueries({ queryKey: ["SearchDisplay", kind, params] });
+  };
+  const [root, setRoot] = useState<HTMLDivElement | null>(null);
+  useFormSuccess(root, refresh);
+  useAutoOpen(rows.data, refresh);
+  // Core keeps the toolbar of the last run while the next page loads.
+  const [shown, setShown] = useState<RunPage | undefined>(undefined);
+  if (rows.data && rows.data !== shown) setShown(rows.data);
 
-  const error = loaded.error ?? rows.error ?? counted.error;
-  if (error)
-    return (
-      <div className="alert alert-danger" role="alert">
-        {errorMessage(error)}
-      </div>
-    );
+  const error = loaded.error ?? rows.error;
+  if (error) return <Failure error={error} />;
   if (!settings) return <p role="status">{ts("Loading…")}</p>;
   const label = loaded.data?.label ?? "";
   const rowCount = counted.data ?? null;
@@ -131,30 +128,40 @@ export function AfreactSearch({ search, display, settings: given, afform }: Afre
       ? activeSort.map(([sorted, current]) => [sorted, sorted === key ? direction : current])
       : [];
     if (!next.some(([sorted]) => sorted === key)) next.push([key, direction]);
+    // Core's setSort() stays on the current page.
     setSort(next);
-    setPage(1);
   };
 
   const pager = settings.pager;
+  const unsupported = unsupportedFeatures(settings, shown);
+  const failed = counted.error ?? tallied.error;
+  const tally = settings.tally;
+  const tallyRow = !loading && !!rows.data?.rows.length && !!tally && (
+    <TallyRow settings={settings} tally={tallied.data ?? null} />
+  );
   return (
-    <div className="crm-search-display crm-search-display-table">
+    <div className="crm-search-display crm-search-display-table" ref={setRoot}>
+      {unsupported.length > 0 && <Unsupported what={unsupported.join(", ")} />}
+      {failed && <Failure error={failed} />}
+      <DisplayHeader settings={settings} rowCount={rowCount} toolbar={shown?.toolbar} />
       <p role="status" className="sr-only">
         {loading ? ts("Loading…") : ""}
       </p>
-      <table className={(settings.classes ?? ["table"]).join(" ")} aria-busy={loading}>
+      <table className={(settings.classes ?? []).join(" ")} aria-busy={loading}>
         <caption className="sr-only">{label}</caption>
-        <thead>
+        <thead hidden={settings.hideThead === true}>
           <tr>
+            <ControlHeader settings={settings} />
             {settings.columns.map((column, index) => {
               const direction = directionOf(column.key);
-              const sortKey = column.sortable === true ? column.key : undefined;
+              const sortKey = isSortable(column, settings) ? column.key : undefined;
               // ARIA allows aria-sort on one header: the column sorted first.
               const primary = !!column.key && activeSort[0]?.[0] === column.key;
               return (
                 <th
                   key={index}
                   scope="col"
-                  className={sortKey ? "crm-sortable-col" : undefined}
+                  className={headerClass(column, !!sortKey)}
                   title={
                     sortKey
                       ? ts("Click to sort results (shift-click to sort by multiple).")
@@ -198,38 +205,32 @@ export function AfreactSearch({ search, display, settings: given, afform }: Afre
               );
             })}
           </tr>
+          {tally && tally.header && tallyRow}
         </thead>
         <tbody>
-          {loading &&
-            Array.from({ length: settings.placeholder ?? 5 }, (_, placeholder) => (
-              <tr key={placeholder}>
-                {settings.columns.map((_column, index) => (
-                  <td key={index}>
-                    <div className="crm-search-loading-placeholder" />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          {rows.data?.length === 0 && settings.noResultsText !== false && (
+          {loading && <PlaceholderRows settings={settings} />}
+          {rows.data?.rows.length === 0 && settings.noResultsText !== false && (
             <tr>
-              <td colSpan={settings.columns.length}>
-                {/* Core falls back on an empty text too. */}
-                {settings.noResultsText === undefined || settings.noResultsText === ""
-                  ? ts("None found.")
-                  : settings.noResultsText}
+              <td colSpan={settings.columns.length + (hasControlColumn(settings) ? 1 : 0)}>
+                <p className="alert alert-info text-center">
+                  {/* Core falls back on an empty text too. */}
+                  {settings.noResultsText === undefined || settings.noResultsText === ""
+                    ? ts("None found.")
+                    : settings.noResultsText}
+                </p>
               </td>
             </tr>
           )}
-          {rows.data?.map((row) => (
-            <tr key={row.key} className={row.cssClass}>
-              {row.columns.map((cell, index) => (
-                <td key={index} className={cell.cssClass}>
-                  <Cell cell={cell} />
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows.data && (
+            <BodyRows
+              rows={rows.data.rows}
+              settings={settings}
+              subsearch={rows.data.subsearch}
+              afform={afform}
+            />
+          )}
         </tbody>
+        {tally && tally.footer !== false && tallyRow && <tfoot>{tallyRow}</tfoot>}
       </table>
       {pager && !!rowCount && (
         <div className="crm-flex-box crm-search-display-pager">
@@ -292,6 +293,30 @@ export function AfreactSearch({ search, display, settings: given, afform }: Afre
   );
 }
 
+function Failure({ error }: { error: unknown }) {
+  return (
+    <div className="alert alert-danger" role="alert">
+      {errorMessage(error)}
+    </div>
+  );
+}
+
+/** A display in columnMode "auto" stores no columns; core fills in SearchDisplay.getDefault's. */
+async function withAutoColumns(search: string, settings: unknown): Promise<unknown> {
+  if (!isRecord(settings) || settings.columnMode !== "auto") return settings;
+  if (Array.isArray(settings.columns) && settings.columns.length > 0) return settings;
+  const [defaults] = await api4<{ settings?: unknown }>("SearchDisplay", "getDefault", {
+    savedSearch: search,
+    select: ["settings"],
+  });
+  const columns = isRecord(defaults?.settings) ? defaults.settings.columns : undefined;
+  return { ...settings, columns };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 interface PageItemProps {
   className: string;
   label: string;
@@ -328,25 +353,4 @@ function PageItem({ className, label, name, current = false, onSelect }: PageIte
       )}
     </li>
   );
-}
-
-/** Angular's interpolation: scalars as text, other objects as JSON. */
-function cellText(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  if (value === null || value === undefined) return "";
-  return JSON.stringify(value);
-}
-
-function Cell({ cell }: { cell: Row["columns"][number] }) {
-  const text = Array.isArray(cell.val) ? cell.val.map(cellText).join(", ") : cellText(cell.val);
-  const link = cell.links?.[0];
-  if (link?.url) {
-    return (
-      <a href={link.url} title={cell.title} target={link.target}>
-        {text}
-      </a>
-    );
-  }
-  return <>{text}</>;
 }

@@ -80,7 +80,7 @@ export function AfreactForm({
   });
   if (loaded.isSuccess) return <LoadedForm name={name} {...loaded.data} />;
   return (
-    <div className="afreact-form" aria-busy={loaded.isPending}>
+    <div className="afreact-form afform-directive" aria-busy={loaded.isPending}>
       {loaded.isError && (
         <div className="alert alert-danger" role="alert">
           {errorMessage(loaded.error)}
@@ -152,8 +152,9 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
     : save.isError
       ? errorMessage(save.error)
       : null;
+  // afCore marks every form element afform-directive; theme rules anchor dropdowns and toolbars on it.
   return (
-    <div className="afreact-form" aria-busy={busy}>
+    <div className="afreact-form afform-directive" aria-busy={busy}>
       {failure && (
         <div className="alert alert-danger" role="alert">
           {failure}

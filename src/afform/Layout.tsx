@@ -10,7 +10,8 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { AfreactSearch, isDisplaySettings } from "../search/AfreactSearch";
+import { AfreactSearch } from "../search/AfreactSearch";
+import { isDisplaySettings } from "../search/types";
 import { checkConditions, parseConditions } from "./conditions";
 import { interpolate, type ExpressionContext } from "./expressions";
 import { ClearButton, Field, fieldClasses } from "./Field";
@@ -100,6 +101,8 @@ const HTML_TAGS = new Set([
   "th",
   "td",
 ]);
+/** Tags React refuses children for, even an empty list. */
+const VOID_TAGS = new Set(["br", "hr"]);
 /** Attributes the renderer interprets itself; other ng-*, af-* and crm-* attributes are reported. */
 const HANDLED = new Set([
   "af-if",
@@ -221,10 +224,20 @@ function Element({ node, children }: { node: ElementNode; children?: ReactNode }
     ) : title ? (
       <h4 className="af-title">{title}</h4>
     ) : null;
+  const note = unsupported.length > 0 && (
+    <Unsupported what={`Angular expression ${unsupported.join(", ")}`} />
+  );
+  if (VOID_TAGS.has(node["#tag"]))
+    return (
+      <>
+        {note}
+        {createElement(node["#tag"], props)}
+      </>
+    );
   return createElement(
     node["#tag"],
     props,
-    unsupported.length > 0 && <Unsupported what={`Angular expression ${unsupported.join(", ")}`} />,
+    note,
     legend,
     children ?? <Nodes nodes={node["#children"] ?? []} />,
   );
@@ -655,12 +668,19 @@ function SearchNode({ node }: { node: ElementNode }) {
   const settings = node.settings;
   if (settings !== undefined && !isDisplaySettings(settings))
     return <Unsupported what="search display settings without columns" />;
+  // Angular expressions the display element takes from the page (routeParams, options).
+  const bound = ["filters", "total-count"].filter((attr) => node[attr] !== undefined);
   return (
-    <AfreactSearch
-      search={String(node["search-name"])}
-      display={String(node["display-name"])}
-      settings={settings}
-      afform={form.formName}
-    />
+    <>
+      {bound.length > 0 && (
+        <Unsupported what={bound.map((attr) => `${attr}="${String(node[attr])}"`).join(", ")} />
+      )}
+      <AfreactSearch
+        search={String(node["search-name"])}
+        display={String(node["display-name"])}
+        settings={settings}
+        afform={form.formName}
+      />
+    </>
   );
 }

@@ -7,9 +7,22 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { isReady } from "../../src/compare/metrics";
 
-const rules = (renderer: string) =>
-  `/civicrm/afreact/render?name=afformAfreactDemoRules&renderer=${renderer}`;
-const PAIRS = [
+const render = (name: string) => (renderer: string) =>
+  `/civicrm/afreact/render?name=${name}&renderer=${renderer}`;
+const rules = render("afformAfreactDemoRules");
+const features = render("afsearchAfreactDemoFeatures");
+const types = render("afsearchAfreactDemoContactTypes");
+// Rows, count and totals are in.
+const tableReady = `!!document.querySelector(".afreact-render tbody tr[data-entity-id]") && !document.querySelector(".afreact-render .crm-search-loading-placeholder")`;
+const PAIRS: {
+  name: string;
+  react: string;
+  angular: string;
+  scope: string;
+  ready: string;
+  /** Opened with Enter before the check; the keyboard leaves no hover colours behind. */
+  open?: string;
+}[] = [
   {
     name: "demo",
     react: "/civicrm/afreact/demo",
@@ -24,6 +37,38 @@ const PAIRS = [
     angular: rules("angular"),
     scope: ".afreact-render",
     ready: `!!document.querySelector(".afreact-render af-field input")`,
+  },
+  {
+    name: "table features",
+    react: features("react"),
+    angular: features("angular"),
+    scope: ".afreact-render",
+    ready: tableReady,
+  },
+  {
+    name: "table row menu",
+    react: features("react"),
+    angular: features("angular"),
+    scope: ".afreact-render",
+    ready: tableReady,
+    // The first row's menu covers rows without theme contrast failures: axe does not see
+    // top-layer popovers covering text and would report the covered text on React only.
+    open: ".afreact-render tbody tr:nth-child(1) .crm-search-col-type-menu button",
+  },
+  {
+    name: "table subsearch",
+    react: features("react"),
+    angular: features("angular"),
+    scope: ".afreact-render",
+    ready: tableReady,
+    open: ".afreact-render tbody tr:nth-child(2) .crm-search-col-type-subsearch summary",
+  },
+  {
+    name: "collapsible table",
+    react: types("react"),
+    angular: types("angular"),
+    scope: ".afreact-render",
+    ready: tableReady,
   },
 ];
 
@@ -46,6 +91,12 @@ async function findings(page: Page, url: string, pair: (typeof PAIRS)[number]): 
   await page.goto(url);
   await page.waitForFunction(pair.ready);
   await page.waitForLoadState("networkidle");
+  if (pair.open) {
+    await page.locator(pair.open).focus();
+    await page.keyboard.press("Enter");
+    await page.waitForLoadState("networkidle");
+    await page.waitForFunction(pair.ready);
+  }
   const { violations } = await new AxeBuilder({ page })
     .include(pair.scope)
     .exclude(".crm-admin-block-context-dropdown")

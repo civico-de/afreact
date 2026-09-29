@@ -3,6 +3,12 @@ import type { Entities } from "./entities.gen";
 
 export type ApiResult<R> = R[] & { count?: number; rowCount?: number; countMatched?: number };
 
+/** The part of a jQuery object the renderer uses. */
+export interface JQueryEvents {
+  on: (events: string, handler: () => void) => JQueryEvents;
+  off: (events: string, handler: () => void) => JQueryEvents;
+}
+
 /** Rejection payload of CRM.api4 (see CRM/Api4/Page/AJAX.php). */
 export interface ApiError {
   error_code?: string | number;
@@ -16,6 +22,11 @@ declare global {
     CRM: {
       api4: (entity: string, action: string, params?: object) => Promise<unknown>;
       url: (path: string, query?: string | Record<string, unknown>) => string;
+      /** CiviCRM's jQuery; popups announce success with jQuery events only. */
+      $: (target: Element) => JQueryEvents;
+      /** Opens a form in a popup (js/crm.ajax.js). */
+      loadForm: (url: string) => JQueryEvents;
+      utils: { colorContrast: (color: string) => string };
       /** Page variables from Civi::resources()->addVars(), by extension. */
       vars?: { afreact?: AfreactVars };
     };

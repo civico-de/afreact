@@ -53,7 +53,15 @@ else Afform uses.
 
 - **Data layer:** TanStack Query, one query per API call, keyed by its
   parameters. Search tables follow SearchKit's rules: placeholder rows while a
-  page loads, and a `row_count` request only when the first page is full.
+  page loads, a `row_count` request only when the first page is full or the
+  header shows the count, a `tally` request for a totals row, and a reload of
+  all three when a popup form of the display (`crmPopupFormSuccess`) succeeds.
+- **Search tables** render what core's `crmSearchDisplayTable` renders: field,
+  html, image, links, buttons, menu and subsearch columns, style rules, the
+  toolbar, header count, totals, and hierarchical and collapsible rows. Row
+  and toolbar menus are native popovers with the menu button keyboard pattern.
+  Bulk actions, in-place and row editing, drag to reorder, the search button,
+  the column picker, task links and include columns show a note instead.
 - **Types:** `src/api/entities.gen.ts` is generated from APIv4
   `getFields` (see [Development](#development)).
 - **Unsupported layout** is never dropped silently: the renderer shows a
@@ -92,8 +100,10 @@ rendering every Afform with React.
 ## Development
 
 The dev stack is civikitchen (CiviCRM standalone, MariaDB, maildev); see the
-header of `.docker/docker-compose.yml`. A first-boot hook seeds 25 synthetic
-contacts for the table.
+header of `.docker/docker-compose.yml`. First-boot hooks seed 25 synthetic
+contacts and three contact sub-types for the tables; `managed/` holds the demo
+searches, among them one table using every column type and a collapsible table
+of contact types.
 
 ```sh
 cd .docker && docker compose up -d        # or civikitchen's ckup for free ports
@@ -136,7 +146,8 @@ CIVICRM_BASE_URL=http://localhost:8080 npm run test:e2e
 | `tests/browser/sources.spec.ts` | every layout source renders the demo page to the same DOM; `page` and `bundle` never call `getForm` |
 | `tests/browser/visual.spec.ts` | the React page matches the Angular page part by part in position, size and main styles; differences by design are listed with a reason |
 | `tests/browser/rules.spec.ts` | the rules form on both renderers: expressions, `af-if` (and the values it drops), `af-required`, `af-disabled`, a token default |
-| `tests/browser/a11y.spec.ts` | axe in light and dark mode finds nothing on the React demo and rules forms that the Angular ones pass |
+| `tests/browser/table.spec.ts` | SearchKit tables on both renderers: equal cells, links, classes, toolbar, counts and totals on the demo fixtures and the core forms the React table renders without a note; row menus, the menu keyboard path, collapsible rows, a `crm-popup` link and the reload after a popup form |
+| `tests/browser/a11y.spec.ts` | axe in light and dark mode finds nothing on the React demo and rules forms and the demo tables (menu and subsearch open) that the Angular ones pass |
 
 `compare.spec.ts` switches `debug_enabled` off for the measurement, so all
 pages load as in production, and restores the previous value afterwards.
@@ -163,9 +174,10 @@ half shows when that page was ready. The suite does not run it.
 | `Civi/Afreact/Afforms.php` | shared cache (core's Angular cache), block list, typed record fields |
 | `Civi/Afreact/Assets.php`, `Civi/Afreact/AttributeSchema.php` | bundle loading and the layouts handed to the page |
 | `Civi/Afreact/Pages.php`, `Civi/Afreact/RenderPage.php`, `Civi/Afreact/Chrome.php`, `xml/Menu/afreact.xml` | demo, compare and render routes, and the page chrome they share |
-| `ang/` | demo forms and search page |
+| `ang/` | demo forms and search pages |
+| `managed/` | demo searches and displays |
 | `src/afform/` | form renderer (layout, fields, form model, conditions, expressions, layout sources, module file parser) |
-| `src/search/` | SearchKit table renderer and its pager |
+| `src/search/` | SearchKit table renderer: columns, row menus, toolbar, totals, collapsible rows and pager |
 | `src/compare/` | comparison page and metric helpers |
 | `tests/browser/` | browser tests |
 | `tests/phpunit/` | headless PHPUnit suite |

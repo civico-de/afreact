@@ -1,7 +1,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
-import { AfreactSearch, type DisplaySettings, type Row } from "./AfreactSearch";
+import { AfreactSearch } from "./AfreactSearch";
+import type { DisplaySettings, Row } from "./types";
 
 const settings: DisplaySettings = {
   columns: [
@@ -18,7 +19,7 @@ const settings: DisplaySettings = {
 const row = (id: number): Row => ({
   key: id,
   columns: [
-    { val: `Name ${id}`, links: [{ url: `/civicrm/contact?id=${id}` }] },
+    { val: `Name ${id}`, links: [{ url: `/civicrm/contact?id=${id}`, text: `Name ${id}` }] },
     { val: [`a${id}@example.org`, "b"] },
     { val: null },
   ],
@@ -58,7 +59,7 @@ describe("AfreactSearch", () => {
       "/civicrm/contact?id=1",
     );
     expect(table).toHaveAttribute("aria-busy", "false");
-    expect(screen.getByText("a1@example.org, b")).toBeInTheDocument();
+    expect(screen.getAllByRole("cell")[1]).toHaveTextContent("a1@example.org, b");
     expect(await currentPage()).toHaveTextContent("1");
     expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
       "⬅Previous",
@@ -68,17 +69,28 @@ describe("AfreactSearch", () => {
       "⮕Next",
     ]);
     expect(screen.getByText("5 results")).toBeInTheDocument();
+    const seed = calls[0]?.params.seed;
+    expect(seed).toEqual(expect.any(Number));
     expect(calls.map(({ params }) => params)).toEqual([
       {
         savedSearch: "S",
         display: "D",
         limit: 2,
+        seed,
         afform: "afsearchTest",
         sort: [["sort_name", "ASC"]],
         return: "page:1",
       },
-      { savedSearch: "S", display: "D", limit: 2, afform: "afsearchTest", return: "row_count" },
+      {
+        savedSearch: "S",
+        display: "D",
+        limit: 2,
+        seed,
+        afform: "afsearchTest",
+        return: "row_count",
+      },
     ]);
+    expect(table).toHaveClass("table table-striped", { exact: true });
   });
 
   it("pages forward and back, answering known pages from the cache", async () => {
@@ -94,7 +106,7 @@ describe("AfreactSearch", () => {
     expect(calls.map(({ params }) => params.return)).toEqual(["page:1", "row_count", "page:2"]);
   });
 
-  it("toggles the sort direction of a column and returns to page 1", async () => {
+  it("toggles the sort direction of a column and stays on the page, as core's setSort", async () => {
     const calls = runs(5);
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await currentPage();
@@ -115,8 +127,8 @@ describe("AfreactSearch", () => {
     expect(pages).toEqual([
       ["page:1", [["sort_name", "ASC"]]],
       ["page:3", [["sort_name", "ASC"]]],
-      ["page:1", [["email", "ASC"]]],
-      ["page:1", [["email", "DESC"]]],
+      ["page:3", [["email", "ASC"]]],
+      ["page:3", [["email", "DESC"]]],
     ]);
   });
 
@@ -189,7 +201,8 @@ describe("AfreactSearch", () => {
         settings={{ ...settings, noResultsText: "Nobody here." }}
       />,
     );
-    expect(await screen.findByRole("cell", { name: "Nobody here." })).toBeInTheDocument();
+    const cell = await screen.findByRole("cell", { name: "Nobody here." });
+    expect(cell.firstElementChild).toHaveClass("alert alert-info text-center");
   });
 
   it("shows no empty row when the display turns its text off", async () => {
@@ -220,6 +233,34 @@ describe("AfreactSearch", () => {
         ["saved_search_id.name", "=", "S"],
       ],
     });
+  });
+
+  it("fills in the default columns of a display in auto column mode, as core", async () => {
+    const calls = mockApi({
+      "SearchDisplay.get": () => [
+        { label: "Auto", settings: { columnMode: "auto", columns: [], pager: false } },
+      ],
+      "SearchDisplay.getDefault": () => [{ settings: { columns: settings.columns } }],
+      "SearchDisplay.run": () => [row(1)],
+    });
+    renderWithQuery(<AfreactSearch search="S" display="D" />);
+    expect(await screen.findByRole("columnheader", { name: "Email" })).toBeInTheDocument();
+    expect(calls[1]).toEqual({
+      call: "SearchDisplay.getDefault",
+      params: { savedSearch: "S", select: ["settings"] },
+    });
+  });
+
+  it("keeps the table when only the count fails", async () => {
+    mockApi({
+      "SearchDisplay.run": (params) => {
+        if (params.return === "row_count") throw apiError("Count failed");
+        return [row(1), row(2)];
+      },
+    });
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Count failed");
+    expect(screen.getByRole("link", { name: "Name 2" })).toBeInTheDocument();
   });
 
   it("shows values as Angular's interpolation does: objects as JSON", async () => {

@@ -380,6 +380,47 @@ describe("AfreactForm", () => {
       afform: "afformTest",
     });
   });
+
+  it("flags display attributes that take Angular expressions from the page", async () => {
+    const layout: LayoutNode[] = [
+      {
+        "#tag": "crm-search-display-table",
+        "search-name": "S",
+        "display-name": "D",
+        filters: "{contact_id: routeParams.cid}",
+        "total-count": "totalCount",
+        settings: { columns: [{ type: "field", key: "id", label: "ID" }], pager: false },
+      },
+    ];
+    mockApi({
+      "Afreact.getForm": () => [
+        { name: "afsearchTest", title: "Search", type: "search", layout, strings: [] },
+      ],
+      "SearchDisplay.run": () => [{ key: 1, columns: [{ val: 1 }] }],
+    });
+    renderWithQuery(<AfreactForm name="afsearchTest" location={{ search: "", hash: "" }} />);
+    expect(await screen.findByRole("note")).toHaveTextContent(
+      'filters="{contact_id: routeParams.cid}", total-count="totalCount"',
+    );
+    expect(await screen.findByRole("cell", { name: "1" })).toBeInTheDocument();
+  });
+
+  it("renders line breaks and rules the layout lists with an empty child list", async () => {
+    const layout: LayoutNode[] = [
+      { "#tag": "p", "#children": [{ "#text": "a" }, { "#tag": "br", "#children": [] }] },
+      { "#tag": "hr", class: "wide", "#children": [] },
+    ];
+    mockApi({
+      "Afreact.getForm": () => [
+        { name: "afsearchTest", title: "Search", type: "search", layout, strings: [] },
+      ],
+    });
+    const { container } = renderWithQuery(
+      <AfreactForm name="afsearchTest" location={{ search: "", hash: "" }} />,
+    );
+    expect(await screen.findByRole("separator")).toHaveClass("wide");
+    expect(container.querySelector("p br")).not.toBeNull();
+  });
 });
 
 describe("formExpressions", () => {

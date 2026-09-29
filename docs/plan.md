@@ -15,16 +15,16 @@ using a feature, not occurrences.
 
 | Area | Used by | Supported now |
 |---|---|---|
-| SearchKit table | 61 | basic: columns, sort, pager, links |
-| … row menu column (`menu`) | 45 | no |
+| SearchKit table | 61 | columns, sort, pager, links (with `crm-popup`), images, header count, totals (`tally`), description, `placeholder`, `hideThead`; reload after a popup form |
+| … row menu column (`menu`) | 45 | yes (native popover, menu button keys) |
 | … bulk actions (`actions`) | 60 | no |
-| … toolbar buttons (`toolbar`) | 44 | no |
+| … toolbar buttons (`toolbar`) | 44 | yes, with dropdowns and `autoOpen`; task links: no |
 | … in-place editing (`editable`) | 34 | no |
-| … conditional styles (`cssRules`) | 33 | no |
-| … button column (`buttons`) | 15 | no |
+| … conditional styles (`cssRules`) | 33 | yes (row, cell, header) |
+| … button column (`buttons`) | 15 | yes |
 | … drag to reorder (`draggable`) | 13 | no |
-| … HTML / include / subsearch columns | 10 / 1 / 2 | no |
-| … hierarchy, collapsible rows | 4 / 3 | no |
+| … HTML / include / subsearch columns | 10 / 1 / 2 | yes / no (Angular template) / yes (table displays) |
+| … hierarchy, collapsible rows | 4 / 3 | yes in tables; the tree display: no |
 | search filters from form fields (`filters`) | 23 | no |
 | grid, tree display | 1 / 1 | no |
 | `{{ :: ts('…') }}` text and `{{ crmUrl(…) }}` links | 33 | yes |
