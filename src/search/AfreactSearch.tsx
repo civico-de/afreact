@@ -17,7 +17,8 @@ export interface DisplaySettings {
   sort?: [string, "ASC" | "DESC"][];
   pager?: false | { show_count?: boolean; hide_single?: boolean };
   classes?: string[];
-  noResultsText?: string;
+  /** false hides the row SearchKit shows when nothing is found. */
+  noResultsText?: string | false;
   /** Placeholder rows while a page loads; SearchKit shows 5 unless set. */
   placeholder?: number;
 }
@@ -209,7 +210,7 @@ export function AfreactSearch({ search, display, settings: given, afform }: Afre
                 ))}
               </tr>
             ))}
-          {rows.data?.length === 0 && (
+          {rows.data?.length === 0 && settings.noResultsText !== false && (
             <tr>
               <td colSpan={settings.columns.length}>
                 {/* Core falls back on an empty text too. */}

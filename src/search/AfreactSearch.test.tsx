@@ -192,6 +192,16 @@ describe("AfreactSearch", () => {
     expect(await screen.findByRole("cell", { name: "Nobody here." })).toBeInTheDocument();
   });
 
+  it("shows no empty row when the display turns its text off", async () => {
+    runs(0);
+    renderWithQuery(
+      <AfreactSearch search="S" display="D" settings={{ ...settings, noResultsText: false }} />,
+    );
+    const table = screen.getByRole("table");
+    await waitFor(() => expect(table).toHaveAttribute("aria-busy", "false"));
+    expect(within(table).getAllByRole("row")).toHaveLength(1);
+  });
+
   it("loads the display settings when the layout carries none", async () => {
     const calls = mockApi({
       "SearchDisplay.get": () => [
