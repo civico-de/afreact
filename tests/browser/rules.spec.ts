@@ -12,6 +12,14 @@ const render = (renderer: Renderer) =>
 const input = (page: Page, name: string) =>
   page.locator(`.afreact-render af-field[name="${name}"] input`);
 
+/** afField sets a shown field's default in a $timeout; Angular's testability waits for it. */
+async function settled(page: Page, renderer: Renderer) {
+  if (renderer === "angular")
+    await input(page, "job_title").evaluate(
+      "(el) => new Promise((resolve) => angular.getTestability(el).whenStable(resolve))",
+    );
+}
+
 interface Observed {
   text: string;
   href: string | null;
@@ -54,6 +62,7 @@ async function observe(page: Page, renderer: Renderer): Promise<Observed> {
   observed.jobTitleShown.push(await shown());
   await first.pressSequentially("lock");
   await expect(input(page, "job_title")).toBeVisible();
+  await settled(page, renderer);
   observed.jobTitleAfterHide = await input(page, "job_title").inputValue();
   observed.middleNameDisabled.push(await disabled());
   return observed;
