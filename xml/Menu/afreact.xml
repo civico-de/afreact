@@ -24,4 +24,16 @@
     <title>Afreact form</title>
     <access_arguments>access CiviCRM</access_arguments>
   </item>
+  <item>
+    <path>civicrm/admin/afreact</path>
+    <page_callback>Civi\Afreact\SupportPage::render</page_callback>
+    <title>React renderer support</title>
+    <access_arguments>administer CiviCRM</access_arguments>
+  </item>
+  <item>
+    <path>civicrm/admin/setting/afreact</path>
+    <page_callback>CRM_Admin_Form_Generic</page_callback>
+    <title>React renderer settings</title>
+    <access_arguments>administer CiviCRM</access_arguments>
+  </item>
 </menu>

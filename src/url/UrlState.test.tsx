@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { parseAsString, useQueryStates } from "nuqs";
+import { events } from "../test/jquery";
 import { memoryStore, pageStore } from "./hash";
 import { DisplayCountContext, isOnlyElement, storeFor, UrlState, useUrlPrefix } from "./UrlState";
 
@@ -96,13 +97,11 @@ describe("storeFor", () => {
     document.body.innerHTML =
       '<div class="ui-dialog-content"><afreact-form id="in"></afreact-form></div><afreact-search id="out"></afreact-search>';
     const data = vi.fn(() => "#?title=News");
-    const jQuery = window.CRM.$;
-    window.CRM.$ = (target) => ({ ...jQuery(target), data });
+    vi.mocked(window.CRM.$).mockImplementation((target) => ({ ...events(target), data }));
     const inPopup = storeFor(byId("in"));
     expect(inPopup.params().get("title")).toBe("News");
     expect(data).toHaveBeenCalledWith("urlHash");
     expect(storeFor(byId("out"))).toBe(pageStore);
-    window.CRM.$ = jQuery;
   });
 });
 

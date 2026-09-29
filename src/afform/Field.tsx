@@ -31,6 +31,22 @@ function emptied(required: boolean, numeric: boolean): string | null | undefined
   return numeric ? null : "";
 }
 
+/** The input types Field renders a control for; others show the "Not supported" note. */
+export const INPUT_TYPES: ReadonlySet<string> = new Set([
+  ...Object.keys(TEXT_TYPES),
+  "TextArea",
+  "Date",
+  "Select",
+  "Radio",
+  "CheckBox",
+  "DisplayOnly",
+]);
+
+export function inputTypeNote(defn: FieldDefn): string {
+  const label = defn.label === false ? undefined : (defn.label ?? defn.name);
+  return `field type ${defn.input_type} (${label ?? defn.name})`;
+}
+
 /** The classes afField adds to its element: af-field-type-<kebab input type>, plus -multiple. */
 export function fieldClasses(defn: FieldDefn): string {
   const type = `af-field-type-${defn.input_type.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase()}`;
@@ -295,7 +311,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
   })();
 
   if (control === null) {
-    return <Unsupported what={`field type ${defn.input_type} (${label ?? defn.name})`} />;
+    return <Unsupported what={inputTypeNote(defn)} />;
   }
   return (
     <>

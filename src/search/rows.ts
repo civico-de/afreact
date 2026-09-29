@@ -92,12 +92,71 @@ export function hiddenRows(rows: Row[], isCollapsed: (row: Row) => boolean): Set
   return hidden;
 }
 
+/** Column types the table renders; the rest show a note in each cell. */
+const COLUMN_TYPES = new Set(["field", "html", "image", "links", "buttons", "menu", "subsearch"]);
+
+/** The note a cell of `column` shows instead of its content, or null when the table renders it. */
+export function columnNote(column: Column | undefined): string | null {
+  if (column && COLUMN_TYPES.has(column.type)) return null;
+  if (column?.type === "include") return `include column ${column.path ?? ""}`;
+  return `column type ${column?.type ?? "(none)"}`;
+}
+
+/**
+ * Settings the table shows or the server applies before the rows arrive. Any other setting
+ * with a value gets a note, so a new SearchKit feature never goes missing silently.
+ */
+const TABLE_SETTINGS = new Set([
+  "columns",
+  "limit",
+  "sort",
+  "pager",
+  "classes",
+  "noResultsText",
+  "placeholder",
+  "description",
+  "headerCount",
+  "hideThead",
+  "hierarchical",
+  "collapsible",
+  "tally",
+  "toolbar",
+  // Older displays' toolbar button; the server turns it into a toolbar.
+  "addButton",
+  "button",
+  "cssRules",
+  "columnMode",
+  // Only read together with actions, which have their own note.
+  "actions_display_mode",
+  // Stored by some core displays; nothing in core reads it.
+  "nested",
+  // Named features below.
+  "actions",
+  "editableRow",
+  "draggable",
+  "toggleColumns",
+]);
+const PAGER_OPTIONS = new Set(["show_count", "hide_single", "expose_limit"]);
+
+/** Unset as SearchKit's admin UI stores switched-off features: empty values. */
+function isSet(value: unknown): boolean {
+  if (value === undefined || value === null || value === false || value === "") return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") return Object.keys(value).length > 0;
+  return true;
+}
+
 /**
  * Display features the React table cannot show yet, each named with its setting. Task links
  * are known only from a loaded page.
  */
 export function unsupportedFeatures(settings: DisplaySettings, page?: RunPage): string[] {
-  const features: string[] = [];
+  const features: string[] = Object.entries(settings)
+    .filter(([key, value]) => !TABLE_SETTINGS.has(key) && isSet(value))
+    .map(([key]) => `setting ${key}`);
+  if (typeof settings.pager === "object")
+    for (const [key, value] of Object.entries(settings.pager))
+      if (!PAGER_OPTIONS.has(key) && isSet(value)) features.push(`setting pager.${key}`);
   if (settings.actions) features.push("bulk actions (actions)");
   const editable =
     settings.editableRow && settings.editableRow.disable

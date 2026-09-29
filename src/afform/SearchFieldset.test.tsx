@@ -1,6 +1,5 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { RouteOptionsContext } from "../search/displayFilters";
 import { SEARCH_DELAY_MS } from "../search/filters";
 import { mockApi, renderWithQuery } from "../test/render";
 import { memoryStore, pageStore, type ParamStore } from "../url/hash";
@@ -433,9 +432,11 @@ describe("SearchFieldset", () => {
       "SearchDisplay.run": () => [{ key: 1, columns: [{ val: "Row" }] }],
     });
     renderWithQuery(
-      <RouteOptionsContext.Provider value={{ contact_id: 8 }}>
-        <AfreactForm name="afsearchGroups" location={{ search: "", hash: "" }} />
-      </RouteOptionsContext.Provider>,
+      <AfreactForm
+        name="afsearchGroups"
+        location={{ search: "", hash: "" }}
+        options={{ contact_id: 8 }}
+      />,
     );
     await screen.findByRole("cell", { name: "Row" });
     expect(calls.find(({ call }) => call === "SearchDisplay.run")?.params.filters).toEqual({

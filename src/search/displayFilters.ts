@@ -103,3 +103,17 @@ export function evaluateDisplayFilters(
   }
   return values;
 }
+
+/** A display's `filters` attribute; the error names it as its note does. */
+export function parseFiltersAttribute(
+  attribute: unknown,
+): { filters: DisplayFilters } | { error: string } {
+  if (attribute === undefined) return { filters: [] };
+  if (typeof attribute !== "string") return { error: `filters=${JSON.stringify(attribute)}` };
+  try {
+    return { filters: parseDisplayFilters(attribute) };
+  } catch (error) {
+    console.warn("[afreact] display filters", error);
+    return { error: `filters="${attribute}"` };
+  }
+}

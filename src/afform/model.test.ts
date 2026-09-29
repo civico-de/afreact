@@ -9,6 +9,7 @@ import {
   ensureRepeatItems,
   getValue,
   keepOffered,
+  placementOptions,
   removeRepeatItem,
   repeatCount,
   routeArgs,
@@ -37,6 +38,31 @@ describe("routeArgs", () => {
     expect(routeArgs({ search: "", hash: "#/?Individual1=3" }, ["Individual1"])).toEqual({
       Individual1: ["3"],
     });
+  });
+
+  it("puts a placement's options over the route and splits entity IDs among them", () => {
+    expect(
+      routeArgs({ search: "?contact_id=1&tab=x", hash: "" }, ["Individual1"], {
+        contact_id: 9,
+        Individual1: "4,5",
+      }),
+    ).toEqual({ contact_id: 9, tab: "x", Individual1: ["4", "5"] });
+  });
+});
+
+describe("placementOptions", () => {
+  it("reads a JSON object, null as a placement without options, and no attribute as none", () => {
+    expect(placementOptions('{"contact_id":2,"case_id":"7"}')).toEqual({
+      contact_id: 2,
+      case_id: "7",
+    });
+    expect(placementOptions(null)).toBeUndefined();
+    expect(placementOptions("null")).toEqual({});
+  });
+
+  it("rejects anything but an object", () => {
+    expect(() => placementOptions("[1]")).toThrow("options must be a JSON object, got [1]");
+    expect(() => placementOptions("{")).toThrow(SyntaxError);
   });
 });
 

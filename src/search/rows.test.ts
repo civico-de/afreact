@@ -1,5 +1,6 @@
 import {
   cellClass,
+  columnNote,
   hasControlColumn,
   headerClass,
   hiddenRows,
@@ -127,9 +128,55 @@ describe("unsupportedFeatures", () => {
     ]);
   });
 
+  it("names nothing for a table as core's own displays store it", () => {
+    const untyped = {
+      nested: true,
+      cssRules: [],
+      columnMode: "fixed",
+      addButton: { path: "civicrm/group/add", text: "Add Group" },
+    };
+    const settings: DisplaySettings = {
+      columns: [{ ...field, label: "Name" }],
+      limit: 25,
+      sort: [["name", "ASC"]],
+      pager: { show_count: true, hide_single: true, expose_limit: true },
+      classes: ["table", "table-striped"],
+      placeholder: 5,
+      actions: false,
+      actions_display_mode: "menu",
+      draggable: "",
+      editableRow: {},
+      toolbar: [],
+      headerCount: true,
+      noResultsText: "",
+      ...untyped,
+    };
+    expect(unsupportedFeatures(settings)).toEqual([]);
+  });
+
+  it("names any other setting with a value, and pager options alike", () => {
+    const settings = {
+      columns: [field],
+      seeMore: true,
+      futureFeature: "",
+      pager: { show_count: true, jump: true, compact: false },
+    };
+    expect(unsupportedFeatures(settings)).toEqual(["setting seeMore", "setting pager.jump"]);
+  });
+
   it("drops in-place editing when row editing switches it off", () => {
     const settings = { columns: [{ ...field, editable: true }], editableRow: { disable: true } };
     expect(unsupportedFeatures(settings)).toEqual([]);
+  });
+});
+
+describe("columnNote", () => {
+  it("names only the columns the table cannot render", () => {
+    for (const type of ["field", "html", "image", "links", "buttons", "menu", "subsearch"])
+      expect(columnNote({ type })).toBeNull();
+    expect(columnNote({ type: "include", path: "~/x.html" })).toBe("include column ~/x.html");
+    expect(columnNote({ type: "chart" })).toBe("column type chart");
+    expect(columnNote(undefined)).toBe("column type (none)");
   });
 });
 

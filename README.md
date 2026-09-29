@@ -8,8 +8,9 @@ Angular.
 Status: proof of concept. It covers one contact form with a joined email block,
 one SearchKit table and a form with live rules (conditions, required and
 disabled rules, token defaults, `ts()` / `crmUrl()` expressions), and measures
-them against the Angular runtime. [docs/plan.md](docs/plan.md) tracks what
-else Afform uses.
+them against the Angular runtime. Forms listed in a setting render with React
+wherever core places them (see [Rendering forms with React](#rendering-forms-with-react)).
+[docs/plan.md](docs/plan.md) tracks what else Afform uses.
 
 ## How it works
 
@@ -47,9 +48,10 @@ else Afform uses.
 
   | Element | Attributes | Renders |
   |---|---|---|
-  | `<afreact-form>` | `name`, `source` | a FormBuilder form or search page |
+  | `<afreact-form>` | `name`, `source`, `options` (JSON object of a placement's arguments) | a FormBuilder form or search page |
   | `<afreact-search>` | `search`, `display` | a SearchKit table display |
   | `<afreact-compare>` | `pages` (JSON list of `{label, url}`) | the comparison page |
+  | `<afreact-support>` | `listed` (JSON list of form names), `settings` (URL) | the support report |
 
 - **Data layer:** TanStack Query, one query per API call, keyed by its
   parameters. Search tables follow SearchKit's rules: placeholder rows while a
@@ -116,6 +118,38 @@ Where React reads the URL differently from core:
 - A value with another operator than the field's, or a range, is written as
   JSON (`type={"NOT IN":["1"]}`), which only React reads.
 
+## Rendering forms with React
+
+The setting **Forms rendered with React** (`afreact_forms`, at
+`civicrm/admin/setting/afreact`) lists the forms React renders; every other
+form stays Angular. Saving the setting rebuilds the route table, as core's
+settings forms do. The listeners in `Civi\Afreact` (`FormPage`, `Placements`,
+`PlacedSnippets`) run after core's placement listeners and swap only what core
+put there, so placement rules, filters, titles and weights stay core's:
+
+| Where core shows the form | What changes for a listed form |
+|---|---|
+| its page (`server_route`) | the route runs core's bare page with `afreact/AfformPage.tpl`; title, breadcrumb and public-page handling as in `CRM_Afform_Page_AfformBase` |
+| contact summary tab, event management tab | the tab includes `afreact/InlineAfform.tpl` instead of core's |
+| contact summary block, case summary block | the region snippet `afform:<name>` gets the React markup |
+| contact summary block in ContactLayout | the block's template is swapped |
+| contact actions popup | the popup loads the form's page; the form reads its arguments from the popup URL, triggers `crmFormSuccess` on save and closes the popup, as `afForm` does |
+
+The dashboard is not taken over yet, nor are the SearchKit and FormBuilder
+previews, which belong to the Angular builders. Core's placement listeners
+still queue the listed form's Angular module on pages that place it; its
+directive is never rendered. Unsupported parts of a listed form show the
+visible "Not supported" note.
+
+The **support report** (`civicrm/admin/afreact`) lists every form but blocks,
+which core only places inside other forms, with what React cannot show yet.
+It walks each form's layout with the same checks the renderer words its notes
+with (`src/afform/support.ts`), so the report and the rendered form agree
+(pinned by `tests/browser/support.spec.ts`). A form placed only in tabs or
+summary blocks is checked with its placement's options; its preview has none,
+so a display filtered by them shows a note there only. A listed form shown only
+as a dashlet stays Angular, and the report says so.
+
 ## Pages
 
 | Route | Content |
@@ -124,6 +158,8 @@ Where React reads the URL differently from core:
 | `civicrm/afreact/angular` | the same forms, Angular runtime |
 | `civicrm/afreact/compare` | loads every React variant and the Angular page in iframes and compares metrics |
 | `civicrm/afreact/render?name=…&renderer=react\|angular` | any form the user may open, with the renderer named |
+| `civicrm/admin/afreact` | support report: every form with what React cannot show yet |
+| `civicrm/admin/setting/afreact` | the forms React renders |
 
 Both demo pages share one markup; only the elements that mount the forms
 differ (pinned by `PagesHeadlessTest`). The demo forms live in `ang/`.

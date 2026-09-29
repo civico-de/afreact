@@ -5,6 +5,7 @@ import { UrlState } from "../url/UrlState";
 import { AfreactSearch } from "./AfreactSearch";
 import { Icon, LinkContent } from "./LinkContent";
 import { Menu } from "./Menu";
+import { columnNote } from "./rows";
 import {
   isDisplaySettings,
   type CellData,
@@ -50,10 +51,8 @@ export function Cell(props: CellProps) {
       return <MenuColumn {...props} />;
     case "subsearch":
       return <SubsearchColumn {...props} />;
-    case "include":
-      return <Unsupported what={`include column ${column.path ?? ""}`} />;
     default:
-      return <Unsupported what={`column type ${column?.type ?? "(none)"}`} />;
+      return <Unsupported what={columnNote(column) ?? ""} />;
   }
 }
 

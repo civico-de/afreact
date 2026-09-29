@@ -98,3 +98,29 @@ export async function api<T>(
     `${entity}.${action}`,
   );
 }
+
+/**
+ * APIv4 over HTTP with the page's session, the page parked on about:blank. For writes that rebuild
+ * civicrm_menu: a page request starting mid-rebuild would start a second one past the response.
+ */
+export async function quietApi<T>(
+  page: Page,
+  entity: string,
+  action: string,
+  params: object,
+): Promise<T[]> {
+  await page.goto("about:blank");
+  const response = await page.request.post(`/civicrm/ajax/api4/${entity}/${action}`, {
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+    form: { params: JSON.stringify(params) },
+  });
+  const body: unknown = await response.json();
+  if (!response.ok()) throw new Error(`${entity}.${action}: ${JSON.stringify(body)}`);
+  const values = typeof body === "object" && body !== null && "values" in body ? body.values : null;
+  return asRows<T>(values, `${entity}.${action}`);
+}
+
+/** Sets the forms React renders; the page is left on about:blank. */
+export async function setReactForms(page: Page, forms: string[]): Promise<void> {
+  await quietApi(page, "Setting", "set", { values: { afreact_forms: forms } });
+}

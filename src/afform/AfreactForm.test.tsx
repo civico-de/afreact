@@ -1,5 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
+import { jquerySelection } from "../test/jquery";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
 import { AfreactForm, formExpressions } from "./AfreactForm";
 import type { FieldDefn, LayoutNode } from "./types";
@@ -156,6 +158,35 @@ describe("AfreactForm", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Save" }));
     await waitFor(() => expect(screen.getByText("Saved")).toHaveAttribute("role", "status"));
     expect(screen.getByRole("form")).toBeInTheDocument();
+  });
+
+  it("announces the save as afForm does and closes the popup it sits in", async () => {
+    const dialog = vi.fn(() => popup);
+    const trigger = vi.fn(() => popup);
+    const popup = jquerySelection({ length: 1, data: () => "", trigger, dialog });
+    vi.mocked(window.CRM.$).mockReturnValue(popup);
+    renderForm(() => [{ saved: true }]);
+    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(dialog).toHaveBeenCalledWith("close");
+    });
+    expect(trigger).toHaveBeenCalledWith(
+      "crmFormSuccess",
+      expect.objectContaining({
+        afform: { name: "afformTest", title: "Test form" },
+        submissionResponse: [{ saved: true }],
+      }),
+    );
+  });
+
+  it("keeps the popup open for a confirmation message", async () => {
+    const dialog = vi.fn(() => popup);
+    const popup = jquerySelection({ length: 1, data: () => "", dialog });
+    vi.mocked(window.CRM.$).mockReturnValue(popup);
+    renderForm(() => [{ message: "Thanks" }]);
+    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Thanks")).toBeInTheDocument();
+    expect(dialog).not.toHaveBeenCalled();
   });
 
   it("shows a server error and lets the user retry", async () => {

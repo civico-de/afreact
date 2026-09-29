@@ -14,15 +14,7 @@ import {
 } from "react";
 import { api4, errorMessage } from "../api/civi";
 import { AfreactSearch } from "../search/AfreactSearch";
-import { isDisplaySettings } from "../search/types";
-import {
-  evaluateDisplayFilters,
-  parseDisplayFilters,
-  readsOptions,
-  routeKeys,
-  RouteOptionsContext,
-  type DisplayFilters,
-} from "../search/displayFilters";
+import { evaluateDisplayFilters, routeKeys, RouteOptionsContext } from "../search/displayFilters";
 import {
   defaultValues,
   fieldsetReducer,
@@ -40,6 +32,12 @@ import {
 } from "../search/filters";
 import { useHashParams, useParamStore, useUrlPrefix } from "../url/UrlState";
 import { Field, fieldClasses } from "./Field";
+import {
+  fieldAttributesNote,
+  searchDisplayCheck,
+  searchRangeNote,
+  unknownFilterAttributes,
+} from "./support";
 import type { ElementNode, LayoutNode } from "./types";
 import { isElement, isFieldDefn } from "./types";
 import { Unsupported } from "./Unsupported";
@@ -239,9 +237,6 @@ function useUrlWriter(
   }, [state.commits]);
 }
 
-/** af-field attributes a filter uses; `class` goes onto the field element. */
-const FILTER_ATTRIBUTES = new Set(["#tag", "#children", "name", "defn", "class"]);
-
 /** An af-field inside a search fieldset: its value is a filter. */
 export function FilterFieldNode({
   node,
@@ -258,7 +253,7 @@ export function FilterFieldNode({
   const operator = operatorOf(field, state.operators);
   const current = state.values[name];
   const value = operator ? (isRecord(current) ? current[operator] : undefined) : current;
-  const unknown = Object.keys(node).filter((attr) => !FILTER_ATTRIBUTES.has(attr));
+  const unknown = unknownFilterAttributes(node);
   const label = defn.label === false ? name : (defn.label ?? name);
   return createElement(
     "af-field",
@@ -266,9 +261,9 @@ export function FilterFieldNode({
       name,
       className: `${fieldClasses(defn)} ${typeof node.class === "string" ? node.class : ""}`.trim(),
     },
-    unknown.length > 0 && <Unsupported what={`${unknown.join(", ")} on ${name}`} />,
+    unknown.length > 0 && <Unsupported what={fieldAttributesNote(unknown, name)} />,
     defn.search_range ? (
-      <Unsupported what={`search range (${label})`} />
+      <Unsupported what={searchRangeNote(label)} />
     ) : (
       <Field
         defn={defn}
@@ -300,17 +295,6 @@ export function FilterFieldNode({
   );
 }
 
-function parseFilters(attribute: unknown): { filters: DisplayFilters } | { error: string } {
-  if (attribute === undefined) return { filters: [] };
-  if (typeof attribute !== "string") return { error: `filters=${JSON.stringify(attribute)}` };
-  try {
-    return { filters: parseDisplayFilters(attribute) };
-  } catch (error) {
-    console.warn("[afreact] display filters", error);
-    return { error: `filters="${attribute}"` };
-  }
-}
-
 interface FieldsetDisplayProps {
   node: ElementNode;
   formName: string;
@@ -322,32 +306,23 @@ interface FieldsetDisplayProps {
  */
 export function FieldsetDisplay({ node, formName }: FieldsetDisplayProps) {
   const fieldset = useSearchFieldset();
-  const parsed = useMemo(() => parseFilters(node.filters), [node.filters]);
-  const params = useHashParams("filters" in parsed ? routeKeys(parsed.filters) : []);
   const options = useContext(RouteOptionsContext);
-  const settings = node.settings;
-  if (settings !== undefined && !isDisplaySettings(settings))
-    return <Unsupported what="search display settings without columns" />;
-  // Without its own filters the display would show rows the form means to hide.
-  if ("error" in parsed) return <Unsupported what={parsed.error} />;
-  // Outside a placement that provides options, `options.x` has no value to filter by.
-  if (options === undefined && readsOptions(parsed.filters))
-    return <Unsupported what="display filters from options outside a placement" />;
-  const own = evaluateDisplayFilters(parsed.filters, params, options);
+  const check = useMemo(() => searchDisplayCheck(node, options), [node, options]);
+  const params = useHashParams(check.filters ? routeKeys(check.filters) : []);
+  const notes = check.notes.map((note) => <Unsupported key={note} what={note} />);
+  if (check.filters === null) return notes;
+  const own = evaluateDisplayFilters(check.filters, params, options);
   const merged = (values: FilterValues | undefined) => ({
     ...(values ? filterValues(values) : {}),
     ...own,
   });
   return (
     <>
-      {/* Core writes the row count into the page's scope; nothing reads it here. */}
-      {node["total-count"] !== undefined && (
-        <Unsupported what={`total-count=${JSON.stringify(node["total-count"])}`} />
-      )}
+      {notes}
       <AfreactSearch
         search={String(node["search-name"])}
         display={String(node["display-name"])}
-        settings={settings}
+        settings={check.settings}
         afform={formName}
         filters={merged(fieldset?.state.applied)}
         typed={merged(fieldset?.state.values)}

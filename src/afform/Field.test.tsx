@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { Field, fieldClasses } from "./Field";
+import { Field, fieldClasses, INPUT_TYPES } from "./Field";
 import type { FieldDefn } from "./types";
 
 function Harness({
@@ -238,5 +238,18 @@ describe("Field", () => {
       "af-field-type-select af-field-type-multiple",
     );
     expect(fieldClasses(defn({ input_type: "CheckBox" }))).toBe("af-field-type-check-box");
+  });
+
+  it("renders a control for every input type the support report accepts, and a note otherwise", () => {
+    const options = [{ id: 1, label: "One" }];
+    for (const input_type of INPUT_TYPES) {
+      const { unmount } = render(
+        <Harness defn={{ input_type, options }} onValue={() => undefined} />,
+      );
+      expect(screen.queryByRole("note"), input_type).toBeNull();
+      unmount();
+    }
+    render(<Harness defn={{ input_type: "ChainSelect" }} onValue={() => undefined} />);
+    expect(screen.getByRole("note")).toHaveTextContent("field type ChainSelect (Field)");
   });
 });

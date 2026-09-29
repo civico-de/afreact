@@ -23,6 +23,7 @@ parameters:
 	paths:
 		- Civi
 		- managed
+		- settings
 		- afreact.php
 	scanFiles:
 		- afreact.civix.php
@@ -33,6 +34,9 @@ parameters:
 	scanDirectories:
 		# Afform keeps its classes one level down (ext/afform/core).
 		- /var/www/html/core/ext/afform/core
+	# Hook events carry the hook's parameters as dynamic properties.
+	universalObjectCratesClasses:
+		- Civi\Core\Event\GenericHookEvent
 	bootstrapFiles:
 		- phpstanBootstrap.php
 	civikitchen:

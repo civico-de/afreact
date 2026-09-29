@@ -15,6 +15,10 @@ using a feature, not occurrences.
 
 | Area | Used by | Supported now |
 |---|---|---|
+| page (`server_route`) | 64 | yes, for forms in `afreact_forms` |
+| contact summary tab | 7 | yes, for forms in `afreact_forms` |
+| contact summary block and actions, case summary block, event tab | 0 | yes, for forms in `afreact_forms` |
+| dashboard dashlet | 0 | no |
 | SearchKit table | 61 | columns, sort, pager with page size, links (with `crm-popup`), images, header count, totals (`tally`), description, `placeholder`, `hideThead`, search button; reload after a popup form; sort, page and page size in the URL |
 | … row menu column (`menu`) | 45 | yes (native popover, menu button keys) |
 | … bulk actions (`actions`) | 60 | no |

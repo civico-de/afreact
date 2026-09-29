@@ -37,22 +37,39 @@ export function emptyData(names: string[]): FormData {
 }
 
 /**
- * Route arguments as the Angular runtime builds them: every query parameter,
- * with comma-separated IDs split for entity names. Angular-style hash
- * parameters ("#?Individual1=5") count too, so existing Afform links work.
+ * Route arguments as the Angular runtime builds them: every query parameter, then the
+ * placement's options (e.g. contact_id on a contact summary tab) over them, with
+ * comma-separated IDs split for entity names. Angular-style hash parameters
+ * ("#?Individual1=5") count too, so existing Afform links work.
  */
 export function routeArgs(
   location: { search: string; hash: string },
   names: string[],
+  options: Record<string, unknown> = {},
 ): Record<string, unknown> {
   const args: Record<string, unknown> = {};
   const hashQuery = location.hash.replace(/^#\/?\??/, "");
   new URLSearchParams(`${location.search.replace(/^\?/, "")}&${hashQuery}`).forEach(
     (value, key) => {
-      args[key] = names.includes(key) ? value.split(",") : value;
+      args[key] = value;
     },
   );
+  Object.assign(args, options);
+  for (const name of names) {
+    const value = args[name];
+    if (typeof value === "string" && value) args[name] = value.split(",");
+  }
   return args;
+}
+
+/** The options attribute of a placed form: a JSON object, or "null" where the page set none. */
+export function placementOptions(attribute: string | null): Record<string, unknown> | undefined {
+  // Placements always write the attribute; without it the form is not placed.
+  if (attribute === null) return undefined;
+  const value: unknown = JSON.parse(attribute);
+  if (value === null) return {};
+  if (!isRecord(value)) throw new Error(`options must be a JSON object, got ${attribute}`);
+  return value;
 }
 
 export interface PrefillItem {

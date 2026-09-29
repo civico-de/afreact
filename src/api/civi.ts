@@ -3,11 +3,15 @@ import type { Entities } from "./entities.gen";
 
 export type ApiResult<R> = R[] & { count?: number; rowCount?: number; countMatched?: number };
 
-/** The part of a jQuery object the renderer uses. */
+/** The part of a jQuery object the renderer uses to cooperate with CiviCRM's popups (js/crm.ajax.js). */
 export interface JQueryObject {
+  length: number;
   on: (events: string, handler: () => void) => JQueryObject;
   off: (events: string, handler: () => void) => JQueryObject;
   data: (key: string) => unknown;
+  closest: (selector: string) => JQueryObject;
+  trigger: (event: string, data?: unknown) => JQueryObject;
+  dialog: (method: "close") => JQueryObject;
 }
 
 /** Rejection payload of CRM.api4 (see CRM/Api4/Page/AJAX.php). */

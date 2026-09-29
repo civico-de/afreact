@@ -41,6 +41,19 @@ import {
 } from "./structure";
 import type { ElementNode, FieldDefn, FormData, LayoutNode, Scope } from "./types";
 import { isElement, isFieldDefn } from "./types";
+import {
+  conditionNote,
+  elementAttributes,
+  expressionNote,
+  fieldAttributesNote,
+  joinOutsideFieldsetNote,
+  missingFieldNote,
+  nodeKind,
+  renderedKind,
+  type NodeKind,
+  unknownFieldAttributes,
+  unsupportedElement,
+} from "./support";
 import { Unsupported } from "./Unsupported";
 
 export interface FormState {
@@ -69,82 +82,36 @@ function useForm(): FormState {
   return form;
 }
 
-/** Plain HTML the layout may contain; anything else with a dash is an unknown directive. */
-const HTML_TAGS = new Set([
-  "div",
-  "span",
-  "p",
-  "fieldset",
-  "section",
-  "article",
-  "header",
-  "footer",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "strong",
-  "em",
-  "b",
-  "i",
-  "u",
-  "small",
-  "br",
-  "hr",
-  "ul",
-  "ol",
-  "li",
-  "a",
-  "label",
-  "table",
-  "thead",
-  "tbody",
-  "tr",
-  "th",
-  "td",
-]);
 /** Tags React refuses children for, even an empty list. */
 const VOID_TAGS = new Set(["br", "hr"]);
-/** Attributes the renderer interprets itself; other ng-*, af-* and crm-* attributes are reported. */
-const HANDLED = new Set([
-  "af-if",
-  "api-entities",
-  "af-fieldset",
-  "af-join",
-  "af-repeat",
-  "af-repeat-default",
-  "af-title",
-  "af-copy",
-  "add-icon",
-  "copy-icon",
-  "min",
-  "max",
-  "actions",
-  "data",
-  "crm-icon",
-  "ng-click",
-  "ctrl",
-  "ng-form",
-  "ng-href",
-]);
-/** af-field attributes the renderer uses; `class` goes onto the field wrapper. */
-const FIELD_ATTRIBUTES = new Set([
-  "#tag",
-  "#children",
-  "name",
-  "defn",
-  "class",
-  "af-required",
-  "af-disabled",
-  "af-if",
-]);
-const PASSTHROUGH = new Set(["id", "href", "title", "role", "target", "type"]);
 
 export function Nodes({ nodes }: { nodes: LayoutNode[] }): ReactNode {
   return nodes.map((node, index) => <Node key={index} node={node} />);
 }
+
+const Children = ({ node }: { node: ElementNode }) => <Nodes nodes={node["#children"] ?? []} />;
+
+/** The component rendering each kind of element. */
+const KIND_VIEWS: Record<NodeKind, (props: { node: ElementNode }) => ReactNode> = {
+  conditional: Conditional,
+  submitCondition: SubmitButtonCondition,
+  entity: () => null,
+  field: FieldNode,
+  block: Children,
+  form: Children,
+  submit: SubmitButton,
+  search: SearchNode,
+  unknown: ({ node }) => (
+    <>
+      <Unsupported what={unsupportedElement(node) ?? ""} />
+      <Children node={node} />
+    </>
+  ),
+  searchFieldset: SearchFieldsetNode,
+  fieldset: FieldsetNode,
+  join: JoinNode,
+  element: Element,
+};
 
 function Node({ node }: { node: LayoutNode }): ReactNode {
   if (!isElement(node)) {
@@ -152,45 +119,14 @@ function Node({ node }: { node: LayoutNode }): ReactNode {
     // CRM_Afform_ArrayHtml writes non-breaking spaces as the entity.
     return <Text text={node["#text"].replaceAll("&nbsp;", "\u00a0")} />;
   }
-  if (typeof node["af-if"] === "string") return <Conditional node={node} />;
-  if (node["ng-if"] === SUBMIT_BUTTON_CONDITION) return <SubmitButtonCondition node={node} />;
-  return <Rendered node={node} />;
+  const View = KIND_VIEWS[nodeKind(node)];
+  return <View node={node} />;
 }
-
-const SUBMIT_BUTTON_CONDITION = "afform.showSubmitButton";
 
 /** An element whose af-if or submit-button condition holds; the node itself goes on, so lookups by node still match. */
 function Rendered({ node }: { node: ElementNode }): ReactNode {
-  const tag = node["#tag"];
-  if (tag === "af-entity") return null;
-  if (tag === "af-field") return <FieldNode node={node} />;
-  // Blocks arrive with their compiled layout as children.
-  if (tag.startsWith("afblock-")) return <Nodes nodes={node["#children"] ?? []} />;
-  if (tag === "af-form") return <Nodes nodes={node["#children"] ?? []} />;
-  if (tag === "button" && node["ng-click"] === "afform.submit()")
-    return <SubmitButton node={node} />;
-  if (tag === "crm-search-display-table") return <SearchNode node={node} />;
-
-  const unknown = Object.keys(node).filter(
-    (attr) =>
-      /^(ng|af|crm)-/.test(attr) &&
-      !HANDLED.has(attr) &&
-      !(attr === "ng-if" && node[attr] === SUBMIT_BUTTON_CONDITION),
-  );
-  if (node["ng-click"] !== undefined) unknown.push(`ng-click=${JSON.stringify(node["ng-click"])}`);
-  if (!HTML_TAGS.has(tag) || unknown.length) {
-    return (
-      <>
-        <Unsupported what={HTML_TAGS.has(tag) ? unknown.join(", ") : `<${tag}>`} />
-        <Nodes nodes={node["#children"] ?? []} />
-      </>
-    );
-  }
-  // An empty af-fieldset wraps a search page's filters rather than an entity.
-  if (node["af-fieldset"] === "") return <SearchFieldsetNode node={node} />;
-  if (node["af-fieldset"]) return <FieldsetNode node={node} />;
-  if (typeof node["af-join"] === "string") return <JoinNode node={node} />;
-  return <Element node={node} />;
+  const View = KIND_VIEWS[renderedKind(node)];
+  return <View node={node} />;
 }
 
 function Text({ text }: { text: string }) {
@@ -200,7 +136,7 @@ function Text({ text }: { text: string }) {
   return "text" in result ? (
     result.text
   ) : (
-    <Unsupported what={`Angular expression ${result.unsupported}`} />
+    <Unsupported what={expressionNote([result.unsupported])} />
   );
 }
 
@@ -215,11 +151,7 @@ function Element({ node, children }: { node: ElementNode; children?: ReactNode }
     unsupported.push(result.unsupported);
     return undefined;
   };
-  for (const [attr, value] of Object.entries(node)) {
-    if (attr === "class") props.className = resolve(value);
-    else if (attr === "ng-href") props.href = resolve(value);
-    else if (PASSTHROUGH.has(attr) || attr.startsWith("aria-")) props[attr] = resolve(value);
-  }
+  for (const [prop, value] of elementAttributes(node)) props[prop] = resolve(value);
   // afTitle's elements.
   const resolvedTitle = resolve(node["af-title"]);
   const title = typeof resolvedTitle === "string" ? resolvedTitle : null;
@@ -229,9 +161,7 @@ function Element({ node, children }: { node: ElementNode; children?: ReactNode }
     ) : title ? (
       <h4 className="af-title">{title}</h4>
     ) : null;
-  const note = unsupported.length > 0 && (
-    <Unsupported what={`Angular expression ${unsupported.join(", ")}`} />
-  );
+  const note = unsupported.length > 0 && <Unsupported what={expressionNote(unsupported)} />;
   if (VOID_TAGS.has(node["#tag"]))
     return (
       <>
@@ -253,8 +183,9 @@ type Evaluated = { value: boolean } | { error: string };
 function evaluateConditions(attribute: string, data: FormData, name: string): Evaluated {
   try {
     return { value: checkConditions(parseConditions(attribute), data) };
-  } catch {
-    return { error: `${name}="${attribute}"` };
+  } catch (error) {
+    console.warn(`[afreact] ${name} failed`, error);
+    return { error: conditionNote(name, attribute) };
   }
 }
 
@@ -331,8 +262,7 @@ function SearchFieldsetNode({ node }: { node: ElementNode }) {
 function JoinNode({ node }: { node: ElementNode }) {
   const form = useForm();
   const parent = useContext(ScopeContext);
-  if (!parent)
-    return <Unsupported what={`af-join="${String(node["af-join"])}" outside a fieldset`} />;
+  if (!parent) return <Unsupported what={joinOutsideFieldsetNote(String(node["af-join"]))} />;
   const scope = { entity: parent.entity, index: parent.index, join: String(node["af-join"]) };
   if (node["af-repeat"] === undefined) {
     return (
@@ -450,8 +380,7 @@ function FieldNode({ node }: { node: ElementNode }) {
   const defn = node.defn;
   const name = String(node.name);
   if (filters && !scope) return <FilterFieldNode node={node} fieldset={filters} />;
-  if (!scope || !isFieldDefn(defn))
-    return <Unsupported what={`field ${name} without entity or metadata`} />;
+  if (!scope || !isFieldDefn(defn)) return <Unsupported what={missingFieldNote(name)} />;
   if (hidden !== null) return <DroppedField scope={scope} name={name} defn={defn} />;
   return <VisibleField node={node} scope={scope} name={name} defn={defn} />;
 }
@@ -576,7 +505,7 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
   useOfferedValue(offeredIds(given, visible.options), scope, name);
   const value = getValue(form.data, scope, name);
   const unknown = [
-    ...Object.keys(node).filter((attr) => !FIELD_ATTRIBUTES.has(attr)),
+    ...unknownFieldAttributes(node),
     ...[required, disabled].flatMap((result) =>
       result && "error" in result ? [result.error] : [],
     ),
@@ -599,7 +528,7 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
       className:
         `${primary ? "af-field-type-radio" : fieldClasses(defn)} ${typeof node.class === "string" ? node.class : ""}`.trim(),
     },
-    unknown.length > 0 && <Unsupported what={`${unknown.join(", ")} on ${name}`} />,
+    unknown.length > 0 && <Unsupported what={fieldAttributesNote(unknown, name)} />,
     primary ? (
       <PrimaryField
         label={typeof defn.label === "string" && defn.label !== "" ? defn.label : ts("Primary")}
