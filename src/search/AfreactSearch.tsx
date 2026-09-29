@@ -1,16 +1,24 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQueryStates } from "nuqs";
+import { useEffect, useState } from "react";
 import { Unsupported } from "../afform/Unsupported";
 import { api4, errorMessage, get, type ApiResult } from "../api/civi";
 import { onButtonKey } from "../keys";
+import { useUrlPrefix } from "../url/UrlState";
 import { BodyRows, ControlHeader, PlaceholderRows, TallyRow } from "./Body";
 import { useAutoOpen, useFormSuccess } from "./links";
-import { pageLinks } from "./pages";
-import { hasControlColumn, headerClass, isSortable, runPage, unsupportedFeatures } from "./rows";
+import { Pager, SearchButton } from "./Pager";
+import {
+  hasControlColumn,
+  headerClass,
+  isSortable,
+  runPage,
+  unlabelledHeader,
+  unsupportedFeatures,
+} from "./rows";
 import { DisplayHeader } from "./Toolbar";
 import { isDisplaySettings, type DisplaySettings, type Row, type RunPage } from "./types";
-
-type Sort = [string, "ASC" | "DESC"][];
+import { displayKeys, positiveInteger, sortParser, sortText, type Sort } from "./urlKeys";
 
 interface AfreactSearchProps {
   search: string;
@@ -19,16 +27,24 @@ interface AfreactSearchProps {
   settings?: DisplaySettings;
   /** Embedding Afform, so SearchDisplay.run applies the form's access rules as in Angular. */
   afform?: string;
-  /** Fixed filters, e.g. those a subsearch column passes on from its row. */
+  /** The form's filter values and the display's own `filters`, merged as getFilters() does. */
   filters?: Record<string, unknown> | unknown[];
+  /** The same with the values as typed, before the search pause: what a search button submits. */
+  typed?: Record<string, unknown> | unknown[];
+  /** False while the filters are not final yet, e.g. a saved filter set still loading. */
+  enabled?: boolean;
 }
+
+const NO_FILTERS = {};
 
 export function AfreactSearch({
   search,
   display,
   settings: given,
   afform,
-  filters,
+  filters = NO_FILTERS,
+  typed = filters,
+  enabled = true,
 }: AfreactSearchProps) {
   const client = useQueryClient();
   const loaded = useQuery({
@@ -51,28 +67,40 @@ export function AfreactSearch({
     enabled: !given,
   });
   const settings = given ?? loaded.data?.settings;
-  const [sort, setSort] = useState<Sort | null>(null);
-  const [page, setPage] = useState(1);
+  const [url, setUrl] = useQueryStates(
+    { sort: sortParser, page: positiveInteger, limit: positiveInteger },
+    { urlKeys: displayKeys(useUrlPrefix(display)) },
+  );
+  // With a search button the filters apply on its click (onClickSearchButton), not as they change.
+  const [submitted, setSubmitted] = useState<{
+    filters: Record<string, unknown> | unknown[];
+  } | null>(null);
+  const runFilters = settings?.button ? (submitted?.filters ?? null) : filters;
+  const filtersKey = JSON.stringify(runFilters);
+  // A page belongs to the filters it was shown with; new filters start on page 1. Filters
+  // that settle before the first search (a saved set loading) keep the page of the link.
+  const [pageFilters, setPageFilters] = useState({ key: filtersKey, enabled });
+  const filtersChanged = pageFilters.enabled && pageFilters.key !== filtersKey;
+  useEffect(() => {
+    if (pageFilters.key === filtersKey && pageFilters.enabled === enabled) return;
+    setPageFilters({ key: filtersKey, enabled });
+    if (filtersChanged) void setUrl({ page: null });
+  }, [pageFilters, filtersKey, enabled, filtersChanged, setUrl]);
   // searchDisplayBaseTrait's uniqueId: keeps a RAND() sort stable across pages and reloads.
   const [seed] = useState(() => Math.floor(Math.random() * 10e10));
 
-  const activeSort = sort ?? settings?.sort ?? [];
-  const limit = settings?.limit ?? 0;
-  const params = {
-    savedSearch: search,
-    display,
-    limit,
-    seed,
-    afform,
-    ...(filters ? { filters } : {}),
-  };
-  // The count ignores sort and page, so it is asked once per display.
+  const activeSort = url.sort ?? settings?.sort ?? [];
+  const limit = url.limit ?? settings?.limit ?? 0;
+  const page = filtersChanged ? 1 : (url.page ?? 1);
+  const params = { savedSearch: search, display, seed, afform, filters: runFilters ?? {} };
+  // The count and totals ignore sort, page and page size, so they are asked once per set of filters.
   const countKey = ["SearchDisplay", "count", params];
   const rows = useQuery({
-    queryKey: ["SearchDisplay", "run", params, activeSort, page],
+    queryKey: ["SearchDisplay", "run", params, activeSort, limit, page],
     queryFn: async () => {
       const result: ApiResult<Row> = await api4<Row>("SearchDisplay", "run", {
         ...params,
+        limit,
         sort: activeSort,
         return: `page:${page}`,
       });
@@ -81,21 +109,24 @@ export function AfreactSearch({
         client.setQueryData(countKey, result.length);
       return runPage(result);
     },
-    enabled: !!settings,
+    enabled: !!settings && enabled && runFilters !== null,
   });
   const counted = useQuery({
     queryKey: countKey,
     queryFn: async () =>
-      (await api4<unknown>("SearchDisplay", "run", { ...params, return: "row_count" })).count ??
-      null,
+      (await api4<unknown>("SearchDisplay", "run", { ...params, limit, return: "row_count" }))
+        .count ?? null,
     enabled: rows.isSuccess && (!!settings?.pager || !!settings?.headerCount),
   });
-  // The totals row ignores sort and page, like the count.
   const tallied = useQuery({
     queryKey: ["SearchDisplay", "tally", params],
     queryFn: async () =>
       (
-        await api4<Record<string, unknown>>("SearchDisplay", "run", { ...params, return: "tally" })
+        await api4<Record<string, unknown>>("SearchDisplay", "run", {
+          ...params,
+          limit,
+          return: "tally",
+        })
       )[0] ?? {},
     enabled: rows.isSuccess && !!settings?.tally,
   });
@@ -116,9 +147,17 @@ export function AfreactSearch({
   if (!settings) return <p role="status">{ts("Loading…")}</p>;
   const label = loaded.data?.label ?? "";
   const rowCount = counted.data ?? null;
-  const loading = rows.isPending;
+  // Before the first click of a search button nothing loads.
+  const loading = rows.isFetching || (rows.isPending && enabled && runFilters !== null);
+  const setPage = (next: number) => void setUrl({ page: next === 1 ? null : next });
+  const onSearch = () => {
+    // A click searches again even when the filters are the same.
+    if (submitted && JSON.stringify(submitted.filters) === JSON.stringify(typed))
+      void rows.refetch();
+    setSubmitted({ filters: typed });
+    setPage(1);
+  };
 
-  const pages = rowCount !== null && limit ? Math.max(1, Math.ceil(rowCount / limit)) : 1;
   const directionOf = (key: string | undefined) =>
     activeSort.find(([sorted]) => sorted === key)?.[1] ?? null;
   // setSort() of searchDisplaySortableTrait: Shift adds the column or flips it in place.
@@ -129,7 +168,8 @@ export function AfreactSearch({
       : [];
     if (!next.some(([sorted]) => sorted === key)) next.push([key, direction]);
     // Core's setSort() stays on the current page.
-    setSort(next);
+    const isDefault = sortText(next) === sortText(settings.sort ?? []);
+    void setUrl({ sort: isDefault ? null : next });
   };
 
   const pager = settings.pager;
@@ -143,7 +183,16 @@ export function AfreactSearch({
     <div className="crm-search-display crm-search-display-table" ref={setRoot}>
       {unsupported.length > 0 && <Unsupported what={unsupported.join(", ")} />}
       {failed && <Failure error={failed} />}
-      <DisplayHeader settings={settings} rowCount={rowCount} toolbar={shown?.toolbar} />
+      <DisplayHeader
+        settings={settings}
+        rowCount={rowCount}
+        toolbar={shown?.toolbar}
+        button={
+          settings.button && (
+            <SearchButton label={settings.button} loading={loading} onSearch={onSearch} />
+          )
+        }
+      />
       <p role="status" className="sr-only">
         {loading ? ts("Loading…") : ""}
       </p>
@@ -157,6 +206,7 @@ export function AfreactSearch({
               const sortKey = isSortable(column, settings) ? column.key : undefined;
               // ARIA allows aria-sort on one header: the column sorted first.
               const primary = !!column.key && activeSort[0]?.[0] === column.key;
+              const unlabelled = unlabelledHeader(column, index);
               return (
                 <th
                   key={index}
@@ -201,15 +251,17 @@ export function AfreactSearch({
                   >
                     {column.label}
                   </span>
+                  {unlabelled && <span className="sr-only">{unlabelled}</span>}
                 </th>
               );
             })}
           </tr>
           {tally && tally.header && tallyRow}
         </thead>
+        {/* Core swaps the rows for placeholders while a run loads. */}
         <tbody>
           {loading && <PlaceholderRows settings={settings} />}
-          {rows.data?.rows.length === 0 && settings.noResultsText !== false && (
+          {!loading && rows.data?.rows.length === 0 && settings.noResultsText !== false && (
             <tr>
               <td colSpan={settings.columns.length + (hasControlColumn(settings) ? 1 : 0)}>
                 <p className="alert alert-info text-center">
@@ -221,7 +273,7 @@ export function AfreactSearch({
               </td>
             </tr>
           )}
-          {rows.data && (
+          {!loading && rows.data && (
             <BodyRows
               rows={rows.data.rows}
               settings={settings}
@@ -233,61 +285,16 @@ export function AfreactSearch({
         {tally && tally.footer !== false && tallyRow && <tfoot>{tallyRow}</tfoot>}
       </table>
       {pager && !!rowCount && (
-        <div className="crm-flex-box crm-search-display-pager">
-          <div>
-            {pager.show_count && (
-              <div className="form-inline">
-                <label>{rowCount === 1 ? ts("1 result") : ts("%1 results", { 1: rowCount })}</label>
-              </div>
-            )}
-          </div>
-          {(!pager.hide_single || pages > 1) && (
-            <nav className="text-center crm-flex-2" aria-label={ts("Pages")}>
-              <ul className="pagination">
-                <PageItem
-                  className="pagination-prev"
-                  label="⬅"
-                  name={ts("Previous")}
-                  onSelect={
-                    page > 1
-                      ? () => {
-                          setPage(page - 1);
-                        }
-                      : null
-                  }
-                />
-                {pageLinks(page, pages).map((link, index) => (
-                  <PageItem
-                    key={index}
-                    className="pagination-page"
-                    label={link.label}
-                    current={link.active}
-                    onSelect={
-                      link.active
-                        ? null
-                        : () => {
-                            setPage(link.number);
-                          }
-                    }
-                  />
-                ))}
-                <PageItem
-                  className="pagination-next"
-                  label="⮕"
-                  name={ts("Next")}
-                  onSelect={
-                    page < pages
-                      ? () => {
-                          setPage(page + 1);
-                        }
-                      : null
-                  }
-                />
-              </ul>
-            </nav>
-          )}
-          <div />
-        </div>
+        <Pager
+          settings={pager}
+          rowCount={rowCount}
+          page={page}
+          limit={limit}
+          onPage={setPage}
+          onLimit={(next) => {
+            void setUrl({ limit: next === settings.limit ? null : next, page: null });
+          }}
+        />
       )}
     </div>
   );
@@ -315,42 +322,4 @@ async function withAutoColumns(search: string, settings: unknown): Promise<unkno
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-interface PageItemProps {
-  className: string;
-  label: string;
-  name?: string;
-  current?: boolean;
-  onSelect: (() => void) | null;
-}
-
-/** An entry of SearchKit's pager; the theme styles its links and spans, so an inactive entry is a span. */
-function PageItem({ className, label, name, current = false, onSelect }: PageItemProps) {
-  const state = current ? " active" : onSelect ? "" : " disabled";
-  const content = name ? (
-    <>
-      <span aria-hidden="true">{label}</span>
-      <span className="sr-only">{name}</span>
-    </>
-  ) : (
-    label
-  );
-  return (
-    <li className={className + state}>
-      {onSelect ? (
-        <a
-          href="#"
-          onClick={(event) => {
-            event.preventDefault();
-            onSelect();
-          }}
-        >
-          {content}
-        </a>
-      ) : (
-        <span aria-current={current ? "page" : undefined}>{content}</span>
-      )}
-    </li>
-  );
 }

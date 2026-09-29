@@ -15,7 +15,7 @@ using a feature, not occurrences.
 
 | Area | Used by | Supported now |
 |---|---|---|
-| SearchKit table | 61 | columns, sort, pager, links (with `crm-popup`), images, header count, totals (`tally`), description, `placeholder`, `hideThead`; reload after a popup form |
+| SearchKit table | 61 | columns, sort, pager with page size, links (with `crm-popup`), images, header count, totals (`tally`), description, `placeholder`, `hideThead`, search button; reload after a popup form; sort, page and page size in the URL |
 | … row menu column (`menu`) | 45 | yes (native popover, menu button keys) |
 | … bulk actions (`actions`) | 60 | no |
 | … toolbar buttons (`toolbar`) | 44 | yes, with dropdowns and `autoOpen`; task links: no |
@@ -25,7 +25,7 @@ using a feature, not occurrences.
 | … drag to reorder (`draggable`) | 13 | no |
 | … HTML / include / subsearch columns | 10 / 1 / 2 | yes / no (Angular template) / yes (table displays) |
 | … hierarchy, collapsible rows | 4 / 3 | yes in tables; the tree display: no |
-| search filters from form fields (`filters`) | 23 | no |
+| search filters from form fields (`filters`) | 23 | yes: defaults, URL, `store-values`, saved filter sets (`_s`), exposed operators, a display's own `filters`; EntityRef, ChainSelect and range inputs show the note but their values filter |
 | grid, tree display | 1 / 1 | no |
 | `{{ :: ts('…') }}` text and `{{ crmUrl(…) }}` links | 33 | yes |
 | submit button (`ng-click="afform.submit()"`) | 12 | yes |
@@ -154,9 +154,11 @@ covers everything in one library but costs 87 kB for the needed hooks (44 kB
 for the combobox alone); Radix adds dialog, menu and tabs that the platform
 already provides.
 
-The two widget libraries load only on pages that need them. That needs code splitting, which
-`vite.config.ts` turns off today because chunks would miss CiviCRM's cache
-code. Content-hashed chunk names make that code unnecessary for chunks.
+The two widget libraries load only on pages that need them, as lazy chunks.
+`vite.config.ts` names chunks by content hash, so they need no cache code; the
+entry keeps its fixed name and the cache code. Libraries sit in a `vendor`
+chunk, because a lazy chunk that imported the entry would load it a second
+time; the build fails if one does.
 
 No library covers the rest: Afform and SearchKit semantics (conditions,
 filters, tasks, placements) are where most of the work is.
@@ -172,8 +174,10 @@ first. Upstream removed the wait twice:
   ignored filter defaults (dev/core#6493).
 
 A third attempt (#35683) is open, and its author doubts the 600 ms can be won
-reliably. The demo table has no filters yet, so its lead does not prove that
-React keeps the gain.
+reliably. React keeps the gain on filtered forms too: `filters.spec.ts`
+measures the first row of core's group search with a title filter, and React
+was ahead of Angular there (2026-09-29, dev stack, median of 5: about 2.2 s
+against 2.7 s after navigation start).
 
 React keeps it if one pure function computes a fieldset's complete initial
 values before the first `SearchDisplay.run`, from these sources in core's
@@ -184,11 +188,11 @@ order:
 | field defaults | `defn.afform_default` | from the layout, synchronous |
 | URL | `#?name=value` via Angular's `$location.search()`; in a popup, the dialog's `urlHash` | `URLSearchParams` on `location.hash`, synchronous |
 | stored filters (`store-values`) | `CRM.cache` key `afform:<form><fieldset>` | the same `CRM.cache` key, synchronous |
-| saved filter set (`#?_s=<id>`) | `SearchParamSet.get`, then a form reset | the display query waits for that request (`enabled`), so one search runs |
+| saved filter set (`#?_s=<id>`) | `SearchParamSet.get`, then a form reset that drops the set's values again (still so on core master) | the display query waits for that request (`enabled`), so one search runs; fields the URL leaves out take the set's values |
 
-The parity sweep pins each source: one search request, with the final
-filters, and no flash of unfiltered rows. `#35683`'s failure case is the
-test: stored filters, then reload.
+`tests/browser/filters.spec.ts` pins each source against Angular: one search
+request, with the final filters, and no flash of unfiltered rows. `#35683`'s
+failure case is one of its tests: stored filters, then reload.
 
 ### State
 

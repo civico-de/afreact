@@ -1,7 +1,8 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { mockApi, renderWithQuery } from "../test/render";
+import { memoryStore } from "../url/hash";
 import { Cell, type CellProps } from "./Cell";
 import { onLinkClick } from "./links";
 import type { CellData, Column, Link } from "./types";
@@ -206,7 +207,7 @@ describe("subsearch columns", () => {
     },
   });
 
-  function subsearchCells(data: CellData[], sent = subsearch) {
+  function subsearchCells(data: CellData[], sent = subsearch, store = memoryStore("")) {
     const calls = mockApi({
       "SearchDisplay.run": (params) => [
         { key: 1, columns: [{ val: `mail of ${JSON.stringify(params.filters)}` }] },
@@ -231,6 +232,7 @@ describe("subsearch columns", () => {
           </tr>
         </tbody>
       </table>,
+      store,
     );
     return calls;
   }
@@ -273,6 +275,25 @@ describe("subsearch columns", () => {
     subsearchCells([info("inline", 4)]);
     expect(await screen.findByText('mail of {"contact_id":4}')).toBeInTheDocument();
     expect(screen.getByText("Emails")).toHaveClass("crm-search-display-subsearch-inline-header");
+  });
+
+  it("keeps a nested display's sort out of the page's URL", async () => {
+    const sortable = {
+      ...settings,
+      columns: [{ type: "field", key: "email", label: "Email", sortable: true }],
+    };
+    const page = memoryStore("");
+    const calls = subsearchCells(
+      [info("inline", 4)],
+      { "Emails.Table": { ...subsearch["Emails.Table"], settings: sortable } },
+      page,
+    );
+    await screen.findByText('mail of {"contact_id":4}');
+    const header = screen.getByRole("columnheader", { name: "Email" });
+    await userEvent.click(within(header).getByRole("button"));
+    await waitFor(() => expect(header).toHaveAttribute("aria-sort", "ascending"));
+    expect(calls.at(-1)?.params.sort).toEqual([["email", "ASC"]]);
+    expect(page.params().toString()).toBe("");
   });
 
   it("flags a nested display that is not a table", () => {

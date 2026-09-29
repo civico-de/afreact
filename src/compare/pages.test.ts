@@ -1,4 +1,4 @@
-import { comparedPages } from "./AfreactCompare";
+import { comparedPages } from "./pages";
 
 describe("comparedPages", () => {
   it("reads the page list and rejects anything else", () => {

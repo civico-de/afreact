@@ -48,6 +48,15 @@ export interface FieldDefn {
   help_post?: string | null;
   serialize?: number | null;
   afform_default?: unknown;
+  /** Search filters: the operator a value is sent with, e.g. {title: {CONTAINS: "x"}}. */
+  search_operator?: string | null;
+  /** Search filters: the user picks the operator from `operators` (operator => label). */
+  expose_operator?: boolean;
+  operators?: Record<string, string>;
+  /** Search filters: a low and a high value ({">=": …, "<=": …}). */
+  search_range?: boolean;
+  is_date?: boolean | number;
+  fk_entity?: string | null;
 }
 
 export interface FormDefinition {

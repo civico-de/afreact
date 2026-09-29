@@ -1,5 +1,7 @@
 import { useState, type MouseEvent, type SyntheticEvent } from "react";
 import { Unsupported } from "../afform/Unsupported";
+import { memoryStore } from "../url/hash";
+import { UrlState } from "../url/UrlState";
 import { AfreactSearch } from "./AfreactSearch";
 import { Icon, LinkContent } from "./LinkContent";
 import { Menu } from "./Menu";
@@ -273,18 +275,24 @@ interface NestedDisplayProps {
   afform?: string;
 }
 
-/** crmSearchDisplay picks the display type; without sent settings the display loads its own. */
+/**
+ * crmSearchDisplay picks the display type; without sent settings the display loads its own.
+ * Its sort and page stay out of the page's URL, which belongs to the outer display.
+ */
 function NestedDisplay({ info, display, afform }: NestedDisplayProps) {
+  const [store] = useState(() => memoryStore(""));
   if (display && display.type !== "table")
     return <Unsupported what={`subsearch display type ${display.type}`} />;
   const settings = display && isDisplaySettings(display.settings) ? display.settings : undefined;
   return (
-    <AfreactSearch
-      search={info.search}
-      display={info.display}
-      settings={settings}
-      afform={afform}
-      filters={info.filters}
-    />
+    <UrlState store={store} onlyElement>
+      <AfreactSearch
+        search={info.search}
+        display={info.display}
+        settings={settings}
+        afform={afform}
+        filters={info.filters}
+      />
+    </UrlState>
   );
 }

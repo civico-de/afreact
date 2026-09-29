@@ -16,6 +16,7 @@ function events(target: EventTarget) {
       for (const name of names.split(" ")) target.removeEventListener(name, handler);
       return handlers;
     },
+    data: (): unknown => undefined,
   };
   return handlers;
 }

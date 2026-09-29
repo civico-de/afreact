@@ -13,6 +13,8 @@ interface FieldProps {
   value: unknown;
   onChange: (value: unknown) => void;
   disabled: boolean;
+  /** The operator choice of a search filter with expose_operator (afFieldWithSearchOperator.html). */
+  operator?: ReactNode;
 }
 
 const TEXT_TYPES: Record<string, string> = {
@@ -112,7 +114,7 @@ export function ClearButton({
   );
 }
 
-export function Field({ defn, value, onChange, disabled }: FieldProps) {
+export function Field({ defn, value, onChange, disabled, operator }: FieldProps) {
   const id = useId();
   const helpId = `${id}-help`;
   const labelId = `${id}-label`;
@@ -308,7 +310,14 @@ export function Field({ defn, value, onChange, disabled }: FieldProps) {
         </label>
       )}
       {defn.help_pre && <p className="crm-af-field-help-pre">{defn.help_pre}</p>}
-      <div className="crm-af-field">{control}</div>
+      {operator ? (
+        <div className="input-group">
+          {operator}
+          <div className="crm-af-field">{control}</div>
+        </div>
+      ) : (
+        <div className="crm-af-field">{control}</div>
+      )}
       {defn.help_post && (
         <p id={helpId} className="crm-af-field-help-post">
           {defn.help_post}

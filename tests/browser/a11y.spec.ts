@@ -12,17 +12,21 @@ const render = (name: string) => (renderer: string) =>
 const rules = render("afformAfreactDemoRules");
 const features = render("afsearchAfreactDemoFeatures");
 const types = render("afsearchAfreactDemoContactTypes");
+const groups = (renderer: string) => `${render("afsearchManageGroups")(renderer)}#?title=a`;
 // Rows, count and totals are in.
 const tableReady = `!!document.querySelector(".afreact-render tbody tr[data-entity-id]") && !document.querySelector(".afreact-render .crm-search-loading-placeholder")`;
-const PAIRS: {
+interface Pair {
   name: string;
   react: string;
   angular: string;
   scope: string;
+  /** A page expression that holds once the content is there. */
   ready: string;
   /** Opened with Enter before the check; the keyboard leaves no hover colours behind. */
   open?: string;
-}[] = [
+}
+
+const PAIRS: Pair[] = [
   {
     name: "demo",
     react: "/civicrm/afreact/demo",
@@ -70,6 +74,14 @@ const PAIRS: {
     scope: ".afreact-render",
     ready: tableReady,
   },
+  {
+    name: "filtered search",
+    react: groups("react"),
+    angular: groups("angular"),
+    scope: ".afreact-render",
+    // Filter fields and the rows of the first search, placeholders gone.
+    ready: `!!document.querySelector(".afreact-render af-field input") && !!document.querySelector(".afreact-render tbody td") && !document.querySelector(".afreact-render .crm-search-loading-placeholder")`,
+  },
 ];
 
 type ContrastData = Record<"fgColor" | "bgColor" | "fontSize" | "fontWeight", string>;
@@ -87,7 +99,7 @@ function isContrastData(data: unknown): data is ContrastData {
  * Axe findings on the demo, one per element: contrast failures by colours and font, which the
  * theme decides, anything else by element selector. Admin gear menus are Angular-only.
  */
-async function findings(page: Page, url: string, pair: (typeof PAIRS)[number]): Promise<string[]> {
+async function findings(page: Page, url: string, pair: Pair): Promise<string[]> {
   await page.goto(url);
   await page.waitForFunction(pair.ready);
   await page.waitForLoadState("networkidle");

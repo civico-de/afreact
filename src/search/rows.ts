@@ -19,6 +19,14 @@ export function headerClass(column: Column, sortable: boolean): string | undefin
   return classes.length ? classes.join(" ") : undefined;
 }
 
+/** A name for screen readers where core leaves a header empty, as it does over link columns. */
+export function unlabelledHeader(column: Column, index: number): string | null {
+  if (column.label) return null;
+  return ["links", "buttons", "menu"].includes(column.type)
+    ? ts("Actions")
+    : ts("Column %1", { 1: index + 1 });
+}
+
 function depth(row: Row, key: "_depth" | "_descendents"): number {
   const value = Number(row.data?.[key] ?? 0);
   return Number.isNaN(value) ? 0 : value;
@@ -99,7 +107,6 @@ export function unsupportedFeatures(settings: DisplaySettings, page?: RunPage): 
   if (settings.editableRow && (settings.editableRow.create || settings.editableRow.full))
     features.push("row editing (editableRow)");
   if (settings.draggable) features.push("drag to reorder (draggable)");
-  if (settings.button) features.push("search button (button)");
   if (settings.toggleColumns) features.push("column picker (toggleColumns)");
   const links = [
     ...(page?.toolbar ?? []),

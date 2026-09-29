@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { LinkContent } from "./LinkContent";
 import { Menu } from "./Menu";
 import type { DisplaySettings, ToolbarLink } from "./types";
@@ -37,10 +38,12 @@ interface DisplayHeaderProps {
   settings: DisplaySettings;
   rowCount: number | null;
   toolbar: ToolbarLink[] | undefined;
+  /** The search button, first in the bar as in core. */
+  button?: ReactNode;
 }
 
 /** The description and the form-inline bar above crmSearchDisplayTable's table. */
-export function DisplayHeader({ settings, rowCount, toolbar }: DisplayHeaderProps) {
+export function DisplayHeader({ settings, rowCount, toolbar, button }: DisplayHeaderProps) {
   return (
     <>
       {settings.description && (
@@ -49,6 +52,7 @@ export function DisplayHeader({ settings, rowCount, toolbar }: DisplayHeaderProp
         </div>
       )}
       <div className="form-inline">
+        {button && <div className="btn-group">{button}</div>}
         {settings.headerCount && (
           <span>{rowCount !== null && <label>{resultCount(rowCount)}</label>}</span>
         )}

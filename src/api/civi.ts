@@ -4,9 +4,10 @@ import type { Entities } from "./entities.gen";
 export type ApiResult<R> = R[] & { count?: number; rowCount?: number; countMatched?: number };
 
 /** The part of a jQuery object the renderer uses. */
-export interface JQueryEvents {
-  on: (events: string, handler: () => void) => JQueryEvents;
-  off: (events: string, handler: () => void) => JQueryEvents;
+export interface JQueryObject {
+  on: (events: string, handler: () => void) => JQueryObject;
+  off: (events: string, handler: () => void) => JQueryObject;
+  data: (key: string) => unknown;
 }
 
 /** Rejection payload of CRM.api4 (see CRM/Api4/Page/AJAX.php). */
@@ -22,13 +23,19 @@ declare global {
     CRM: {
       api4: (entity: string, action: string, params?: object) => Promise<unknown>;
       url: (path: string, query?: string | Record<string, unknown>) => string;
-      /** CiviCRM's jQuery; popups announce success with jQuery events only. */
-      $: (target: Element) => JQueryEvents;
+      /** CiviCRM's jQuery; popups announce success with jQuery events and keep their urlHash in data(). */
+      $: (target: Element) => JQueryObject;
       /** Opens a form in a popup (js/crm.ajax.js). */
-      loadForm: (url: string) => JQueryEvents;
+      loadForm: (url: string) => JQueryObject;
       utils: { colorContrast: (color: string) => string };
       /** Page variables from Civi::resources()->addVars(), by extension. */
       vars?: { afreact?: AfreactVars };
+      /** localStorage under a "CRM" prefix, with an in-memory fallback (js/Common.js). */
+      cache?: {
+        get: (name: string, defaultValue?: unknown) => unknown;
+        set: (name: string, value: unknown) => void;
+      };
+      config?: { cid?: number };
     };
   }
 }

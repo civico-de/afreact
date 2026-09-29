@@ -10,8 +10,6 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { AfreactSearch } from "../search/AfreactSearch";
-import { isDisplaySettings } from "../search/types";
 import { checkConditions, parseConditions } from "./conditions";
 import { interpolate, type ExpressionContext } from "./expressions";
 import { ClearButton, Field, fieldClasses } from "./Field";
@@ -27,6 +25,12 @@ import {
   setValue,
   type EntityDeclaration,
 } from "./model";
+import {
+  FieldsetDisplay,
+  FilterFieldNode,
+  SearchFieldset,
+  useSearchFieldset,
+} from "./SearchFieldset";
 import {
   defaultValue,
   hasTokens,
@@ -183,6 +187,7 @@ function Rendered({ node }: { node: ElementNode }): ReactNode {
     );
   }
   // An empty af-fieldset wraps a search page's filters rather than an entity.
+  if (node["af-fieldset"] === "") return <SearchFieldsetNode node={node} />;
   if (node["af-fieldset"]) return <FieldsetNode node={node} />;
   if (typeof node["af-join"] === "string") return <JoinNode node={node} />;
   return <Element node={node} />;
@@ -315,6 +320,14 @@ function FieldsetNode({ node }: { node: ElementNode }) {
   );
 }
 
+function SearchFieldsetNode({ node }: { node: ElementNode }) {
+  return (
+    <SearchFieldset node={node} formName={useForm().formName}>
+      <Element node={node} />
+    </SearchFieldset>
+  );
+}
+
 function JoinNode({ node }: { node: ElementNode }) {
   const form = useForm();
   const parent = useContext(ScopeContext);
@@ -433,8 +446,10 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
 function FieldNode({ node }: { node: ElementNode }) {
   const scope = useContext(ScopeContext);
   const hidden = useContext(HiddenContext);
+  const filters = useSearchFieldset();
   const defn = node.defn;
   const name = String(node.name);
+  if (filters && !scope) return <FilterFieldNode node={node} fieldset={filters} />;
   if (!scope || !isFieldDefn(defn))
     return <Unsupported what={`field ${name} without entity or metadata`} />;
   if (hidden !== null) return <DroppedField scope={scope} name={name} defn={defn} />;
@@ -665,22 +680,5 @@ function SearchNode({ node }: { node: ElementNode }) {
   const form = useForm();
   // A display under a hidden af-if loads nothing.
   if (useContext(HiddenContext) !== null) return null;
-  const settings = node.settings;
-  if (settings !== undefined && !isDisplaySettings(settings))
-    return <Unsupported what="search display settings without columns" />;
-  // Angular expressions the display element takes from the page (routeParams, options).
-  const bound = ["filters", "total-count"].filter((attr) => node[attr] !== undefined);
-  return (
-    <>
-      {bound.length > 0 && (
-        <Unsupported what={bound.map((attr) => `${attr}="${String(node[attr])}"`).join(", ")} />
-      )}
-      <AfreactSearch
-        search={String(node["search-name"])}
-        display={String(node["display-name"])}
-        settings={settings}
-        afform={form.formName}
-      />
-    </>
-  );
+  return <FieldsetDisplay node={node} formName={form.formName} />;
 }

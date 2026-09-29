@@ -246,7 +246,10 @@ describe("AfreactForm", () => {
         "#tag": "div",
         "af-fieldset": "",
         class: "af-container",
-        "#children": [field("first_name", {}, { "af-required": "x" })],
+        "#children": [
+          field("first_name", {}, { "af-required": "x" }),
+          { "#tag": "af-field", name: "last_name" },
+        ],
       },
     ];
     const calls = mockApi({
@@ -263,7 +266,8 @@ describe("AfreactForm", () => {
       "Angular expression {{ total }}",
       "<crm-search-display-grid>",
       "search display settings without columns",
-      "field first_name without entity or metadata",
+      "af-required on first_name",
+      "field last_name without metadata",
     ]);
     expect(screen.queryByText("never shown")).not.toBeInTheDocument();
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
@@ -381,13 +385,13 @@ describe("AfreactForm", () => {
     });
   });
 
-  it("flags display attributes that take Angular expressions from the page", async () => {
+  // Route filters are covered with the search fieldset.
+  it("flags a total-count binding, which writes into the page's scope", async () => {
     const layout: LayoutNode[] = [
       {
         "#tag": "crm-search-display-table",
         "search-name": "S",
         "display-name": "D",
-        filters: "{contact_id: routeParams.cid}",
         "total-count": "totalCount",
         settings: { columns: [{ type: "field", key: "id", label: "ID" }], pager: false },
       },
@@ -399,9 +403,7 @@ describe("AfreactForm", () => {
       "SearchDisplay.run": () => [{ key: 1, columns: [{ val: 1 }] }],
     });
     renderWithQuery(<AfreactForm name="afsearchTest" location={{ search: "", hash: "" }} />);
-    expect(await screen.findByRole("note")).toHaveTextContent(
-      'filters="{contact_id: routeParams.cid}", total-count="totalCount"',
-    );
+    expect(await screen.findByRole("note")).toHaveTextContent('total-count="totalCount"');
     expect(await screen.findByRole("cell", { name: "1" })).toBeInTheDocument();
   });
 

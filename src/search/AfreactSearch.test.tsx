@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
+import { memoryStore } from "../url/hash";
 import { AfreactSearch } from "./AfreactSearch";
 import type { DisplaySettings, Row } from "./types";
 
@@ -78,6 +79,7 @@ describe("AfreactSearch", () => {
         limit: 2,
         seed,
         afform: "afsearchTest",
+        filters: {},
         sort: [["sort_name", "ASC"]],
         return: "page:1",
       },
@@ -87,6 +89,7 @@ describe("AfreactSearch", () => {
         limit: 2,
         seed,
         afform: "afsearchTest",
+        filters: {},
         return: "row_count",
       },
     ]);
@@ -111,15 +114,19 @@ describe("AfreactSearch", () => {
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await currentPage();
     await userEvent.click(screen.getByRole("link", { name: "3" }));
-    await waitFor(() =>
-      expect(screen.getByText("3", { selector: "[aria-current]" })).toBeVisible(),
-    );
+    await waitFor(() => {
+      expect(screen.getByText("3", { selector: "[aria-current]" })).toBeVisible();
+    });
     const header = screen.getByRole("columnheader", { name: "Email" });
     await userEvent.click(within(header).getByRole("button"));
-    await waitFor(() => expect(header).toHaveAttribute("aria-sort", "ascending"));
+    await waitFor(() => {
+      expect(header).toHaveAttribute("aria-sort", "ascending");
+    });
     within(header).getByRole("button").focus();
     await userEvent.keyboard(" ");
-    await waitFor(() => expect(header).toHaveAttribute("aria-sort", "descending"));
+    await waitFor(() => {
+      expect(header).toHaveAttribute("aria-sort", "descending");
+    });
     expect(screen.getByRole("columnheader", { name: "Name" })).not.toHaveAttribute("aria-sort");
     const pages = calls
       .filter(({ params }) => params.return !== "row_count")
@@ -142,15 +149,19 @@ describe("AfreactSearch", () => {
     await user.keyboard("{Shift>}");
     await user.click(within(email).getByRole("button"));
     await user.keyboard("{/Shift}");
-    await waitFor(() =>
-      expect(email.querySelector(".crm-search-table-column-sort-icon")).toHaveClass("fa-sort-asc"),
-    );
+    await waitFor(() => {
+      expect(email.querySelector(".crm-search-table-column-sort-icon")).toHaveClass("fa-sort-asc");
+    });
     within(name).getByRole("button").focus();
     await user.keyboard("{Shift>}{Enter}{/Shift}");
-    await waitFor(() => expect(name).toHaveAttribute("aria-sort", "descending"));
+    await waitFor(() => {
+      expect(name).toHaveAttribute("aria-sort", "descending");
+    });
     expect(email).not.toHaveAttribute("aria-sort");
     await user.click(within(email).getByRole("button"));
-    await waitFor(() => expect(email).toHaveAttribute("aria-sort", "descending"));
+    await waitFor(() => {
+      expect(email).toHaveAttribute("aria-sort", "descending");
+    });
     expect(email).toHaveAttribute(
       "title",
       "Click to sort results (shift-click to sort by multiple).",
@@ -211,7 +222,9 @@ describe("AfreactSearch", () => {
       <AfreactSearch search="S" display="D" settings={{ ...settings, noResultsText: false }} />,
     );
     const table = screen.getByRole("table");
-    await waitFor(() => expect(table).toHaveAttribute("aria-busy", "false"));
+    await waitFor(() => {
+      expect(table).toHaveAttribute("aria-busy", "false");
+    });
     expect(within(table).getAllByRole("row")).toHaveLength(1);
   });
 
@@ -291,5 +304,195 @@ describe("AfreactSearch", () => {
     mockApi({ "SearchDisplay.run": () => Promise.reject(apiError("Access denied")) });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     expect(await screen.findByRole("alert")).toHaveTextContent("Access denied");
+  });
+
+  describe("URL state", () => {
+    const pageRequests = (calls: { params: Record<string, unknown> }[]) =>
+      calls
+        .filter(({ params }) => params.return !== "row_count")
+        .map(({ params }) => [params.return, params.sort, params.limit]);
+
+    it("keeps sort and page in the hash, without defaults, and restores them on reload", async () => {
+      const store = memoryStore("#/tab?Individual1=7");
+      runs(5);
+      const { unmount } = renderWithQuery(
+        <AfreactSearch search="S" display="D" settings={settings} />,
+        store,
+      );
+      await currentPage();
+      const name = screen.getByRole("columnheader", { name: "Name" });
+      await userEvent.click(within(name).getByRole("button"));
+      await waitFor(() => {
+        expect(store.params().toString()).toBe("Individual1=7&_sort=-sort_name");
+      });
+      await userEvent.click(within(name).getByRole("button"));
+      await waitFor(() => {
+        expect(store.params().toString()).toBe("Individual1=7");
+      });
+      await userEvent.click(
+        within(screen.getByRole("columnheader", { name: "Email" })).getByRole("button"),
+      );
+      await userEvent.click(await screen.findByRole("link", { name: "2" }));
+      await waitFor(() => {
+        expect(store.params().toString()).toBe("Individual1=7&_sort=email&_page=2");
+      });
+      await userEvent.click(screen.getByRole("link", { name: "1" }));
+      await waitFor(() => {
+        expect(store.params().get("_page")).toBeNull();
+      });
+      await userEvent.click(screen.getByRole("link", { name: "3" }));
+      await waitFor(() => {
+        expect(store.params().get("_page")).toBe("3");
+      });
+      unmount();
+
+      const calls = runs(5);
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />, store);
+      expect(await currentPage()).toHaveTextContent("3");
+      expect(pageRequests(calls)).toEqual([["page:3", [["email", "ASC"]], 2]]);
+    });
+
+    it("opens a shared link with one page request", async () => {
+      const calls = runs(5);
+      renderWithQuery(
+        <AfreactSearch search="S" display="D" settings={settings} />,
+        memoryStore("#?_sort=-email,sort_name&_page=2&_limit=1"),
+      );
+      expect(await currentPage()).toHaveTextContent("2");
+      expect(pageRequests(calls)).toEqual([
+        [
+          "page:2",
+          [
+            ["email", "DESC"],
+            ["sort_name", "ASC"],
+          ],
+          1,
+        ],
+      ]);
+    });
+
+    it("ignores page numbers and sizes below 1", async () => {
+      const calls = runs(5);
+      renderWithQuery(
+        <AfreactSearch search="S" display="D" settings={settings} />,
+        memoryStore("#?_page=0&_limit=-3"),
+      );
+      await currentPage();
+      expect(pageRequests(calls)).toEqual([["page:1", [["sort_name", "ASC"]], 2]]);
+    });
+
+    it("starts new filters on page 1 and searches with them", async () => {
+      const calls = runs(5);
+      const store = memoryStore("#?_page=2");
+      const view = (filters: Record<string, unknown>) => (
+        <AfreactSearch search="S" display="D" settings={settings} filters={filters} />
+      );
+      const { rerender } = renderWithQuery(view({ title: "a" }), store);
+      expect(await currentPage()).toHaveTextContent("2");
+      rerender(view({ title: "b" }));
+      await waitFor(() => {
+        expect(store.params().get("_page")).toBeNull();
+      });
+      expect(await currentPage()).toHaveTextContent("1");
+      expect(
+        calls
+          .filter(({ params }) => params.return !== "row_count")
+          .map(({ params }) => [params.return, params.filters]),
+      ).toEqual([
+        ["page:2", { title: "a" }],
+        ["page:1", { title: "b" }],
+      ]);
+    });
+
+    it("keeps the linked page while the filters settle before the first search", async () => {
+      const calls = runs(5);
+      const store = memoryStore("#?_page=2");
+      const view = (filters: Record<string, unknown>, enabled: boolean) => (
+        <AfreactSearch
+          search="S"
+          display="D"
+          settings={settings}
+          filters={filters}
+          enabled={enabled}
+        />
+      );
+      const { rerender } = renderWithQuery(view({}, false), store);
+      await screen.findByRole("table");
+      expect(calls).toEqual([]);
+      rerender(view({ title: "saved" }, true));
+      expect(await currentPage()).toHaveTextContent("2");
+      expect(store.params().get("_page")).toBe("2");
+      expect(calls.map(({ params }) => [params.return, params.filters])[0]).toEqual([
+        "page:2",
+        { title: "saved" },
+      ]);
+    });
+
+    it("searches only on the search button's click, and again on every click", async () => {
+      const calls = runs(1);
+      renderWithQuery(
+        <AfreactSearch
+          search="S"
+          display="D"
+          settings={{ ...settings, button: "Search" }}
+          filters={{ title: "x" }}
+        />,
+      );
+      const button = await screen.findByRole("button", { name: "Search" });
+      expect(button.querySelector(".crm-i")).toHaveClass("fa-search");
+      expect(calls).toEqual([]);
+      await userEvent.click(button);
+      expect(await screen.findByRole("cell", { name: "Name 1" })).toBeInTheDocument();
+      await userEvent.click(button);
+      await waitFor(() => {
+        expect(calls).toHaveLength(2);
+      });
+      expect(calls.map(({ params }) => params.filters)).toEqual([{ title: "x" }, { title: "x" }]);
+    });
+
+    it("changes the page size once typing pauses", async () => {
+      const calls = runs(5);
+      const store = memoryStore("");
+      renderWithQuery(
+        <AfreactSearch
+          search="S"
+          display="D"
+          settings={{ ...settings, pager: { expose_limit: true } }}
+        />,
+        store,
+      );
+      await currentPage();
+      const size = screen.getByRole("spinbutton", { name: "Page Size" });
+      await userEvent.clear(size);
+      await userEvent.type(size, "5");
+      expect(size).toHaveValue(5);
+      await waitFor(() => {
+        expect(store.params().get("_limit")).toBe("5");
+      });
+      await waitFor(() => {
+        expect(pageRequests(calls).at(-1)).toEqual(["page:1", [["sort_name", "ASC"]], 5]);
+      });
+      expect(pageRequests(calls)).toHaveLength(2);
+      await userEvent.clear(size);
+      await userEvent.type(size, "2");
+      await waitFor(() => {
+        expect(store.params().get("_limit")).toBeNull();
+      });
+    });
+
+    it("prefixes its keys with the display name when the page holds other elements", async () => {
+      runs(5);
+      const store = memoryStore("#?_sort=email");
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />, store, false);
+      await currentPage();
+      expect(screen.getByRole("columnheader", { name: "Name" })).toHaveAttribute(
+        "aria-sort",
+        "ascending",
+      );
+      await userEvent.click(screen.getByRole("link", { name: "2" }));
+      await waitFor(() => {
+        expect(store.params().toString()).toBe("_sort=email&D._page=2");
+      });
+    });
   });
 });

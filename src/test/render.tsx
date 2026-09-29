@@ -4,10 +4,28 @@ import type { ReactNode } from "react";
 import { vi } from "vitest";
 import type { ApiError } from "../api/civi";
 import { createQueryClient } from "../api/query";
+import { memoryStore, type ParamStore } from "../url/hash";
+import { UrlState } from "../url/UrlState";
 
-/** Renders with a fresh query cache, as each page load gets. */
-export function renderWithQuery(ui: ReactNode) {
-  return render(<QueryClientProvider client={createQueryClient()}>{ui}</QueryClientProvider>);
+/**
+ * Renders with a fresh query cache, as each page load gets, and URL state in `store`;
+ * `onlyElement` false stands for a page with other afreact elements.
+ */
+export function renderWithQuery(
+  ui: ReactNode,
+  store: ParamStore = memoryStore(""),
+  onlyElement = true,
+) {
+  const client = createQueryClient();
+  return render(ui, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>
+        <UrlState store={store} onlyElement={onlyElement}>
+          {children}
+        </UrlState>
+      </QueryClientProvider>
+    ),
+  });
 }
 
 type Handler = (params: Record<string, unknown>) => unknown;

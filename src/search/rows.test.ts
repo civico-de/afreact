@@ -7,6 +7,7 @@ import {
   rowClass,
   runPage,
   startsCollapsed,
+  unlabelledHeader,
   unsupportedFeatures,
 } from "./rows";
 import type { Column, DisplaySettings, Row } from "./types";
@@ -39,6 +40,15 @@ describe("headerClass", () => {
     };
     expect(headerClass(column, true)).toBe("crm-sortable-col text-right font-bold");
     expect(headerClass(field, false)).toBeUndefined();
+  });
+});
+
+describe("unlabelledHeader", () => {
+  it("names headers core leaves empty, and no others", () => {
+    expect(unlabelledHeader({ type: "links", label: "" }, 3)).toBe("Actions");
+    expect(unlabelledHeader({ type: "menu" }, 3)).toBe("Actions");
+    expect(unlabelledHeader({ type: "field", key: "id" }, 3)).toBe("Column 4");
+    expect(unlabelledHeader({ ...field, label: "Name" }, 0)).toBeNull();
   });
 });
 
@@ -112,7 +122,6 @@ describe("unsupportedFeatures", () => {
       "in-place editing (editable: name, email)",
       "row editing (editableRow)",
       "drag to reorder (draggable)",
-      "search button (button)",
       "column picker (toggleColumns)",
       "task links (enable, delete)",
     ]);

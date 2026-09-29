@@ -1,10 +1,12 @@
 import { QueryClientProvider } from "@tanstack/react-query";
+import { lazy, Suspense } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { queryClient } from "./api/query";
 import { AfreactForm } from "./afform/AfreactForm";
 import { layoutSource } from "./afform/source";
-import { comparedPages, AfreactCompare } from "./compare/AfreactCompare";
+import { comparedPages } from "./compare/pages";
 import { AfreactSearch } from "./search/AfreactSearch";
+import { isOnlyElement, storeFor, UrlState } from "./url/UrlState";
 import "./afreact.css";
 
 /** Light-DOM custom element, so CiviCRM's theme styles the React output like any other markup. */
@@ -13,7 +15,13 @@ abstract class ReactElement extends HTMLElement {
 
   connectedCallback() {
     this.root = createRoot(this);
-    this.root.render(<QueryClientProvider client={queryClient}>{this.view()}</QueryClientProvider>);
+    this.root.render(
+      <QueryClientProvider client={queryClient}>
+        <UrlState store={storeFor(this)} onlyElement={isOnlyElement(this)}>
+          {this.view()}
+        </UrlState>
+      </QueryClientProvider>,
+    );
   }
 
   disconnectedCallback() {
@@ -49,10 +57,20 @@ class AfreactSearchElement extends ReactElement {
   }
 }
 
+// Only the comparison page uses it, so it loads as its own chunk.
+const AfreactCompare = lazy(async () => ({
+  default: (await import("./compare/AfreactCompare")).AfreactCompare,
+}));
+
 /** <afreact-compare pages='[{"label": "…", "url": "…"}, …]'> measures the listed pages. */
 class AfreactCompareElement extends ReactElement {
   protected view() {
-    return <AfreactCompare pages={comparedPages(this.required("pages"))} />;
+    const pages = comparedPages(this.required("pages"));
+    return (
+      <Suspense fallback={<p role="status">{ts("Loading…")}</p>}>
+        <AfreactCompare pages={pages} />
+      </Suspense>
+    );
   }
 }
 

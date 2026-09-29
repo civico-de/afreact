@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import { createElement, useMemo, useRef, useState } from "react";
 import { api4, errorMessage } from "../api/civi";
 import type { ExpressionContext } from "./expressions";
+import { DisplayCountContext } from "../url/UrlState";
 import { FormContext, Nodes, type FormState } from "./Layout";
 import {
   applyPrefill,
@@ -11,6 +12,7 @@ import {
   routeArgs,
   type PrefillItem,
 } from "./model";
+import { countDisplays } from "./SearchFieldset";
 import { loadDefinition, type LayoutSource } from "./source";
 import { initialiseData, joinOffsets } from "./structure";
 import type { FormData, FormDefinition } from "./types";
@@ -112,6 +114,7 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
   const busy = save.isPending || !!save.data?.redirect;
   const root = useRef<HTMLFormElement>(null);
   const expressions = useMemo(() => formExpressions(form.strings), [form]);
+  const displays = useMemo(() => countDisplays(form.layout), [form]);
   const state: FormState = {
     data,
     update: setData,
@@ -165,22 +168,24 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
         {busy ? ts("Saving…") : save.isSuccess ? ts("Saved") : ""}
       </p>
       <FormContext.Provider value={state}>
-        {isForm(form) ? (
-          // A form around af-form as on core's Afform page, so Enter submits and af-form theme rules apply.
-          <form
-            ref={root}
-            noValidate
-            aria-label={form.title ?? undefined}
-            onSubmit={(event) => {
-              event.preventDefault();
-              submit();
-            }}
-          >
-            {createElement("af-form", null, <Nodes nodes={form.layout} />)}
-          </form>
-        ) : (
-          <Nodes nodes={form.layout} />
-        )}
+        <DisplayCountContext.Provider value={displays}>
+          {isForm(form) ? (
+            // A form around af-form as on core's Afform page, so Enter submits and af-form theme rules apply.
+            <form
+              ref={root}
+              noValidate
+              aria-label={form.title ?? undefined}
+              onSubmit={(event) => {
+                event.preventDefault();
+                submit();
+              }}
+            >
+              {createElement("af-form", null, <Nodes nodes={form.layout} />)}
+            </form>
+          ) : (
+            <Nodes nodes={form.layout} />
+          )}
+        </DisplayCountContext.Provider>
       </FormContext.Provider>
     </div>
   );

@@ -58,19 +58,63 @@ else Afform uses.
   all three when a popup form of the display (`crmPopupFormSuccess`) succeeds.
 - **Search tables** render what core's `crmSearchDisplayTable` renders: field,
   html, image, links, buttons, menu and subsearch columns, style rules, the
-  toolbar, header count, totals, and hierarchical and collapsible rows. Row
-  and toolbar menus are native popovers with the menu button keyboard pattern.
-  Bulk actions, in-place and row editing, drag to reorder, the search button,
-  the column picker, task links and include columns show a note instead.
+  toolbar, header count, totals, the search button, the page size input, and
+  hierarchical and collapsible rows. Row and toolbar menus are native popovers
+  with the menu button keyboard pattern. Bulk actions, in-place and row
+  editing, drag to reorder, the column picker, task links and include columns
+  show a note instead.
 - **Types:** `src/api/entities.gen.ts` is generated from APIv4
   `getFields` (see [Development](#development)).
 - **Unsupported layout** is never dropped silently: the renderer shows a
   visible "Not supported by the React renderer" note naming the directive,
   attribute or field type.
 
+- **Search forms:** an `af-fieldset` without entity holds filter fields; their
+  values are the filters of the displays inside, merged with a display's own
+  `filters` attribute (literals, `routeParams.x`, `options.x`) as SearchKit
+  does. The first search waits until every source is in: field defaults,
+  stored values (`store-values`, kept in `CRM.cache` under
+  `afform:<form><display>`), the URL, and a saved filter set (`#?_s=<id>`).
+  Typing searches after a 300 ms pause (SearchKit waits 600 ms); the first
+  search never waits.
+- **Bundle:** `dist/afreact.js` and `dist/afreact.css` keep fixed names and load
+  with CiviCRM's cache code; libraries and lazy parts sit in content-hashed
+  `dist/chunks/`. The build fails if a chunk imports `afreact.js`, which would
+  load it a second time without the cache code.
+
 `Civi\Afreact\Assets::load()` adds the bundle to a page and
 `Assets::layouts()` hands over layouts; the demo pages in `Civi\Afreact\Pages`
 show how.
+
+## Search state in the URL
+
+Search displays keep their state in the URL hash, so a reload restores it and
+a link opens it. Values equal to the default stay out of the URL; keys other
+code writes into the hash (Angular routes, `Individual1=5`) are kept.
+
+| Key | Meaning |
+|---|---|
+| `_sort=title,-created_date` | sort columns, `-` for descending |
+| `_page=2`, `_limit=50` | page and page size |
+| `<field>=value` | a filter, the key afField reads: lists comma-separated, Yes/No as `1`/`0` |
+| `<display>.<field>=value` | the same filter for one fieldset; wins over the plain key |
+| `_s=<id>` | a saved filter set; the first change of a filter removes it |
+
+With more than one display on the page (several displays in a form, or other
+afreact elements on the page), every key carries the display name as a prefix
+(`<display>._page=2`). A plain `<field>` key from a link leaves the URL once one
+fieldset writes its own prefixed key, even where a second fieldset read it
+too. A form in a popup reads the popup's own URL, as
+`afCore` does, and keeps its changes to itself.
+
+Where React reads the URL differently from core:
+
+- `_s` fills the fields the URL leaves out from the saved set. Core loads the
+  set but then resets the fields to their defaults.
+- An empty value (`is_active=`) means no filter; core reads an empty Yes/No
+  as No.
+- A value with another operator than the field's, or a range, is written as
+  JSON (`type={"NOT IN":["1"]}`), which only React reads.
 
 ## Pages
 
@@ -147,7 +191,8 @@ CIVICRM_BASE_URL=http://localhost:8080 npm run test:e2e
 | `tests/browser/visual.spec.ts` | the React page matches the Angular page part by part in position, size and main styles; differences by design are listed with a reason |
 | `tests/browser/rules.spec.ts` | the rules form on both renderers: expressions, `af-if` (and the values it drops), `af-required`, `af-disabled`, a token default |
 | `tests/browser/table.spec.ts` | SearchKit tables on both renderers: equal cells, links, classes, toolbar, counts and totals on the demo fixtures and the core forms the React table renders without a note; row menus, the menu keyboard path, collapsible rows, a `crm-popup` link and the reload after a popup form |
-| `tests/browser/a11y.spec.ts` | axe in light and dark mode finds nothing on the React demo and rules forms and the demo tables (menu and subsearch open) that the Angular ones pass |
+| `tests/browser/filters.spec.ts` | search filters on both renderers: the same filters and rows from the defaults, the URL, stored values and a saved filter set, with one page request and no excluded row shown on first load; typed filters and a reload; the first-row time of each renderer |
+| `tests/browser/a11y.spec.ts` | axe in light and dark mode finds nothing on the React demo and rules forms, the demo tables (menu and subsearch open) and a filtered search form that the Angular ones pass |
 
 `compare.spec.ts` switches `debug_enabled` off for the measurement, so all
 pages load as in production, and restores the previous value afterwards.
@@ -177,7 +222,8 @@ half shows when that page was ready. The suite does not run it.
 | `ang/` | demo forms and search pages |
 | `managed/` | demo searches and displays |
 | `src/afform/` | form renderer (layout, fields, form model, conditions, expressions, layout sources, module file parser) |
-| `src/search/` | SearchKit table renderer: columns, row menus, toolbar, totals, collapsible rows and pager |
+| `src/search/` | SearchKit table renderer: columns, row menus, toolbar, totals, collapsible rows, pager, filter values and URL keys |
+| `src/url/` | the URL hash as state for all elements of a page |
 | `src/compare/` | comparison page and metric helpers |
 | `tests/browser/` | browser tests |
 | `tests/phpunit/` | headless PHPUnit suite |
