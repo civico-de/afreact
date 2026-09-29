@@ -92,9 +92,11 @@ includes responses served from the HTTP cache. The server needs 85–120 ms
 
 ### Reading the numbers
 
-- **Ready time.** Most of React's lead is SearchKit's 600 ms debounce: the
-  Angular table waits for it before its first request when it sits inside a
-  search form.
+- **Ready time.** Most of React's lead is SearchKit's 600 ms debounce: every
+  Angular display starts its first search through the filter watcher, which
+  waits for filter values to settle. The React table has no filters yet and
+  starts at once; see the plan's first open decision for what keeping that
+  lead takes.
 - **Layout source.** `api` adds one round trip before `Afform.prefill` and
   `SearchDisplay.run` can start. The layout is cached in core's Angular
   cache, so `getForm` costs about 60 ms, the same as an empty API request;

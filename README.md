@@ -74,8 +74,16 @@ differ (pinned by `PagesHeadlessTest`). The demo forms live in `ang/`.
 
 ## React vs Angular
 
+On the dev stack with debug off, the React demo page is ready (form input and
+first table row shown) sooner than the Angular one: 565–870 ms against
+1215–1375 ms from a cold cache, with almost the same script and style bytes.
+Absolute times drift between sessions; the order does not. Most of the lead
+is SearchKit's 600 ms debounce before the Angular table's first request.
+`npm run video` records both pages side by side (see [Demo video](#demo-video)).
+
 [docs/comparison.md](docs/comparison.md) holds the parity gaps, the measured
-load numbers and what they mean.
+load numbers and what they mean; [docs/plan.md](docs/plan.md) the plan for
+rendering every Afform with React.
 
 ## Development
 
@@ -90,6 +98,7 @@ npm run build                             # type check + bundle into dist/
 npm test                                  # unit tests (Vitest, jsdom)
 npm run coverage
 npm run types                             # regenerate entities.gen.ts from the stack
+npm run inventory                         # what the site's Afforms use, per feature
 ```
 
 `dist/` is committed, so the extension installs without a Node toolchain.
