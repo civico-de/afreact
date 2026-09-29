@@ -18,4 +18,10 @@
     <title>Afreact: React vs Angular</title>
     <access_arguments>access CiviCRM</access_arguments>
   </item>
+  <item>
+    <path>civicrm/afreact/render</path>
+    <page_callback>Civi\Afreact\RenderPage::render</page_callback>
+    <title>Afreact form</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
 </menu>

@@ -42,10 +42,40 @@ export function repeatMinimum(node: ElementNode): number {
   return Math.max(fallback, Number.isNaN(min) ? 0 : min);
 }
 
-/** A static afform_default; defaults with [tokens] are calculated live in Angular and not supported. */
+/** afForm's identifyTokens(): [Entity.index.field] references in a default. */
+const TOKEN = /\[[a-zA-Z0-9_]+\.[0-9]+\.[^\]]+\]/g;
+
+export function hasTokens(value: unknown): value is string {
+  return typeof value === "string" && new RegExp(TOKEN.source).test(value);
+}
+
+/** afForm's replaceTokens(): each token becomes the referenced field's value, or "" when unset. */
+export function replaceTokens(value: string, data: FormData): string {
+  return value.replace(TOKEN, (token) => {
+    const [entity = "", index = "", ...field] = token.slice(1, -1).split(".");
+    const current = data[entity]?.[Number(index)]?.fields[field.join(".")];
+    return current === undefined ? "" : tokenText(current);
+  });
+}
+
+/** How String.replaceAll() writes a field value: a list comma-joined, its empty items blank. */
+function tokenText(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (item === null || item === undefined ? "" : tokenText(item)))
+      .join(",");
+  }
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (value === null) return "null";
+  throw new TypeError(`A token refers to a ${typeof value}, not a field value`);
+}
+
+/** A default without tokens; afField calculates token defaults live, see FieldNode. */
 export function staticDefault(defn: FieldDefn | undefined): unknown {
   const value = defn?.afform_default;
-  return typeof value === "string" && /\[[^\]]+\]/.test(value) ? undefined : value;
+  return hasTokens(value) ? undefined : value;
 }
 
 /**

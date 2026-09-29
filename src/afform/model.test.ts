@@ -2,6 +2,7 @@ import {
   addRepeatItem,
   applyPrefill,
   copyRepeatItem,
+  deleteValue,
   emptyData,
   entityDeclarations,
   ensurePrimary,
@@ -155,5 +156,25 @@ describe("primary records", () => {
     ]);
     const chosen = setPrimary(padded, { ...joinScope, joinIndex: 1 });
     expect(ensurePrimary(chosen, joinScope)).toBe(chosen);
+  });
+});
+
+describe("deleteValue", () => {
+  it("removes the key from an entity item or a join record", () => {
+    const data = {
+      Individual1: [
+        { fields: { a: 1, b: 2 }, joins: { Email: [{ email: "x", is_primary: true }] } },
+      ],
+    };
+    expect(deleteValue(data, { entity: "Individual1", index: 0 }, "a")).toEqual({
+      Individual1: [{ fields: { b: 2 }, joins: { Email: [{ email: "x", is_primary: true }] } }],
+    });
+    expect(
+      deleteValue(data, { entity: "Individual1", index: 0, join: "Email", joinIndex: 0 }, "email"),
+    ).toEqual({
+      Individual1: [{ fields: { a: 1, b: 2 }, joins: { Email: [{ is_primary: true }] } }],
+    });
+    expect(deleteValue(data, { entity: "Other", index: 0 }, "a")).toEqual(data);
+    expect(data.Individual1[0]?.fields).toEqual({ a: 1, b: 2 });
   });
 });

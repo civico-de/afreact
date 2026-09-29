@@ -70,4 +70,51 @@ final class Afforms {
     return $value;
   }
 
+  /**
+   * @param list<string> $modules
+   * @return array<string, string>
+   *   The modules and every block they embed, sorted so equal sets share one URL:
+   *   module name => block directive name, or '' for the forms themselves.
+   */
+  public static function withBlocks(array $modules): array {
+    $angular = self::angular();
+    $blocks = array_flip(self::blocks());
+    $found = [];
+    while ($modules) {
+      $module = array_pop($modules);
+      if (isset($found[$module])) {
+        continue;
+      }
+      $found[$module] = $blocks[$module] ?? '';
+      $requires = $angular->getModule($module)['requires'] ?? [];
+      $embedded = array_filter(
+        is_array($requires) ? $requires : [],
+        static fn (mixed $name) => is_string($name) && isset($blocks[$name]),
+      );
+      $modules = [...$modules, ...array_map('strval', array_values($embedded))];
+    }
+    ksort($found);
+    return $found;
+  }
+
+  /**
+   * The translations core sends the Angular runtime for a form's and its blocks' ts() texts.
+   *
+   * @return array<string, string>
+   *   Original => translated, only for texts that have a translation.
+   */
+  public static function translatedStrings(string $module): array {
+    $angular = self::angular();
+    $strings = [];
+    foreach (array_keys(self::withBlocks([$module])) as $name) {
+      foreach ($angular->getTranslatedStrings($name) as $original => $translated) {
+        if (!is_string($translated)) {
+          throw new \CRM_Core_Exception("Angular module {$name} has a translation that is no string.");
+        }
+        $strings[(string) $original] = $translated;
+      }
+    }
+    return $strings;
+  }
+
 }

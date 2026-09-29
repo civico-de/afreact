@@ -1,0 +1,14 @@
+<af-form ctrl="afform">
+  <af-entity data="{contact_type: 'Individual', source: 'Afreact demo'}" type="Contact" name="Individual1" label="Individual 1" actions="{create: true, update: true}" security="RBAC" />
+  <p class="help">{{:: ts('Learn more...') }} <a ng-href="{{:: crmUrl('civicrm/admin/setting/preferences/address', {reset: 1}) }}">{{:: ts('Address Settings') }}</a></p>
+  <fieldset af-fieldset="Individual1" class="af-container" af-title="Individual">
+    <af-field name="first_name" defn="{required: true}" />
+    <af-field name="last_name" af-required="([[&quot;Individual1[0][fields][first_name]&quot;,&quot;=&quot;,&quot;\&quot;ada\&quot;&quot;]])" />
+    <af-field name="nick_name" defn="{afform_default: 'Dear [Individual1.0.first_name]'}" />
+    <div class="af-container" af-if="([[&quot;Individual1[0][fields][first_name]&quot;,&quot;IS NOT EMPTY&quot;,&quot;&quot;]])">
+      <af-field name="job_title" />
+    </div>
+    <af-field name="middle_name" af-disabled="([[&quot;Individual1[0][fields][first_name]&quot;,&quot;=&quot;,&quot;\&quot;lock\&quot;&quot;]])" />
+  </fieldset>
+  <button class="af-button btn btn-primary" crm-icon="fa-check" ng-click="afform.submit()" ng-if="afform.showSubmitButton">{{:: ts('Save') }}</button>
+</af-form>

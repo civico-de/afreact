@@ -17,8 +17,11 @@ export interface BundleVars {
   attributeTypes: Record<string, Record<string, string>>;
 }
 
-/** angular-modules.json: module name => its partials (file path => HTML). */
-export type ModuleFile = Record<string, { partials: Record<string, string> }>;
+/** angular-modules.json: module name => its partials (file path => HTML) and translated texts. */
+export type ModuleFile = Record<
+  string,
+  { partials: Record<string, string>; strings?: Record<string, string> | [] }
+>;
 
 export function isModuleFile(value: unknown): value is ModuleFile {
   return (
@@ -31,7 +34,11 @@ export function isModuleFile(value: unknown): value is ModuleFile {
         "partials" in module &&
         typeof module.partials === "object" &&
         module.partials !== null &&
-        Object.values(module.partials).every((html: unknown) => typeof html === "string"),
+        Object.values(module.partials).every((html: unknown) => typeof html === "string") &&
+        (!("strings" in module) ||
+          (typeof module.strings === "object" &&
+            module.strings !== null &&
+            Object.values(module.strings).every((text: unknown) => typeof text === "string"))),
     )
   );
 }
@@ -185,27 +192,33 @@ function convertNode(node: ChildNode, types: AttributeTypes): LayoutNode | null 
 export function compileBundle(vars: BundleVars, file: ModuleFile, name: string): FormDefinition {
   const form = vars.forms[name];
   if (!form) throw new Error(ts('Form "%1" does not exist or you may not open it.', { 1: name }));
+  const compiled: string[] = [];
+  const layout = compileModule({ vars, file, compiled }, form.module, []);
   return {
     name,
     title: form.title,
     type: form.type,
-    layout: compileModule(vars, file, form.module, []),
+    layout,
+    strings: Object.fromEntries(
+      compiled.flatMap((module) => Object.entries(file[module]?.strings ?? {})),
+    ),
   };
 }
 
-function compileModule(
-  vars: BundleVars,
-  file: ModuleFile,
-  module: string,
-  trail: string[],
-): LayoutNode[] {
+/** What a compilation reads, and the modules it inlined so far. */
+interface Compilation {
+  vars: BundleVars;
+  file: ModuleFile;
+  compiled: string[];
+}
+
+function compileModule(compilation: Compilation, module: string, trail: string[]): LayoutNode[] {
   if (trail.includes(module)) throw new Error(`Afform block ${module} includes itself.`);
-  const html = file[module]?.partials[`~/${module}/${module}.aff.html`];
+  const html = compilation.file[module]?.partials[`~/${module}/${module}.aff.html`];
   if (typeof html !== "string") throw new Error(`No layout for Afform module ${module}.`);
-  return prepare(vars, file, withoutAdminMenu(htmlToLayout(html, vars.attributeTypes)), [
-    ...trail,
-    module,
-  ]);
+  compilation.compiled.push(module);
+  const nodes = withoutAdminMenu(htmlToLayout(html, compilation.vars.attributeTypes));
+  return prepare(compilation, nodes, [...trail, module]);
 }
 
 const isAdminMenu = (node: LayoutNode | undefined): boolean =>
@@ -236,12 +249,7 @@ function withoutAdminMenu(nodes: LayoutNode[]): LayoutNode[] {
   return result;
 }
 
-function prepare(
-  vars: BundleVars,
-  file: ModuleFile,
-  nodes: LayoutNode[],
-  trail: string[],
-): LayoutNode[] {
+function prepare(compilation: Compilation, nodes: LayoutNode[], trail: string[]): LayoutNode[] {
   return nodes.map((node) => {
     if (!isElement(node)) return node;
     const tag = node["#tag"];
@@ -249,13 +257,13 @@ function prepare(
     if (tag.startsWith("crm-search-display-") && typeof element.settings === "string") {
       element.settings = decodeJs(element.settings);
     }
-    const block = vars.blocks[tag];
+    const block = compilation.vars.blocks[tag];
     if (block !== undefined) {
-      element["#children"] = compileModule(vars, file, block, trail);
+      element["#children"] = compileModule(compilation, block, trail);
       return element;
     }
     if (element["#children"])
-      element["#children"] = prepare(vars, file, element["#children"], trail);
+      element["#children"] = prepare(compilation, element["#children"], trail);
     return element;
   });
 }

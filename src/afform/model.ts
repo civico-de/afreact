@@ -113,6 +113,18 @@ export function setValue(data: FormData, scope: Scope, field: string, value: unk
   return next;
 }
 
+/** afField on afIfDestroy: the field's key leaves the record. */
+export function deleteValue(data: FormData, scope: Scope, field: string): FormData {
+  const next = structuredClone(data);
+  const entityItem = next[scope.entity]?.[scope.index];
+  const record =
+    scope.join === undefined
+      ? entityItem?.fields
+      : entityItem?.joins?.[scope.join]?.[scope.joinIndex ?? 0];
+  if (record) delete record[field];
+  return next;
+}
+
 /** Items a repeat iterates: entity items for a fieldset, join records for a join. */
 export function repeatCount(data: FormData, scope: Scope): number {
   return scope.join === undefined

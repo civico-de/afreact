@@ -1,9 +1,22 @@
-import { createContext, createElement, useContext, useId, type ReactNode } from "react";
+import {
+  createContext,
+  createElement,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { AfreactSearch, isDisplaySettings } from "../search/AfreactSearch";
+import { checkConditions, parseConditions } from "./conditions";
+import { interpolate, type ExpressionContext } from "./expressions";
 import { ClearButton, Field, fieldClasses } from "./Field";
 import {
   addRepeatItem,
   copyRepeatItem,
+  deleteValue,
   getValue,
   removeRepeatItem,
   repeatCount,
@@ -11,7 +24,8 @@ import {
   setValue,
   type EntityDeclaration,
 } from "./model";
-import type { ElementNode, FormData, LayoutNode, Scope } from "./types";
+import { hasTokens, replaceTokens } from "./structure";
+import type { ElementNode, FieldDefn, FormData, LayoutNode, Scope } from "./types";
 import { isElement, isFieldDefn } from "./types";
 import { Unsupported } from "./Unsupported";
 
@@ -22,10 +36,15 @@ export interface FormState {
   joinOffsets: WeakMap<ElementNode, number>;
   entities: Record<string, EntityDeclaration>;
   formName: string;
+  /** afForm hides the submit button when the route opens a stored submission (sid). */
+  showSubmitButton: boolean;
+  expressions: ExpressionContext;
 }
 
 export const FormContext = createContext<FormState | null>(null);
 const ScopeContext = createContext<Scope | null>(null);
+/** Set inside an af-if that turned false: fields drop their values as on afIfDestroy. */
+const HiddenContext = createContext(false);
 
 function useForm(): FormState {
   const form = useContext(FormContext);
@@ -88,9 +107,18 @@ const HANDLED = new Set([
   "ng-click",
   "ctrl",
   "ng-form",
+  "ng-href",
 ]);
 /** af-field attributes the renderer uses; `class` goes onto the field wrapper. */
-const FIELD_ATTRIBUTES = new Set(["#tag", "#children", "name", "defn", "class"]);
+const FIELD_ATTRIBUTES = new Set([
+  "#tag",
+  "#children",
+  "name",
+  "defn",
+  "class",
+  "af-required",
+  "af-disabled",
+]);
 const PASSTHROUGH = new Set(["id", "href", "title", "role", "target", "type"]);
 
 export function Nodes({ nodes }: { nodes: LayoutNode[] }): ReactNode {
@@ -100,12 +128,13 @@ export function Nodes({ nodes }: { nodes: LayoutNode[] }): ReactNode {
 function Node({ node }: { node: LayoutNode }): ReactNode {
   if (!isElement(node)) {
     if ("#comment" in node) return null;
-    return node["#text"].includes("{{") ? (
-      <Unsupported what={`Angular expression ${node["#text"].trim()}`} />
-    ) : (
-      // CRM_Afform_ArrayHtml writes non-breaking spaces as the entity.
-      node["#text"].replaceAll("&nbsp;", "\u00a0")
-    );
+    // CRM_Afform_ArrayHtml writes non-breaking spaces as the entity.
+    return <Text text={node["#text"].replaceAll("&nbsp;", "\u00a0")} />;
+  }
+  if (typeof node["af-if"] === "string") return <Conditional node={node} />;
+  if (node["ng-if"] === "afform.showSubmitButton") {
+    const { "ng-if": _, ...rest } = node;
+    return <SubmitButtonCondition node={rest} />;
   }
   const tag = node["#tag"];
   if (tag === "af-entity") return null;
@@ -135,14 +164,36 @@ function Node({ node }: { node: LayoutNode }): ReactNode {
   return <Element node={node} />;
 }
 
+function Text({ text }: { text: string }) {
+  const form = useForm();
+  if (!text.includes("{{")) return text;
+  const result = interpolate(text, form.expressions);
+  return "text" in result ? (
+    result.text
+  ) : (
+    <Unsupported what={`Angular expression ${result.unsupported}`} />
+  );
+}
+
 function Element({ node, children }: { node: ElementNode; children?: ReactNode }) {
+  const form = useForm();
   const props: Record<string, unknown> = {};
+  const unsupported: string[] = [];
+  const resolve = (value: unknown): unknown => {
+    if (typeof value !== "string" || !value.includes("{{")) return value;
+    const result = interpolate(value, form.expressions);
+    if ("text" in result) return result.text;
+    unsupported.push(result.unsupported);
+    return undefined;
+  };
   for (const [attr, value] of Object.entries(node)) {
-    if (attr === "class") props.className = value;
-    else if (PASSTHROUGH.has(attr) || attr.startsWith("aria-")) props[attr] = value;
+    if (attr === "class") props.className = resolve(value);
+    else if (attr === "ng-href") props.href = resolve(value);
+    else if (PASSTHROUGH.has(attr) || attr.startsWith("aria-")) props[attr] = resolve(value);
   }
   // afTitle's elements.
-  const title = typeof node["af-title"] === "string" ? node["af-title"] : null;
+  const resolvedTitle = resolve(node["af-title"]);
+  const title = typeof resolvedTitle === "string" ? resolvedTitle : null;
   const legend =
     title && node["#tag"] === "fieldset" ? (
       <legend className="af-title">{title}</legend>
@@ -152,9 +203,55 @@ function Element({ node, children }: { node: ElementNode; children?: ReactNode }
   return createElement(
     node["#tag"],
     props,
+    unsupported.length > 0 && <Unsupported what={`Angular expression ${unsupported.join(", ")}`} />,
     legend,
     children ?? <Nodes nodes={node["#children"] ?? []} />,
   );
+}
+
+type Evaluated = { value: boolean } | { error: string };
+
+function evaluateConditions(attribute: string, data: FormData, name: string): Evaluated {
+  try {
+    return { value: checkConditions(parseConditions(attribute), data) };
+  } catch (error) {
+    console.warn(`[afreact] ${name} failed`, error);
+    return { error: `${name}="${attribute}"` };
+  }
+}
+
+/**
+ * afIf: the element renders while its conditions hold. Once shown and hidden again, its
+ * subtree renders off-document so every field inside drops its value, as on afIfDestroy.
+ */
+function Conditional({ node }: { node: ElementNode }) {
+  const form = useForm();
+  const { "af-if": attribute, ...rest } = node;
+  const result = evaluateConditions(String(attribute), form.data, "af-if");
+  const shown = "value" in result && result.value;
+  const [wasShown, setWasShown] = useState(shown);
+  const [detached] = useState(() => document.createElement("div"));
+  if (shown && !wasShown) setWasShown(true);
+  if ("error" in result) {
+    return (
+      <>
+        <Unsupported what={result.error} />
+        <Node node={rest} />
+      </>
+    );
+  }
+  if (shown) return <Node node={rest} />;
+  if (!wasShown) return null;
+  return createPortal(
+    <HiddenContext.Provider value={true}>
+      <Node node={rest} />
+    </HiddenContext.Provider>,
+    detached,
+  );
+}
+
+function SubmitButtonCondition({ node }: { node: ElementNode }) {
+  return useForm().showSubmitButton ? <Node node={node} /> : null;
 }
 
 function FieldsetNode({ node }: { node: ElementNode }) {
@@ -269,15 +366,82 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
 }
 
 function FieldNode({ node }: { node: ElementNode }) {
-  const form = useForm();
   const scope = useContext(ScopeContext);
+  const hidden = useContext(HiddenContext);
   const defn = node.defn;
   const name = String(node.name);
   if (!scope || !isFieldDefn(defn))
     return <Unsupported what={`field ${name} without entity or metadata`} />;
-  // Conditions (af-if, af-required, af-disabled) are evaluated live by Angular; afField reads no other attributes.
-  const unknown = Object.keys(node).filter((attr) => !FIELD_ATTRIBUTES.has(attr));
+  if (hidden) return <DroppedField scope={scope} name={name} defn={defn} />;
+  return <VisibleField node={node} scope={scope} name={name} defn={defn} />;
+}
+
+interface FieldNodeProps {
+  scope: Scope;
+  name: string;
+  defn: FieldDefn;
+}
+
+function DroppedField({ scope, name, defn }: FieldNodeProps) {
+  const { update } = useForm();
+  const dropped = useRef(false);
+  useEffect(() => {
+    if (dropped.current || defn.input_type === "DisplayOnly") return;
+    dropped.current = true;
+    update((data) => deleteValue(data, scope, name));
+  }, [update, scope, name, defn.input_type]);
+  return null;
+}
+
+function conditionResult(node: ElementNode, form: FormState, attr: string): Evaluated | null {
+  const attribute = node[attr];
+  return typeof attribute === "string" ? evaluateConditions(attribute, form.data, attr) : null;
+}
+
+/** afField's getOptions(): an option with conditions shows while they hold; a broken rule shows it. */
+function visibleOptions(defn: FieldDefn, data: FormData): FieldDefn["options"] {
+  if (!Array.isArray(defn.options)) return defn.options;
+  return defn.options.filter((option) => {
+    if (!option.if?.length) return true;
+    try {
+      return checkConditions(option.if, data);
+    } catch (error) {
+      console.warn("[afreact] option condition failed", option.id, error);
+      return true;
+    }
+  });
+}
+
+/**
+ * afField's live rules: af-required and af-disabled conditions, conditional options,
+ * and a token default recalculated from other fields until the user edits the field.
+ */
+function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { node: ElementNode }) {
+  const form = useForm();
+  const { update } = form;
+  const edited = useRef(false);
+  const required = conditionResult(node, form, "af-required");
+  const disabled = conditionResult(node, form, "af-disabled");
+  const defn: FieldDefn = {
+    ...given,
+    options: visibleOptions(given, form.data),
+    required: required && "value" in required ? required.value : given.required,
+  };
+  const calculated = hasTokens(given.afform_default)
+    ? replaceTokens(given.afform_default, form.data)
+    : undefined;
   const value = getValue(form.data, scope, name);
+  useEffect(() => {
+    if (calculated === undefined || edited.current || value === calculated) return;
+    update((data) => setValue(data, scope, name, calculated));
+  }, [calculated, value, update, scope, name]);
+  const unknown = [
+    ...Object.keys(node).filter((attr) => !FIELD_ATTRIBUTES.has(attr)),
+    ...[required, disabled].flatMap((result) =>
+      result && "error" in result ? [result.error] : [],
+    ),
+  ];
+  const conditionallyDisabled = !!disabled && "value" in disabled && disabled.value;
   // afField: a field that selects a record (autofill) is read-only when the entity forbids that action.
   const autofill = defn.input_attrs?.autofill;
   const readonly =
@@ -298,7 +462,7 @@ function FieldNode({ node }: { node: ElementNode }) {
         label={typeof defn.label === "string" && defn.label !== "" ? defn.label : ts("Primary")}
         group={`${form.formName}-${scope.entity}-${scope.index}-${scope.join ?? ""}`}
         checked={value === true}
-        disabled={form.disabled}
+        disabled={form.disabled || conditionallyDisabled}
         onSelect={() => {
           form.update((data) => setPrimary(data, scope));
         }}
@@ -310,8 +474,9 @@ function FieldNode({ node }: { node: ElementNode }) {
       <Field
         defn={defn}
         value={value}
-        disabled={form.disabled || readonly}
+        disabled={form.disabled || readonly || conditionallyDisabled}
         onChange={(next) => {
+          edited.current = true;
           form.update((data) => setValue(data, scope, name, next));
         }}
       />
@@ -371,6 +536,8 @@ function SubmitButton({ node }: { node: ElementNode }) {
 
 function SearchNode({ node }: { node: ElementNode }) {
   const form = useForm();
+  // A display under a hidden af-if loads nothing.
+  if (useContext(HiddenContext)) return null;
   const settings = node.settings;
   if (settings !== undefined && !isDisplaySettings(settings))
     return <Unsupported what="search display settings without columns" />;

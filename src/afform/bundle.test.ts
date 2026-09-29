@@ -107,12 +107,17 @@ describe("compileBundle", () => {
         "afformA",
         `<afblock-b></afblock-b><crm-search-display-table settings="{limit: 10}"></crm-search-display-table>\n${admin}`,
       ),
-      afblockB: partial("afblockB", `<p>block</p>\n${admin}`),
+      afblockB: {
+        ...partial("afblockB", `<p>block</p>\n${admin}`),
+        strings: { Block: "Baustein" },
+      },
+      afformUnrelated: { ...partial("afformUnrelated", ""), strings: { Other: "Andere" } },
     };
     expect(compileBundle(vars, file, "afformA")).toEqual({
       name: "afformA",
       title: "A",
       type: "form",
+      strings: { Block: "Baustein" },
       layout: [
         {
           "#tag": "afblock-b",

@@ -24,7 +24,7 @@ describe("layoutSource", () => {
 
 describe("loadDefinition", () => {
   it("reads layouts the page embedded and reports the ones it left out", async () => {
-    const form = { name: "afformA", title: "A", type: "form", layout: [] };
+    const form = { name: "afformA", title: "A", type: "form", layout: [], strings: [] as [] };
     window.CRM.vars = { afreact: { layouts: { afformA: form } } };
     await expect(loadDefinition("afformA", "page", createQueryClient())).resolves.toBe(form);
     await expect(loadDefinition("afformB", "page", createQueryClient())).rejects.toThrow(

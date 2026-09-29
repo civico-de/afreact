@@ -86,7 +86,9 @@ final class Assets {
     }
     $modules = array_column($forms, 'module');
     sort($modules);
-    $embedded = Afforms::cached('bundle_' . implode(',', $modules), static fn (): array => self::withBlocks($modules));
+    $embedded = Afforms::cached('bundle_' . implode(',', $modules), static fn (): array => Afforms::withBlocks(
+      $modules,
+    ));
     $assets = \Civi::service('asset_builder');
     if (!$assets instanceof AssetBuilder) {
       throw new \CRM_Core_Exception('The asset builder service is not available.');
@@ -100,33 +102,6 @@ final class Assets {
       'blocks' => array_flip(array_filter($embedded)),
       'attributeTypes' => Afforms::cached('attributeTypes', static fn (): array => (new AttributeSchema())->attributeTypes()),
     ];
-  }
-
-  /**
-   * @param list<string> $modules
-   * @return array<string, string>
-   *   The modules and every block they embed, sorted so equal sets share one URL:
-   *   module name => block directive name, or '' for the forms themselves.
-   */
-  private static function withBlocks(array $modules): array {
-    $angular = Afforms::angular();
-    $blocks = array_flip(Afforms::blocks());
-    $found = [];
-    while ($modules) {
-      $module = array_pop($modules);
-      if (isset($found[$module])) {
-        continue;
-      }
-      $found[$module] = $blocks[$module] ?? '';
-      $requires = $angular->getModule($module)['requires'] ?? [];
-      $embedded = array_filter(
-        is_array($requires) ? $requires : [],
-        static fn (mixed $name) => is_string($name) && isset($blocks[$name]),
-      );
-      $modules = [...$modules, ...array_map('strval', array_values($embedded))];
-    }
-    ksort($found);
-    return $found;
   }
 
 }

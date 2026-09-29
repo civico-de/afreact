@@ -27,10 +27,10 @@ using a feature, not occurrences.
 | … hierarchy, collapsible rows | 4 / 3 | no |
 | search filters from form fields (`filters`) | 23 | no |
 | grid, tree display | 1 / 1 | no |
-| `{{ :: ts('…') }}` text and `{{ crmUrl(…) }}` links | 33 | no |
+| `{{ :: ts('…') }}` text and `{{ crmUrl(…) }}` links | 33 | yes |
 | submit button (`ng-click="afform.submit()"`) | 12 | yes |
-| `ng-if="afform.showSubmitButton"` | 3 | no |
-| conditions (`af-if`) | 2 | no |
+| `ng-if="afform.showSubmitButton"` | 3 | yes |
+| conditions (`af-if`) | 2 | yes |
 | tabs (`af-tabset`, `crm-ui-tab`) | 2 / 1 | no |
 | field types Text, Select, Radio, Email, CheckBox, TextArea, Url, Date, DisplayOnly, Hidden | 40 … 1 | yes |
 | field type EntityRef | 6 | no |

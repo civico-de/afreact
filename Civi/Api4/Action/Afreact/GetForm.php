@@ -40,7 +40,11 @@ class GetForm extends AbstractAction {
     if ($afform === NULL) {
       throw new UnauthorizedException(E::ts('Form "%1" does not exist or you may not open it.', [1 => $this->name]));
     }
-    $afform['layout'] = self::layout(Afforms::field($afform, 'module_name'));
+    $module = Afforms::field($afform, 'module_name');
+    $afform['layout'] = self::layout($module);
+    $afform['strings'] = Afforms::cached("strings_{$module}", static fn (): array => Afforms::translatedStrings(
+      $module,
+    ));
     $result[] = $afform;
   }
 

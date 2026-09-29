@@ -213,7 +213,13 @@ describe("AfreactForm", () => {
 
   it("renders a layout the page embedded without calling getForm", async () => {
     const layout: LayoutNode[] = [{ "#tag": "p", "#children": [{ "#text": "a&nbsp;b" }] }];
-    const form = { name: "afsearchTest", title: "Search", type: "search", layout };
+    const form = {
+      name: "afsearchTest",
+      title: "Search",
+      type: "search",
+      layout,
+      strings: [] as [],
+    };
     window.CRM.vars = { afreact: { layouts: { afsearchTest: form } } };
     try {
       const calls = mockApi({});
@@ -250,7 +256,7 @@ describe("AfreactForm", () => {
     expect(
       notes.map((note) => note.textContent?.replace("Not supported by the React renderer: ", "")),
     ).toEqual([
-      "af-if",
+      'af-if="x"',
       "Angular expression {{ total }}",
       "<crm-search-display-grid>",
       "search display settings without columns",

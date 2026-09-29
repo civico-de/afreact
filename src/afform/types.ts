@@ -1,3 +1,5 @@
+import type { Condition } from "./conditions";
+
 /** Afform layout in the deep array format of CRM_Afform_ArrayHtml. */
 export interface TextNode {
   "#text": string;
@@ -15,6 +17,8 @@ export type LayoutNode = TextNode | CommentNode | ElementNode;
 export interface FieldOption {
   id: string | number | boolean;
   label: string;
+  /** Conditions under which FormBuilder shows the option. */
+  if?: Condition[];
 }
 
 /** Field metadata as merged by core's AfformMetadataInjector. */
@@ -51,6 +55,8 @@ export interface FormDefinition {
   title: string | null;
   type: string;
   layout: LayoutNode[];
+  /** Translations of the ts() texts in the form's and its blocks' layouts; PHP sends [] for none. */
+  strings: Record<string, string> | [];
 }
 
 export type Values = Record<string, unknown>;

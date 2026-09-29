@@ -1,5 +1,12 @@
 import { emptyData } from "./model";
-import { initialiseData, joinOffsets, repeatMinimum, staticDefault } from "./structure";
+import {
+  hasTokens,
+  initialiseData,
+  joinOffsets,
+  repeatMinimum,
+  replaceTokens,
+  staticDefault,
+} from "./structure";
 import type { ElementNode, FieldDefn } from "./types";
 
 const field = (name: string, defn: Partial<FieldDefn> = {}): ElementNode => ({
@@ -43,15 +50,15 @@ describe("repeatMinimum", () => {
 });
 
 describe("staticDefault", () => {
-  it("skips token defaults, which Angular calculates live", () => {
+  it("skips token defaults, which afField calculates live", () => {
+    const defn = { name: "x", input_type: "Text", data_type: "String" };
     expect(
-      staticDefault({
-        name: "x",
-        input_type: "Text",
-        data_type: "String",
-        afform_default: "[user_contact_id]",
-      }),
+      staticDefault({ ...defn, afform_default: "Dear [Individual1.0.first_name]" }),
     ).toBeUndefined();
+    // afForm's identifyTokens() only knows [Entity.index.field].
+    expect(staticDefault({ ...defn, afform_default: "[user_contact_id]" })).toBe(
+      "[user_contact_id]",
+    );
     expect(
       staticDefault({
         name: "x",
@@ -61,6 +68,24 @@ describe("staticDefault", () => {
       }),
     ).toBe("Hello");
     expect(staticDefault(undefined)).toBeUndefined();
+  });
+});
+
+describe("replaceTokens", () => {
+  it("fills [Entity.index.field] tokens from the form data, unset ones empty", () => {
+    const data = { Individual1: [{ fields: { first_name: "Ada", age: 36 } }] };
+    expect(
+      replaceTokens("[Individual1.0.first_name] ([Individual1.0.age]) [Individual1.0.x]", data),
+    ).toBe("Ada (36) ");
+    expect(
+      replaceTokens("[Individual1.0.tags]", { Individual1: [{ fields: { tags: [1, null, 3] } }] }),
+    ).toBe("1,,3");
+    expect(() =>
+      replaceTokens("[Individual1.0.x]", { Individual1: [{ fields: { x: {} } }] }),
+    ).toThrow("not a field value");
+    expect(hasTokens("[Individual1.0.first_name]")).toBe(true);
+    expect(hasTokens("[user_contact_id]")).toBe(false);
+    expect(hasTokens(5)).toBe(false);
   });
 });
 

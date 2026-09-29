@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { createElement, useMemo, useRef, useState } from "react";
 import { api4, errorMessage } from "../api/civi";
+import type { ExpressionContext } from "./expressions";
 import { FormContext, Nodes, type FormState } from "./Layout";
 import {
   applyPrefill,
@@ -53,6 +54,15 @@ async function loadForm(
   };
 }
 
+/** ts() looks up the form's own translations first, then CiviCRM's page-wide strings; crmUrl() is CRM.url. */
+export function formExpressions(strings: FormDefinition["strings"]): ExpressionContext {
+  const own: Record<string, string> = Array.isArray(strings) ? {} : strings;
+  return {
+    translate: (text) => own[text] ?? ts(text),
+    url: (path, query) => window.CRM.url(path, query),
+  };
+}
+
 function isForm(form: FormDefinition): boolean {
   return findElements(form.layout, "af-form").length > 0;
 }
@@ -101,6 +111,7 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
   // A redirect keeps the form busy until the browser leaves the page.
   const busy = save.isPending || !!save.data?.redirect;
   const root = useRef<HTMLFormElement>(null);
+  const expressions = useMemo(() => formExpressions(form.strings), [form]);
   const state: FormState = {
     data,
     update: setData,
@@ -108,6 +119,8 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
     joinOffsets: offsets,
     entities,
     formName: name,
+    showSubmitButton: !args.sid,
+    expressions,
   };
 
   function submit() {

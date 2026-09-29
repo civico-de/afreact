@@ -5,8 +5,11 @@ and search definitions, the APIs and the permission checks stay those of core;
 only the browser side changes. The builders (FormBuilder, SearchKit admin) stay
 Angular.
 
-Status: proof of concept. It covers one contact form with a joined email block
-and one SearchKit table, and measures both against the Angular runtime.
+Status: proof of concept. It covers one contact form with a joined email block,
+one SearchKit table and a form with live rules (conditions, required and
+disabled rules, token defaults, `ts()` / `crmUrl()` expressions), and measures
+them against the Angular runtime. [docs/plan.md](docs/plan.md) tracks what
+else Afform uses.
 
 ## How it works
 
@@ -68,6 +71,7 @@ show how.
 | `civicrm/afreact/demo` | demo form and table, React renderer; `?source=page` or `?source=bundle` picks the layout source |
 | `civicrm/afreact/angular` | the same forms, Angular runtime |
 | `civicrm/afreact/compare` | loads every React variant and the Angular page in iframes and compares metrics |
+| `civicrm/afreact/render?name=…&renderer=react\|angular` | any form the user may open, with the renderer named |
 
 Both demo pages share one markup; only the elements that mount the forms
 differ (pinned by `PagesHeadlessTest`). The demo forms live in `ang/`.
@@ -131,7 +135,8 @@ CIVICRM_BASE_URL=http://localhost:8080 npm run test:e2e
 | `tests/browser/compare.spec.ts` | cold and warm load metrics for every React layout source and Angular (printed as a table), a cold request waterfall, and one round of the in-browser compare page |
 | `tests/browser/sources.spec.ts` | every layout source renders the demo page to the same DOM; `page` and `bundle` never call `getForm` |
 | `tests/browser/visual.spec.ts` | the React page matches the Angular page part by part in position, size and main styles; differences by design are listed with a reason |
-| `tests/browser/a11y.spec.ts` | axe in light and dark mode finds nothing on the React page that the Angular page passes |
+| `tests/browser/rules.spec.ts` | the rules form on both renderers: expressions, `af-if` (and the values it drops), `af-required`, `af-disabled`, a token default |
+| `tests/browser/a11y.spec.ts` | axe in light and dark mode finds nothing on the React demo and rules forms that the Angular ones pass |
 
 `compare.spec.ts` switches `debug_enabled` off for the measurement, so all
 pages load as in production, and restores the previous value afterwards.
@@ -157,9 +162,9 @@ half shows when that page was ready. The suite does not run it.
 | `Civi/Afreact/LayoutCompiler.php` | Afform partial → layout array, blocks inlined |
 | `Civi/Afreact/Afforms.php` | shared cache (core's Angular cache), block list, typed record fields |
 | `Civi/Afreact/Assets.php`, `Civi/Afreact/AttributeSchema.php` | bundle loading and the layouts handed to the page |
-| `Civi/Afreact/Pages.php`, `xml/Menu/afreact.xml` | demo and compare routes |
-| `ang/` | demo form and search page |
-| `src/afform/` | form renderer (layout, fields, form model, layout sources, module file parser) |
+| `Civi/Afreact/Pages.php`, `Civi/Afreact/RenderPage.php`, `Civi/Afreact/Chrome.php`, `xml/Menu/afreact.xml` | demo, compare and render routes, and the page chrome they share |
+| `ang/` | demo forms and search page |
+| `src/afform/` | form renderer (layout, fields, form model, conditions, expressions, layout sources, module file parser) |
 | `src/search/` | SearchKit table renderer and its pager |
 | `src/compare/` | comparison page and metric helpers |
 | `tests/browser/` | browser tests |

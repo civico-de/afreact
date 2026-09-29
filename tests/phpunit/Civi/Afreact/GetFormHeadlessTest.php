@@ -5,6 +5,7 @@ declare(strict_types = 1);
 namespace Civi\Afreact;
 
 use Civi\Api4\Afreact;
+use Civi\Api4\WordReplacement;
 use Civi\API\Exception\UnauthorizedException;
 use Civi\Test\CiviEnvBuilder;
 use Civi\Test\HeadlessInterface;
@@ -28,7 +29,7 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
    */
   public static function builder(): CiviEnvBuilder {
     return ck_headless()
-      ->install(['org.civicrm.afform_admin'])
+      ->install(['org.civicrm.afform_admin', 'civicrm_admin_ui'])
       ->callback([\CRM_Core_Menu::class, 'store'], 'afreact-menu')
       ->apply();
   }
@@ -59,6 +60,17 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
     $this->assertSame('sort_name', $display['settings']['columns'][0]['key']);
   }
 
+  public function testStringsCarryTheTranslationsOfTheFormsTexts(): void {
+    $this->assertSame([], $this->form('afformAfreactDemoContact')['strings']);
+
+    WordReplacement::create(checkPermissions: FALSE)
+      ->setValues(['find_word' => 'Learn more...', 'replace_word' => 'Read on', 'match_type' => 'exactMatch'])
+      ->execute();
+    // ts() keeps the replacements it read in a static.
+    unset(\Civi::$statics[\CRM_Core_I18n::class]);
+    $this->assertSame(['Learn more...' => 'Read on'], $this->form('afsearchManageACLs')['strings']);
+  }
+
   public function testFormPermissionDecidesAccess(): void {
     \CRM_Core_Config::singleton()->userPermissionClass->permissions = ['access CiviCRM'];
     $this->assertSame(
@@ -75,6 +87,13 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
   public function testUnknownFormIsRejected(): void {
     $this->expectException(UnauthorizedException::class);
     Afreact::getForm(checkPermissions: FALSE)->setName('afformDoesNotExist')->execute();
+  }
+
+  /**
+   * @return array<string, mixed>
+   */
+  private function form(string $name): array {
+    return Afreact::getForm(checkPermissions: FALSE)->setName($name)->execute()->single();
   }
 
   /**
