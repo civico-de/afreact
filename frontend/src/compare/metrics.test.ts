@@ -23,7 +23,7 @@ describe("resourceMetrics", () => {
 describe("isReady", () => {
   const page = (table: string) =>
     new DOMParser().parseFromString(
-      `<div class="facade-demo"><section><input></section><section><table><tbody>${table}</tbody></table></section></div>`,
+      `<div class="afreact-demo"><section><input></section><section><table><tbody>${table}</tbody></table></section></div>`,
       "text/html",
     );
 

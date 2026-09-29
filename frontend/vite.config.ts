@@ -11,8 +11,8 @@ export default defineConfig({
     rolldownOptions: {
       input: "src/main.tsx",
       output: {
-        entryFileNames: "facade.js",
-        assetFileNames: "facade.[ext]",
+        entryFileNames: "afreact.js",
+        assetFileNames: "afreact.[ext]",
         // Chunks would be loaded without the cache code.
         codeSplitting: false,
       },

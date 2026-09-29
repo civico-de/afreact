@@ -3,7 +3,7 @@
 declare(strict_types = 1);
 
 // phpcs:disable PSR1.Files.SideEffects
-require_once 'facade.civix.php';
+require_once 'afreact.civix.php';
 // phpcs:enable
 
 /**
@@ -11,8 +11,8 @@ require_once 'facade.civix.php';
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_config/
  */
-function facade_civicrm_config(\CRM_Core_Config $config): void {
-  _facade_civix_civicrm_config($config);
+function afreact_civicrm_config(\CRM_Core_Config $config): void {
+  _afreact_civix_civicrm_config($config);
 }
 
 /**
@@ -20,8 +20,8 @@ function facade_civicrm_config(\CRM_Core_Config $config): void {
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_install
  */
-function facade_civicrm_install(): void {
-  _facade_civix_civicrm_install();
+function afreact_civicrm_install(): void {
+  _afreact_civix_civicrm_install();
 }
 
 /**
@@ -29,6 +29,6 @@ function facade_civicrm_install(): void {
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_enable
  */
-function facade_civicrm_enable(): void {
-  _facade_civix_civicrm_enable();
+function afreact_civicrm_enable(): void {
+  _afreact_civix_civicrm_enable();
 }

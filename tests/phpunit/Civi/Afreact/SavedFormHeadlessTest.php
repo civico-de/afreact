@@ -2,10 +2,10 @@
 
 declare(strict_types = 1);
 
-namespace Civi\Facade;
+namespace Civi\Afreact;
 
 use Civi\Api4\Afform;
-use Civi\Api4\Facade;
+use Civi\Api4\Afreact;
 use Civi\Test\CiviEnvBuilder;
 use Civi\Test\HeadlessInterface;
 use PHPUnit\Framework\TestCase;
@@ -33,7 +33,7 @@ class SavedFormHeadlessTest extends TestCase implements HeadlessInterface {
   public function testSavingAFormRefreshesTheCachedLayout(): void {
     $save = static fn (string $text) => Afform::save(checkPermissions: FALSE)
       ->addRecord([
-        'name' => 'afformFacadeCacheProbe',
+        'name' => 'afformAfreactCacheProbe',
         'type' => 'form',
         'title' => 'Probe',
         'layout' => "<p>{$text}</p>",
@@ -41,7 +41,7 @@ class SavedFormHeadlessTest extends TestCase implements HeadlessInterface {
       ->setLayoutFormat('html')
       ->execute();
     $text = static fn (): string => json_encode(
-      Facade::getForm(checkPermissions: FALSE)->setName('afformFacadeCacheProbe')->execute()->single()['layout'],
+      Afreact::getForm(checkPermissions: FALSE)->setName('afformAfreactCacheProbe')->execute()->single()['layout'],
       JSON_THROW_ON_ERROR,
     );
     try {
@@ -52,14 +52,14 @@ class SavedFormHeadlessTest extends TestCase implements HeadlessInterface {
       $this->assertStringContainsString('second', $text());
     }
     finally {
-      Afform::revert(checkPermissions: FALSE)->addWhere('name', '=', 'afformFacadeCacheProbe')->execute();
+      Afform::revert(checkPermissions: FALSE)->addWhere('name', '=', 'afformAfreactCacheProbe')->execute();
     }
   }
 
   public function testSavingABlockRefreshesTheLayoutsEmbeddingIt(): void {
     $saveBlock = static fn (string $text) => Afform::save(checkPermissions: FALSE)
       ->addRecord([
-        'name' => 'afblockFacadeCacheProbe',
+        'name' => 'afblockAfreactCacheProbe',
         'type' => 'block',
         'title' => 'Probe block',
         'layout' => "<p>{$text}</p>",
@@ -67,17 +67,17 @@ class SavedFormHeadlessTest extends TestCase implements HeadlessInterface {
       ->setLayoutFormat('html')
       ->execute();
     $text = static fn (): string => json_encode(
-      Facade::getForm(checkPermissions: FALSE)->setName('afformFacadeCacheParent')->execute()->single()['layout'],
+      Afreact::getForm(checkPermissions: FALSE)->setName('afformAfreactCacheParent')->execute()->single()['layout'],
       JSON_THROW_ON_ERROR,
     );
     try {
       $saveBlock('first');
       Afform::save(checkPermissions: FALSE)
         ->addRecord([
-          'name' => 'afformFacadeCacheParent',
+          'name' => 'afformAfreactCacheParent',
           'type' => 'form',
           'title' => 'Parent',
-          'layout' => '<div><afblock-facade-cache-probe></afblock-facade-cache-probe></div>',
+          'layout' => '<div><afblock-afreact-cache-probe></afblock-afreact-cache-probe></div>',
         ])
         ->setLayoutFormat('html')
         ->execute();
@@ -87,7 +87,7 @@ class SavedFormHeadlessTest extends TestCase implements HeadlessInterface {
     }
     finally {
       Afform::revert(checkPermissions: FALSE)
-        ->addWhere('name', 'IN', ['afformFacadeCacheParent', 'afblockFacadeCacheProbe'])
+        ->addWhere('name', 'IN', ['afformAfreactCacheParent', 'afblockAfreactCacheProbe'])
         ->execute();
     }
   }
@@ -96,47 +96,47 @@ class SavedFormHeadlessTest extends TestCase implements HeadlessInterface {
     // Only the block: saving a form that embeds it crashes core before 6.19 (FormDataModel recursion).
     Afform::save(checkPermissions: FALSE)
       ->addRecord([
-        'name' => 'afblockFacadeLoop',
+        'name' => 'afblockAfreactLoop',
         'type' => 'block',
         'title' => 'Loop',
-        'layout' => '<div><afblock-facade-loop></afblock-facade-loop></div>',
+        'layout' => '<div><afblock-afreact-loop></afblock-afreact-loop></div>',
       ])
       ->execute();
     try {
       $this->expectException(\CRM_Core_Exception::class);
-      $this->expectExceptionMessage('Afform block afblockFacadeLoop includes itself.');
-      Facade::getForm(checkPermissions: FALSE)->setName('afblockFacadeLoop')->execute();
+      $this->expectExceptionMessage('Afform block afblockAfreactLoop includes itself.');
+      Afreact::getForm(checkPermissions: FALSE)->setName('afblockAfreactLoop')->execute();
     }
     finally {
       // Afform stores saved forms as files, outside the test transaction.
-      Afform::revert(checkPermissions: FALSE)->addWhere('name', '=', 'afblockFacadeLoop')->execute();
+      Afform::revert(checkPermissions: FALSE)->addWhere('name', '=', 'afblockAfreactLoop')->execute();
     }
   }
 
   public function testBundleOfASelfIncludingBlockNamesItOnce(): void {
     Afform::save(checkPermissions: FALSE)
       ->addRecord([
-        'name' => 'afblockFacadeLoop',
+        'name' => 'afblockAfreactLoop',
         'type' => 'block',
         'title' => 'Loop',
         'permission' => ['access CiviCRM'],
-        'layout' => '<div><afblock-facade-loop></afblock-facade-loop></div>',
+        'layout' => '<div><afblock-afreact-loop></afblock-afreact-loop></div>',
       ])
       ->execute();
     try {
       \CRM_Core_Config::singleton()->userPermissionClass->permissions = ['access CiviCRM'];
       \CRM_Core_Region::instance('html-header')->clear();
-      Assets::layouts('bundle', ['afblockFacadeLoop']);
-      $bundle = \Civi::resources()->getSettings()['vars']['facade']['bundle'] ?? NULL;
+      Assets::layouts('bundle', ['afblockAfreactLoop']);
+      $bundle = \Civi::resources()->getSettings()['vars']['afreact']['bundle'] ?? NULL;
       $this->assertIsArray($bundle);
-      $this->assertSame(['afblock-facade-loop' => 'afblockFacadeLoop'], $bundle['blocks']);
+      $this->assertSame(['afblock-afreact-loop' => 'afblockAfreactLoop'], $bundle['blocks']);
       $this->assertSame(
-        \Civi::service('asset_builder')->getUrl('angular-modules.json', ['modules' => 'afblockFacadeLoop']),
+        \Civi::service('asset_builder')->getUrl('angular-modules.json', ['modules' => 'afblockAfreactLoop']),
         $bundle['url'],
       );
     }
     finally {
-      Afform::revert(checkPermissions: FALSE)->addWhere('name', '=', 'afblockFacadeLoop')->execute();
+      Afform::revert(checkPermissions: FALSE)->addWhere('name', '=', 'afblockAfreactLoop')->execute();
     }
   }
 

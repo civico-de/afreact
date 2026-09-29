@@ -17,7 +17,7 @@ export function comparedPages(json: string): ComparedPage[] {
         typeof (page as ComparedPage).label === "string" &&
         typeof (page as ComparedPage).url === "string",
     );
-  if (!valid) throw new Error("<facade-compare> needs pages as a JSON list of {label, url}");
+  if (!valid) throw new Error("<afreact-compare> needs pages as a JSON list of {label, url}");
   return pages as ComparedPage[];
 }
 
@@ -82,7 +82,7 @@ function format(value: number, unit: string): string {
       : String(Math.round(value));
 }
 
-export function FacadeCompare({ pages }: { pages: ComparedPage[] }) {
+export function AfreactCompare({ pages }: { pages: ComparedPage[] }) {
   const frames = useRef<(HTMLIFrameElement | null)[]>([]);
   const [rounds, setRounds] = useState(5);
   const [runs, setRuns] = useState<Run[]>([]);
@@ -120,16 +120,16 @@ export function FacadeCompare({ pages }: { pages: ComparedPage[] }) {
   const count = (page: number) => runs.filter((run) => run.page === page).length;
 
   return (
-    <div className="facade-compare" id="bootstrap-theme">
+    <div className="afreact-compare" id="bootstrap-theme">
       <p>
         {ts(
           "All pages render the same two Afform definitions against the same APIs. The first round loads with a cold cache for whichever page runs first; later rounds are warm. Values are medians.",
         )}
       </p>
-      <div className="facade-compare-controls">
-        <label htmlFor="facade-compare-rounds">{ts("Rounds")}</label>
+      <div className="afreact-compare-controls">
+        <label htmlFor="afreact-compare-rounds">{ts("Rounds")}</label>
         <select
-          id="facade-compare-rounds"
+          id="afreact-compare-rounds"
           className="form-control"
           value={rounds}
           disabled={busy}
@@ -151,7 +151,7 @@ export function FacadeCompare({ pages }: { pages: ComparedPage[] }) {
           {error}
         </div>
       )}
-      <table className="table facade-compare-table">
+      <table className="table afreact-compare-table">
         <caption className="sr-only">{ts("Median metrics per page")}</caption>
         <thead>
           <tr>
@@ -174,7 +174,7 @@ export function FacadeCompare({ pages }: { pages: ComparedPage[] }) {
           ))}
         </tbody>
       </table>
-      <div className="facade-compare-frames">
+      <div className="afreact-compare-frames">
         {pages.map((page, index) => (
           <figure key={page.url}>
             <figcaption>{page.label}</figcaption>

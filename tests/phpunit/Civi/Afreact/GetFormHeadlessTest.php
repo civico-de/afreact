@@ -2,9 +2,9 @@
 
 declare(strict_types = 1);
 
-namespace Civi\Facade;
+namespace Civi\Afreact;
 
-use Civi\Api4\Facade;
+use Civi\Api4\Afreact;
 use Civi\API\Exception\UnauthorizedException;
 use Civi\Test\CiviEnvBuilder;
 use Civi\Test\HeadlessInterface;
@@ -12,7 +12,7 @@ use Civi\Test\TransactionalInterface;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Facade.getForm against the demo forms shipped in ang/.
+ * Afreact.getForm against the demo forms shipped in ang/.
  *
  * @group headless
  */
@@ -29,13 +29,13 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
   public static function builder(): CiviEnvBuilder {
     return ck_headless()
       ->install(['org.civicrm.afform_admin'])
-      ->callback([\CRM_Core_Menu::class, 'store'], 'facade-menu')
+      ->callback([\CRM_Core_Menu::class, 'store'], 'afreact-menu')
       ->apply();
   }
 
   public function testLayoutCarriesFieldMetadataAndInlinedBlocks(): void {
-    $form = Facade::getForm(checkPermissions: FALSE)->setName('afformFacadeDemoContact')->execute()->single();
-    $this->assertSame('Facade demo contact', $form['title']);
+    $form = Afreact::getForm(checkPermissions: FALSE)->setName('afformAfreactDemoContact')->execute()->single();
+    $this->assertSame('Afreact demo contact', $form['title']);
     $this->assertSame('form', $form['type']);
 
     $firstName = $this->findTag($form['layout'], 'af-field', 'first_name')[0];
@@ -51,9 +51,9 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
   }
 
   public function testSearchDisplaySettingsArriveAsArray(): void {
-    $form = Facade::getForm(checkPermissions: FALSE)->setName('afsearchFacadeDemoContacts')->execute()->single();
+    $form = Afreact::getForm(checkPermissions: FALSE)->setName('afsearchAfreactDemoContacts')->execute()->single();
     $display = $this->findTag($form['layout'], 'crm-search-display-table')[0];
-    $this->assertSame('Facade_Demo_Contacts', $display['search-name']);
+    $this->assertSame('Afreact_Demo_Contacts', $display['search-name']);
     $this->assertIsArray($display['settings']);
     $this->assertSame(10, $display['settings']['limit']);
     $this->assertSame('sort_name', $display['settings']['columns'][0]['key']);
@@ -62,19 +62,19 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
   public function testFormPermissionDecidesAccess(): void {
     \CRM_Core_Config::singleton()->userPermissionClass->permissions = ['access CiviCRM'];
     $this->assertSame(
-      'afformFacadeDemoContact',
-      Facade::getForm()->setName('afformFacadeDemoContact')->execute()->single()['name'],
+      'afformAfreactDemoContact',
+      Afreact::getForm()->setName('afformAfreactDemoContact')->execute()->single()['name'],
     );
 
     \CRM_Core_Config::singleton()->userPermissionClass->permissions = [];
     $this->expectException(UnauthorizedException::class);
-    $this->expectExceptionMessage('Form "afformFacadeDemoContact" does not exist or you may not open it.');
-    Facade::getForm()->setName('afformFacadeDemoContact')->execute();
+    $this->expectExceptionMessage('Form "afformAfreactDemoContact" does not exist or you may not open it.');
+    Afreact::getForm()->setName('afformAfreactDemoContact')->execute();
   }
 
   public function testUnknownFormIsRejected(): void {
     $this->expectException(UnauthorizedException::class);
-    Facade::getForm(checkPermissions: FALSE)->setName('afformDoesNotExist')->execute();
+    Afreact::getForm(checkPermissions: FALSE)->setName('afformDoesNotExist')->execute();
   }
 
   /**

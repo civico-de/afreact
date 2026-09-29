@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { mockApi, renderWithQuery } from "../test/render";
-import { FacadeForm } from "./FacadeForm";
+import { AfreactForm } from "./AfreactForm";
 import type { FieldDefn, LayoutNode } from "./types";
 
 const field = (
@@ -86,17 +86,17 @@ function renderForm(
   search = "?Individual1=5",
 ) {
   const calls = mockApi({
-    "Facade.getForm": () => [
+    "Afreact.getForm": () => [
       { name: "afformTest", title: "Test form", type: "form", layout: contactForm },
     ],
     "Afform.prefill": () => (search ? prefill : []),
     "Afform.submit": submit,
   });
-  renderWithQuery(<FacadeForm name="afformTest" location={{ search, hash: "" }} />);
+  renderWithQuery(<AfreactForm name="afformTest" location={{ search, hash: "" }} />);
   return calls;
 }
 
-describe("FacadeForm", () => {
+describe("AfreactForm", () => {
   it("prefills from the route arguments and submits the edited record", async () => {
     const calls = renderForm(() => [{ message: "<p>Contact saved.</p>" }]);
     const form = await screen.findByRole("form", { name: "Test form" });
@@ -112,7 +112,7 @@ describe("FacadeForm", () => {
     expect(await screen.findByText("Contact saved.")).toBeInTheDocument();
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
     expect(calls.map(({ call }) => call)).toEqual([
-      "Facade.getForm",
+      "Afreact.getForm",
       "Afform.prefill",
       "Afform.submit",
     ]);
@@ -200,21 +200,21 @@ describe("FacadeForm", () => {
 
   it("reports a form that cannot be loaded", async () => {
     mockApi({
-      "Facade.getForm": () =>
+      "Afreact.getForm": () =>
         Promise.reject({ error_message: 'Form "x" does not exist or you may not open it.' }),
     });
-    renderWithQuery(<FacadeForm name="x" location={{ search: "", hash: "" }} />);
+    renderWithQuery(<AfreactForm name="x" location={{ search: "", hash: "" }} />);
     expect(await screen.findByRole("alert")).toHaveTextContent("does not exist");
   });
 
   it("renders a layout the page embedded without calling getForm", async () => {
     const layout: LayoutNode[] = [{ "#tag": "p", "#children": [{ "#text": "a&nbsp;b" }] }];
     const form = { name: "afsearchTest", title: "Search", type: "search", layout };
-    window.CRM.vars = { facade: { layouts: { afsearchTest: form } } };
+    window.CRM.vars = { afreact: { layouts: { afsearchTest: form } } };
     try {
       const calls = mockApi({});
       renderWithQuery(
-        <FacadeForm name="afsearchTest" source="page" location={{ search: "", hash: "" }} />,
+        <AfreactForm name="afsearchTest" source="page" location={{ search: "", hash: "" }} />,
       );
       // The default normaliser would turn the non-breaking space into a plain one.
       const text = await screen.findByText("a\u00a0b", { normalizer: (value) => value });
@@ -238,9 +238,9 @@ describe("FacadeForm", () => {
       },
     ];
     const calls = mockApi({
-      "Facade.getForm": () => [{ name: "afsearchTest", title: "Search", type: "search", layout }],
+      "Afreact.getForm": () => [{ name: "afsearchTest", title: "Search", type: "search", layout }],
     });
-    renderWithQuery(<FacadeForm name="afsearchTest" location={{ search: "", hash: "" }} />);
+    renderWithQuery(<AfreactForm name="afsearchTest" location={{ search: "", hash: "" }} />);
     const notes = await screen.findAllByRole("note");
     expect(
       notes.map((note) => note.textContent?.replace("Not supported by the React renderer: ", "")),
@@ -251,7 +251,7 @@ describe("FacadeForm", () => {
       "field first_name without entity or metadata",
     ]);
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
-    expect(calls.map(({ call }) => call)).toEqual(["Facade.getForm"]);
+    expect(calls.map(({ call }) => call)).toEqual(["Afreact.getForm"]);
   });
 
   it("puts a field's class on its wrapper and flags attributes afField ignores", async () => {
@@ -264,10 +264,10 @@ describe("FacadeForm", () => {
       },
     ];
     mockApi({
-      "Facade.getForm": () => [{ name: "afformTest", title: "Attrs", type: "form", layout }],
+      "Afreact.getForm": () => [{ name: "afformTest", title: "Attrs", type: "form", layout }],
       "Afform.prefill": () => [],
     });
-    renderWithQuery(<FacadeForm name="afformTest" location={{ search: "", hash: "" }} />);
+    renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />);
     const input = await screen.findByRole("textbox", { name: "Nick" });
     const element = input.closest("af-field");
     expect(element).toHaveAttribute("name", "nick_name");
@@ -293,13 +293,13 @@ describe("FacadeForm", () => {
     ];
     for (const update of [false, true]) {
       mockApi({
-        "Facade.getForm": () => [
+        "Afreact.getForm": () => [
           { name: "afformTest", title: "Ids", type: "form", layout: layout(update) },
         ],
         "Afform.prefill": () => [],
       });
       const { unmount } = renderWithQuery(
-        <FacadeForm name="afformTest" location={{ search: "", hash: "" }} />,
+        <AfreactForm name="afformTest" location={{ search: "", hash: "" }} />,
       );
       const input = await screen.findByRole("spinbutton", { name: "Existing" });
       if (update) expect(input).toBeEnabled();
@@ -337,11 +337,11 @@ describe("FacadeForm", () => {
       },
     ];
     const calls = mockApi({
-      "Facade.getForm": () => [{ name: "afformTest", title: "Mixed", type: "form", layout }],
+      "Afreact.getForm": () => [{ name: "afformTest", title: "Mixed", type: "form", layout }],
       "Afform.prefill": () => [],
       "SearchDisplay.run": () => [{ key: 1, columns: [{ val: 1 }] }],
     });
-    renderWithQuery(<FacadeForm name="afformTest" location={{ search: "", hash: "" }} />);
+    renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />);
     await userEvent.type(await screen.findByRole("textbox", { name: "Details" }), "x");
     await userEvent.click(screen.getByRole("button", { name: "Copy" }));
     const add = screen.getByRole("button", { name: "Add" });

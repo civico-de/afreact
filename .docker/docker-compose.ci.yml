@@ -4,7 +4,7 @@
 #
 #   docker compose -f .docker/docker-compose.ci.yml up -d --wait
 #   docker compose -f .docker/docker-compose.ci.yml exec -T -u www-data \
-#     -w /var/www/html/ext/facade app ck ci
+#     -w /var/www/html/ext/afreact app ck ci
 #
 # `ck ci` runs every in-container gate of the shared CI workflow, in its order.
 # In a repository of several extensions the repository root is mounted at
@@ -27,7 +27,7 @@
 # The mount target is the sibling's extension KEY: that is where a <requires>
 # entry is looked up.
 # BEGIN CIVIKITCHEN MANAGED app
-name: facade-ci
+name: afreact-ci
 
 services:
   app:
@@ -42,7 +42,7 @@ services:
       CIVIKITCHEN_SITE_URL: "http://localhost:8080"
     volumes:
       # Mounted under ext/ → enabled on first boot, <requires> resolved.
-      - ..:/var/www/html/ext/facade
+      - ..:/var/www/html/ext/afreact
       - ./init.d:/civikitchen-init.d:ro
 # END CIVIKITCHEN MANAGED app
 

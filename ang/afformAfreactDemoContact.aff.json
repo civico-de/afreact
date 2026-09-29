@@ -1,7 +1,7 @@
 {
   "type": "form",
-  "title": "Facade demo contact",
-  "server_route": "civicrm/facade/demo-angular",
+  "title": "Afreact demo contact",
+  "server_route": "civicrm/afreact/demo-angular",
   "permission": ["access CiviCRM"],
   "confirmation_type": "show_confirmation_message",
   "confirmation_message": "Contact saved."

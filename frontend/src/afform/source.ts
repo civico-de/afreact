@@ -4,8 +4,8 @@ import { compileBundle, type BundleVars, type ModuleFile } from "./bundle";
 import type { FormDefinition } from "./types";
 
 /**
- * Where <facade-form source="…"> takes its layout from: the Facade.getForm API (default),
- * the page (Civi\Facade\Assets::layouts), or the compiled Angular module file.
+ * Where <afreact-form source="…"> takes its layout from: the Afreact.getForm API (default),
+ * the page (Civi\Afreact\Assets::layouts), or the compiled Angular module file.
  */
 export type LayoutSource = "api" | "page" | "bundle";
 
@@ -15,18 +15,18 @@ export function layoutSource(value: string | null): LayoutSource {
   throw new Error(`Unknown layout source "${value}"`);
 }
 
-interface FacadeVars {
+interface AfreactVars {
   layouts?: Record<string, FormDefinition>;
   bundle?: BundleVars;
 }
 
-function vars(): FacadeVars {
-  return (window.CRM.vars?.facade ?? {}) as FacadeVars;
+function vars(): AfreactVars {
+  return (window.CRM.vars?.afreact ?? {}) as AfreactVars;
 }
 
 function notProvided(source: LayoutSource): Error {
   return new Error(
-    `The page provides no layouts for source="${source}" (Civi\\Facade\\Assets::layouts).`,
+    `The page provides no layouts for source="${source}" (Civi\\Afreact\\Assets::layouts).`,
   );
 }
 
@@ -59,12 +59,12 @@ export async function loadDefinition(
     if (url === null || !bundle.forms[name]) throw forbidden(name);
     // Every form on the page shares one file and one request.
     const file = await client.fetchQuery({
-      queryKey: ["facade-bundle", url],
+      queryKey: ["afreact-bundle", url],
       queryFn: () => moduleFile(url),
     });
     return compileBundle(bundle, file, name);
   }
-  const [form] = await api4<FormDefinition>("Facade", "getForm", { name });
+  const [form] = await api4<FormDefinition>("Afreact", "getForm", { name });
   if (!form) throw new Error(ts("Form %1 was not returned.", { 1: name }));
   return form;
 }

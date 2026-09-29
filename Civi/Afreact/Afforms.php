@@ -2,7 +2,7 @@
 
 declare(strict_types = 1);
 
-namespace Civi\Facade;
+namespace Civi\Afreact;
 
 use Civi\Angular\Manager;
 use Civi\Api4\Afform;
@@ -28,7 +28,7 @@ final class Afforms {
       'withArray' => 'fast',
     ]);
     // The resource cache code changes on flush and carries the locale.
-    $key = 'facade_' . md5($name . '_' . \CRM_Core_Resources::singleton()->getCacheCode());
+    $key = 'afreact_' . md5($name . '_' . \CRM_Core_Resources::singleton()->getCacheCode());
     if ($cache->has($key)) {
       /** @var T */
       return $cache->get($key);

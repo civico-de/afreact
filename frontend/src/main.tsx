@@ -1,11 +1,11 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createRoot, type Root } from "react-dom/client";
 import { queryClient } from "./api/query";
-import { FacadeForm } from "./afform/FacadeForm";
+import { AfreactForm } from "./afform/AfreactForm";
 import { layoutSource } from "./afform/source";
-import { comparedPages, FacadeCompare } from "./compare/FacadeCompare";
-import { FacadeSearch } from "./search/FacadeSearch";
-import "./facade.css";
+import { comparedPages, AfreactCompare } from "./compare/AfreactCompare";
+import { AfreactSearch } from "./search/AfreactSearch";
+import "./afreact.css";
 
 /** Light-DOM custom element, so CiviCRM's theme styles the React output like any other markup. */
 abstract class ReactElement extends HTMLElement {
@@ -30,29 +30,32 @@ abstract class ReactElement extends HTMLElement {
   protected abstract view(): React.ReactNode;
 }
 
-/** <facade-form name="afformName" source="api|page|bundle"> renders a FormBuilder form. */
-class FacadeFormElement extends ReactElement {
+/** <afreact-form name="afformName" source="api|page|bundle"> renders a FormBuilder form. */
+class AfreactFormElement extends ReactElement {
   protected view() {
     return (
-      <FacadeForm name={this.required("name")} source={layoutSource(this.getAttribute("source"))} />
+      <AfreactForm
+        name={this.required("name")}
+        source={layoutSource(this.getAttribute("source"))}
+      />
     );
   }
 }
 
-/** <facade-search search="SavedSearch" display="SearchDisplay"> renders a SearchKit table. */
-class FacadeSearchElement extends ReactElement {
+/** <afreact-search search="SavedSearch" display="SearchDisplay"> renders a SearchKit table. */
+class AfreactSearchElement extends ReactElement {
   protected view() {
-    return <FacadeSearch search={this.required("search")} display={this.required("display")} />;
+    return <AfreactSearch search={this.required("search")} display={this.required("display")} />;
   }
 }
 
-/** <facade-compare pages='[{"label": "…", "url": "…"}, …]'> measures the listed pages. */
-class FacadeCompareElement extends ReactElement {
+/** <afreact-compare pages='[{"label": "…", "url": "…"}, …]'> measures the listed pages. */
+class AfreactCompareElement extends ReactElement {
   protected view() {
-    return <FacadeCompare pages={comparedPages(this.required("pages"))} />;
+    return <AfreactCompare pages={comparedPages(this.required("pages"))} />;
   }
 }
 
-customElements.define("facade-form", FacadeFormElement);
-customElements.define("facade-search", FacadeSearchElement);
-customElements.define("facade-compare", FacadeCompareElement);
+customElements.define("afreact-form", AfreactFormElement);
+customElements.define("afreact-search", AfreactSearchElement);
+customElements.define("afreact-compare", AfreactCompareElement);

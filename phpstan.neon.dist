@@ -23,9 +23,9 @@ parameters:
 	paths:
 		- Civi
 		- managed
-		- facade.php
+		- afreact.php
 	scanFiles:
-		- facade.civix.php
+		- afreact.civix.php
 	# phpstanBootstrap.php already autoloads core's own ext packages and
 	# every extension in info.xml <requires>. Add here what neither covers:
 	# an extension this repo does not <require>, or a package whose classes

@@ -7,8 +7,8 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 type Renderer = "react" | "angular";
 const PAGES: Record<Renderer, string> = {
-  react: "/civicrm/facade/demo",
-  angular: "/civicrm/facade/angular",
+  react: "/civicrm/afreact/demo",
+  angular: "/civicrm/afreact/angular",
 };
 const RUN = Date.now().toString(36);
 
@@ -21,7 +21,7 @@ interface Driver {
 }
 
 function driver(page: Page, renderer: Renderer): Driver {
-  const form = page.locator(".facade-demo section").first();
+  const form = page.locator(".afreact-demo section").first();
   const field = (name: string) => form.locator(`af-field[name="${name}"]`).first();
   return {
     field,
@@ -113,8 +113,10 @@ async function savedContact(page: Page, lastName: string): Promise<Saved[]> {
 }
 
 async function waitReady(page: Page) {
-  await expect(page.locator(".facade-demo section").first().locator("input").first()).toBeVisible();
-  await expect(page.locator(".facade-demo table tbody tr a[href]").first()).toBeVisible();
+  await expect(
+    page.locator(".afreact-demo section").first().locator("input").first(),
+  ).toBeVisible();
+  await expect(page.locator(".afreact-demo table tbody tr a[href]").first()).toBeVisible();
 }
 
 const created: Partial<Record<Renderer, Saved>> = {};
@@ -124,7 +126,7 @@ test.afterAll(async ({ browser }) => {
   if (!ids.length) return;
   const context = await browser.newContext({ storageState: "e2e/.auth/admin.json" });
   const page = await context.newPage();
-  await page.goto("/civicrm/facade/compare");
+  await page.goto("/civicrm/afreact/compare");
   await api(page, "Contact", "delete", { where: [["id", "IN", ids]], useTrash: false });
   await context.close();
 });
@@ -141,7 +143,7 @@ for (const renderer of ["react", "angular"] as const) {
       await waitReady(page);
       await page.getByRole("button", { name: "Save" }).click();
       await expect(
-        page.locator(".facade-demo section").first().locator(":invalid").first(),
+        page.locator(".afreact-demo section").first().locator(":invalid").first(),
       ).toBeAttached();
       expect(submits).toEqual([]);
     });
@@ -167,7 +169,7 @@ for (const renderer of ["react", "angular"] as const) {
         first_name: "Paula",
         "gender_id:label": "Female",
         birth_date: "1980-05-17",
-        source: "Facade demo",
+        source: "Afreact demo",
         do_not_email: false,
         emails: [
           {
@@ -223,7 +225,7 @@ test("both renderers saved the same record", () => {
 });
 
 test("both renderers show the same table pages and sort order", async ({ page }) => {
-  const search = page.locator(".facade-demo section").nth(1);
+  const search = page.locator(".afreact-demo section").nth(1);
   // Angular swaps in placeholder rows while a page loads; wait for the answer and real rows.
   const reload = async (action: () => Promise<void>) => {
     const answered = page.waitForResponse((response) => response.url().includes("/ajax/api4"));

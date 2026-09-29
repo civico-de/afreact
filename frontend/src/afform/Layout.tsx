@@ -1,5 +1,5 @@
 import { createContext, createElement, useContext, useId, type ReactNode } from "react";
-import { FacadeSearch, type DisplaySettings } from "../search/FacadeSearch";
+import { AfreactSearch, type DisplaySettings } from "../search/AfreactSearch";
 import { ClearButton, Field, fieldClasses } from "./Field";
 import {
   addRepeatItem,
@@ -360,7 +360,7 @@ function SubmitButton({ node }: { node: ElementNode }) {
 function SearchNode({ node }: { node: ElementNode }) {
   const form = useForm();
   return (
-    <FacadeSearch
+    <AfreactSearch
       search={String(node["search-name"])}
       display={String(node["display-name"])}
       settings={node.settings as DisplaySettings | undefined}

@@ -1,4 +1,4 @@
-# facade
+# afreact
 
 Renders FormBuilder (Afform) forms and SearchKit displays with React. The form
 and search definitions, the APIs and the permission checks stay those of core;
@@ -11,27 +11,27 @@ and one SearchKit table, and measures both against the Angular runtime.
 ## How it works
 
 ```
-<facade-form name="afformX">          custom element, React inside (light DOM)
+<afreact-form name="afformX">          custom element, React inside (light DOM)
         │
         ├─ layout                       as the Angular runtime sees it (see below)
         ├─ Afform.prefill / .submit     unchanged core actions
         └─ SearchDisplay.run            unchanged core action (tables)
 ```
 
-- **`Facade.getForm`** (APIv4) runs the form's partial through core's Angular
+- **`Afreact.getForm`** (APIv4) runs the form's partial through core's Angular
   pipeline, so every `af-field` carries the metadata FormBuilder injected
   (`defn`: input type, label, options, required). Blocks (`afblock-*`) arrive
   with their compiled layout as children; embedded search displays arrive with
   their settings as an array. Access is the form's own permission, checked by
   `Afform.get`. The compiled layout is kept in core's Angular cache, which
   saving a form or changing custom fields clears.
-- **Layout sources.** `<facade-form source="…">` picks where the layout comes
+- **Layout sources.** `<afreact-form source="…">` picks where the layout comes
   from; all three give the same layout (pinned by `e2e/sources.spec.ts`):
 
   | `source` | Layout from | Needs |
   |---|---|---|
-  | `api` (default) | a `Facade.getForm` request | nothing |
-  | `page` | the page's `CRM.vars.facade.layouts` | `Assets::layouts('page', $names)` |
+  | `api` (default) | an `Afreact.getForm` request | nothing |
+  | `page` | the page's `CRM.vars.afreact.layouts` | `Assets::layouts('page', $names)` |
   | `bundle` | core's compiled `angular-modules.json`, parsed in the browser | `Assets::layouts('bundle', $names)` |
 
   `page` and `bundle` save the `getForm` round trip, but the server must know
@@ -44,9 +44,9 @@ and one SearchKit table, and measures both against the Angular runtime.
 
   | Element | Attributes | Renders |
   |---|---|---|
-  | `<facade-form>` | `name`, `source` | a FormBuilder form or search page |
-  | `<facade-search>` | `search`, `display` | a SearchKit table display |
-  | `<facade-compare>` | `pages` (JSON list of `{label, url}`) | the comparison page |
+  | `<afreact-form>` | `name`, `source` | a FormBuilder form or search page |
+  | `<afreact-search>` | `search`, `display` | a SearchKit table display |
+  | `<afreact-compare>` | `pages` (JSON list of `{label, url}`) | the comparison page |
 
 - **Data layer:** TanStack Query, one query per API call, keyed by its
   parameters. Search tables follow SearchKit's rules: placeholder rows while a
@@ -57,17 +57,17 @@ and one SearchKit table, and measures both against the Angular runtime.
   visible "Not supported by the React renderer" note naming the directive,
   attribute or field type.
 
-`Civi\Facade\Assets::load()` adds the bundle to a page and
-`Assets::layouts()` hands over layouts; the demo pages in `Civi\Facade\Pages`
+`Civi\Afreact\Assets::load()` adds the bundle to a page and
+`Assets::layouts()` hands over layouts; the demo pages in `Civi\Afreact\Pages`
 show how.
 
 ## Pages
 
 | Route | Content |
 |---|---|
-| `civicrm/facade/demo` | demo form and table, React renderer; `?source=page` or `?source=bundle` picks the layout source |
-| `civicrm/facade/angular` | the same forms, Angular runtime |
-| `civicrm/facade/compare` | loads every React variant and the Angular page in iframes and compares metrics |
+| `civicrm/afreact/demo` | demo form and table, React renderer; `?source=page` or `?source=bundle` picks the layout source |
+| `civicrm/afreact/angular` | the same forms, Angular runtime |
+| `civicrm/afreact/compare` | loads every React variant and the Angular page in iframes and compares metrics |
 
 Both demo pages share one markup; only the elements that mount the forms
 differ (pinned by `PagesHeadlessTest`). The demo forms live in `ang/`.
@@ -103,7 +103,7 @@ container:
 
 ```sh
 docker compose -f .docker/docker-compose.yml exec -u www-data \
-  -w /var/www/html/ext/facade app ck ci
+  -w /var/www/html/ext/afreact app ck ci
 ```
 
 `ck ci` lints the JS/TS files git tracks; before the first commit, lint the
@@ -134,11 +134,11 @@ pages load as in production, and restores the previous value afterwards.
 
 | Path | Content |
 |---|---|
-| `Civi/Api4/Facade.php`, `Civi/Api4/Action/Facade/` | the `Facade.getForm` action |
-| `Civi/Facade/LayoutCompiler.php` | Afform partial → layout array, blocks inlined |
-| `Civi/Facade/Afforms.php` | shared cache (core's Angular cache), block list, typed record fields |
-| `Civi/Facade/Assets.php`, `Civi/Facade/AttributeSchema.php` | bundle loading and the layouts handed to the page |
-| `Civi/Facade/Pages.php`, `xml/Menu/facade.xml` | demo and compare routes |
+| `Civi/Api4/Afreact.php`, `Civi/Api4/Action/Afreact/` | the `Afreact.getForm` action |
+| `Civi/Afreact/LayoutCompiler.php` | Afform partial → layout array, blocks inlined |
+| `Civi/Afreact/Afforms.php` | shared cache (core's Angular cache), block list, typed record fields |
+| `Civi/Afreact/Assets.php`, `Civi/Afreact/AttributeSchema.php` | bundle loading and the layouts handed to the page |
+| `Civi/Afreact/Pages.php`, `xml/Menu/afreact.xml` | demo and compare routes |
 | `ang/` | demo form and search page |
 | `frontend/src/afform/` | form renderer (layout, fields, form model, layout sources, module file parser) |
 | `frontend/src/search/` | SearchKit table renderer and its pager |

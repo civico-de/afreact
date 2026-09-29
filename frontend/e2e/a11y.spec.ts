@@ -7,7 +7,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { isReady } from "../src/compare/metrics";
 
-const PAGES = { react: "/civicrm/facade/demo", angular: "/civicrm/facade/angular" };
+const PAGES = { react: "/civicrm/afreact/demo", angular: "/civicrm/afreact/angular" };
 
 /**
  * Axe findings on the demo, one per element: contrast failures by colours and font, which the
@@ -18,7 +18,7 @@ async function findings(page: Page, url: string): Promise<string[]> {
   await page.waitForFunction(`(${isReady.toString()})(document)`);
   await page.waitForLoadState("networkidle");
   const { violations } = await new AxeBuilder({ page })
-    .include(".facade-demo")
+    .include(".afreact-demo")
     .exclude(".crm-admin-block-context-dropdown")
     .analyze();
   return violations.flatMap((violation) =>

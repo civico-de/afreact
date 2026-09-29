@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
-<extension key="facade" type="module">
-  <file>facade</file>
-  <name>Facade</name>
+<extension key="afreact" type="module">
+  <file>afreact</file>
+  <name>Afreact</name>
   <description>Renders FormBuilder (Afform) forms and SearchKit displays with React, reading the unchanged core definitions and APIs.</description>
   <license>Proprietary</license>
   <authors>
     <author>
-      <name>facade contributors</name>
+      <name>afreact contributors</name>
       <email>hi@jfilter.de</email>
       <role>Maintainer</role>
     </author>
@@ -40,7 +40,7 @@
     <psr4 prefix="Civi\" path="Civi"/>
   </classloader>
   <civix>
-    <namespace>CRM/Facade</namespace>
+    <namespace>CRM/Afreact</namespace>
     <format>25.10.2</format>
   </civix>
   <mixins>

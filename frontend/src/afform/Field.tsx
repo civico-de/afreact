@@ -186,7 +186,7 @@ export function Field({ defn, value, onChange, disabled }: FieldProps) {
         return (
           <div className={`form-group ${style ?? ""}`.trim()}>
             {/* Stands in for select2's container, which sizes the box at the surrounding font. */}
-            <span className="facade-select">
+            <span className="afreact-select">
               {attrs.multiple ? (
                 <select
                   {...common}

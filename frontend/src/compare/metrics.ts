@@ -35,7 +35,7 @@ export function resourceMetrics(entries: Entry[]): ResourceMetrics {
  * the contact table shows a data row (a linked name, not a loading placeholder).
  */
 export function isReady(doc: Document): boolean {
-  const [form, search] = doc.querySelectorAll(".facade-demo > section");
+  const [form, search] = doc.querySelectorAll(".afreact-demo > section");
   return Boolean(form?.querySelector("input") && search?.querySelector("table tbody tr a[href]"));
 }
 

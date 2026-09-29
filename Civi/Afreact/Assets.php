@@ -2,21 +2,21 @@
 
 declare(strict_types = 1);
 
-namespace Civi\Facade;
+namespace Civi\Afreact;
 
 use Civi\Api4\Afform;
-use Civi\Api4\Facade;
+use Civi\Api4\Afreact;
 use Civi\API\Exception\UnauthorizedException;
 use Civi\Core\AssetBuilder;
-use CRM_Facade_ExtensionUtil as E;
+use CRM_Afreact_ExtensionUtil as E;
 
 /**
- * Adds the React bundle, which registers the <facade-form> and <facade-search> elements.
+ * Adds the React bundle, which registers the <afreact-form> and <afreact-search> elements.
  */
 final class Assets {
 
   /**
-   * Where <facade-form source="…"> takes its layout from: the Facade.getForm API, the page
+   * Where <afreact-form source="…"> takes its layout from: the Afreact.getForm API, the page
    * itself, or the compiled Angular module file the Angular runtime loads.
    */
   public const SOURCES = ['api', 'page', 'bundle'];
@@ -24,8 +24,8 @@ final class Assets {
   public static function load(): void {
     // Fixed file names: CiviCRM's resource cache code busts browser caches after flushes and upgrades.
     \Civi::resources()
-      ->addModuleFile(E::LONG_NAME, 'dist/facade.js')
-      ->addStyleFile(E::LONG_NAME, 'dist/facade.css')
+      ->addModuleFile(E::LONG_NAME, 'dist/afreact.js')
+      ->addStyleFile(E::LONG_NAME, 'dist/afreact.css')
       // The styles core's Angular modules bring for the markup the elements share with them.
       ->addStyleFile('civicrm', 'ang/crmUI.css')
       ->addStyleFile('org.civicrm.afform', 'ang/afCore.css')
@@ -34,7 +34,7 @@ final class Assets {
   }
 
   /**
-   * Hands the page what <facade-form source="page|bundle"> needs for the given forms.
+   * Hands the page what <afreact-form source="page|bundle"> needs for the given forms.
    *
    * Forms the user may not open are left out; the element then reports them as such.
    *
@@ -43,8 +43,8 @@ final class Assets {
   public static function layouts(string $source, array $names): void {
     match ($source) {
       'api' => NULL,
-      'page' => \Civi::resources()->addVars('facade', ['layouts' => self::pageLayouts($names)]),
-      'bundle' => \Civi::resources()->addVars('facade', ['bundle' => self::bundle($names)]),
+      'page' => \Civi::resources()->addVars('afreact', ['layouts' => self::pageLayouts($names)]),
+      'bundle' => \Civi::resources()->addVars('afreact', ['bundle' => self::bundle($names)]),
       default => throw new \CRM_Core_Exception("Unknown layout source \"{$source}\"."),
     };
   }
@@ -57,7 +57,7 @@ final class Assets {
     $layouts = [];
     foreach ($names as $name) {
       try {
-        $layouts[$name] = Facade::getForm()->setName($name)->execute()->single();
+        $layouts[$name] = Afreact::getForm()->setName($name)->execute()->single();
       }
       catch (UnauthorizedException) {
         continue;

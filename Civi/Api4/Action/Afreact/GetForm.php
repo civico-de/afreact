@@ -2,20 +2,20 @@
 
 declare(strict_types = 1);
 
-namespace Civi\Api4\Action\Facade;
+namespace Civi\Api4\Action\Afreact;
 
+use Civi\Afreact\Afforms;
+use Civi\Afreact\LayoutCompiler;
 use Civi\Api4\Afform;
 use Civi\Api4\Generic\AbstractAction;
 use Civi\Api4\Generic\Result;
 use Civi\API\Exception\UnauthorizedException;
-use Civi\Facade\Afforms;
-use Civi\Facade\LayoutCompiler;
-use CRM_Facade_ExtensionUtil as E;
+use CRM_Afreact_ExtensionUtil as E;
 
 /**
  * Returns an Afform with its layout as the Angular runtime would see it.
  *
- * @see \Civi\Facade\LayoutCompiler
+ * @see \Civi\Afreact\LayoutCompiler
  *
  * @method $this setName(string $name)
  * @method string getName()

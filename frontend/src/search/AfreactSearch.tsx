@@ -37,7 +37,7 @@ export interface Row {
 
 type Sort = [string, "ASC" | "DESC"][];
 
-interface FacadeSearchProps {
+interface AfreactSearchProps {
   search: string;
   display: string;
   /** Settings Afform already compiled into the layout; loaded via the API when absent. */
@@ -46,7 +46,7 @@ interface FacadeSearchProps {
   afform?: string;
 }
 
-export function FacadeSearch({ search, display, settings: given, afform }: FacadeSearchProps) {
+export function AfreactSearch({ search, display, settings: given, afform }: AfreactSearchProps) {
   const client = useQueryClient();
   const loaded = useQuery({
     queryKey: ["SearchDisplay", "get", search, display],

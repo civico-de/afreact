@@ -2,15 +2,15 @@
 
 declare(strict_types = 1);
 
-namespace Civi\Facade;
+namespace Civi\Afreact;
 
-use Civi\Api4\Facade;
+use Civi\Api4\Afreact;
 use Civi\Test\CiviEnvBuilder;
 use Civi\Test\HeadlessInterface;
 use PHPUnit\Framework\TestCase;
 
 /**
- * What the page hands <facade-form source="page|bundle">.
+ * What the page hands <afreact-form source="page|bundle">.
  *
  * @group headless
  */
@@ -32,8 +32,8 @@ class AssetsHeadlessTest extends TestCase implements HeadlessInterface {
     $layouts = $this->vars()['layouts'];
     $this->assertSame(Pages::FORMS, array_keys($layouts));
     $this->assertSame(
-      Facade::getForm()->setName('afformFacadeDemoContact')->execute()->single(),
-      $layouts['afformFacadeDemoContact'],
+      Afreact::getForm()->setName('afformAfreactDemoContact')->execute()->single(),
+      $layouts['afformAfreactDemoContact'],
     );
   }
 
@@ -47,8 +47,8 @@ class AssetsHeadlessTest extends TestCase implements HeadlessInterface {
     Assets::layouts('bundle', Pages::FORMS);
     $bundle = $this->vars()['bundle'];
     $this->assertSame(
-      ['module' => 'afformFacadeDemoContact', 'title' => 'Facade demo contact', 'type' => 'form'],
-      $bundle['forms']['afformFacadeDemoContact'],
+      ['module' => 'afformAfreactDemoContact', 'title' => 'Afreact demo contact', 'type' => 'form'],
+      $bundle['forms']['afformAfreactDemoContact'],
     );
     $this->assertSame(['afblock-contact-email' => 'afblockContactEmail'], $bundle['blocks']);
     $this->assertStringContainsString('angular-modules', $bundle['url']);
@@ -73,7 +73,7 @@ class AssetsHeadlessTest extends TestCase implements HeadlessInterface {
    * @return array<string, mixed>
    */
   private function vars(): array {
-    $vars = \Civi::resources()->getSettings()['vars']['facade'] ?? NULL;
+    $vars = \Civi::resources()->getSettings()['vars']['afreact'] ?? NULL;
     $this->assertIsArray($vars);
     return $vars;
   }

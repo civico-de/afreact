@@ -2,7 +2,7 @@
 
 declare(strict_types = 1);
 
-namespace Civi\Facade;
+namespace Civi\Afreact;
 
 use Civi\Test\CiviEnvBuilder;
 use Civi\Test\HeadlessInterface;
@@ -24,16 +24,16 @@ class PagesHeadlessTest extends TestCase implements HeadlessInterface {
     $react = Pages::reactWith('api');
     $angular = Pages::angular();
     $this->assertStringContainsString(
-      '<facade-form name="afformFacadeDemoContact" source="api"></facade-form>',
+      '<afreact-form name="afformAfreactDemoContact" source="api"></afreact-form>',
       $react,
     );
     $this->assertStringContainsString(
-      '<crm-angular-js modules="afformFacadeDemoContact afsearchFacadeDemoContacts">',
+      '<crm-angular-js modules="afformAfreactDemoContact afsearchAfreactDemoContacts">',
       $angular,
     );
     // Core's Afform page puts a form around the directive; React renders its own.
     $this->assertStringContainsString(
-      '<form><afform-facade-demo-contact></afform-facade-demo-contact></form>',
+      '<form><afform-afreact-demo-contact></afform-afreact-demo-contact></form>',
       $angular,
     );
 
@@ -41,7 +41,7 @@ class PagesHeadlessTest extends TestCase implements HeadlessInterface {
       preg_replace(
         [
           '#<crm-angular-js[^>]*>|</crm-angular-js>#',
-          '#(<form>)?<(facade-form|afform-[a-z-]+|afsearch-[a-z-]+)[^>]*></\2>(?(1)</form>)#',
+          '#(<form>)?<(afreact-form|afform-[a-z-]+|afsearch-[a-z-]+)[^>]*></\2>(?(1)</form>)#',
           '#data-renderer="\w+"#',
           '#<h1[^>]*>.*?</h1>#s',
         ],
@@ -50,7 +50,7 @@ class PagesHeadlessTest extends TestCase implements HeadlessInterface {
       ) ?? throw new \RuntimeException('preg_replace failed')
     );
     $this->assertStringContainsString(
-      '<h2 id="facade-demo-form">Contact form</h2><mount/></section>',
+      '<h2 id="afreact-demo-form">Contact form</h2><mount/></section>',
       $normalise($react),
     );
     $this->assertSame($normalise($react), $normalise($angular));
@@ -58,7 +58,7 @@ class PagesHeadlessTest extends TestCase implements HeadlessInterface {
 
   public function testDemoPageSetsTheLayoutSource(): void {
     $this->assertStringContainsString(
-      '<facade-form name="afsearchFacadeDemoContacts" source="bundle">',
+      '<afreact-form name="afsearchAfreactDemoContacts" source="bundle">',
       Pages::reactWith('bundle'),
     );
     $this->expectExceptionMessage('Unknown layout source "file".');
@@ -66,14 +66,14 @@ class PagesHeadlessTest extends TestCase implements HeadlessInterface {
   }
 
   public function testComparePageListsEveryVariant(): void {
-    $this->assertSame(1, preg_match('#<facade-compare pages="([^"]*)"></facade-compare>#', Pages::compare(), $match));
+    $this->assertSame(1, preg_match('#<afreact-compare pages="([^"]*)"></afreact-compare>#', Pages::compare(), $match));
     $pages = json_decode(html_entity_decode($match[1]), TRUE, 512, JSON_THROW_ON_ERROR);
     $this->assertIsArray($pages);
     $patterns = [
-      '#civicrm/facade/demo$#',
-      '#civicrm/facade/demo[?&]source=page$#',
-      '#civicrm/facade/demo[?&]source=bundle$#',
-      '#civicrm/facade/angular$#',
+      '#civicrm/afreact/demo$#',
+      '#civicrm/afreact/demo[?&]source=page$#',
+      '#civicrm/afreact/demo[?&]source=bundle$#',
+      '#civicrm/afreact/angular$#',
     ];
     $this->assertCount(count($patterns), $pages);
     foreach ($patterns as $index => $pattern) {

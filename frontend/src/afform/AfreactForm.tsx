@@ -19,7 +19,7 @@ interface SubmitResponse {
   message?: string;
 }
 
-interface FacadeFormProps {
+interface AfreactFormProps {
   name: string;
   source?: LayoutSource;
   /** Source of route arguments; defaults to the page URL like Afform's routeParams. */
@@ -57,22 +57,26 @@ function isForm(form: FormDefinition): boolean {
   return findElements(form.layout, "af-form").length > 0;
 }
 
-export function FacadeForm({ name, source = "api", location = window.location }: FacadeFormProps) {
+export function AfreactForm({
+  name,
+  source = "api",
+  location = window.location,
+}: AfreactFormProps) {
   const { search, hash } = location;
   const client = useQueryClient();
   const loaded = useQuery({
-    queryKey: ["Facade", "form", name, source, search, hash],
+    queryKey: ["Afreact", "form", name, source, search, hash],
     queryFn: () => loadForm(name, source, { search, hash }, client),
   });
   if (loaded.isSuccess) return <LoadedForm name={name} {...loaded.data} />;
   return (
-    <div className="facade-form" aria-busy={loaded.isPending}>
+    <div className="afreact-form" aria-busy={loaded.isPending}>
       {loaded.isError && (
         <div className="alert alert-danger" role="alert">
           {errorMessage(loaded.error)}
         </div>
       )}
-      <p role="status" className="facade-status">
+      <p role="status" className="afreact-status">
         {loaded.isPending ? ts("Loading…") : ""}
       </p>
     </div>
@@ -136,13 +140,13 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
       ? errorMessage(save.error)
       : null;
   return (
-    <div className="facade-form" aria-busy={busy}>
+    <div className="afreact-form" aria-busy={busy}>
       {failure && (
         <div className="alert alert-danger" role="alert">
           {failure}
         </div>
       )}
-      <p role="status" className="facade-status">
+      <p role="status" className="afreact-status">
         {/* Without a confirmation message Angular keeps the filled form and shows a "Saved" status. */}
         {busy ? ts("Saving…") : save.isSuccess ? ts("Saved") : ""}
       </p>

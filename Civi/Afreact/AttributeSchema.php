@@ -2,7 +2,7 @@
 
 declare(strict_types = 1);
 
-namespace Civi\Facade;
+namespace Civi\Afreact;
 
 /**
  * The attribute types core's CRM_Afform_ArrayHtml decodes partials with, including those

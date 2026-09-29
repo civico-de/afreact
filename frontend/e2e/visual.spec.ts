@@ -6,7 +6,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { isReady } from "../src/compare/metrics";
 
-const PAGES = { react: "/civicrm/facade/demo", angular: "/civicrm/facade/angular" };
+const PAGES = { react: "/civicrm/afreact/demo", angular: "/civicrm/afreact/angular" };
 const TOLERANCE_PX = 2;
 const STYLES = [
   "font-size",
@@ -21,7 +21,7 @@ const STYLES = [
 
 /** Parts of the page, in document order per selector; `text` is read only from UI chrome. */
 const PARTS: { name: string; selector: string; text?: boolean }[] = [
-  { name: "heading", selector: ".facade-demo h2", text: true },
+  { name: "heading", selector: ".afreact-demo h2", text: true },
   { name: "title", selector: ".af-title", text: true },
   { name: "field", selector: "af-field" },
   { name: "label", selector: "label.crm-af-field-label", text: true },
@@ -69,7 +69,7 @@ async function measure(page: Page, url: string): Promise<Measured[]> {
   });
   return page.evaluate(
     ({ parts, styles }) => {
-      const origin = document.querySelector(".facade-demo")!.getBoundingClientRect();
+      const origin = document.querySelector(".afreact-demo")!.getBoundingClientRect();
       // Screen-reader-only labels differ between the renderers without being seen.
       const visibleText = (element: HTMLElement) => {
         const copy = element.cloneNode(true) as HTMLElement;
@@ -151,6 +151,6 @@ test("the React page looks like the Angular page", async ({ page }, testInfo) =>
 
 /** Contact rows stay out of the report. */
 function shot(page: Page): Promise<Buffer> {
-  const demo = page.locator(".facade-demo");
+  const demo = page.locator(".afreact-demo");
   return demo.screenshot({ mask: [demo.locator("tbody")], animations: "disabled" });
 }

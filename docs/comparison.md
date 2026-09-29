@@ -1,8 +1,8 @@
 # React vs Angular renderer
 
 The same Afform definitions are rendered twice: by core's Angular runtime on
-`civicrm/facade/angular` and by this extension's React renderer on
-`civicrm/facade/demo`. The pages share one markup, so any difference comes
+`civicrm/afreact/angular` and by this extension's React renderer on
+`civicrm/afreact/demo`. The pages share one markup, so any difference comes
 from the renderer.
 
 ## Behavioural parity
@@ -20,7 +20,7 @@ The React renderer writes the markup of core's Angular templates — afField and
 its field templates, afRepeat, afTitle, the SearchKit table and its pager —
 with the same classes, and loads the stylesheets core's Angular modules bring
 for them (`crmUI.css`, `afCore.css`, the SearchKit display styles). The site
-theme therefore styles both renderers; `frontend/src/facade.css` only sizes the
+theme therefore styles both renderers; `frontend/src/afreact.css` only sizes the
 native controls that replace jQuery widgets.
 
 `frontend/e2e/visual.spec.ts` pairs the parts of both pages — titles, fields,
@@ -68,7 +68,7 @@ instead of being dropped:
 per round, with `debug_enabled` off. A page counts as ready when the form has
 an input and the table has a data row with a link. The React demo page runs
 once per layout source (see the README): `api` fetches the layout with
-`Facade.getForm`, `page` finds it in the page, `bundle` parses core's compiled
+`Afreact.getForm`, `page` finds it in the page, `bundle` parses core's compiled
 Angular module file.
 
 Measured 2026-09-29 on the civikitchen dev stack (CiviCRM 6.18, localhost,
@@ -117,7 +117,7 @@ includes responses served from the HTTP cache. The server needs 85–120 ms
 
 ### Choosing a source
 
-- `api` works for any `<facade-form>`, including ones added after the page
+- `api` works for any `<afreact-form>`, including ones added after the page
   loaded, at the cost of one round trip.
 - `page` is the fastest, but the server renders every layout into each page,
   and its route must know the forms in advance.
@@ -136,7 +136,7 @@ includes itself crashes the PHP process on CiviCRM up to 6.18:
 `FormDataModel::parseFields` recurses into the block without a guard. Afform
 runs the parser on save (through `CreateContribution::validateFormModel`),
 prefill, submit and autocomplete. Core fixed it in 6.19 (commit
-`375489330c`). `Facade.getForm` guards the recursion itself and rejects such a
+`375489330c`). `Afreact.getForm` guards the recursion itself and rejects such a
 block with an error.
 
 **Confirmation message is not escaped.** `Afform.submit` fills tokens such as

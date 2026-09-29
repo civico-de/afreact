@@ -2,7 +2,7 @@
 
 declare(strict_types = 1);
 
-namespace Civi\Facade;
+namespace Civi\Afreact;
 
 use Civi\Angular\ChangeSet;
 use Civi\Angular\Manager;

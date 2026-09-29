@@ -2,11 +2,11 @@ import { isElement, type FormDefinition, type LayoutNode, type TextNode } from "
 
 /**
  * Builds a form definition from the compiled Angular module file (angular-modules.json),
- * with the same result Facade.getForm returns: CRM_Afform_ArrayHtml's array format,
- * blocks inlined and search display settings decoded as in Civi\Facade\LayoutCompiler.
+ * with the same result Afreact.getForm returns: CRM_Afform_ArrayHtml's array format,
+ * blocks inlined and search display settings decoded as in Civi\Afreact\LayoutCompiler.
  */
 
-/** What Civi\Facade\Assets::layouts() hands the page for source="bundle". */
+/** What Civi\Afreact\Assets::layouts() hands the page for source="bundle". */
 export interface BundleVars {
   /** Null when the user may open none of the page's forms. */
   url: string | null;
@@ -164,7 +164,7 @@ function convertNode(node: ChildNode, types: AttributeTypes): LayoutNode | null 
   return null;
 }
 
-/** The form's layout with blocks inlined, as Civi\Facade\LayoutCompiler compiles it. */
+/** The form's layout with blocks inlined, as Civi\Afreact\LayoutCompiler compiles it. */
 export function compileBundle(vars: BundleVars, file: ModuleFile, name: string): FormDefinition {
   const form = vars.forms[name];
   if (!form) throw new Error(ts('Form "%1" does not exist or you may not open it.', { 1: name }));

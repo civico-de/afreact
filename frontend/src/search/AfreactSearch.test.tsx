@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { mockApi, renderWithQuery } from "../test/render";
-import { FacadeSearch, type DisplaySettings, type Row } from "./FacadeSearch";
+import { AfreactSearch, type DisplaySettings, type Row } from "./AfreactSearch";
 
 const settings: DisplaySettings = {
   columns: [
@@ -43,11 +43,11 @@ function currentPage(): Promise<HTMLElement> {
   return screen.findByText(/^\d+$/, { selector: "[aria-current=page]" });
 }
 
-describe("FacadeSearch", () => {
+describe("AfreactSearch", () => {
   it("shows SearchKit placeholders, then rows, pages and the count", async () => {
     const calls = runs(5);
     renderWithQuery(
-      <FacadeSearch search="S" display="D" settings={settings} afform="afsearchTest" />,
+      <AfreactSearch search="S" display="D" settings={settings} afform="afsearchTest" />,
     );
     const table = screen.getByRole("table");
     expect(table).toHaveAttribute("aria-busy", "true");
@@ -83,7 +83,7 @@ describe("FacadeSearch", () => {
 
   it("pages forward and back, answering known pages from the cache", async () => {
     const calls = runs(5);
-    renderWithQuery(<FacadeSearch search="S" display="D" settings={settings} />);
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await currentPage();
     expect(screen.queryByRole("link", { name: "Previous" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("link", { name: "Next" }));
@@ -96,7 +96,7 @@ describe("FacadeSearch", () => {
 
   it("toggles the sort direction of a column and returns to page 1", async () => {
     const calls = runs(5);
-    renderWithQuery(<FacadeSearch search="S" display="D" settings={settings} />);
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await currentPage();
     await userEvent.click(screen.getByRole("link", { name: "3" }));
     await waitFor(() =>
@@ -123,7 +123,7 @@ describe("FacadeSearch", () => {
   it("adds columns to the sort with Shift, as SearchKit does", async () => {
     const calls = runs(5);
     const user = userEvent.setup();
-    renderWithQuery(<FacadeSearch search="S" display="D" settings={settings} />);
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await currentPage();
     const name = screen.getByRole("columnheader", { name: "Name" });
     const email = screen.getByRole("columnheader", { name: "Email" });
@@ -161,7 +161,7 @@ describe("FacadeSearch", () => {
 
   it("takes a short first page as the whole result without a count call", async () => {
     const calls = runs(1);
-    renderWithQuery(<FacadeSearch search="S" display="D" settings={settings} />);
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     expect(await screen.findByText("1 result")).toBeInTheDocument();
     expect(await currentPage()).toHaveTextContent("1");
     expect(calls).toHaveLength(1);
@@ -170,7 +170,7 @@ describe("FacadeSearch", () => {
   it("hides the page links of a single page when the display asks to", async () => {
     runs(1);
     renderWithQuery(
-      <FacadeSearch
+      <AfreactSearch
         search="S"
         display="D"
         settings={{ ...settings, pager: { show_count: true, hide_single: true } }}
@@ -183,7 +183,7 @@ describe("FacadeSearch", () => {
   it("shows the display's empty text", async () => {
     runs(0);
     renderWithQuery(
-      <FacadeSearch
+      <AfreactSearch
         search="S"
         display="D"
         settings={{ ...settings, noResultsText: "Nobody here." }}
@@ -199,7 +199,7 @@ describe("FacadeSearch", () => {
       ],
       "SearchDisplay.run": () => [row(1), row(2)],
     });
-    renderWithQuery(<FacadeSearch search="S" display="D" />);
+    renderWithQuery(<AfreactSearch search="S" display="D" />);
     expect(await screen.findByRole("table", { name: "Contacts table" })).toBeInTheDocument();
     await screen.findByRole("link", { name: "Name 2" });
     expect(calls.map(({ call }) => call)).toEqual(["SearchDisplay.get", "SearchDisplay.run"]);
@@ -214,11 +214,11 @@ describe("FacadeSearch", () => {
 
   it("reports a missing display and a failing run", async () => {
     mockApi({ "SearchDisplay.get": () => [] });
-    const { unmount } = renderWithQuery(<FacadeSearch search="S" display="D" />);
+    const { unmount } = renderWithQuery(<AfreactSearch search="S" display="D" />);
     expect(await screen.findByRole("alert")).toHaveTextContent("Search display S.D not found.");
     unmount();
     mockApi({ "SearchDisplay.run": () => Promise.reject({ error_message: "Access denied" }) });
-    renderWithQuery(<FacadeSearch search="S" display="D" settings={settings} />);
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     expect(await screen.findByRole("alert")).toHaveTextContent("Access denied");
   });
 });

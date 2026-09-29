@@ -5,7 +5,7 @@
          tests/ would otherwise dilute the numbers into meaninglessness. -->
     <include>
       <directory suffix=".php">./Civi</directory>
-      <file>./facade.php</file>
+      <file>./afreact.php</file>
     </include>
   </coverage>
   <listeners>
@@ -14,7 +14,7 @@
     </listener>
   </listeners>
   <testsuites>
-    <testsuite name="facade Tests">
+    <testsuite name="afreact Tests">
       <directory>./tests/phpunit</directory>
     </testsuite>
   </testsuites>

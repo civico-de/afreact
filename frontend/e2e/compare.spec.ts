@@ -10,10 +10,10 @@ import { expect, test, type Browser, type BrowserContext } from "@playwright/tes
 import { isReady, median, resourceMetrics, type PageMetrics } from "../src/compare/metrics";
 
 const PAGES = {
-  "react api": "/civicrm/facade/demo",
-  "react page": "/civicrm/facade/demo?source=page",
-  "react bundle": "/civicrm/facade/demo?source=bundle",
-  angular: "/civicrm/facade/angular",
+  "react api": "/civicrm/afreact/demo",
+  "react page": "/civicrm/afreact/demo?source=page",
+  "react bundle": "/civicrm/afreact/demo?source=bundle",
+  angular: "/civicrm/afreact/angular",
 };
 type Renderer = keyof typeof PAGES;
 const RENDERERS = Object.keys(PAGES) as Renderer[];
@@ -28,7 +28,7 @@ const AUTH = "e2e/.auth/admin.json";
 async function setDebug(browser: Browser, value: unknown): Promise<unknown> {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/facade/compare");
+  await page.goto("/civicrm/afreact/compare");
   const api = (action: string, params: object) =>
     page.evaluate(
       ([a, p]) =>
@@ -135,7 +135,7 @@ test("prints the request waterfall of a cold load", async ({ browser }, testInfo
         .filter(
           ({ initiatorType, name }) =>
             ["xmlhttprequest", "fetch"].includes(initiatorType) ||
-            /facade\.js|angular\.js|crm-ui|angular-modules/.test(name),
+            /afreact\.js|angular\.js|crm-ui|angular-modules/.test(name),
         )
         .map(({ name, startTime, responseEnd }) => ({
           name: new URL(name).pathname.replace(/^.*\/civicrm\//, ""),
@@ -168,7 +168,7 @@ test("prints the request waterfall of a cold load", async ({ browser }, testInfo
 });
 
 test("the compare page measures one round in the browser", async ({ page }) => {
-  await page.goto("/civicrm/facade/compare");
+  await page.goto("/civicrm/afreact/compare");
   await page.getByLabel("Rounds").selectOption("1");
   await page.getByRole("button", { name: "Measure" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Done." })).toBeVisible({

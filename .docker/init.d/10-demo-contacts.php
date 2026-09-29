@@ -16,7 +16,7 @@ foreach ($last as $i => $lastName) {
       'last_name' => $lastName,
       'gender_id' => (($i + $j) % 3) + 1,
       'birth_date' => sprintf('19%02d-%02d-%02d', 50 + ($i * 9) + $j, $j + 1, $i + 10),
-      'source' => 'Facade seed',
+      'source' => 'Afreact seed',
       'email_primary.email' => strtolower("{$firstName}.{$lastName}@example.org"),
     ];
   }

@@ -2,22 +2,22 @@
 
 declare(strict_types = 1);
 
-use CRM_Facade_ExtensionUtil as E;
+use CRM_Afreact_ExtensionUtil as E;
 
 /**
  * Contact list for the demo page; the name links back to the React form in edit mode.
  */
 return [
   [
-    'name' => 'SavedSearch_Facade_Demo_Contacts',
+    'name' => 'SavedSearch_Afreact_Demo_Contacts',
     'entity' => 'SavedSearch',
     'cleanup' => 'unused',
     'update' => 'unmodified',
     'params' => [
       'version' => 4,
       'values' => [
-        'name' => 'Facade_Demo_Contacts',
-        'label' => E::ts('Facade demo contacts'),
+        'name' => 'Afreact_Demo_Contacts',
+        'label' => E::ts('Afreact demo contacts'),
         'api_entity' => 'Individual',
         'api_params' => [
           'version' => 4,
@@ -30,16 +30,16 @@ return [
     ],
   ],
   [
-    'name' => 'SearchDisplay_Facade_Demo_Contacts_Table',
+    'name' => 'SearchDisplay_Afreact_Demo_Contacts_Table',
     'entity' => 'SearchDisplay',
     'cleanup' => 'unused',
     'update' => 'unmodified',
     'params' => [
       'version' => 4,
       'values' => [
-        'name' => 'Facade_Demo_Contacts_Table',
+        'name' => 'Afreact_Demo_Contacts_Table',
         'label' => E::ts('Contacts'),
-        'saved_search_id.name' => 'Facade_Demo_Contacts',
+        'saved_search_id.name' => 'Afreact_Demo_Contacts',
         'type' => 'table',
         'settings' => [
           'limit' => 10,
@@ -53,7 +53,7 @@ return [
               'label' => E::ts('Name'),
               'sortable' => TRUE,
               'link' => [
-                'path' => 'civicrm/facade/demo?Individual1=[id]',
+                'path' => 'civicrm/afreact/demo?Individual1=[id]',
                 'target' => '',
               ],
               'title' => E::ts('Edit in the React form'),

@@ -1,4 +1,4 @@
-# facade dev stack — CiviCRM (civikitchen standalone) + MariaDB + maildev
+# afreact dev stack — CiviCRM (civikitchen standalone) + MariaDB + maildev
 # + phpMyAdmin.
 #
 # Usage:
@@ -14,7 +14,7 @@
 # Re-provision from scratch (re-runs init.d hooks): docker compose down -v && up -d
 #
 # Every gate the shared CI runs in the container, with a summary table:
-#   docker compose exec -u www-data -w /var/www/html/ext/facade app ck ci
+#   docker compose exec -u www-data -w /var/www/html/ext/afreact app ck ci
 #
 # In a repository of several extensions the repository root is mounted at
 # /civikitchen-repo; the git-reading gates run from there, so pass
@@ -22,7 +22,7 @@
 
 # Explicit project name — unnamed .docker/ stacks all become one project
 # called "docker" and share volumes across checkouts.
-name: facade
+name: afreact
 
 services:
   app:
@@ -52,7 +52,7 @@ services:
       # Every extension mounted under ext/ is enabled on first boot, with its
       # info.xml <requires> resolved. Mount siblings the same way; use
       # CIVIKITCHEN_ENABLE_EXTENSIONS only to order them or add non-mounts.
-      - ..:/var/www/html/ext/facade
+      - ..:/var/www/html/ext/afreact
       # - ../../othersibling:/var/www/html/ext/othersibling
       # First-boot provisioning hooks (seed data, API users, settings) — run
       # after install + ext:enable, in lexical order. See init.d/README.md.

@@ -336,6 +336,8 @@ export interface AfformSubmissionData {
   "status_id:description": string | null;
 }
 
+export interface Afreact {}
+
 export interface AuthxCredential {}
 
 export interface Batch {
@@ -1271,8 +1273,6 @@ export interface Extension {
   "status:name": string | null;
   "status:label": string | null;
 }
-
-export interface Facade {}
 
 export interface File {
   id: number | null;
@@ -4085,6 +4085,7 @@ export interface Entities {
   AfformBehavior: AfformBehavior;
   AfformSubmission: AfformSubmission;
   AfformSubmissionData: AfformSubmissionData;
+  Afreact: Afreact;
   AuthxCredential: AuthxCredential;
   Batch: Batch;
   BouncePattern: BouncePattern;
@@ -4124,7 +4125,6 @@ export interface Entities {
   Event: Event;
   ExampleData: ExampleData;
   Extension: Extension;
-  Facade: Facade;
   File: File;
   FinancialAccount: FinancialAccount;
   FinancialItem: FinancialItem;
