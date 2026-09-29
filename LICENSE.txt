@@ -1,0 +1,4 @@
+Copyright (C) 2026 civico GmbH. All rights reserved.
+
+This software is proprietary. It is not licensed for redistribution or use
+outside the terms agreed with the copyright holder.

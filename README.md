@@ -1,0 +1,149 @@
+# facade
+
+Renders FormBuilder (Afform) forms and SearchKit displays with React. The form
+and search definitions, the APIs and the permission checks stay those of core;
+only the browser side changes. The builders (FormBuilder, SearchKit admin) stay
+Angular.
+
+Status: proof of concept. It covers one contact form with a joined email block
+and one SearchKit table, and measures both against the Angular runtime.
+
+## How it works
+
+```
+<facade-form name="afformX">          custom element, React inside (light DOM)
+        │
+        ├─ layout                       as the Angular runtime sees it (see below)
+        ├─ Afform.prefill / .submit     unchanged core actions
+        └─ SearchDisplay.run            unchanged core action (tables)
+```
+
+- **`Facade.getForm`** (APIv4) runs the form's partial through core's Angular
+  pipeline, so every `af-field` carries the metadata FormBuilder injected
+  (`defn`: input type, label, options, required). Blocks (`afblock-*`) arrive
+  with their compiled layout as children; embedded search displays arrive with
+  their settings as an array. Access is the form's own permission, checked by
+  `Afform.get`. The compiled layout is kept in core's Angular cache, which
+  saving a form or changing custom fields clears.
+- **Layout sources.** `<facade-form source="…">` picks where the layout comes
+  from; all three give the same layout (pinned by `e2e/sources.spec.ts`):
+
+  | `source` | Layout from | Needs |
+  |---|---|---|
+  | `api` (default) | a `Facade.getForm` request | nothing |
+  | `page` | the page's `CRM.vars.facade.layouts` | `Assets::layouts('page', $names)` |
+  | `bundle` | core's compiled `angular-modules.json`, parsed in the browser | `Assets::layouts('bundle', $names)` |
+
+  `page` and `bundle` save the `getForm` round trip, but the server must know
+  which forms the page shows. `bundle` reads the static file the Angular runtime
+  loads, which browsers cache across pages. That file is public, as it is for
+  the Angular runtime; the page names only forms the user may open.
+- **Custom elements** are the entry point. They render into the light DOM, so
+  CiviCRM's theme (Riverlea classes, `--crm-*` variables) styles the output
+  like any other markup:
+
+  | Element | Attributes | Renders |
+  |---|---|---|
+  | `<facade-form>` | `name`, `source` | a FormBuilder form or search page |
+  | `<facade-search>` | `search`, `display` | a SearchKit table display |
+  | `<facade-compare>` | `pages` (JSON list of `{label, url}`) | the comparison page |
+
+- **Data layer:** TanStack Query, one query per API call, keyed by its
+  parameters. Search tables follow SearchKit's rules: placeholder rows while a
+  page loads, and a `row_count` request only when the first page is full.
+- **Types:** `frontend/src/api/entities.gen.ts` is generated from APIv4
+  `getFields` (see [Development](#development)).
+- **Unsupported layout** is never dropped silently: the renderer shows a
+  visible "Not supported by the React renderer" note naming the directive,
+  attribute or field type.
+
+`Civi\Facade\Assets::load()` adds the bundle to a page and
+`Assets::layouts()` hands over layouts; the demo pages in `Civi\Facade\Pages`
+show how.
+
+## Pages
+
+| Route | Content |
+|---|---|
+| `civicrm/facade/demo` | demo form and table, React renderer; `?source=page` or `?source=bundle` picks the layout source |
+| `civicrm/facade/angular` | the same forms, Angular runtime |
+| `civicrm/facade/compare` | loads every React variant and the Angular page in iframes and compares metrics |
+
+Both demo pages share one markup; only the elements that mount the forms
+differ (pinned by `PagesHeadlessTest`). The demo forms live in `ang/`.
+
+## React vs Angular
+
+[docs/comparison.md](docs/comparison.md) holds the parity gaps, the measured
+load numbers and what they mean.
+
+## Development
+
+The dev stack is civikitchen (CiviCRM standalone, MariaDB, maildev); see the
+header of `.docker/docker-compose.yml`. A first-boot hook seeds 25 synthetic
+contacts for the table.
+
+```sh
+cd .docker && docker compose up -d        # or civikitchen's ckup for free ports
+cd frontend && npm ci
+npm run build                             # type check + bundle into ../dist
+npm test                                  # unit tests (Vitest, jsdom)
+npm run coverage
+npm run types                             # regenerate entities.gen.ts from the stack
+```
+
+`dist/` is committed, so the extension installs without a Node toolchain.
+`npm run types` runs as the stack's admin user, so the types cover every
+entity an administrator can see.
+
+### Checks
+
+All PHP gates, the headless PHPUnit suite and the JS lint run inside the
+container:
+
+```sh
+docker compose -f .docker/docker-compose.yml exec -u www-data \
+  -w /var/www/html/ext/facade app ck ci
+```
+
+`ck ci` lints the JS/TS files git tracks; before the first commit, lint the
+frontend explicitly with `ckeslint frontend`.
+
+### Browser tests
+
+Playwright runs against the dev stack and logs in as `admin`:
+
+```sh
+cd frontend
+CIVICRM_BASE_URL=http://localhost:8080 npx playwright test
+```
+
+| Spec | Checks |
+|---|---|
+| `e2e/parity.spec.ts` | the same scenarios against both renderers: empty submit is rejected client-side, create with a joined email, prefill and update from the URL, equal saved records, equal table rows after sorting and paging |
+| `e2e/compare.spec.ts` | cold and warm load metrics for every React layout source and Angular (printed as a table), a cold request waterfall, and one round of the in-browser compare page |
+| `e2e/sources.spec.ts` | every layout source renders the demo page to the same DOM; `page` and `bundle` never call `getForm` |
+
+`compare.spec.ts` switches `debug_enabled` off for the measurement, so all
+pages load as in production, and restores the previous value afterwards.
+`COMPARE_ROUNDS` sets the number of rounds (default 5).
+
+## Layout
+
+| Path | Content |
+|---|---|
+| `Civi/Api4/Facade.php`, `Civi/Api4/Action/Facade/` | the `Facade.getForm` action |
+| `Civi/Facade/LayoutCompiler.php` | Afform partial → layout array, blocks inlined |
+| `Civi/Facade/Afforms.php` | shared cache (core's Angular cache), block list, typed record fields |
+| `Civi/Facade/Assets.php`, `Civi/Facade/AttributeSchema.php` | bundle loading and the layouts handed to the page |
+| `Civi/Facade/Pages.php`, `xml/Menu/facade.xml` | demo and compare routes |
+| `ang/` | demo form and search page |
+| `frontend/src/afform/` | form renderer (layout, fields, form model, layout sources, module file parser) |
+| `frontend/src/search/` | SearchKit table renderer |
+| `frontend/src/compare/` | comparison page and metric helpers |
+| `frontend/e2e/` | browser tests |
+| `scripts/gen-types.php` | APIv4 → TypeScript generator |
+
+## Licence
+
+Proprietary, © civico GmbH. See [LICENSE.txt](LICENSE.txt).

@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<menu>
+  <item>
+    <path>civicrm/facade/demo</path>
+    <page_callback>Civi\Facade\Pages::react</page_callback>
+    <title>Facade demo (React)</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+  <item>
+    <path>civicrm/facade/angular</path>
+    <page_callback>Civi\Facade\Pages::angular</page_callback>
+    <title>Facade demo (Angular)</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+  <item>
+    <path>civicrm/facade/compare</path>
+    <page_callback>Civi\Facade\Pages::compare</page_callback>
+    <title>Facade: React vs Angular</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+</menu>

@@ -1,0 +1,35 @@
+$schema: 'https://raw.githubusercontent.com/jfilter/civikitchen/main/packages/civikitchen-scenario-schema/scenario.schema.json'
+version: 1
+scenario:
+  name: facade
+  image: 'ghcr.io/jfilter/civikitchen:v1'
+  database:
+    image: 'mariadb:11.4'
+  extension:
+    key: facade
+    path: .
+  credentials_output: file
+  checks:
+    - conform
+    - lint
+    - format
+    - compatibility
+    - dependencies
+    - javascript
+    - test
+    - coverage
+    - lifecycle
+    - smarty
+    - taint
+policy:
+  license: Proprietary
+  npm_license: UNLICENSED
+  copyright: 'civico GmbH'
+
+  # Frontend build inputs live below frontend/; the release contains only
+  # their compiled dist/ output.
+  dist:
+    exclude:
+      - frontend/package-lock.json
+      - frontend/tsconfig.json
+

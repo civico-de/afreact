@@ -1,0 +1,5 @@
+{
+  "type": "search",
+  "title": "Facade demo contacts",
+  "permission": ["access CiviCRM"]
+}

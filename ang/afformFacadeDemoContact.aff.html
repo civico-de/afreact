@@ -1,0 +1,16 @@
+<af-form ctrl="afform">
+  <af-entity data="{contact_type: 'Individual', source: 'Facade demo'}" type="Contact" name="Individual1" label="Individual 1" actions="{create: true, update: true}" security="RBAC" url-autofill="1" />
+  <fieldset af-fieldset="Individual1" class="af-container" af-title="Individual">
+    <div class="af-container af-layout-inline">
+      <af-field name="first_name" defn="{required: true}" />
+      <af-field name="last_name" defn="{required: true}" />
+    </div>
+    <af-field name="gender_id" />
+    <af-field name="birth_date" />
+    <div af-join="Email" actions="{update: true, delete: true}" af-repeat="Add email" min="1" max="3">
+      <afblock-contact-email></afblock-contact-email>
+    </div>
+    <af-field name="do_not_email" />
+  </fieldset>
+  <button class="af-button btn btn-primary" crm-icon="fa-check" ng-click="afform.submit()">Save</button>
+</af-form>

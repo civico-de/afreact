@@ -1,0 +1,8 @@
+{
+  "type": "form",
+  "title": "Facade demo contact",
+  "server_route": "civicrm/facade/demo-angular",
+  "permission": ["access CiviCRM"],
+  "confirmation_type": "show_confirmation_message",
+  "confirmation_message": "Contact saved."
+}
