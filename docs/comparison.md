@@ -7,7 +7,7 @@ from the renderer.
 
 ## Behavioural parity
 
-`frontend/e2e/parity.spec.ts` runs the same scenarios against both pages and
+`tests/browser/parity.spec.ts` runs the same scenarios against both pages and
 compares the outcomes through the API: validation, create with a joined email
 (submitted with Enter, as the form element on core's Afform page allows),
 prefill and update from `#?Individual1=<id>`, the saved records field by field,
@@ -20,10 +20,10 @@ The React renderer writes the markup of core's Angular templates — afField and
 its field templates, afRepeat, afTitle, the SearchKit table and its pager —
 with the same classes, and loads the stylesheets core's Angular modules bring
 for them (`crmUI.css`, `afCore.css`, the SearchKit display styles). The site
-theme therefore styles both renderers; `frontend/src/afreact.css` only sizes the
+theme therefore styles both renderers; `src/afreact.css` only sizes the
 native controls that replace jQuery widgets.
 
-`frontend/e2e/visual.spec.ts` pairs the parts of both pages — titles, fields,
+`tests/browser/visual.spec.ts` pairs the parts of both pages — titles, fields,
 labels, controls, clear links, buttons, table header, sort icons, rows, pager —
 and compares position, size and the main computed styles to within 2 px.
 Remaining differences must be listed in the spec with a reason, and an entry
@@ -41,7 +41,7 @@ that no longer excuses anything fails the test.
 
 ## Accessibility
 
-`frontend/e2e/a11y.spec.ts` runs axe on both pages in light and dark mode and
+`tests/browser/a11y.spec.ts` runs axe on both pages in light and dark mode and
 fails when the React page breaks a rule on more elements than the Angular page.
 Findings only on the Angular page: the select2 widgets carry roles their
 elements do not allow, the clear link carries `aria-label` without a role, and
@@ -63,7 +63,7 @@ instead of being dropped:
 
 ## Load metrics
 
-`frontend/e2e/compare.spec.ts` loads each page in a fresh browser context
+`tests/browser/compare.spec.ts` loads each page in a fresh browser context
 (cold: empty HTTP cache) and in one shared context (warm), rotating the order
 per round, with `debug_enabled` off. A page counts as ready when the form has
 an input and the table has a data row with a link. The React demo page runs

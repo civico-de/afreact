@@ -27,7 +27,7 @@ Thumbs.db
 *.tsbuildinfo
 
 # Frontend test output and the Playwright login state
-frontend/coverage/
-frontend/test-results/
-frontend/playwright-report/
-frontend/e2e/.auth/
+/coverage/
+/test-results/
+/playwright-report/
+/tests/browser/.auth/

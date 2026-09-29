@@ -25,11 +25,3 @@ policy:
   license: Proprietary
   npm_license: UNLICENSED
   copyright: 'civico GmbH'
-
-  # Frontend build inputs live below frontend/; the release contains only
-  # their compiled dist/ output.
-  dist:
-    exclude:
-      - frontend/package-lock.json
-      - frontend/tsconfig.json
-

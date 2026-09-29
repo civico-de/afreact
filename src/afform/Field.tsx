@@ -1,0 +1,401 @@
+import { useId, type ReactNode } from "react";
+import { onButtonKey } from "../keys";
+import type { FieldDefn, FieldOption } from "./types";
+import { Unsupported } from "./Unsupported";
+
+/**
+ * A field in the markup of core's afField templates (afField.html, fields/*.html), so the
+ * site theme styles it as it styles Angular's.
+ */
+
+interface FieldProps {
+  defn: FieldDefn;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  disabled: boolean;
+}
+
+const TEXT_TYPES: Record<string, string> = {
+  Text: "text",
+  Email: "email",
+  Url: "url",
+  Number: "number",
+  Hidden: "hidden",
+};
+
+/** The classes afField adds to its element: af-field-type-<kebab input type>, plus -multiple. */
+export function fieldClasses(defn: FieldDefn): string {
+  const type = `af-field-type-${defn.input_type.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase()}`;
+  return defn.input_attrs?.multiple ? `${type} af-field-type-multiple` : type;
+}
+
+/** Option IDs keep their type (e.g. 2, not "2") so the submission matches Angular's. */
+function optionById(options: FieldOption[], raw: string): FieldOption["id"] | undefined {
+  return options.find((option) => String(option.id) === raw)?.id;
+}
+
+/** afField makes Boolean options truly boolean and supplies Yes/No when there are none. */
+function fieldOptions(defn: FieldDefn): FieldOption[] {
+  // Core sends false for a field without options.
+  const options = defn.options === false ? undefined : defn.options;
+  if (defn.data_type !== "Boolean") return options ?? [];
+  return options
+    ? options.map((option) => ({ ...option, id: Boolean(option.id) }))
+    : [
+        { id: true, label: ts("Yes") },
+        { id: false, label: ts("No") },
+      ];
+}
+
+/** "2026-09-29 14:30:00" <-> "2026-09-29T14:30" for datetime-local inputs. */
+function toLocalDateTime(value: unknown): string {
+  return typeof value === "string" ? value.replace(" ", "T").slice(0, 16) : "";
+}
+function fromLocalDateTime(value: string): string | null {
+  return value ? `${value.replace("T", " ")}:00` : null;
+}
+
+/** A list is a multi-value field shown as text; anything else but a scalar is a caller bug. */
+function textValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (Array.isArray(value)) return value.map(textValue).join(",");
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  throw new TypeError(`A field value must be a scalar or a list, got ${typeof value}`);
+}
+
+/** Radio.html offers to clear a value that is set, including false and 0. */
+function hasValue(value: unknown): boolean {
+  return !!value || value === false || value === 0;
+}
+
+function Marker() {
+  return (
+    <>
+      {" "}
+      <span className="crm-marker" title={ts("Required")} aria-hidden="true">
+        *
+      </span>
+    </>
+  );
+}
+
+/** Core's clear link, with the role and keys that make it reachable from the keyboard. */
+export function ClearButton({
+  onClear,
+  hidden = false,
+}: {
+  onClear: () => void;
+  hidden?: boolean;
+}) {
+  return (
+    <a
+      role="button"
+      tabIndex={0}
+      className="crm-hover-button"
+      title={ts("Clear")}
+      aria-label={ts("Clear")}
+      // Date.html keeps the space of an unset date's clear link.
+      style={hidden ? { visibility: "hidden" } : undefined}
+      onClick={onClear}
+      onKeyDown={onButtonKey(onClear)}
+    >
+      <i className="crm-i fa-times" aria-hidden="true" />
+    </a>
+  );
+}
+
+export function Field({ defn, value, onChange, disabled }: FieldProps) {
+  const id = useId();
+  const helpId = `${id}-help`;
+  const labelId = `${id}-label`;
+  const label = defn.label === false ? undefined : (defn.label ?? defn.name);
+  const required = defn.required === true;
+  const describedBy = defn.help_post ? helpId : undefined;
+  const common = {
+    id,
+    name: defn.name,
+    disabled,
+    required,
+    "aria-describedby": describedBy,
+  };
+  const attrs = defn.input_attrs ?? {};
+  const style = defn.input_style ?? undefined;
+  // afField's isMultiple(): a non-Boolean checkbox is always a list.
+  const grouped =
+    defn.input_type === "Radio" || (defn.input_type === "CheckBox" && defn.data_type !== "Boolean");
+  const booleanCheckbox = defn.input_type === "CheckBox" && !grouped;
+
+  const control = ((): ReactNode => {
+    const textType = TEXT_TYPES[defn.input_type];
+    if (textType) {
+      const numeric = textType === "number";
+      return (
+        <input
+          {...common}
+          type={textType}
+          className={textType === "hidden" ? undefined : `form-control ${style ?? ""}`.trim()}
+          value={textValue(value)}
+          placeholder={attrs.placeholder}
+          maxLength={attrs.maxlength}
+          min={attrs.min}
+          max={attrs.max}
+          step={numeric ? (attrs.step ?? 1) : undefined}
+          onChange={(event) => {
+            onChange(
+              event.target.value === ""
+                ? null
+                : numeric
+                  ? Number(event.target.value)
+                  : event.target.value,
+            );
+          }}
+        />
+      );
+    }
+    switch (defn.input_type) {
+      case "TextArea":
+        return (
+          <textarea
+            {...common}
+            className={`crm-form-textarea ${style ?? ""}`.trim()}
+            rows={attrs.rows ?? 4}
+            cols={attrs.cols ?? 60}
+            maxLength={attrs.maxlength}
+            value={textValue(value)}
+            onChange={(event) => {
+              onChange(event.target.value);
+            }}
+          />
+        );
+      case "Date":
+        return (
+          <span className="crm-form-date-wrapper">
+            {attrs.time ? (
+              <input
+                {...common}
+                type="datetime-local"
+                className="form-control crm-form-text crm-form-date"
+                value={toLocalDateTime(value)}
+                onChange={(event) => {
+                  onChange(fromLocalDateTime(event.target.value));
+                }}
+              />
+            ) : (
+              <input
+                {...common}
+                type="date"
+                className="form-control crm-form-text crm-form-date"
+                value={textValue(value)}
+                onChange={(event) => {
+                  onChange(event.target.value || null);
+                }}
+              />
+            )}
+            <ClearButton
+              onClear={() => {
+                onChange(null);
+              }}
+              hidden={!value || disabled}
+            />
+          </span>
+        );
+      case "Select": {
+        const options = fieldOptions(defn);
+        const choices = options.map((option) => (
+          <option key={String(option.id)} value={String(option.id)}>
+            {option.label}
+          </option>
+        ));
+        return (
+          <div className={`form-group ${style ?? ""}`.trim()}>
+            {/* Stands in for select2's container, which sizes the box at the surrounding font. */}
+            <span className="afreact-select">
+              {attrs.multiple ? (
+                <select
+                  {...common}
+                  multiple
+                  className="form-control"
+                  value={Array.isArray(value) ? value.map(String) : []}
+                  onChange={(event) => {
+                    onChange(
+                      [...event.target.selectedOptions].map((option) =>
+                        optionById(options, option.value),
+                      ),
+                    );
+                  }}
+                >
+                  {choices}
+                </select>
+              ) : (
+                <select
+                  {...common}
+                  className="form-control"
+                  value={textValue(value)}
+                  onChange={(event) => {
+                    onChange(
+                      event.target.value === "" ? null : optionById(options, event.target.value),
+                    );
+                  }}
+                >
+                  <option value="">{attrs.placeholder ?? ""}</option>
+                  {choices}
+                </select>
+              )}
+            </span>
+          </div>
+        );
+      }
+      case "Radio":
+        return (
+          <RadioGroup
+            defn={defn}
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+            labelId={labelId}
+            helpId={describedBy}
+          />
+        );
+      case "CheckBox":
+        return grouped ? (
+          <CheckboxList
+            defn={defn}
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+            labelId={labelId}
+            helpId={describedBy}
+          />
+        ) : (
+          <label className={`crm-af-field-label ${style ?? ""}`.trim()}>
+            <input
+              {...common}
+              type="checkbox"
+              checked={value === true || value === 1 || value === "1"}
+              onChange={(event) => {
+                onChange(event.target.checked);
+              }}
+            />{" "}
+            {label}
+            {required && <Marker />}
+          </label>
+        );
+      case "DisplayOnly":
+        return <output id={id}>{textValue(value)}</output>;
+      default:
+        return null;
+    }
+  })();
+
+  if (control === null) {
+    return <Unsupported what={`field type ${defn.input_type} (${label ?? defn.name})`} />;
+  }
+  return (
+    <>
+      {label && !booleanCheckbox && (
+        <label
+          className="crm-af-field-label"
+          id={grouped ? labelId : undefined}
+          htmlFor={grouped ? undefined : id}
+        >
+          {label}
+          {required && <Marker />}
+        </label>
+      )}
+      {defn.help_pre && <p className="crm-af-field-help-pre">{defn.help_pre}</p>}
+      <div className="crm-af-field">{control}</div>
+      {defn.help_post && (
+        <p id={helpId} className="crm-af-field-help-post">
+          {defn.help_post}
+        </p>
+      )}
+    </>
+  );
+}
+
+interface GroupProps extends FieldProps {
+  labelId: string;
+  helpId: string | undefined;
+}
+
+/** fields/Radio.html: one label per option, and a clear button while a value is set. */
+function RadioGroup({ defn, value, onChange, disabled, labelId, helpId }: GroupProps) {
+  const name = useId();
+  return (
+    <>
+      <span role="radiogroup" aria-labelledby={labelId} aria-describedby={helpId}>
+        {fieldOptions(defn).map((option) => {
+          const id = `${name}-${String(option.id)}`;
+          const checked = String(value) === String(option.id) && hasValue(value);
+          return (
+            <label
+              key={String(option.id)}
+              htmlFor={id}
+              className={
+                defn.input_style ? `${defn.input_style}${checked ? " active" : ""}` : "radio-inline"
+              }
+            >
+              <input
+                id={id}
+                className="crm-form-radio"
+                type="radio"
+                name={name}
+                disabled={disabled}
+                required={defn.required === true}
+                checked={checked}
+                onChange={() => {
+                  onChange(option.id);
+                }}
+              />{" "}
+              {option.label}
+            </label>
+          );
+        })}
+      </span>
+      {!defn.required && !disabled && hasValue(value) && (
+        <ClearButton
+          onClear={() => {
+            onChange(null);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+/** fields/CheckBox.html for multi-value fields: a list of checkboxes. */
+function CheckboxList({ defn, value, onChange, disabled, labelId, helpId }: GroupProps) {
+  const name = useId();
+  const selected: unknown[] = Array.isArray(value) ? value : [];
+  return (
+    <ul
+      className={`crm-checkbox-list ${defn.input_style ?? ""}`.trim()}
+      aria-labelledby={labelId}
+      aria-describedby={helpId}
+    >
+      {fieldOptions(defn).map((option) => {
+        const id = `${name}-${String(option.id)}`;
+        return (
+          <li key={String(option.id)}>
+            <input
+              id={id}
+              type="checkbox"
+              disabled={disabled}
+              checked={selected.some((item) => String(item) === String(option.id))}
+              onChange={(event) => {
+                onChange(
+                  event.target.checked
+                    ? [...selected, option.id]
+                    : selected.filter((item) => String(item) !== String(option.id)),
+                );
+              }}
+            />
+            <label htmlFor={id}>{option.label}</label>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}

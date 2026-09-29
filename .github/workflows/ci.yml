@@ -37,3 +37,6 @@ jobs:
   ci:
     uses: jfilter/civikitchen/.github/workflows/extension-ci.yml@v1
 # END CIVIKITCHEN MANAGED caller
+    with:
+      js_tests: true
+      playwright: true
