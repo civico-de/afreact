@@ -26,8 +26,9 @@ Thumbs.db
 # to, so a bare '.tsbuildinfo' pattern misses it)
 *.tsbuildinfo
 
-# Frontend test output and the Playwright login state
+# Frontend test output, the Playwright login state and the demo video
 /coverage/
 /test-results/
 /playwright-report/
 /tests/browser/.auth/
+/video/

@@ -128,6 +128,18 @@ CIVICRM_BASE_URL=http://localhost:8080 npm run test:e2e
 pages load as in production, and restores the previous value afterwards.
 `COMPARE_ROUNDS` sets the number of rounds (default 5).
 
+### Demo video
+
+```sh
+CIVICRM_BASE_URL=http://localhost:8080 npm run video   # needs ffmpeg
+```
+
+`tests/browser/demo.video.ts` records the same session on both renderers:
+cold browser cache on a warm server, typing a contact, saving it, sorting
+and paging the table. The contact is deleted afterwards. Both recordings end
+up side by side in `video/angular-vs-react.mp4`, and the label in each
+half shows when that page was ready. The suite does not run it.
+
 ## Layout
 
 | Path | Content |

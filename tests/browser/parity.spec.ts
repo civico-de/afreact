@@ -3,73 +3,10 @@
  * assertions are shared, only the way a widget is operated differs (Angular
  * uses select2 and the jQuery datepicker, React native inputs).
  */
-import { expect, test, type Locator, type Page, type Request } from "@playwright/test";
-import { asRows } from "../../src/api/civi";
+import { expect, test, type Page, type Request } from "@playwright/test";
+import { api, AUTH, driver, PAGES, type Renderer } from "./harness";
 
-type Renderer = "react" | "angular";
-const PAGES: Record<Renderer, string> = {
-  react: "/civicrm/afreact/demo",
-  angular: "/civicrm/afreact/angular",
-};
 const RUN = Date.now().toString(36);
-
-interface Driver {
-  field(name: string): Locator;
-  fill(name: string, value: string): Promise<void>;
-  select(name: string, label: string): Promise<void>;
-  date(name: string, isoDate: string): Promise<void>;
-  selected(name: string): Promise<string>;
-}
-
-function driver(page: Page, renderer: Renderer): Driver {
-  const form = page.locator(".afreact-demo section").first();
-  const field = (name: string) => form.locator(`af-field[name="${name}"]`).first();
-  return {
-    field,
-    fill: (name, value) => field(name).locator("input, textarea").first().fill(value),
-    async select(name, label) {
-      if (renderer === "react") {
-        await field(name).locator("select").selectOption({ label });
-        return;
-      }
-      await field(name).locator(".select2-choice").click();
-      await page
-        .locator(".select2-drop-active .select2-result-label", { hasText: label })
-        .first()
-        .click();
-    },
-    async date(name, isoDate) {
-      if (renderer === "react") {
-        await field(name).locator("input").fill(isoDate);
-        return;
-      }
-      // The datepicker's visible input takes the site's input format (mm/dd/yy by default).
-      const [year, month, day] = isoDate.split("-");
-      const input = field(name).locator("input:visible").first();
-      await input.fill(`${month}/${day}/${year}`);
-      await input.press("Escape");
-      await input.blur();
-      await expect(
-        field(name).locator("input[type=hidden], input:not(:visible)").first(),
-      ).toHaveValue(isoDate);
-    },
-    async selected(name) {
-      if (renderer === "react") {
-        return field(name)
-          .locator("select")
-          .evaluate((select: HTMLSelectElement) => select.selectedOptions[0]?.text ?? "");
-      }
-      return (await field(name).locator(".select2-chosen").innerText()).trim();
-    },
-  };
-}
-
-async function api<T>(page: Page, entity: string, action: string, params: object): Promise<T[]> {
-  return asRows<T>(
-    await page.evaluate(([e, a, p]) => window.CRM.api4(e, a, p), [entity, action, params] as const),
-    `${entity}.${action}`,
-  );
-}
 
 interface Saved {
   id: number;
@@ -120,7 +57,7 @@ const created: Partial<Record<Renderer, Saved>> = {};
 test.afterAll(async ({ browser }) => {
   const ids = Object.values(created).map((saved) => saved.id);
   if (!ids.length) return;
-  const context = await browser.newContext({ storageState: "tests/browser/.auth/admin.json" });
+  const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
   await page.goto("/civicrm/afreact/compare");
   await api(page, "Contact", "delete", { where: [["id", "IN", ids]], useTrash: false });

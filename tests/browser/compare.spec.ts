@@ -6,9 +6,9 @@
  * as a static file); the previous debug setting is restored afterwards.
  * Numbers go to stdout and the report; the assertions only guard the harness.
  */
-import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
-import { asRows } from "../../src/api/civi";
-import { isReady, median, resourceMetrics, type PageMetrics } from "../../src/compare/metrics";
+import { expect, test, type BrowserContext } from "@playwright/test";
+import { median, resourceMetrics, type PageMetrics } from "../../src/compare/metrics";
+import { AUTH, readyAt, setDebug } from "./harness";
 
 const RENDERERS = ["react api", "react page", "react bundle", "angular"] as const;
 type Renderer = (typeof RENDERERS)[number];
@@ -33,22 +33,6 @@ const runsPerRenderer = (): Record<Renderer, PageMetrics[]> => ({
   angular: [],
 });
 const ROUNDS = Number(process.env.COMPARE_ROUNDS ?? 5);
-const AUTH = "tests/browser/.auth/admin.json";
-
-async function setDebug(browser: Browser, value: unknown): Promise<unknown> {
-  const context = await browser.newContext({ storageState: AUTH });
-  const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
-  const api = async (action: string, params: object) =>
-    asRows<{ value: unknown }>(
-      await page.evaluate(([a, p]) => window.CRM.api4("Setting", a, p), [action, params] as const),
-      `Setting.${action}`,
-    );
-  const [previous] = await api("get", { select: ["debug_enabled"] });
-  await api("set", { values: { debug_enabled: value } });
-  await context.close();
-  return previous?.value;
-}
 
 let debugBefore: unknown;
 test.beforeAll(async ({ browser }) => {
@@ -57,18 +41,6 @@ test.beforeAll(async ({ browser }) => {
 test.afterAll(async ({ browser }) => {
   await setDebug(browser, debugBefore);
 });
-
-/** Waits for isReady(), evaluated in the page so the time is on the page's own clock. */
-async function readyAt(page: Page): Promise<number> {
-  const ready = await page.waitForFunction(
-    `(${isReady.toString()})(document) && performance.now()`,
-    undefined,
-    { polling: "raf", timeout: 30_000 },
-  );
-  const ms: unknown = await ready.jsonValue();
-  if (typeof ms !== "number") throw new Error(`isReady() stamped ${String(ms)}, not a time`);
-  return ms;
-}
 
 async function load(context: BrowserContext, renderer: Renderer): Promise<PageMetrics> {
   const page = await context.newPage();

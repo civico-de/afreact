@@ -3,6 +3,7 @@
  *   CIVICRM_BASE_URL=http://localhost:8081 npx playwright test
  */
 import { defineConfig, devices } from "@playwright/test";
+import { AUTH } from "./tests/browser/harness";
 
 export default defineConfig({
   testDir: "tests/browser",
@@ -18,7 +19,7 @@ export default defineConfig({
     { name: "setup", testMatch: /.*\.setup\.ts/ },
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"], storageState: "tests/browser/.auth/admin.json" },
+      use: { ...devices["Desktop Chrome"], storageState: AUTH },
       dependencies: ["setup"],
       testIgnore: /.*\.setup\.ts/,
     },
