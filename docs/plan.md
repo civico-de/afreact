@@ -136,6 +136,46 @@ must provide:
 
 Total: roughly 6,000 lines, several weeks of work.
 
+## Status and next steps
+
+As of 2026-09-30:
+
+| Package | State |
+|---|---|
+| 1. Takeover | done for pages, tabs, summary blocks and the actions popup; dashboard open (package 8) |
+| 2. Expressions and conditions | done |
+| 3. Fields | open |
+| 4. Submission behaviour | open |
+| 5. SearchKit table | rendering, filters from form fields and URL state done; the features marked "no" in the inventory open |
+| 6. Other display types and layout | open |
+| 7. Parity sweep | open; `parity.spec.ts` and `support.spec.ts` cover samples |
+| 8. Dashboard | open |
+
+Next, in this order:
+
+1. **Join offsets behind `af-if`.** A join hidden at load that comes before a
+   second block of the same join entity makes the form submit
+   `Email: [null, {…}]`, which core's `filterEmptyJoins` cannot merge. Core
+   numbers joins with a counter while linking; the renderer numbers them from
+   the layout (`joinOffsets` in `src/afform/structure.ts`).
+2. **Package 5, the rest:** bulk actions with the API task dialogs, in-place
+   editing, drag to reorder, the column picker, task links.
+3. **Package 3**, starting with EntityRef (6 forms) and ChainSelect (5), then
+   range inputs in search filters.
+4. Packages 4, 6, 7 and 8.
+
+Known gaps outside the packages:
+- `user_contact_id` and relative dates (`now …`) work as filter defaults but
+  not yet as defaults of form fields.
+- Two repeated joins of the same entity in one fieldset: after a remove, the
+  "touched" state can land on the wrong item. Rare layout, small damage.
+- A form in the case summary block sits inside core's case `<form>`; saving
+  from there is untested.
+- Pages that place a listed form still load its Angular module, which is
+  never rendered.
+
+Upstream bugs found so far are listed in [comparison.md](comparison.md#upstream-bugs-found-on-the-way).
+
 ## Libraries
 
 Browsers now provide the modal dialog (`<dialog>` with `showModal()`: focus

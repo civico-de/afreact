@@ -53,13 +53,16 @@ findings listed under upstream bugs.
 Each of these shows a visible "Not supported by the React renderer" note
 instead of being dropped:
 
-- conditional display and validation (`af-if`, `af-required`, `af-disabled`)
-- defaults with tokens (static defaults work)
-- Angular expressions in text (`{{ … }}`)
+- Angular expressions other than `:: ts('…')` and `crmUrl(…)`
 - field types other than Text, Email, Url, Number, Hidden, TextArea, Date,
   Select, Radio, CheckBox and DisplayOnly — notably EntityRef, ChainSelect and File
-- directives outside plain HTML, forms, blocks, joins, repeats and table
-  displays (for example other search display types)
+- range inputs in search filters (`search_range`)
+- directives outside plain HTML, forms, blocks, joins, repeats, search
+  fieldsets and table displays (for example tabs and other search display types)
+- table features: bulk actions, in-place editing, drag to reorder, the column
+  picker, task links, include columns
+
+The support report (`civicrm/admin/afreact`) lists these per form.
 
 ## Load metrics
 
@@ -131,7 +134,37 @@ includes responses served from the HTTP cache. The server needs 85–120 ms
 
 ## Upstream bugs found on the way
 
-All are in core, so the Angular runtime and this renderer share them.
+All are in core. Unless an entry says otherwise, the Angular runtime and this
+renderer share them.
+
+**Placement lists are cached without invalidation.** `PlacementUtils::
+getAfformsForPlacement()` caches the forms of each placement in the `metadata`
+cache, per domain and contact. Saving, reverting or deleting an Afform clears
+only the Afform scanner and the Angular cache (`_afform_clear()`), so a
+deleted placed form stays in the list and the contact summary fails with a
+500 until caches are flushed; a new placement appears only after a flush.
+Present on upstream `master` as of 2026-09-08; not yet reported.
+
+**Negative lower bound of a number range.** afField splits a range default or
+URL value such as `-5-10` on every `-` (`('' + value).split('-')`), so the
+filter becomes `>= 0` and `<= 5`. The React renderer splits the same way for
+parity. Present on upstream `master` as of 2026-09-08; not yet reported.
+
+**A saved filter set is dropped after loading.** With `#?_s=<id>` afFieldset
+loads the `SearchParamSet`, then resets the fields to their defaults, so the
+set's values never reach the search. The React renderer keeps them (fields the
+URL leaves out take the set's values).
+
+**Defaults overwrite loaded or copied values.** A block behind `af-if` that
+opens after prefill gets its field defaults over the loaded values, and
+copying a repeat item overwrites the copied values with defaults. The React
+renderer keeps the loaded and copied values.
+
+**Word replacements on Standalone.** On Standalone sites in en_US, word and
+translation replacements never apply: `CRM_Core_I18n` caches an empty list
+while the settings metadata is translated during boot, before the database is
+known (dev/core#5862). Fix proposed in civicrm/civicrm-core#37148; the
+civikitchen standalone image carries it as a patch.
 
 **Self-including block crashes PHP.** Saving a form that embeds a block which
 includes itself crashes the PHP process on CiviCRM up to 6.18:
