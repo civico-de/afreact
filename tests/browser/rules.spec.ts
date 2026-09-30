@@ -12,11 +12,19 @@ const render = (renderer: Renderer) =>
 const input = (page: Page, name: string) =>
   page.locator(`.afreact-render af-field[name="${name}"] input`);
 
+/** AngularJS on the Angular page. */
+declare const angular: {
+  getTestability: (element: Element) => { whenStable: (callback: () => void) => void };
+};
+
 /** afField sets a shown field's default in a $timeout; Angular's testability waits for it. */
 async function settled(page: Page, renderer: Renderer) {
   if (renderer === "angular")
     await input(page, "job_title").evaluate(
-      "(el) => new Promise((resolve) => angular.getTestability(el).whenStable(resolve))",
+      (element) =>
+        new Promise<void>((resolve) => {
+          angular.getTestability(element).whenStable(resolve);
+        }),
     );
 }
 
@@ -70,8 +78,8 @@ async function observe(page: Page, renderer: Renderer): Promise<Observed> {
 
 test("both renderers apply the form's live rules alike", async ({ page }) => {
   const react = await observe(page, "react");
-  const angular = await observe(page, "angular");
-  expect(react).toEqual(angular);
+  const byAngular = await observe(page, "angular");
+  expect(react).toEqual(byAngular);
   expect(react).toMatchObject({
     text: "Learn more... Address Settings",
     jobTitleShown: [false, true, false],
