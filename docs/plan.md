@@ -82,7 +82,10 @@ Sizes are rough estimates in lines of TypeScript or PHP including tests.
 
 - **EntityRef**: combobox on APIv4 `autocomplete`, the same call core's
   select2 widget makes, with the ARIA combobox pattern. Single and multiple.
-- **ChainSelect**: country → state/province and similar dependent lists.
+  `input_attrs.autoOpen` lists results before typing; with `dfk_entities`,
+  the value of `input_attrs.control_field` picks the entity to search.
+- **ChainSelect**: country → state/province and similar dependent lists,
+  filtered by the field named in `input_attrs.control_field`.
 - **Toggle, Range**.
 - **File**: upload through `Afform.submitFile` after submit, as core does.
 - **RichTextEditor**: core's `CRM.wysiwyg` on a textarea.
@@ -102,6 +105,11 @@ In order of use: row menus, bulk selection with the actions menu, toolbar
 buttons, in-place editing, `cssRules`, button columns, drag to reorder,
 HTML / include / subsearch columns, hierarchy and collapsible rows, tally and
 header counts, and search filters bound to form fields.
+
+Run result and settings the renderer does not read yet:
+- `labels`: core appends them to the page title.
+- `editable` and `editableRow.createLabel`: in-place editing and the
+  "add row" button.
 
 **Bulk actions.** Core's actions come in two kinds:
 - Legacy task forms open in `CRM.loadForm` popups, which are jQuery and work
