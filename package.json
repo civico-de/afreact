@@ -10,7 +10,8 @@
     "video": "playwright test -c tests/browser/video.config.ts && ffmpeg -y -loglevel error -i video/angular.webm -i video/react.webm -filter_complex hstack=inputs=2 -c:v libx264 -pix_fmt yuv420p -movflags +faststart video/angular-vs-react.mp4",
     "coverage": "vitest run --coverage",
     "inventory": "docker compose -f .docker/docker-compose.yml exec -T app cv scr --user=admin /var/www/html/ext/afreact/scripts/inventory.php",
-    "types": "docker compose -f .docker/docker-compose.yml exec -T app cv scr --user=admin /var/www/html/ext/afreact/scripts/gen-types.php > src/api/entities.gen.ts"
+    "types": "docker compose -f .docker/docker-compose.yml exec -T app cv scr --user=admin /var/www/html/ext/afreact/scripts/gen-types.php > src/api/entities.gen.ts",
+    "core-watch": "scripts/core-watch.sh"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.0",

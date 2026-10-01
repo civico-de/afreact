@@ -1,0 +1,31 @@
+# civicrm-core files whose behaviour or output the React renderer reproduces
+# (scripts/core-watch.sh). Paths are git pathspecs; `*` matches across `/`.
+
+# The civicrm-core commit reviewed up to, inclusive (6.18.1).
+reviewed 5e09c0172e03c60f7010e29a8f5a2850cc652c5c
+
+# Afform runtime: directives, field templates, core blocks, placements, prefill and submit
+ext/afform/core/afform.php
+ext/afform/core/ang/af
+ext/afform/core/ang/af.ang.php
+ext/afform/core/ang/af.js
+ext/afform/core/ang/afCore
+ext/afform/core/ang/afCore.ang.php
+ext/afform/core/ang/afCore.css
+ext/afform/core/ang/afCore.js
+ext/afform/core/ang/afblock*
+ext/afform/core/CRM/Afform/ArrayHtml.php
+ext/afform/core/CRM/Afform/Page/AfformBase.php
+ext/afform/core/Civi/Afform
+ext/afform/core/Civi/Api4/Action/Afform
+
+# SearchKit runtime: displays, bulk tasks, SearchDisplay.run
+ext/search_kit/ang/crmSearchDisplay*
+ext/search_kit/ang/crmSearchTasks*
+ext/search_kit/Civi/Api4/Action/SearchDisplay
+
+# Shared: Angular module compilation, popups, CRM.cache and ts()
+Civi/Angular/ChangeSet.php
+Civi/Angular/Manager.php
+js/Common.js
+js/crm.ajax.js

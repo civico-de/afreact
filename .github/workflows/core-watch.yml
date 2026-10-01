@@ -1,0 +1,21 @@
+# Weekly list of civicrm-core commits to the files the React renderer reproduces
+# (scripts/core-watch.sh). A failed run means there are commits to review.
+name: Core watch
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core-watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - run: scripts/core-watch.sh | tee -a "$GITHUB_STEP_SUMMARY"
+        shell: bash
