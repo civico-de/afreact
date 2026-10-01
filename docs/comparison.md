@@ -179,10 +179,28 @@ block with an error.
 values without HTML escaping (`AbstractProcessor::replaceTokens`), and
 `afForm` inserts the message as HTML. Markup typed into a field therefore
 runs on the page that shows the confirmation. Tokens inside the form itself
-(`af-token`) are set as text and not affected. Present on upstream `master`
-as of 2026-09-29; not yet reported, and to go to the CiviCRM security team
-rather than the public tracker. The React renderer inserts the message as
-HTML as well, for parity.
+(`af-token`) are set as text and not affected. Reproduced on civikitchen with
+afform 6.18.1 on both paths:
+- the submitter sees their own markup run (self-XSS);
+- on a form with "Verify submission before processing", a reviewer who
+  processes the stored submission (`#?sid=`) gets the confirmation message
+  with the submitter's markup in their own session.
+
+The redirect URL is built by the same function without URL encoding. The
+contribution checkout passes the same unescaped message to its landing page,
+which sets it as `innerHTML` (read from the code, not run). Processing a
+submission by `sid` also warns `Undefined variable $submission` at
+`Submit.php:101`. Present on upstream `master` as of 2026-09-29; to go to the
+CiviCRM security team rather than the public tracker.
+
+afreact escapes the submitted values site-wide, whichever
+renderer shows it: a `civi.api.respond` listener on `Afform.submit` rebuilds
+core's message with each token value HTML-escaped and the admin's markup
+kept (`Civi/Afreact/ConfirmationMessage.php`). Values that hold HTML, such
+as a rich-text field, therefore show as text. A message another listener set
+is left as it is. The contribution checkout sets its own; afreact escapes it
+only where it equals core's (no `[token]`, no entity saved after the
+contribution). The redirect and the checkout page are unchanged.
 
 **Theme contrast below WCAG AA.** Riverlea (stream Minetta) links on the
 shaded rows of a striped table reach 4.2:1 (`#2c789b` on `#ededed`), and in

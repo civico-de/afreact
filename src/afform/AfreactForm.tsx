@@ -168,7 +168,7 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
   }
 
   if (saved?.message) {
-    // HTML as in afForm; core substitutes submitted values into it unescaped (see docs/comparison.md).
+    // The admin's HTML, with submitted values escaped by the server (Civi/Afreact/ConfirmationMessage.php).
     return (
       <div
         className="afform-confirmation"
