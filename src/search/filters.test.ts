@@ -125,7 +125,15 @@ describe("assignValue", () => {
       data_type: "Integer",
       search_range: true,
     });
-    expect(assignValue(empty, count, "5").values).toEqual({ count: { ">=": 5, "<=": 0 } });
+    const read = (text: string) => assignValue(empty, count, text).values.count;
+    expect(read("5-10")).toEqual({ ">=": 5, "<=": 10 });
+    expect(read("-5-10")).toEqual({ ">=": -5, "<=": 10 });
+    expect(read("-10--5")).toEqual({ ">=": -10, "<=": -5 });
+    expect(read("2.5-7.5")).toEqual({ ">=": 2.5, "<=": 7.5 });
+    expect(read("5-")).toEqual({ ">=": 5 });
+    expect(read("5")).toEqual({ ">=": 5 });
+    expect(read("5-x")).toEqual({ ">=": 5 });
+    expect(read("-")).toEqual({});
     const bounds = { ">=": 2, "<=": 9 };
     expect(assignValue(empty, count, bounds).values).toEqual({ count: bounds });
     const date = field("created", {

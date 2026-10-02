@@ -147,10 +147,15 @@ Present on upstream `master` as of 2026-10-02; fix proposed in
 [civicrm-core#37197](https://github.com/civicrm/civicrm-core/pull/37197)
 (`_afform_clear()` also clears the `metadata` cache).
 
-**Negative lower bound of a number range.** afField splits a range default or
-URL value such as `-5-10` on every `-` (`('' + value).split('-')`), so the
-filter becomes `>= 0` and `<= 5`. The React renderer splits the same way for
-parity. Present on upstream `master` as of 2026-09-08; not yet reported.
+**Number ranges from the URL or a default.** afField converts the value of an
+Integer or Float range field to a number before splitting it, so `5-10` becomes
+`NaN` and the search runs with `>= null`. It then splits on every `-` and turns
+an empty bound into 0: `5` searches `>= 5 AND <= 0`, and on a Money field
+`-5-10` searches `>= 0 AND <= 5`. Reproduced in the browser on 6.18.1, present
+on `master` as of 2026-10-02; fix proposed in
+[civicrm-core#37198](https://github.com/civicrm/civicrm-core/pull/37198). The
+React renderer splits at the first `-` after a leading sign and leaves an empty
+bound out: `-5-10` is −5 to 10, `5-` and `5` are `>= 5`.
 
 **A saved filter set is dropped after loading.** With `#?_s=<id>` afFieldset
 loads the `SearchParamSet`, then resets the fields to their defaults, so the

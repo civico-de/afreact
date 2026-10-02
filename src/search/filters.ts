@@ -79,6 +79,21 @@ export interface FieldsetState {
 }
 
 /**
+ * A number range such as "5-10", "-5-10" or "5-": a leading minus is a sign, an empty or invalid
+ * bound is left out. Core splits on every "-" and makes an empty bound 0.
+ */
+function numberRange(text: string): Record<string, number> {
+  const separator = text.indexOf("-", 1);
+  const bounds = separator < 0 ? [text, ""] : [text.slice(0, separator), text.slice(separator + 1)];
+  const range: Record<string, number> = {};
+  for (const [index, operator] of [">=", "<="].entries()) {
+    const bound = bounds[index] ?? "";
+    if (bound !== "" && !Number.isNaN(Number(bound))) range[operator] = Number(bound);
+  }
+  return range;
+}
+
+/**
  * afField's setValue(): converts a value from a default, stored values, the URL or a saved
  * filter set to the field's type and writes it the way getSetValue() does.
  */
@@ -109,16 +124,16 @@ export function assignValue(
   ) {
     value = context.userContactId;
   }
-  if (defn.input_type !== "DisplayOnly") value = correctValueType(value, defn.data_type);
+  const isNumberRange = defn.input_type === "Number" && !!defn.search_range;
+  // Core converts a range string to a number first, which turns "5-10" into NaN.
+  if (defn.input_type !== "DisplayOnly" && !isNumberRange)
+    value = correctValueType(value, defn.data_type);
   if (defn.input_type === "Date" && typeof value === "string" && value.startsWith("now")) {
     value = relativeDate(value, !!defn.input_attrs?.time, context.now ?? new Date());
   }
   const bounds = (text: string) => text.split("-");
-  if (defn.input_type === "Number" && defn.search_range) {
-    if (!isPlainObject(value)) {
-      const [low = "", high = ""] = bounds(String(value));
-      value = { ">=": Number(low || 0), "<=": Number(high || 0) };
-    }
+  if (isNumberRange) {
+    if (!isPlainObject(value)) value = numberRange(String(value));
   } else if (defn.input_type === "Number") {
     value = Number(value);
   } else if (
