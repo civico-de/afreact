@@ -143,7 +143,9 @@ cache, per domain and contact. Saving, reverting or deleting an Afform clears
 only the Afform scanner and the Angular cache (`_afform_clear()`), so a
 deleted placed form stays in the list and the contact summary fails with a
 500 until caches are flushed; a new placement appears only after a flush.
-Present on upstream `master` as of 2026-09-08; not yet reported.
+Present on upstream `master` as of 2026-10-02; fix proposed in
+[civicrm-core#37197](https://github.com/civicrm/civicrm-core/pull/37197)
+(`_afform_clear()` also clears the `metadata` cache).
 
 **Negative lower bound of a number range.** afField splits a range default or
 URL value such as `-5-10` on every `-` (`('' + value).split('-')`), so the
