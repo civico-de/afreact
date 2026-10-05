@@ -94,6 +94,39 @@ function numberRange(text: string): Record<string, number> {
 }
 
 /**
+ * The rest of afField's setValue(), shared with form field defaults: the current user,
+ * the field's type, relative dates and search ranges.
+ */
+export function convertValue(defn: FieldDefn, raw: unknown, context: ValueContext): unknown {
+  let value = raw;
+  // Core compares a whole list with "user_contact_id", so a multiple field gets NaN.
+  const user = (item: unknown) => (item === "user_contact_id" ? context.userContactId : item);
+  if (defn.input_type === "EntityRef" && ["Contact", "Individual"].includes(defn.fk_entity ?? ""))
+    value = Array.isArray(value) ? value.map(user) : user(value);
+  const isNumberRange = defn.input_type === "Number" && !!defn.search_range;
+  // Core converts a range string to a number first, which turns "5-10" into NaN.
+  if (defn.input_type !== "DisplayOnly" && !isNumberRange)
+    value = correctValueType(value, defn.data_type);
+  if (defn.input_type === "Date" && typeof value === "string" && value.startsWith("now")) {
+    value = relativeDate(value, !!defn.input_attrs?.time, context.now ?? new Date());
+  }
+  const bounds = (text: string) => text.split("-");
+  if (isNumberRange) {
+    if (!isPlainObject(value)) value = numberRange(String(value));
+  } else if (defn.input_type === "Number") {
+    value = Number(value);
+  } else if (
+    defn.search_range &&
+    !isPlainObject(value) &&
+    !(Array.isArray(defn.options) && defn.options.some((option) => option.id === value))
+  ) {
+    const [low = "", high = ""] = bounds(String(value));
+    value = { ">=": low, "<=": high };
+  }
+  return value;
+}
+
+/**
  * afField's setValue(): converts a value from a default, stored values, the URL or a saved
  * filter set to the field's type and writes it the way getSetValue() does.
  */
@@ -117,33 +150,7 @@ export function assignValue(
     if (!value[operator]) value = null;
     else value = value[operator];
   }
-  if (
-    defn.input_type === "EntityRef" &&
-    ["Contact", "Individual"].includes(defn.fk_entity ?? "") &&
-    value === "user_contact_id"
-  ) {
-    value = context.userContactId;
-  }
-  const isNumberRange = defn.input_type === "Number" && !!defn.search_range;
-  // Core converts a range string to a number first, which turns "5-10" into NaN.
-  if (defn.input_type !== "DisplayOnly" && !isNumberRange)
-    value = correctValueType(value, defn.data_type);
-  if (defn.input_type === "Date" && typeof value === "string" && value.startsWith("now")) {
-    value = relativeDate(value, !!defn.input_attrs?.time, context.now ?? new Date());
-  }
-  const bounds = (text: string) => text.split("-");
-  if (isNumberRange) {
-    if (!isPlainObject(value)) value = numberRange(String(value));
-  } else if (defn.input_type === "Number") {
-    value = Number(value);
-  } else if (
-    defn.search_range &&
-    !isPlainObject(value) &&
-    !(Array.isArray(defn.options) && defn.options.some((option) => option.id === value))
-  ) {
-    const [low = "", high = ""] = bounds(String(value));
-    value = { ">=": low, "<=": high };
-  }
+  value = convertValue(defn, value, context);
   const values = { ...state.values };
   if (operator) {
     const current = values[name];

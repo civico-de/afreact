@@ -1,3 +1,4 @@
+import { convertValue, isMultiple } from "../search/filters";
 import { asText, checkConditions, parseConditions } from "./conditions";
 import {
   ensurePrimary,
@@ -11,8 +12,8 @@ import type { ElementNode, FieldDefn, FormData, LayoutNode, Scope } from "./type
 import { isElement, isFieldDefn } from "./types";
 
 /**
- * Offset of each non-repeating af-join among the joins of the same entity in
- * its fieldset: two Email blocks in one fieldset write to joins.Email[0] and [1].
+ * Offset of each non-repeating af-join among its fieldset's joins of the same entity, counted over
+ * the layout, shown or not: the server pairs record n with block n's `data` and prefilled record.
  */
 export function joinOffsets(layout: LayoutNode[]): WeakMap<ElementNode, number> {
   const offsets = new WeakMap<ElementNode, number>();
@@ -75,32 +76,10 @@ export function staticDefault(defn: FieldDefn | undefined): unknown {
   return hasTokens(value) ? undefined : value;
 }
 
-/** afField's isMultiple(): the field holds a list. */
-function isMultiple(defn: FieldDefn): boolean {
-  const type = defn.input_type;
-  return (
-    (["Select", "EntityRef", "ChainSelect"].includes(type) && !!defn.input_attrs?.multiple) ||
-    ((type === "CheckBox" || type === "Toggle") && defn.data_type !== "Boolean") ||
-    ((type === "Hidden" || type === "DisplayOnly") &&
-      (!!defn.serialize || defn.data_type === "Array"))
-  );
-}
-
-/** afField's correctValueType(): numbers and booleans from their text, item by item in a list. */
-function typed(value: unknown, dataType: string): unknown {
-  if (value === null) return value;
-  if (Array.isArray(value)) return value.map((item: unknown) => typed(item, dataType));
-  if (dataType === "Integer" || dataType === "Float") return Number(value);
-  if (dataType === "Boolean") return Number(value) === 1;
-  return value;
-}
-
-/** afField's setValue() for a default: a list split from its text, then typed like the field. */
+/** afField's setValue() for a default: a list split from its text, converted like a filter value. */
 export function defaultValue(defn: FieldDefn, value: unknown): unknown {
   const listed = typeof value === "string" && isMultiple(defn) ? value.split(",") : value;
-  if (defn.input_type === "DisplayOnly") return listed;
-  const correct = typed(listed, defn.data_type);
-  return defn.input_type === "Number" ? Number(correct) : correct;
+  return convertValue(defn, listed, { userContactId: window.CRM.config?.cid });
 }
 
 /** An af-if the renderer cannot read renders nothing, so it initialises nothing either. */

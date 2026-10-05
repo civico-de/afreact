@@ -13,6 +13,8 @@ import { createPortal } from "react-dom";
 import { checkConditions, parseConditions } from "./conditions";
 import { interpolate, type ExpressionContext } from "./expressions";
 import { ClearButton, Field, fieldClasses } from "./Field";
+import { loadSelected } from "./fields/autofill";
+import { FieldEnvContext, type FieldEnv } from "./fields/env";
 import {
   addRepeatItem,
   copyRepeatItem,
@@ -66,10 +68,14 @@ export interface FormState {
   /** afForm hides the submit button when the route opens a stored submission (sid). */
   showSubmitButton: boolean;
   expressions: ExpressionContext;
+  /** Item keys per repeated array, shared by every af-repeat over that array. */
+  itemKeys: Map<string, number[]>;
 }
 
 export const FormContext = createContext<FormState | null>(null);
 const ScopeContext = createContext<Scope | null>(null);
+/** Names the entity item the layout is in by its item key, which a removal leaves unchanged. */
+const ItemPathContext = createContext("");
 /**
  * Inside an af-if that turned false: the data it last rendered with. Fields drop their values
  * as on afIfDestroy; a nested af-if renders what it showed then.
@@ -237,7 +243,9 @@ function FieldsetNode({ node }: { node: ElementNode }) {
   if (node["af-repeat"] === undefined) {
     return (
       <ScopeContext.Provider value={{ entity, index: 0 }}>
-        <Element node={node} />
+        <ItemPathContext.Provider value={entity}>
+          <Element node={node} />
+        </ItemPathContext.Provider>
       </ScopeContext.Provider>
     );
   }
@@ -289,27 +297,29 @@ interface RepeatProps {
 }
 
 /**
- * A stable key per repeat item, as ng-repeat tracks items by identity: removing an item
- * keeps the state of the items after it.
+ * A stable key per item of a repeated array, as ng-repeat tracks items by identity: removing
+ * an item keeps the state of the items after it, in every repeat over the same array.
  */
-function useItemKeys(count: number): [number[], (position: number) => void] {
-  const [keys, setKeys] = useState(() => Array.from({ length: count }, (_, key) => key));
-  let current = keys;
+function useItemKeys(id: string, count: number): [number[], (position: number) => void] {
+  const { itemKeys } = useForm();
+  let keys = itemKeys.get(id) ?? [];
   if (keys.length !== count) {
-    current = keys.slice(0, count);
-    for (let key = Math.max(-1, ...keys) + 1; current.length < count; key++) current.push(key);
-    setKeys(current);
+    keys = keys.slice(0, count);
+    for (let key = Math.max(-1, ...keys) + 1; keys.length < count; key++) keys.push(key);
+    itemKeys.set(id, keys);
   }
   const remove = (position: number) => {
-    setKeys((previous) => previous.filter((_, index) => index !== position));
+    itemKeys.set(id, keys.filter((_, index) => index !== position));
   };
-  return [current, remove];
+  return [keys, remove];
 }
 
 /** af-repeat in afRepeat.html's markup: one copy of the children per item, with add/copy/remove inside the min/max bounds. */
 function Repeat({ node, scope, itemScope, count }: RepeatProps) {
   const form = useForm();
-  const [keys, removeKey] = useItemKeys(count);
+  const path = useContext(ItemPathContext);
+  const id = scope.join === undefined ? scope.entity : `${path}/${scope.join}`;
+  const [keys, removeKey] = useItemKeys(id, count);
   // Same bounds as afRepeat's canAdd/canRemove: no min means every item can go.
   const min = Number(node.min ?? 0);
   const max = Number(node.max ?? 0);
@@ -323,7 +333,9 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
   const items = keys.map((key, position) => (
     <div af-repeat-item="" key={key}>
       <ScopeContext.Provider value={itemScope(position)}>
-        <Nodes nodes={children} />
+        <ItemPathContext.Provider value={`${id}#${key}`}>
+          <Nodes nodes={children} />
+        </ItemPathContext.Provider>
       </ScopeContext.Provider>
       {count > min && (
         <button
@@ -543,16 +555,44 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
         }}
       />
     ) : (
-      <Field
-        defn={defn}
-        value={value}
-        disabled={form.disabled || readonly || conditionallyDisabled}
-        onChange={(next) => {
-          form.update((data) => setValue(data, scope, name, next));
-        }}
-      />
+      <FieldEnvContext.Provider value={fieldEnv(form, scope, name, autofill)}>
+        <Field
+          defn={defn}
+          value={value}
+          disabled={form.disabled || readonly || conditionallyDisabled}
+          onChange={(next) => {
+            form.update((data) => setValue(data, scope, name, next));
+          }}
+        />
+      </FieldEnvContext.Provider>
     ),
   );
+}
+
+/** What EntityRef and ChainSelect send about the field; an autofill field loads the record it selects. */
+function fieldEnv(
+  form: FormState,
+  scope: Scope,
+  name: string,
+  autofill: string | undefined,
+): FieldEnv {
+  const entityItem = form.data[scope.entity]?.[scope.index];
+  const values =
+    scope.join === undefined
+      ? entityItem?.fields
+      : entityItem?.joins?.[scope.join]?.[scope.joinIndex ?? 0];
+  return {
+    formName: form.formName,
+    modelName: scope.entity,
+    joinEntity: scope.join,
+    fieldName: name,
+    values: values ?? {},
+    onSelect: autofill
+      ? async (id) => {
+          form.update(await loadSelected(form.formName, scope, name, id, form.entities));
+        }
+      : undefined,
+  };
 }
 
 interface PrimaryFieldProps {

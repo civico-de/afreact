@@ -86,6 +86,7 @@ const prefill = [
 function renderForm(
   submit: (params: Record<string, unknown>) => unknown,
   search = "?Individual1=5",
+  container?: HTMLElement,
 ) {
   const calls = mockApi({
     "Afreact.getForm": () => [
@@ -94,7 +95,12 @@ function renderForm(
     "Afform.prefill": () => (search ? prefill : []),
     "Afform.submit": submit,
   });
-  renderWithQuery(<AfreactForm name="afformTest" location={{ search, hash: "" }} />);
+  renderWithQuery(
+    <AfreactForm name="afformTest" location={{ search, hash: "" }} />,
+    undefined,
+    true,
+    container,
+  );
   return calls;
 }
 
@@ -145,12 +151,130 @@ describe("AfreactForm", () => {
     expect(calls.map(({ call }) => call)).not.toContain("Afform.submit");
   });
 
+  describe("a value shorter than its minlength", () => {
+    const form = (fields: LayoutNode[]): LayoutNode[] => [
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+          { "#tag": "fieldset", "af-fieldset": "Individual1", "#children": fields },
+          { "#tag": "button", "ng-click": "afform.submit()", "#children": [{ "#text": "Save" }] },
+        ],
+      },
+    ];
+    function renderFields(fields: LayoutNode[], values: Record<string, unknown>) {
+      const calls = mockApi({
+        "Afreact.getForm": () => [
+          { name: "afformTest", title: "Test", type: "form", layout: form(fields), strings: [] },
+        ],
+        "Afform.prefill": () => [{ name: "Individual1", values: [{ fields: values }] }],
+        "Afform.submit": () => [{}],
+      });
+      renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />);
+      return calls;
+    }
+    const save = async () => {
+      await userEvent.click(await screen.findByRole("button", { name: "Save" }));
+    };
+
+    it("blocks the submission and names the field, without its required marker", async () => {
+      const calls = renderFields(
+        [
+          field("first_name", {
+            label: "First Name",
+            required: true,
+            input_attrs: { minlength: 3 },
+          }),
+          field("note", { label: "Note", input_type: "TextArea", input_attrs: { minlength: 5 } }),
+        ],
+        { first_name: "Al", note: "Hi" },
+      );
+      await save();
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /^First Name must be at least 3 characters\.$/,
+      );
+      const name = screen.getByRole("textbox", { name: "First Name" });
+      expect(name).toHaveAttribute("minlength", "3");
+      expect(name).toHaveFocus();
+      expect(screen.getByRole("textbox", { name: "Note" })).toHaveAttribute("minlength", "5");
+      expect(calls.map(({ call }) => call)).not.toContain("Afform.submit");
+
+      await userEvent.type(name, "an");
+      await save();
+      expect(screen.getByRole("alert")).toHaveTextContent("Note must be at least 5 characters.");
+      await userEvent.type(screen.getByRole("textbox", { name: "Note" }), " there");
+      await save();
+      await waitFor(() => {
+        expect(calls.map(({ call }) => call)).toContain("Afform.submit");
+      });
+    });
+
+    it("lets an empty value through and leaves minlength off other input types", async () => {
+      const calls = renderFields(
+        [
+          field("first_name", { label: "First Name", input_attrs: { minlength: 3 } }),
+          field("email", { label: "Email", input_type: "Email", input_attrs: { minlength: 30 } }),
+        ],
+        { email: "ada@example.org" },
+      );
+      expect(await screen.findByRole("textbox", { name: "Email" })).not.toHaveAttribute(
+        "minlength",
+      );
+      await save();
+      await waitFor(() => {
+        expect(calls.map(({ call }) => call)).toContain("Afform.submit");
+      });
+    });
+
+    it("words the message without a label when the field has none", async () => {
+      renderFields([field("nick_name", { label: false, input_attrs: { minlength: 4 } })], {
+        nick_name: "Al",
+      });
+      await save();
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "One or more fields must have at least 4 characters.",
+      );
+    });
+  });
+
+  it("reports an invalid value apart from a missing one", async () => {
+    renderForm(() => [{}]);
+    const email = await screen.findByRole("textbox", { name: "Email" });
+    await userEvent.clear(email);
+    await userEvent.type(email, "not an address");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Please check all answers are valid.");
+  });
+
   it("submits with Enter in a text field", async () => {
     const calls = renderForm(() => [{}]);
     await userEvent.type(await screen.findByRole("textbox", { name: "First Name" }), "{Enter}");
     await waitFor(() => {
       expect(calls.map(({ call }) => call)).toContain("Afform.submit");
     });
+  });
+
+  it("submits from inside a page's own form, as in the case summary, not that form", async () => {
+    const outer = document.body.appendChild(document.createElement("form"));
+    const outerSubmit = vi.fn((event: Event) => {
+      event.preventDefault();
+    });
+    outer.addEventListener("submit", outerSubmit);
+    const host = outer.appendChild(document.createElement("div"));
+    const calls = renderForm(() => [{}], "?Individual1=5", host);
+    const submits = () => calls.filter(({ call }) => call === "Afform.submit");
+    const form = await within(outer).findByRole("form", { name: "Test form" });
+    await userEvent.type(within(form).getByRole("textbox", { name: "First Name" }), "{Enter}");
+    await waitFor(() => {
+      expect(submits()).toHaveLength(1);
+    });
+    await userEvent.click(within(form).getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(submits()).toHaveLength(2);
+    });
+    expect(outerSubmit).not.toHaveBeenCalled();
+    outer.remove();
   });
 
   it("keeps the form with a Saved status when there is no confirmation message", async () => {

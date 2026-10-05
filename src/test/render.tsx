@@ -15,9 +15,11 @@ export function renderWithQuery(
   ui: ReactNode,
   store: ParamStore = memoryStore(""),
   onlyElement = true,
+  container?: HTMLElement,
 ) {
   const client = createQueryClient();
   return render(ui, {
+    container,
     wrapper: ({ children }) => (
       <QueryClientProvider client={client}>
         <UrlState store={store} onlyElement={onlyElement}>

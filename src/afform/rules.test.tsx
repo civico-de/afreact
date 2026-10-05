@@ -1,5 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
 import { mockApi, renderWithQuery } from "../test/render";
 import { AfreactForm } from "./AfreactForm";
 import type { FieldDefn, LayoutNode } from "./types";
@@ -363,6 +364,44 @@ describe("live rules", () => {
     });
   });
 
+  it("fills the current user and relative dates into field defaults", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 0, 30, 9, 5, 7));
+    window.CRM.config = { cid: 7 };
+    const date = { input_type: "Date", data_type: "Date" };
+    const calls = renderForm(
+      form([
+        field("employer_id", {
+          input_type: "EntityRef",
+          data_type: "Integer",
+          fk_entity: "Contact",
+          afform_default: "user_contact_id",
+        }),
+        field("birth_date", { ...date, afform_default: "now -1 year" }),
+        field("follow_up", { ...date, input_attrs: { time: true }, afform_default: "now +1 day" }),
+      ]),
+    );
+    expect(await screen.findByLabelText("birth_date")).toHaveValue("2025-01-30");
+    expect(screen.getByLabelText("follow_up")).toHaveValue("2026-01-31T09:05");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({
+        Individual1: [
+          {
+            fields: {
+              employer_id: 7,
+              birth_date: "2025-01-30",
+              follow_up: "2026-01-31 09:05:07",
+            },
+            joins: {},
+          },
+        ],
+      });
+    });
+    delete window.CRM.config;
+    vi.useRealTimers();
+  });
+
   it("drops a selected option once its condition hides it", async () => {
     const calls = renderForm(
       form([
@@ -518,6 +557,32 @@ describe("live rules", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
     await userEvent.type(box("first_name"), "ada");
     expect(box("email")).toHaveValue("mine@example.org");
+  });
+
+  it("keeps item state in every repeat of a join when one of them removes an item", async () => {
+    const repeat = (child: LayoutNode): LayoutNode => ({
+      "#tag": "div",
+      "af-join": "Email",
+      "af-repeat": "Add",
+      "af-repeat-default": "3",
+      "#children": [child],
+    });
+    renderForm(
+      form([
+        field("first_name"),
+        repeat(field("email", { afform_default: "[Individual1.0.first_name]@example.org" })),
+        repeat(field("signature_text", { afform_default: "[Individual1.0.first_name]" })),
+      ]),
+    );
+    await screen.findByRole("textbox", { name: "first_name" });
+    const last = screen.getAllByRole("textbox", { name: "signature_text" })[2]!;
+    await userEvent.type(last, "mine");
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
+    await userEvent.type(box("first_name"), "ada");
+    const [first, second, third] = screen.getAllByRole("textbox", { name: "signature_text" });
+    expect(first).toHaveValue("ada");
+    expect(second).toHaveValue("mine");
+    expect(third).toBeUndefined();
   });
 
   it("initialises a copied item's repeats as afRepeat renders them", async () => {

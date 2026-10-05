@@ -77,6 +77,36 @@ function isForm(form: FormDefinition): boolean {
   return findElements(form.layout, "af-form").length > 0;
 }
 
+type Control = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+/** ngMinlength: the minlength a set value falls short of, else 0. Browsers flag only typed values. */
+function shortOf(control: Control): number {
+  if (!("minLength" in control) || control.minLength <= 0) return 0;
+  const { length } = control.value;
+  return length > 0 && length < control.minLength ? control.minLength : 0;
+}
+
+/** The text of the control's label, without afField's required marker. */
+function labelText(control: Control): string {
+  const label = control.labels?.[0]?.cloneNode(true);
+  if (!(label instanceof HTMLElement)) return "";
+  label.querySelector(".crm-marker")?.remove();
+  return label.textContent.trim();
+}
+
+/** afForm's message for the first invalid input: a missing value, a too short text, or else. */
+function invalidMessage(control: Control): string {
+  if (control.validity.valueMissing) return ts("Please fill all required fields.");
+  const minLength = shortOf(control);
+  if (minLength) {
+    const label = labelText(control);
+    return label
+      ? ts("%1 must be at least %2 characters.", { 1: label, 2: minLength })
+      : ts("One or more fields must have at least %1 characters.", { 1: minLength });
+  }
+  return ts("Please check all answers are valid.");
+}
+
 export function AfreactForm({
   name,
   source = "api",
@@ -111,7 +141,7 @@ export function AfreactForm({
 
 function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
   const [data, setData] = useState(initial);
-  const [incomplete, setIncomplete] = useState(false);
+  const [invalid, setInvalid] = useState<string | null>(null);
   const host = useRef<HTMLDivElement>(null);
   const save = useMutation({
     mutationFn: async (values: FormData) => {
@@ -142,6 +172,7 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
   const root = useRef<HTMLFormElement>(null);
   const expressions = useMemo(() => formExpressions(form.strings), [form]);
   const displays = useMemo(() => countDisplays(form.layout), [form]);
+  const [itemKeys] = useState(() => new Map<string, number[]>());
   const state: FormState = {
     data,
     update: setData,
@@ -151,17 +182,18 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
     formName: name,
     showSubmitButton: !args.sid,
     expressions,
+    itemKeys,
   };
 
   function submit() {
-    const controls = root.current?.querySelectorAll<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >("input, select, textarea");
-    const invalid = [...(controls ?? [])].find((control) => !control.checkValidity());
-    setIncomplete(!!invalid);
-    if (invalid) {
-      invalid.focus();
-      invalid.reportValidity();
+    const controls = root.current?.querySelectorAll<Control>("input, select, textarea");
+    const first = [...(controls ?? [])].find(
+      (control) => !control.checkValidity() || shortOf(control) > 0,
+    );
+    setInvalid(first ? invalidMessage(first) : null);
+    if (first) {
+      first.focus();
+      first.reportValidity();
       return;
     }
     save.mutate(data);
@@ -177,11 +209,7 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
       />
     );
   }
-  const failure = incomplete
-    ? ts("Please fill all required fields.")
-    : save.isError
-      ? errorMessage(save.error)
-      : null;
+  const failure = invalid ?? (save.isError ? errorMessage(save.error) : null);
   // afCore marks every form element afform-directive; theme rules anchor dropdowns and toolbars on it.
   return (
     <div className="afreact-form afform-directive" aria-busy={busy} ref={host}>
@@ -204,6 +232,8 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
               aria-label={form.title ?? undefined}
               onSubmit={(event) => {
                 event.preventDefault();
+                // Placed in a page's own <form> (the case summary), the submit must not reach it.
+                event.stopPropagation();
                 submit();
               }}
             >

@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { emptyData } from "./model";
 import {
   defaultValue,
@@ -125,6 +126,30 @@ describe("defaultValue", () => {
     expect(typed({ input_type: "CheckBox" }, "a,b")).toEqual(["a", "b"]);
     expect(typed({ input_type: "DisplayOnly", data_type: "Integer" }, "42")).toBe("42");
     expect(typed({}, "a,b")).toBe("a,b");
+  });
+
+  it("fills the current user and relative dates as afField's setValue() does", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 0, 30, 9, 5, 7));
+    window.CRM.config = { cid: 7 };
+    const contact = {
+      name: "x",
+      input_type: "EntityRef",
+      data_type: "Integer",
+      fk_entity: "Contact",
+    };
+    const date = { name: "x", input_type: "Date", data_type: "Date" };
+    expect(defaultValue(contact, "user_contact_id")).toBe(7);
+    const contacts = { ...contact, input_attrs: { multiple: true } };
+    expect(defaultValue(contacts, "user_contact_id")).toEqual([7]);
+    expect(defaultValue(date, "now")).toBe("2026-01-30");
+    expect(defaultValue(date, "now +1 day")).toBe("2026-01-31");
+    expect(defaultValue({ ...date, input_attrs: { time: true } }, "now -1 week")).toBe(
+      "2026-01-23 09:05:07",
+    );
+    expect(defaultValue({ ...date, input_type: "Text" }, "now")).toBe("now");
+    delete window.CRM.config;
+    vi.useRealTimers();
   });
 });
 
