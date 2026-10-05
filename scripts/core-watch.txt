@@ -1,8 +1,8 @@
 # civicrm-core files whose behaviour or output the React renderer reproduces
 # (scripts/core-watch.sh). Paths are git pathspecs; `*` matches across `/`.
 
-# The civicrm-core commit reviewed up to, inclusive (6.18.1).
-reviewed 5e09c0172e03c60f7010e29a8f5a2850cc652c5c
+# The civicrm-core commit reviewed up to, inclusive (master, 6.20 alpha).
+reviewed f95e45223cea98855b690b99dadbc38e0d44ebd2
 
 # Afform runtime: directives, field templates, core blocks, placements, prefill and submit
 ext/afform/core/afform.php

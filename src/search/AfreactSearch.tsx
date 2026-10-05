@@ -142,13 +142,14 @@ export function AfreactSearch({
   const [shown, setShown] = useState<RunPage | undefined>(undefined);
   if (rows.data && rows.data !== shown) setShown(rows.data);
 
-  const error = loaded.error ?? rows.error;
-  if (error) return <Failure error={error} />;
+  if (loaded.error) return <Failure error={loaded.error} />;
   if (!settings) return <p role="status">{ts("Loading…")}</p>;
   const label = loaded.data?.label ?? "";
-  const rowCount = counted.data ?? null;
   // Before the first click of a search button nothing loads.
   const loading = rows.isFetching || (rows.isPending && enabled && runFilters !== null);
+  // A failed run shows no rows and no count, as searchDisplayBaseTrait does.
+  const result = loading || rows.error ? undefined : rows.data;
+  const rowCount = rows.error ? null : (counted.data ?? null);
   const setPage = (next: number) => void setUrl({ page: next === 1 ? null : next });
   const onSearch = () => {
     // A click searches again even when the filters are the same.
@@ -176,7 +177,8 @@ export function AfreactSearch({
   const unsupported = unsupportedFeatures(settings, shown);
   const failed = counted.error ?? tallied.error;
   const tally = settings.tally;
-  const tallyRow = !loading && !!rows.data?.rows.length && !!tally && (
+  const columnCount = settings.columns.length + (hasControlColumn(settings) ? 1 : 0);
+  const tallyRow = !!result?.rows.length && !!tally && (
     <TallyRow settings={settings} tally={tallied.data ?? null} />
   );
   return (
@@ -261,9 +263,9 @@ export function AfreactSearch({
         {/* Core swaps the rows for placeholders while a run loads. */}
         <tbody>
           {loading && <PlaceholderRows settings={settings} />}
-          {!loading && rows.data?.rows.length === 0 && settings.noResultsText !== false && (
+          {result?.rows.length === 0 && settings.noResultsText !== false && (
             <tr>
-              <td colSpan={settings.columns.length + (hasControlColumn(settings) ? 1 : 0)}>
+              <td colSpan={columnCount}>
                 <p className="alert alert-info text-center">
                   {/* Core falls back on an empty text too. */}
                   {settings.noResultsText === undefined || settings.noResultsText === ""
@@ -273,11 +275,22 @@ export function AfreactSearch({
               </td>
             </tr>
           )}
-          {!loading && rows.data && (
+          {!loading && rows.error && (
+            // searchDisplayError.html, e.g. for a search that ran past its time limit.
+            <tr>
+              <td colSpan={columnCount}>
+                <p className="alert alert-warning text-center" role="alert">
+                  <i className="crm-i fa-circle-exclamation" role="img" aria-hidden="true" />{" "}
+                  {errorMessage(rows.error)}
+                </p>
+              </td>
+            </tr>
+          )}
+          {result && (
             <BodyRows
-              rows={rows.data.rows}
+              rows={result.rows}
               settings={settings}
-              subsearch={rows.data.subsearch}
+              subsearch={result.subsearch}
               afform={afform}
             />
           )}

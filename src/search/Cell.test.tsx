@@ -60,7 +60,7 @@ describe("field columns", () => {
       { type: "field", key: "name" },
       {
         val: ["Ada", "Ben"],
-        icons: { left: ["fa-user"] },
+        icons: { left: ["fa-user"], right: ["fa-star"] },
         links: [
           { url: "/a", text: "Ada", target: "_blank", title: "View Ada" },
           { url: "/b", text: "Ben", style: "text-danger" },
@@ -72,8 +72,9 @@ describe("field columns", () => {
     expect(ada).toHaveAttribute("target", "_blank");
     expect(ada).toHaveAttribute("title", "View Ada");
     expect(ben).toHaveClass("text-danger");
-    expect(container).toHaveTextContent("Ada , Ben");
-    expect(icons(container)).toEqual(["crm-i fa-user"]);
+    // No space between a value and its comma.
+    expect(container.textContent?.replace(/\s+/g, " ").trim()).toBe("Ada, Ben");
+    expect(icons(container)).toEqual(["crm-i fa-user", "crm-i fa-star"]);
   });
 });
 

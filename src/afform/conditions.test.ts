@@ -75,12 +75,38 @@ describe("checkConditions", () => {
 
   it("lets a clause with an operator afForm does not know decide nothing", () => {
     const no: Condition = [name, "=", '"Bob"'];
-    for (const op of ["IS NULL", "IS NOT NULL", "BETWEEN", "NOT BETWEEN"]) {
+    for (const op of ["IS NULL", "IS NOT NULL"]) {
       const unknown: Condition = [name, op, "[1,2]"];
       expect(check([unknown])).toBe(true);
       expect(check([unknown, no])).toBe(false);
       expect(check([["OR", [unknown, no]]])).toBe(false);
       expect(check([["NOT", [unknown]]])).toBe(true);
+    }
+  });
+
+  it("checks BETWEEN and NOT BETWEEN against both bounds, inclusive", () => {
+    const age = "Individual1[0][fields][age]";
+    expect(check([[age, "BETWEEN", "[30,40]"]])).toBe(true);
+    expect(check([[age, "BETWEEN", "[36,36]"]])).toBe(true);
+    expect(check([[age, "BETWEEN", "[37,40]"]])).toBe(false);
+    expect(check([[age, "NOT BETWEEN", "[37,40]"]])).toBe(true);
+    expect(check([[age, "NOT BETWEEN", "[30,40]"]])).toBe(false);
+    expect(check([[name, "BETWEEN", '["A","B"]']])).toBe(true);
+    // Dates compare as text, as afForm compares the strings.
+    const dates: FormData = { Activity1: [{ fields: { date: "2026-05-01" } }] };
+    const date = "Activity1[0][fields][date]";
+    expect(checkConditions([[date, "BETWEEN", '["2026-01-01","2026-12-31"]']], dates)).toBe(true);
+    expect(checkConditions([[date, "BETWEEN", '["2026-06-01","2026-12-31"]']], dates)).toBe(false);
+    // An empty value is outside any range of numbers.
+    expect(check([["Individual1[0][fields][missing]", "BETWEEN", "[0,10]"]])).toBe(false);
+    expect(check([["Individual1[0][fields][missing]", "NOT BETWEEN", "[0,10]"]])).toBe(true);
+  });
+
+  it("makes BETWEEN and NOT BETWEEN false without a pair of bounds", () => {
+    const age = "Individual1[0][fields][age]";
+    for (const bounds of ["36", "[30]", "[30,40,50]"]) {
+      expect(check([[age, "BETWEEN", bounds]])).toBe(false);
+      expect(check([[age, "NOT BETWEEN", bounds]])).toBe(false);
     }
   });
 

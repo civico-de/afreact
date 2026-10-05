@@ -306,6 +306,28 @@ describe("AfreactSearch", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Access denied");
   });
 
+  it("shows a failing run as a row of the table, without rows, count or pager", async () => {
+    mockApi({
+      "SearchDisplay.run": (params) => {
+        if (params.return === "row_count") return Object.assign([], { count: 5 });
+        if (params.return === "page:2") throw apiError("The search query timed out.");
+        return [row(1), row(2)];
+      },
+    });
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+    expect(await screen.findByText("5 results")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("link", { name: "Next" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("The search query timed out.");
+    expect(alert).toHaveClass("alert alert-warning text-center");
+    expect(alert.closest("td")).toHaveAttribute("colspan", "3");
+    expect(screen.getAllByRole("columnheader")).toHaveLength(3);
+    expect(screen.queryByRole("link", { name: "Name 1" })).not.toBeInTheDocument();
+    expect(screen.queryByText("None found.")).not.toBeInTheDocument();
+    expect(screen.queryByText("5 results")).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+  });
+
   describe("URL state", () => {
     const pageRequests = (calls: { params: Record<string, unknown> }[]) =>
       calls

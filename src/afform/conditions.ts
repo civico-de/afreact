@@ -101,7 +101,7 @@ function order(left: unknown, right: unknown): number {
   return Number(a) - Number(b);
 }
 
-/** undefined for an operator afForm does not know (IS NULL, BETWEEN): the clause decides nothing. */
+/** undefined for an operator afForm does not know (IS NULL): the clause decides nothing. */
 function compare(left: unknown, op: string, right: unknown): boolean | undefined {
   const yes = op !== "!=" && !op.includes("NOT ");
   switch (op) {
@@ -131,6 +131,11 @@ function compare(left: unknown, op: string, right: unknown): boolean | undefined
     case "IN":
     case "NOT IN":
       return (Array.isArray(right) ? right.includes(left) : equals(left, right)) === yes;
+    case "BETWEEN":
+    case "NOT BETWEEN":
+      // Without a pair of bounds both operators are false.
+      if (!Array.isArray(right) || right.length !== 2) return false;
+      return (order(left, right[0]) >= 0 && order(left, right[1]) <= 0) === yes;
     case "LIKE":
     case "NOT LIKE":
       if (typeof left === "string" && typeof right === "string") return like(left, right) === yes;

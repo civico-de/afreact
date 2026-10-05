@@ -117,7 +117,8 @@ function FieldLinks({ cell, links, onLinkClick }: CellProps & { links: Link[] })
         }}
       >
         {" "}
-        <Icon name={left[index]} /> {link.text} <Icon name={right[index]} />{" "}
+        <Icon name={left[index]} /> {link.text}
+        <Icon name={right[index]} />
       </a>
       {index < links.length - 1 && <span>,</span>}
     </span>
