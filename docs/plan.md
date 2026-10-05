@@ -18,33 +18,33 @@ using a feature, not occurrences.
 | page (`server_route`) | 64 | yes, for forms in `afreact_forms` |
 | contact summary tab | 7 | yes, for forms in `afreact_forms` |
 | contact summary block and actions, case summary block, event tab | 0 | yes, for forms in `afreact_forms` |
-| dashboard dashlet | 0 | no |
+| dashboard dashlet | 0 | yes, for forms in `afreact_forms`, inside core's Angular dashboard screen |
 | SearchKit table | 61 | columns, sort, pager with page size, links (with `crm-popup`), images, header count, totals (`tally`), description, `placeholder`, `hideThead`, search button; reload after a popup form; sort, page and page size in the URL |
 | … row menu column (`menu`) | 45 | yes (native popover, menu button keys) |
-| … bulk actions (`actions`) | 60 | no |
-| … toolbar buttons (`toolbar`) | 44 | yes, with dropdowns and `autoOpen`; task links: no |
-| … in-place editing (`editable`) | 34 | no |
+| … bulk actions (`actions`) | 60 | API batches, popup and redirect tasks; tasks that are Angular dialogs (download, update, tag, …) stay disabled with a note |
+| … toolbar buttons (`toolbar`) | 44 | yes, with dropdowns, `autoOpen` and task links |
+| … in-place editing (`editable`) | 34 | yes for text, number, date, option lists and colours; contact references, locations, multi-value fields and row editing (`editableRow`): no |
 | … conditional styles (`cssRules`) | 33 | yes (row, cell, header) |
 | … button column (`buttons`) | 15 | yes |
-| … drag to reorder (`draggable`) | 13 | no |
+| … drag to reorder (`draggable`) | 13 | yes, by pointer and keyboard; hierarchical tables and the tree display: no |
 | … HTML / include / subsearch columns | 10 / 1 / 2 | yes / no (Angular template) / yes (table displays) |
-| … hierarchy, collapsible rows | 4 / 3 | yes in tables; the tree display: no |
-| search filters from form fields (`filters`) | 23 | yes: defaults, URL, `store-values`, saved filter sets (`_s`), exposed operators, a display's own `filters`, EntityRef and ChainSelect filters; range inputs show the note but their values filter |
-| grid, tree display | 1 / 1 | no |
+| … hierarchy, collapsible rows | 4 / 3 | yes, in tables and in the tree display |
+| search filters from form fields (`filters`) | 23 | yes: defaults, URL, `store-values`, saved filter sets (`_s`), exposed operators, a display's own `filters`, EntityRef and ChainSelect filters; range inputs, Location filters |
+| list, grid, tree display | 0 / 1 / 1 | yes; drag in the tree: no. No display knows its label on a form page, so lists and table captions have no name there |
 | `{{ :: ts('…') }}` text and `{{ crmUrl(…) }}` links | 33 | yes |
 | submit button (`ng-click="afform.submit()"`) | 12 | yes |
 | `ng-if="afform.showSubmitButton"` | 3 | yes |
 | conditions (`af-if`) | 2 | yes |
-| tabs (`af-tabset`, `crm-ui-tab`) | 2 / 1 | no |
+| tabs (`af-tabset`, `crm-ui-tab`) | 2 / 1 | yes; `page-nav-buttons`, `page-nav-submit-text` and `selected-tab` (6.20): no |
 | field types Text, Select, Radio, Email, CheckBox, TextArea, Url, Date, DisplayOnly, Hidden | 40 … 1 | yes |
-| field type EntityRef | 6 | yes, single and multiple, `autoOpen`, `dfk_entities`, autofill of the selected record; quick-add links: no |
+| field type EntityRef | 6 | yes, single and multiple, `autoOpen`, `dfk_entities`, autofill of the selected record, quick-add links |
 | field type ChainSelect | 5 | yes |
-| field type Toggle | 1 | no |
-| admin-only widgets (`af-admin-list-menu`, `crm-monaco`) | 1 / 1 | no |
+| field type Toggle | 1 | yes |
+| admin-only widgets (`af-admin-list-menu`, `crm-monaco`) | 1 / 1 | no: they belong to FormBuilder and the message template editor, which stay Angular |
 
 The `{{ }}` expressions are all of two shapes: `:: ts('literal')` and
 `crmUrl('path', {params})`. Core also ships field types no dev-stack form uses:
-File, Location, Range, RichTextEditor. Afforms on a real site add custom fields
+File, Location, Range, RichTextEditor; the renderer has them too. Afforms on a real site add custom fields
 and forms built in FormBuilder; run the inventory there before choosing the
 order.
 
@@ -226,25 +226,28 @@ Total: roughly 6,000 lines, several weeks of work.
 
 ## Status and next steps
 
-As of 2026-10-05:
+As of 2026-10-06:
 
 | Package | State |
 |---|---|
-| 1. Takeover | done for pages, tabs, summary blocks and the actions popup; dashboard open (package 8) |
+| 1. Takeover | done for pages, tabs, summary blocks, the actions popup and dashlets |
 | 2. Expressions and conditions | done, with `BETWEEN` and `NOT BETWEEN` |
-| 3. Fields | EntityRef and ChainSelect done; quick-add links, Toggle, Range, File, RichTextEditor, Location and range inputs in search filters open |
-| 4. Submission behaviour | open |
-| 5. SearchKit table | rendering, filters from form fields and URL state done; the features marked "no" in the inventory open |
-| 6. Other display types and layout | open |
-| 7. Parity sweep | open; `parity.spec.ts` and `support.spec.ts` cover samples |
-| 8. Dashboard | open |
+| 3. Fields | done: every field type core ships, quick-add links, search ranges; File fields outside a form show a note |
+| 4. Submission behaviour | done: status, error summary, closed forms, drafts with autosave, reset, encoded redirects; draft and reset buttons outside `af-form` show a note; placed forms still load their Angular module (needs an upstream way to drop a module) |
+| 5. SearchKit table | done but for the notes in the inventory: Angular-dialog tasks, row editing, reference and multi-value editors, drag in hierarchical tables, include columns |
+| 6. Other display types and layout | list, grid, tree and tab sets done; drag in the tree, the batch and chart display types open |
+| 7. Parity sweep | `sweep.spec.ts` renders every form with both renderers and writes `test-results/sweep.md`; it fails while a supported form differs |
+| 8. Dashboard | listed dashlets render with React inside core's dashboard; a React dashboard screen is the follow-up described in package 8 |
 
 Next, in this order:
 
-1. **Package 5, the rest:** bulk actions with the API task dialogs, in-place
-   editing, drag to reorder, the column picker, task links.
-2. **Package 3, the rest**, starting with range inputs in search filters.
-3. Packages 4, 6, 7 and 8.
+1. **The sweep's remaining findings** on forms the support report calls
+   supported, until `sweep.spec.ts` passes.
+2. **The notes left in the inventory**, by number of forms they hold back:
+   Angular-dialog tasks (download first), row editing, reference and
+   multi-value in-place editors, drag in hierarchical tables and the tree.
+3. **Display labels on form pages**, so a display placed in a form has a name.
+4. **A React dashboard screen** (package 8), for keyboard access.
 
 Join blocks behind `af-if` keep their layout position, which is how the server
 reads them; core's link-order numbering is listed as an upstream bug and
