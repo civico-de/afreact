@@ -24,7 +24,13 @@ interface Pair {
   /** A page expression that holds once the content is there. */
   ready: string;
   /** Opened with Enter before the check; the keyboard leaves no hover colours behind. */
-  open?: string;
+  open?: Opener;
+}
+
+interface Opener {
+  target: string;
+  /** A page expression that holds once what the target opens has rendered and loaded. */
+  ready: string;
 }
 
 const PAIRS: Pair[] = [
@@ -58,7 +64,10 @@ const PAIRS: Pair[] = [
     ready: tableReady,
     // The first row's menu covers rows without theme contrast failures: axe does not see
     // top-layer popovers covering text and would report the covered text on React only.
-    open: ".afreact-render tbody tr:nth-child(1) .crm-search-col-type-menu button",
+    open: {
+      target: ".afreact-render tbody tr:nth-child(1) .crm-search-col-type-menu button",
+      ready: `!!document.querySelector(".afreact-render tbody tr:nth-child(1) .crm-search-col-type-menu button[aria-expanded=true]")`,
+    },
   },
   {
     name: "table subsearch",
@@ -66,7 +75,11 @@ const PAIRS: Pair[] = [
     angular: features("angular"),
     scope: ".afreact-render",
     ready: tableReady,
-    open: ".afreact-render tbody tr:nth-child(2) .crm-search-col-type-subsearch summary",
+    // The nested display loads on opening; its placeholder rows cover different outer rows.
+    open: {
+      target: ".afreact-render tbody tr:nth-child(2) .crm-search-col-type-subsearch summary",
+      ready: `!!document.querySelector(".afreact-render details[open] tbody tr[data-entity-id]") && !document.querySelector(".afreact-render .crm-search-loading-placeholder")`,
+    },
   },
   {
     name: "collapsible table",
@@ -118,10 +131,9 @@ async function findings(
   await page.waitForFunction(pair.ready);
   await page.waitForLoadState("networkidle");
   if (pair.open) {
-    await page.locator(pair.open).focus();
+    await page.locator(pair.open.target).focus();
     await page.keyboard.press("Enter");
-    await page.waitForLoadState("networkidle");
-    await page.waitForFunction(pair.ready);
+    await page.waitForFunction(pair.open.ready);
   }
   const { violations } = await new AxeBuilder({ page })
     .include(pair.scope)

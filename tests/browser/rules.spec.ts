@@ -63,6 +63,8 @@ async function observe(page: Page, renderer: Renderer): Promise<Observed> {
   await expect(input(page, "job_title")).toBeVisible();
   observed.jobTitleShown.push(await shown());
   observed.lastNameRequired.push(await required());
+  // The token default follows the typed name a render later.
+  await expect(input(page, "nick_name")).toHaveValue(/ada$/);
   observed.nickName.push(await nick());
   await input(page, "job_title").fill("Engineer");
   await first.fill("");
