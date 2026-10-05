@@ -80,6 +80,7 @@ describe("collapsible rows", () => {
     expect(hasControlColumn({ ...base, collapsible: "open" })).toBe(true);
     expect(hasControlColumn({ ...base, tally: { label: "Total" } })).toBe(true);
     expect(hasControlColumn({ ...base, tally: {} })).toBe(false);
+    expect(hasControlColumn({ ...base, actions: true })).toBe(true);
   });
 
   it("starts rows with sub-rows closed only on collapsible: closed", () => {
@@ -113,19 +114,18 @@ describe("unsupportedFeatures", () => {
       button: "Search",
       toggleColumns: true,
     };
-    const page = runPage(
-      Object.assign([{ key: 1, columns: [{ links: [{ task: "delete" }, { url: "/x" }] }, null] }], {
-        toolbar: [{ task: "enable" }],
-      }),
-    );
-    expect(unsupportedFeatures(settings, page)).toEqual([
-      "bulk actions (actions)",
+    expect(unsupportedFeatures(settings)).toEqual([
       "in-place editing (editable: name, email)",
       "row editing (editableRow)",
       "drag to reorder (draggable)",
       "column picker (toggleColumns)",
-      "task links (enable, delete)",
     ]);
+  });
+
+  it("names neither bulk actions nor their display mode; the tasks they offer are checked on load", () => {
+    expect(
+      unsupportedFeatures({ ...base, actions: ["delete"], actions_display_mode: "buttons" }),
+    ).toEqual([]);
   });
 
   it("names nothing for a table as core's own displays store it", () => {

@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, vi } from "vitest";
 import { events } from "./jquery";
+import { installDialog } from "./dialog";
 import { installPopover } from "./popover";
 
 // CiviCRM's globals: ts() fills %1-style placeholders, CRM.api4 is replaced per test.
@@ -13,11 +14,16 @@ window.CRM = {
   url: (path) => `/${path}`,
   $: vi.fn($),
   loadForm: vi.fn(() => events(new EventTarget())),
+  alert: vi.fn(),
+  status: vi.fn(),
   utils: { colorContrast: () => "white" },
 };
 installPopover();
+installDialog();
 
 afterEach(() => {
   vi.mocked(window.CRM.api4).mockReset();
   vi.mocked(window.CRM.$).mockReset().mockImplementation($);
+  vi.mocked(window.CRM.alert).mockClear();
+  vi.mocked(window.CRM.status).mockClear();
 });

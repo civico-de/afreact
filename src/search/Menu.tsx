@@ -24,7 +24,15 @@ export interface MenuProps {
   links: Link[];
   alignRight: boolean;
   itemClass?: (link: Link) => string | undefined;
+  /** Items that stay in the menu, focusable, but do nothing. */
+  isDisabled?: (link: Link) => boolean;
   onLinkClick?: (link: Link, event: MouseEvent<HTMLAnchorElement>) => void;
+  /** Called as the menu opens, before it shows. */
+  onOpen?: () => void;
+  disabled?: boolean;
+  buttonTitle?: string;
+  /** Controls in the same `.btn-group` before the menu button. */
+  prefix?: ReactNode;
 }
 
 /**
@@ -41,7 +49,12 @@ export function Menu({
   links,
   alignRight,
   itemClass,
+  isDisabled,
   onLinkClick,
+  onOpen,
+  disabled,
+  buttonTitle,
+  prefix,
 }: MenuProps) {
   const id = useId();
   const button = useRef<HTMLButtonElement>(null);
@@ -99,6 +112,7 @@ export function Menu({
       (focus === "last" ? items().at(-1) : items()[0])?.focus();
       return;
     }
+    onOpen?.();
     menu.current?.showPopover();
   };
 
@@ -126,7 +140,12 @@ export function Menu({
     else if (event.key === "ArrowUp") move(current - 1);
     else if (event.key === "Home") move(0);
     else if (event.key === "End") move(all.length - 1);
-    else if (event.key === "Escape") {
+    else if ((event.key === "Enter" || event.key === " ") && !all[current]?.hasAttribute("href")) {
+      // Items without a link (bulk actions) activate like buttons.
+      event.preventDefault();
+      event.stopPropagation();
+      all[current]?.click();
+    } else if (event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();
       close();
@@ -135,6 +154,7 @@ export function Menu({
 
   return (
     <div className={open ? `${groupClass} open` : groupClass} role={groupRole}>
+      {prefix}
       <button
         ref={button}
         type="button"
@@ -143,6 +163,9 @@ export function Menu({
         aria-expanded={open}
         aria-controls={id}
         popoverTarget={id}
+        disabled={disabled}
+        title={buttonTitle}
+        onClick={onOpen}
         onKeyDown={onButtonKeyDown}
       >
         {label}
@@ -165,7 +188,7 @@ export function Menu({
               href={link.url}
               target={link.target}
               title={link.title}
-              aria-disabled={link.task ? true : undefined}
+              aria-disabled={isDisabled?.(link) ? true : undefined}
               onClick={(event) => {
                 onLinkClick?.(link, event);
                 menu.current?.hidePopover();

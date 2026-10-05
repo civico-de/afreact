@@ -67,11 +67,11 @@ export function cellClass(
 }
 
 /**
- * The control column before the data columns. Core also shows it for bulk actions, drag
- * handles and row editing, which the React renderer reports as unsupported instead.
+ * The control column before the data columns. Core also shows it for drag handles and row
+ * editing, which the React renderer reports as unsupported instead.
  */
 export function hasControlColumn(settings: DisplaySettings): boolean {
-  return !!settings.collapsible || !!(settings.tally && settings.tally.label);
+  return !!settings.actions || !!settings.collapsible || !!(settings.tally && settings.tally.label);
 }
 
 /** crmSearchDisplayToggleCollapse's initial state: rows with sub-rows start closed on "closed". */
@@ -126,12 +126,11 @@ const TABLE_SETTINGS = new Set([
   "button",
   "cssRules",
   "columnMode",
-  // Only read together with actions, which have their own note.
+  "actions",
   "actions_display_mode",
   // Stored by some core displays; nothing in core reads it.
   "nested",
   // Named features below.
-  "actions",
   "editableRow",
   "draggable",
   "toggleColumns",
@@ -146,18 +145,14 @@ function isSet(value: unknown): boolean {
   return true;
 }
 
-/**
- * Display features the React table cannot show yet, each named with its setting. Task links
- * are known only from a loaded page.
- */
-export function unsupportedFeatures(settings: DisplaySettings, page?: RunPage): string[] {
+/** Display features the React table cannot show yet, each named with its setting. */
+export function unsupportedFeatures(settings: DisplaySettings): string[] {
   const features: string[] = Object.entries(settings)
     .filter(([key, value]) => !TABLE_SETTINGS.has(key) && isSet(value))
     .map(([key]) => `setting ${key}`);
   if (typeof settings.pager === "object")
     for (const [key, value] of Object.entries(settings.pager))
       if (!PAGER_OPTIONS.has(key) && isSet(value)) features.push(`setting pager.${key}`);
-  if (settings.actions) features.push("bulk actions (actions)");
   const editable =
     settings.editableRow && settings.editableRow.disable
       ? []
@@ -167,12 +162,6 @@ export function unsupportedFeatures(settings: DisplaySettings, page?: RunPage): 
     features.push("row editing (editableRow)");
   if (settings.draggable) features.push("drag to reorder (draggable)");
   if (settings.toggleColumns) features.push("column picker (toggleColumns)");
-  const links = [
-    ...(page?.toolbar ?? []),
-    ...(page?.rows ?? []).flatMap((row) => row.columns.flatMap((cell) => cell?.links ?? [])),
-  ];
-  const tasks = new Set(links.flatMap((link) => link.task ?? []));
-  if (tasks.size) features.push(`task links (${[...tasks].join(", ")})`);
   return features;
 }
 

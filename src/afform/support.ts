@@ -1,5 +1,6 @@
 import { parseFiltersAttribute, readsOptions, type DisplayFilters } from "../search/displayFilters";
 import { columnNote, unsupportedFeatures } from "../search/rows";
+import { referencedTasks } from "../search/searchTasks";
 import { isDisplaySettings, type DisplaySettings } from "../search/types";
 import { parseConditions } from "./conditions";
 import { interpolate } from "./expressions";
@@ -309,7 +310,7 @@ function inputProblems(defn: FieldDefn): string[] {
   return problem === null ? [] : [problem];
 }
 
-/** The display's notes, and those its table shows whatever the rows; task links need rows. */
+/** The display's notes, and those its table shows whatever the rows. */
 function searchProblems(node: ElementNode, scope: Scope): string[] {
   const check = searchDisplayCheck(node, scope.options);
   if (check.filters === null || !check.settings) return check.notes;
@@ -384,4 +385,28 @@ function layoutProblemsIn(nodes: LayoutNode[], scope: Scope): string[] {
  */
 export function layoutProblems(layout: LayoutNode[], options?: Record<string, unknown>): string[] {
   return layoutProblemsIn(layout, { entity: false, repeated: false, filters: false, options });
+}
+
+export interface TaskDisplay {
+  search: string;
+  display: string;
+  referenced: Set<string> | "all";
+}
+
+/**
+ * The search displays of a layout that offer or link to tasks. Which of those the renderer
+ * runs only the server's task list tells, so the support report asks for it per display.
+ */
+export function taskDisplays(layout: LayoutNode[]): TaskDisplay[] {
+  return layout.flatMap((node): TaskDisplay[] => {
+    if (!isElement(node)) return [];
+    const children = taskDisplays(node["#children"] ?? []);
+    const { "search-name": search, "display-name": display, settings } = node;
+    if (renderedKind(node) !== "search" || typeof search !== "string") return children;
+    if (typeof display !== "string" || !isDisplaySettings(settings)) return children;
+    const referenced = referencedTasks(settings);
+    return referenced === "all" || referenced.size
+      ? [{ search, display, referenced }, ...children]
+      : children;
+  });
 }

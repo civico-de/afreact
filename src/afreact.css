@@ -20,3 +20,8 @@
 .afreact-combobox .select2-choices .select2-search-field input.select2-input { width: 100%; }
 .afreact-combobox:focus-within .select2-choices { outline: 2px solid var(--crm-focus-color, Highlight); outline-offset: 1px; }
 .afreact-combobox .select2-search-choice-close:focus-visible { outline: 2px solid var(--crm-focus-color, Highlight); }
+.afreact-dialog { padding: 0; border: 0; border-radius: var(--crm-dialog-radius, 4px); width: min(40rem, calc(100vw - 2rem)); background: var(--crm-dialog-body-bg-color, Canvas); color: var(--crm-text-color, CanvasText); }
+.afreact-dialog::backdrop { background: rgb(0 0 0 / 50%); }
+.afreact-dialog .afreact-dialog-title { margin: 0; padding: var(--crm-dialog-header-padding, 0.75rem 1rem); font-size: var(--crm-dialog-header-size, 1.25rem); background: var(--crm-dialog-header-bg-color, Canvas); color: var(--crm-dialog-header-color, CanvasText); }
+.afreact-dialog .afreact-dialog-body { padding: var(--crm-dialog-body-padding, 1rem); }
+.afreact-dialog .afreact-dialog-buttons { display: flex; justify-content: flex-end; gap: 0.5rem; padding: var(--crm-dialog-padding, 0.75rem 1rem); }

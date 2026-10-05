@@ -123,11 +123,15 @@ describe("other column types", () => {
     expect(screen.getByRole("link", { name: "View" })).toHaveClass("btn btn-xs btn-info");
   });
 
-  it("keeps a task link from navigating and marks it disabled", async () => {
+  it("makes a task link a focusable button that runs on click, Enter and Space", async () => {
     const { clicked } = cell({ type: "links" }, { links: [{ task: "delete", text: "Delete" }] });
-    const link = screen.getByText("Delete").closest("a");
-    expect(link).toHaveAttribute("aria-disabled", "true");
-    if (link) await userEvent.click(link);
+    const link = screen.getByRole("button", { name: "Delete" });
+    expect(link).toHaveAttribute("tabindex", "0");
+    await userEvent.click(link);
+    link.focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard(" ");
+    expect(clicked).toHaveBeenCalledTimes(3);
     expect(clicked).toHaveBeenCalledWith({ task: "delete", text: "Delete" }, expect.anything());
   });
 

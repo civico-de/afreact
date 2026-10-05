@@ -110,6 +110,52 @@ describe("AfreactSupport", () => {
     );
   });
 
+  it("names the tasks of a display that React cannot run, from the server's task list", async () => {
+    const table = (display: string, settings: Record<string, unknown>) => ({
+      "#tag": "crm-search-display-table",
+      "search-name": "Contacts",
+      "display-name": display,
+      settings: { columns: [], ...settings },
+    });
+    const layout = [
+      { "#tag": "div", "#children": [table("All", { actions: true })] },
+      table("Plain", {}),
+      table("Linked", { columns: [{ type: "links", links: [{ task: "enable" }] }] }),
+    ];
+    const tasks = [
+      { name: "enable", title: "Enable", number: "> 0", apiBatch: { action: "update" } },
+      {
+        name: "download",
+        title: "Download",
+        number: ">= 0",
+        uiDialog: { templateUrl: "~/x.html" },
+      },
+    ];
+    const calls = mockApi({
+      "Afform.get": () => [forms[1]],
+      "Afreact.getForm": ({ name }) => [{ name, title: null, type: "search", layout }],
+      "SearchDisplay.getSearchTasks": () =>
+        Object.assign(tasks, {
+          editable: {
+            entityInfo: { name: "Contact", title: "C", title_plural: "Cs", primary_key: ["id"] },
+          },
+        }),
+    });
+    renderWithQuery(<AfreactSupport listed={[]} settings="/s" />);
+    await screen.findByText(/^Checked 1 forms: 1 with parts/);
+    expect(within(row("afsearchGaps")).getByRole("listitem")).toHaveTextContent(
+      "task download (Angular dialog ~/x.html)",
+    );
+    expect(
+      calls
+        .filter(({ call }) => call === "SearchDisplay.getSearchTasks")
+        .map(({ params }) => params),
+    ).toEqual([
+      { savedSearch: "Contacts", display: "All" },
+      { savedSearch: "Contacts", display: "Linked" },
+    ]);
+  });
+
   it("reports a failed form list", async () => {
     mockApi({
       "Afform.get": () => {

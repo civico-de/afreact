@@ -65,10 +65,34 @@ instead of being dropped:
 - range inputs in search filters (`search_range`)
 - directives outside plain HTML, forms, blocks, joins, repeats, search
   fieldsets and table displays (for example tabs and other search display types)
-- table features: bulk actions, in-place editing, drag to reorder, the column
-  picker, task links, include columns
+- table features: in-place editing, drag to reorder, the column picker,
+  include columns
+- bulk actions whose task is an Angular dialog (download, update, tag, merge
+  tags, add relationship, and extensions' own), takes input fields
+  (`apiBatch.fields`, e.g. soft credits), or uses an expression other than a
+  literal, an object literal, `ids[n]`, `ids.join(',')` and the task's data
+  names. They stay in the actions menu, disabled, with the note as their
+  title; a row link to one alerts.
 
-The support report (`civicrm/admin/afreact`) lists these per form.
+The support report (`civicrm/admin/afreact`) lists these per form; for bulk
+actions it asks the server for each display's tasks.
+
+### Bulk actions
+
+The React table runs the tasks `SearchDisplay.getSearchTasks` returns:
+API batches (enable, disable, delete, …) in a confirmation dialog with
+progress, `CRM.loadForm` popups, and redirects to a new window. Selection
+follows core: per page or all pages (a `return: 'id'` run), Shift for a range,
+kept across sorting and paging, cleared by new filters and after a task.
+
+| Area | Angular | React |
+|---|---|---|
+| Confirmation dialog | jQuery UI dialog through `dialogService` | native modal `<dialog>`: focus moves in and back to the menu button, Escape cancels before the run starts |
+| Progress bar | moves forward every second while a batch runs | moves per finished batch |
+| Delete task without `confirmMsg` (changed by a hook) | runs at once | asks with core's delete question |
+| After a row link updates its row | reloads that row (`refreshAfterEditing`) | reloads the table |
+| Select-all control | icon buttons | the same buttons with `role="checkbox"` and `aria-checked` (`mixed` for some) |
+| Selection count, task result | visible count only | also announced in a live region |
 
 ## Load metrics
 
@@ -279,6 +303,29 @@ as a rich-text field, therefore show as text. A message another listener set
 is left as it is. The contribution checkout sets its own; afreact escapes it
 only where it equals core's (no `[token]`, no entity saved after the
 contribution). The redirect and the checkout page are unchanged.
+
+**Bulk actions.** Read from the source of `master` as of 2026-10-05
+(`ext/search_kit/ang/crmSearchTasks/`), not run. Where React differs it says
+so:
+- A batch that fails after earlier batches were applied leaves the table and
+  the selection as they were (`crmSearchTaskApiBatch.ctrl.js` `onError`
+  cancels the dialog), so the rows show stale values. React reloads the table
+  and clears the selection whenever a batch was sent.
+- The error alert shows the task's `errorMsg` in place of the server's
+  message whenever the task has one. React shows both.
+- Selecting all pages has no error handler
+  (`searchDisplayTasksTrait.service.js` `selectAllPages`): the checkboxes stay
+  disabled with no message. React shows the error and enables them again.
+- A failed `getSearchTasks` leaves an empty actions menu with no message
+  (`getMetadata`). React shows the error.
+- A redirect task's query is replaced by its data expression (`doTask`:
+  `query && $eval(query) && $eval(data)`), so `reset=1` is lost. React merges
+  query and data.
+- A row link to a task the server does not return opens the API batch dialog
+  without an `apiBatch`, which throws (`onClickLink`). React alerts that the
+  task is not offered.
+- The row checkboxes have no label (`crmSearchDisplayTableBody.html`). React
+  labels each with the row's first column.
 
 **Theme contrast below WCAG AA.** Riverlea (stream Minetta) links on the
 shaded rows of a striped table reach 4.2:1 (`#2c789b` on `#ededed`), and in

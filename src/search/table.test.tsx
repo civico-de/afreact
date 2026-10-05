@@ -229,22 +229,21 @@ describe("AfreactSearch table features", () => {
       />,
     );
     await screen.findByText("Name 1");
-    expect(screen.getByRole("note")).toHaveTextContent(
-      "bulk actions (actions), drag to reorder (draggable)",
-    );
+    // Bulk actions render; their tasks load only once the menu is used.
+    expect(screen.getByRole("note")).toHaveTextContent(/: drag to reorder \(draggable\)$/);
     // A drag order switches header sorting off, as in core.
     expect(within(screen.getByRole("table")).queryAllByTitle(/Click to sort/)).toHaveLength(0);
   });
 
-  it("shows no button for a toolbar task link, as core, and names it in the note", async () => {
+  it("shows no button for a toolbar task link, as core's toolbar.html", async () => {
     runs(() => [row(1)], { toolbar: [{ task: "enable", text: "Enable all", style: "default" }] });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={{ columns, toolbar: [{}] }} />);
     await screen.findByText("Name 1");
-    expect(screen.getByRole("note")).toHaveTextContent("task links (enable)");
     expect(screen.queryByText("Enable all")).not.toBeInTheDocument();
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
-  it("keeps the toolbar and the note of the last run while the next page loads", async () => {
+  it("keeps the toolbar of the last run while the next page loads", async () => {
     let pages = 0;
     // The second page never answers, so the table stays busy.
     const stalled = new Promise<never>(() => {
@@ -268,7 +267,7 @@ describe("AfreactSearch table features", () => {
     );
     await userEvent.click(await screen.findByRole("link", { name: "Next" }));
     await waitFor(() => expect(screen.getByRole("table")).toHaveAttribute("aria-busy", "true"));
-    expect(screen.getByRole("note")).toHaveTextContent("task links (enable)");
+    expect(screen.getByRole("link", { name: "Add" })).toBeInTheDocument();
   });
 
   it("hides the header row when asked", async () => {

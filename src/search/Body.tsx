@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import { Cell, cellText } from "./Cell";
-import { onLinkClick } from "./links";
 import {
   cellClass,
   descendents,
@@ -9,17 +8,28 @@ import {
   rowClass,
   startsCollapsed,
 } from "./rows";
-import type { DisplaySettings, Row, SubsearchDisplay } from "./types";
+import type { RowSelect } from "./Tasks";
+import type { DisplaySettings, Link, Row, SubsearchDisplay } from "./types";
 
 interface BodyRowsProps {
   rows: Row[];
   settings: DisplaySettings;
   subsearch: Record<string, SubsearchDisplay>;
   afform?: string;
+  /** The checkbox of each row, with bulk actions. */
+  select?: RowSelect;
+  onLinkClick: (link: Link, key: Row["key"], event: MouseEvent<HTMLAnchorElement>) => void;
 }
 
 /** crmSearchDisplayTableBody.html: one row per result, rows under a collapsed parent left out. */
-export function BodyRows({ rows, settings, subsearch, afform }: BodyRowsProps) {
+export function BodyRows({
+  rows,
+  settings,
+  subsearch,
+  afform,
+  select,
+  onLinkClick,
+}: BodyRowsProps) {
   const [toggled, setToggled] = useState<ReadonlyMap<Row["key"], boolean>>(new Map());
   const control = hasControlColumn(settings);
   const isCollapsed = (row: Row) =>
@@ -35,6 +45,19 @@ export function BodyRows({ rows, settings, subsearch, afform }: BodyRowsProps) {
               .filter(Boolean)
               .join(" ")}
           >
+            {select && (
+              <input
+                type="checkbox"
+                className="crm-search-ctrl-select-row"
+                aria-label={select.label(row)}
+                checked={select.isSelected(row)}
+                disabled={select.disabled}
+                onChange={(event) => {
+                  const click = event.nativeEvent;
+                  select.toggle(row, click instanceof MouseEvent && click.shiftKey);
+                }}
+              />
+            )}
             {settings.collapsible && (
               <ToggleCollapse
                 count={descendents(row)}
@@ -62,7 +85,9 @@ export function BodyRows({ rows, settings, subsearch, afform }: BodyRowsProps) {
                   colIndex={index}
                   subsearch={subsearch}
                   afform={afform}
-                  onLinkClick={onLinkClick}
+                  onLinkClick={(link, event) => {
+                    onLinkClick(link, row.key, event);
+                  }}
                 />
               )}
             </td>
@@ -104,7 +129,11 @@ export function PlaceholderRows({ settings }: { settings: DisplaySettings }) {
   const control = hasControlColumn(settings);
   return Array.from({ length: settings.placeholder ?? 5 }, (_, placeholder) => (
     <tr key={placeholder}>
-      {control && <td />}
+      {control && (
+        <td>
+          {settings.actions && <input type="checkbox" disabled aria-label={ts("Loading…")} />}
+        </td>
+      )}
       {settings.columns.map((_column, index) => (
         <td key={index}>
           <div className="crm-search-loading-placeholder" />
@@ -118,8 +147,15 @@ export function PlaceholderRows({ settings }: { settings: DisplaySettings }) {
  * The header of the control column. Core leaves it empty without bulk actions; the hidden text
  * names what the column holds.
  */
-export function ControlHeader({ settings }: { settings: DisplaySettings }) {
+export function ControlHeader({
+  settings,
+  selectAll,
+}: {
+  settings: DisplaySettings;
+  selectAll?: ReactNode;
+}) {
   if (!hasControlColumn(settings)) return null;
+  if (selectAll) return <th className="crm-search-result-select">{selectAll}</th>;
   const label = settings.collapsible
     ? ts("Show sub-rows")
     : settings.tally

@@ -16,6 +16,7 @@ import {
   unlabelledHeader,
   unsupportedFeatures,
 } from "./rows";
+import { useTasks } from "./Tasks";
 import { DisplayHeader } from "./Toolbar";
 import { isDisplaySettings, type DisplaySettings, type Row, type RunPage } from "./types";
 import { displayKeys, positiveInteger, sortParser, sortText, type Sort } from "./urlKeys";
@@ -141,15 +142,27 @@ export function AfreactSearch({
   // Core keeps the toolbar of the last run while the next page loads.
   const [shown, setShown] = useState<RunPage | undefined>(undefined);
   if (rows.data && rows.data !== shown) setShown(rows.data);
+  // Before the first click of a search button nothing loads.
+  const loading = rows.isFetching || (rows.isPending && enabled && runFilters !== null);
+  const rowCount = rows.error ? null : (counted.data ?? null);
+  const tasks = useTasks({
+    search,
+    display,
+    settings: settings ?? { columns: [] },
+    page: loading || rows.error ? undefined : rows.data,
+    loading,
+    rowCount,
+    pageNumber: page,
+    runParams: { ...params, sort: activeSort, limit },
+    filtersKey,
+    root,
+  });
 
   if (loaded.error) return <Failure error={loaded.error} />;
   if (!settings) return <p role="status">{ts("Loading…")}</p>;
   const label = loaded.data?.label ?? "";
-  // Before the first click of a search button nothing loads.
-  const loading = rows.isFetching || (rows.isPending && enabled && runFilters !== null);
   // A failed run shows no rows and no count, as searchDisplayBaseTrait does.
   const result = loading || rows.error ? undefined : rows.data;
-  const rowCount = rows.error ? null : (counted.data ?? null);
   const setPage = (next: number) => void setUrl({ page: next === 1 ? null : next });
   const onSearch = () => {
     // A click searches again even when the filters are the same.
@@ -174,8 +187,8 @@ export function AfreactSearch({
   };
 
   const pager = settings.pager;
-  const unsupported = unsupportedFeatures(settings, shown);
-  const failed = counted.error ?? tallied.error;
+  const unsupported = [...unsupportedFeatures(settings), ...tasks.notes];
+  const failed = counted.error ?? tallied.error ?? tasks.error;
   const tally = settings.tally;
   const columnCount = settings.columns.length + (hasControlColumn(settings) ? 1 : 0);
   const tallyRow = !!result?.rows.length && !!tally && (
@@ -184,11 +197,13 @@ export function AfreactSearch({
   return (
     <div className="crm-search-display crm-search-display-table" ref={setRoot}>
       {unsupported.length > 0 && <Unsupported what={unsupported.join(", ")} />}
-      {failed && <Failure error={failed} />}
+      {failed ? <Failure error={failed} /> : null}
       <DisplayHeader
         settings={settings}
         rowCount={rowCount}
         toolbar={shown?.toolbar}
+        actions={tasks.menu}
+        selected={tasks.selected}
         button={
           settings.button && (
             <SearchButton label={settings.button} loading={loading} onSearch={onSearch} />
@@ -202,7 +217,7 @@ export function AfreactSearch({
         <caption className="sr-only">{label}</caption>
         <thead hidden={settings.hideThead === true}>
           <tr>
-            <ControlHeader settings={settings} />
+            <ControlHeader settings={settings} selectAll={tasks.header} />
             {settings.columns.map((column, index) => {
               const direction = directionOf(column.key);
               const sortKey = isSortable(column, settings) ? column.key : undefined;
@@ -292,17 +307,21 @@ export function AfreactSearch({
               settings={settings}
               subsearch={result.subsearch}
               afform={afform}
+              select={tasks.rowSelect}
+              onLinkClick={tasks.onRowLink}
             />
           )}
         </tbody>
         {tally && tally.footer !== false && tallyRow && <tfoot>{tallyRow}</tfoot>}
       </table>
+      {tasks.overlay}
       {pager && !!rowCount && (
         <Pager
           settings={pager}
           rowCount={rowCount}
           page={page}
           limit={limit}
+          selected={tasks.selected}
           onPage={setPage}
           onLimit={(next) => {
             void setUrl({ limit: next === settings.limit ? null : next, page: null });

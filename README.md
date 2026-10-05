@@ -62,8 +62,9 @@ wherever core places them (see [Rendering forms with React](#rendering-forms-wit
   html, image, links, buttons, menu and subsearch columns, style rules, the
   toolbar, header count, totals, the search button, the page size input, and
   hierarchical and collapsible rows. Row and toolbar menus are native popovers
-  with the menu button keyboard pattern. Bulk actions, in-place and row
-  editing, drag to reorder, the column picker, task links and include columns
+  with the menu button keyboard pattern. Bulk actions and task links run API
+  batch, popup and redirect tasks; tasks that are Angular dialogs, in-place
+  and row editing, drag to reorder, the column picker and include columns
   show a note instead.
 - **Types:** `src/api/entities.gen.ts` is generated from APIv4
   `getFields` (see [Development](#development)).

@@ -85,7 +85,7 @@ function singleQuoteToJson(js: string): string | null {
 }
 
 /** CRM_Utils_JS::getRawProps(): the top-level keys and raw value strings of a JS object or array. */
-function rawProps(js: string): [string | number, string][] {
+export function rawProps(js: string): [string | number, string][] {
   const chars = Array.from(js.slice(1));
   const isObject = js[0] === "{";
   const end = js.length - 2;

@@ -1,12 +1,19 @@
 import { useEffect, useRef, type MouseEvent } from "react";
+import { onButtonKey } from "../keys";
 import type { Link, RunPage } from "./types";
 
-/**
- * onClickLink() of searchDisplayTasksTrait: a task link runs a bulk action instead of
- * navigating. Tasks are not rendered yet (the display lists them as unsupported).
- */
+/** onClickLink() of searchDisplayTasksTrait: a task link runs its task instead of navigating. */
 export function onLinkClick(link: Link, event: MouseEvent<HTMLAnchorElement>) {
   if (link.task) event.preventDefault();
+}
+
+const clickOnKey = onButtonKey((event) => {
+  if (event.currentTarget instanceof HTMLElement) event.currentTarget.click();
+});
+
+/** A task link has no href, so it takes focus and Enter or Space as a button. */
+export function taskLinkProps(link: Link) {
+  return link.task ? { role: "button", tabIndex: 0, onKeyDown: clickOnKey } : {};
 }
 
 /** The callback of the last render, for listeners registered once. */

@@ -1,7 +1,9 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api4, errorMessage } from "../api/civi";
 import { loadDefinition } from "../afform/source";
-import { layoutProblems } from "../afform/support";
+import { layoutProblems, taskDisplays } from "../afform/support";
+import type { LayoutNode } from "../afform/types";
+import { parseTaskList, unsupportedTaskNotes } from "../search/searchTasks";
 
 export interface SupportRow {
   name: string;
@@ -19,6 +21,17 @@ function loadForms(): Promise<SupportRow[]> {
     where: [["type", "!=", "block"]],
     orderBy: { title: "ASC" },
   });
+}
+
+/** The tasks the form's displays offer or link to that the renderer cannot run. */
+async function taskProblems(layout: LayoutNode[]): Promise<string[]> {
+  const notes = await Promise.all(
+    taskDisplays(layout).map(async ({ search, display, referenced }) => {
+      const list = await api4("SearchDisplay", "getSearchTasks", { savedSearch: search, display });
+      return unsupportedTaskNotes(parseTaskList(list).tasks, referenced);
+    }),
+  );
+  return notes.flat();
 }
 
 /** Placements core renders with InlineAfform.tpl, which passes their options. */
@@ -68,8 +81,10 @@ export function AfreactSupport({ listed, settings }: AfreactSupportProps) {
   const checks = useQueries({
     queries: rows.map((row) => ({
       queryKey: ["afreact-support", row.name],
-      queryFn: async () =>
-        layoutProblems((await loadDefinition(row.name, "api", client)).layout, checkedOptions(row)),
+      queryFn: async () => {
+        const { layout } = await loadDefinition(row.name, "api", client);
+        return [...layoutProblems(layout, checkedOptions(row)), ...(await taskProblems(layout))];
+      },
     })),
   });
   const known = new Set(rows.map((row) => row.name));

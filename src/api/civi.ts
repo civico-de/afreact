@@ -6,6 +6,7 @@ export type ApiResult<R> = R[] & {
   rowCount?: number;
   countMatched?: number;
   countFetched?: number;
+  action?: string;
 };
 
 /** The part of a jQuery object the renderer uses to cooperate with CiviCRM's popups (js/crm.ajax.js). */
@@ -31,11 +32,15 @@ declare global {
   interface Window {
     CRM: {
       api4: (entity: string, action: string, params?: object) => Promise<unknown>;
-      url: (path: string, query?: string | Record<string, unknown>) => string;
+      url: (path: string, query?: string | Record<string, unknown>, mode?: string) => string;
       /** CiviCRM's jQuery; popups announce success with jQuery events and keep their urlHash in data(). */
       $: (target: Element) => JQueryObject;
-      /** Opens a form in a popup (js/crm.ajax.js). */
-      loadForm: (url: string) => JQueryObject;
+      /** Opens a form in a popup (js/crm.ajax.js); `post` sends data on its first load. */
+      loadForm: (url: string, options?: { post?: unknown }) => JQueryObject;
+      /** A notification (js/Common.js); type is "success", "error", "info" or "alert". */
+      alert: (text: string, title?: string, type?: string) => void;
+      /** The short status message in the corner (js/Common.js). */
+      status: (text: string) => void;
       utils: { colorContrast: (color: string) => string };
       /** Page variables from Civi::resources()->addVars(), by extension. */
       vars?: { afreact?: AfreactVars };

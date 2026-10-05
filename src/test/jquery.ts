@@ -15,7 +15,7 @@ export function jquerySelection(overrides: Partial<JQueryObject> = {}): JQueryOb
   return selection;
 }
 
-/** An element outside a popup whose jQuery events are DOM events, so tests fire them with dispatchEvent. */
+/** An element outside a popup whose jQuery events are DOM events that bubble, as jQuery's do. */
 export function events(target: EventTarget): JQueryObject {
   const selection = jquerySelection({
     on: (names, handler) => {
@@ -24,6 +24,10 @@ export function events(target: EventTarget): JQueryObject {
     },
     off: (names, handler) => {
       for (const name of names.split(" ")) target.removeEventListener(name, handler);
+      return selection;
+    },
+    trigger: (name) => {
+      target.dispatchEvent(new Event(name, { bubbles: true }));
       return selection;
     },
   });

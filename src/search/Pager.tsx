@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useId, useState } from "react";
 import { SEARCH_DELAY_MS } from "./filters";
 import { pageLinks } from "./pages";
+import { resultCount } from "./selection";
 
 interface PagerSettings {
   show_count?: boolean;
@@ -15,10 +16,20 @@ interface PagerProps {
   limit: number;
   onPage: (page: number) => void;
   onLimit: (limit: number) => void;
+  /** Rows selected for bulk actions. */
+  selected?: number;
 }
 
 /** crmSearchDisplay/Pager.html: result count, page links and the page size input. */
-export function Pager({ settings, rowCount, page, limit, onPage, onLimit }: PagerProps) {
+export function Pager({
+  settings,
+  rowCount,
+  page,
+  limit,
+  onPage,
+  onLimit,
+  selected = 0,
+}: PagerProps) {
   const pages = limit ? Math.max(1, Math.ceil(rowCount / limit)) : 1;
   const shown = !settings.hide_single || pages > 1;
   return (
@@ -26,7 +37,7 @@ export function Pager({ settings, rowCount, page, limit, onPage, onLimit }: Page
       <div>
         {settings.show_count && (
           <div className="form-inline">
-            <label>{rowCount === 1 ? ts("1 result") : ts("%1 results", { 1: rowCount })}</label>
+            <label>{resultCount(rowCount, selected)}</label>
           </div>
         )}
       </div>

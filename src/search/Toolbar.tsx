@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { LinkContent } from "./LinkContent";
 import { Menu } from "./Menu";
+import { resultCount } from "./selection";
 import type { DisplaySettings, ToolbarLink } from "./types";
 
 /**
@@ -29,21 +30,26 @@ export function Toolbar({ links }: { links: ToolbarLink[] }) {
   );
 }
 
-/** crmSearchDisplay/ResultCount.html without a selection, which needs bulk actions. */
-export function resultCount(rowCount: number): string {
-  return rowCount === 1 ? ts("1 result") : ts("%1 results", { 1: rowCount });
-}
-
 interface DisplayHeaderProps {
   settings: DisplaySettings;
   rowCount: number | null;
   toolbar: ToolbarLink[] | undefined;
   /** The search button, first in the bar as in core. */
   button?: ReactNode;
+  /** The bulk actions menu or buttons, after the search button. */
+  actions?: ReactNode;
+  selected?: number;
 }
 
 /** The description and the form-inline bar above crmSearchDisplayTable's table. */
-export function DisplayHeader({ settings, rowCount, toolbar, button }: DisplayHeaderProps) {
+export function DisplayHeader({
+  settings,
+  rowCount,
+  toolbar,
+  button,
+  actions,
+  selected = 0,
+}: DisplayHeaderProps) {
   return (
     <>
       {settings.description && (
@@ -53,8 +59,9 @@ export function DisplayHeader({ settings, rowCount, toolbar, button }: DisplayHe
       )}
       <div className="form-inline">
         {button && <div className="btn-group">{button}</div>}
+        {actions}
         {settings.headerCount && (
-          <span>{rowCount !== null && <label>{resultCount(rowCount)}</label>}</span>
+          <span>{rowCount !== null && <label>{resultCount(rowCount, selected)}</label>}</span>
         )}
         {settings.toolbar && toolbar && (
           <div className="form-group pull-right">

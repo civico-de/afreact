@@ -4,6 +4,7 @@ import { memoryStore } from "../url/hash";
 import { UrlState } from "../url/UrlState";
 import { AfreactSearch } from "./AfreactSearch";
 import { Icon, LinkContent } from "./LinkContent";
+import { taskLinkProps } from "./links";
 import { Menu } from "./Menu";
 import { columnNote } from "./rows";
 import {
@@ -111,7 +112,7 @@ function FieldLinks({ cell, links, onLinkClick }: CellProps & { links: Link[] })
         href={link.url}
         title={link.title}
         className={link.style}
-        aria-disabled={link.task ? true : undefined}
+        {...taskLinkProps(link)}
         onClick={(event) => {
           onLinkClick(link, event);
         }}
@@ -158,7 +159,7 @@ function LinksColumn({ cell, onLinkClick }: CellProps) {
         target={link.target}
         href={link.url}
         title={link.title}
-        aria-disabled={link.task ? true : undefined}
+        {...taskLinkProps(link)}
         onClick={(event) => {
           onLinkClick(link, event);
         }}
@@ -177,7 +178,7 @@ function ButtonsColumn({ column, cell, onLinkClick }: CellProps) {
         target={link.target}
         href={link.url}
         title={link.title}
-        aria-disabled={link.task ? true : undefined}
+        {...taskLinkProps(link)}
         onClick={(event) => {
           onLinkClick(link, event);
         }}
