@@ -3,18 +3,23 @@
  * returning visitor meets it; npm run video puts the two side by side. Debug is off as in
  * production and restored afterwards.
  */
-import { expect, test, type Locator, type Page, type Response } from "@playwright/test";
-import { api, AUTH, driver, PAGES, readyAt, setDebug, type Renderer } from "./harness";
+import { expect, test, type Locator, type Response } from "@playwright/test";
+import {
+  api,
+  AUTH,
+  driver,
+  label,
+  pause,
+  PAGES,
+  readyAt,
+  setDebug,
+  type Renderer,
+} from "./harness";
 
 const LABELS: Record<Renderer, string> = {
   angular: "CiviCRM (Angular)",
   react: "afreact (React)",
 };
-
-const pause = (ms: number) =>
-  new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
 
 // Only a page request answers a table click: SearchKit's row_count call may still be in flight.
 const isPageRun = (response: Response) =>
@@ -23,21 +28,6 @@ const isPageRun = (response: Response) =>
 
 const typeInto = (field: Locator, text: string) =>
   field.locator("input, textarea").first().pressSequentially(text, { delay: 70 });
-
-/** A caption in the corner from the first paint on. */
-async function label(page: Page, text: string) {
-  await page.addInitScript((content) => {
-    document.addEventListener("DOMContentLoaded", () => {
-      const badge = document.createElement("div");
-      badge.id = "video-label";
-      badge.textContent = content;
-      badge.style.cssText =
-        "position:fixed;left:16px;bottom:16px;z-index:99999;padding:10px 16px;border-radius:6px;" +
-        "background:#111827;color:#fff;font:600 22px system-ui";
-      document.body.append(badge);
-    });
-  }, text);
-}
 
 let debugBefore: unknown;
 let lastIdBefore: number | undefined;

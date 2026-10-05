@@ -35,11 +35,11 @@ import { Unsupported } from "./Unsupported";
 
 /**
  * Tab sets in the markup of afTabset.html and of crmUi's tabset.html after jQuery UI's tabs(),
- * with the ARIA tabs pattern. Every panel renders; its search displays wait until it is shown.
+ * with the ARIA tabs pattern. Every panel renders; an af-tab runs its displays once shown.
  */
 
 interface TabState {
-  /** Selected once, so its search displays run (searchDisplayBaseTrait waits too). */
+  /** Selected once, or in a crm-ui-tab-set, so its search displays run. */
   shown: boolean;
   /** Shows a display's row count in the tab's badge (total-count="$parent.count"). */
   setCount: (count: number) => void;
@@ -221,19 +221,18 @@ export function Tabset({ node, formName, expressions, nodes, element }: TabsetPr
     };
     const icon = tab.icon && <i className={`crm-i ${tab.icon}`} role="img" aria-hidden="true" />;
     const count = badge(tab);
-    // jQuery UI makes the item the tab; afTabset.html (6.20) the link in it.
+    // The link is the tab, as in afTabset.html (6.20); jQuery UI's role on the item would nest it.
     return ui ? (
       <li
         key={index}
-        {...common}
+        role="presentation"
         className={`ui-corner-all crm-tab-button crm-count-${count} ${UI_TAB}${
           active ? UI_ACTIVE : ""
         }`}
       >
         <a
           href={`#${panelIds[index] ?? ""}`}
-          role="presentation"
-          tabIndex={-1}
+          {...common}
           className="ui-tabs-anchor"
           onClick={click}
         >
@@ -267,7 +266,8 @@ export function Tabset({ node, formName, expressions, nodes, element }: TabsetPr
         id={panelIds[index] ?? ""}
         labelledBy={tabIds[index] ?? ""}
         selected={tab.name === selected}
-        shown={shown.includes(tab.name)}
+        // jQuery UI hides crm-ui-tab panels after their displays started (crmUi.js:914).
+        shown={ui || shown.includes(tab.name)}
         className={ui ? UI_PANEL : undefined}
         setCounts={setCounts}
       >

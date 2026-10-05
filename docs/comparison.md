@@ -19,7 +19,10 @@ renderers and compares what a user sees without typing: texts, fields, buttons
 and the first page of each table. It reads select, reference and date widgets
 for the value they show, so the differences by design below do not count, and
 it leaves out the space core puts before commas in linked lists (see upstream
-bugs).
+bugs). A display in a hidden `af-tab` runs only once its tab is shown, on both
+renderers, so the sweep does not wait for it and finds it empty on both. A
+`crm-ui-tab-set` runs all its displays at once: jQuery UI hides the panels only
+after the displays started (`crmUi.js:914`, `searchDisplayBaseTrait.service.js:182`).
 
 ## Visual parity
 
@@ -41,7 +44,7 @@ that no longer excuses anything fails the test.
 
 | Area | Angular | React |
 |---|---|---|
-| Select fields | select2, with option colours, icons and descriptions | native `<select>`, sized like select2, with its warning border on a required select emptied by the user (core up to 6.19 also warns on an untouched one); options show their label only |
+| Select fields | select2, with option colours, icons and descriptions | native `<select>`, sized like select2, with its warning border on a required select emptied by the user (core up to 6.19 also warns on an untouched one); options show their label only; a select without a label is named by its placeholder, else by Select.html's title |
 | Date fields | jQuery UI datepicker, site input format | native `<input type="date">`, wider than the datepicker to fit its format and calendar icon |
 | Search filter text shorter than `minlength` | the value is dropped from the filter while typing, so the table shows unfiltered rows | filters by what was typed |
 | Clear links | `<a>` without `href`, not reachable by keyboard | same link with `role="button"`, focusable, Enter and Space |
@@ -80,6 +83,9 @@ elements do not allow, the clear link carries `aria-label` without a role, and
 the primary-email radio has no label. Both pages share the theme's contrast
 findings and the layouts' own headings and links listed under upstream bugs;
 `tests/browser/sweep.spec.ts` excuses the latter per form (`SHARED_CONTENT`).
+Both specs leave out CKEditor's editing frame: it is CKEditor's own page around
+the field's content, without main landmark or h1, the same under both
+renderers.
 
 ### Not implemented in the React renderer
 
@@ -285,6 +291,14 @@ panel shows the tab's title. The React renderer drops the attribute.
 wrapper around all panels `role="tabpanel"`, and jQuery UI gives each panel
 the same role, so every panel is a tab panel inside another one. The React
 renderer leaves the wrapper without a role.
+
+**A link inside each tab.** jQuery UI makes each `<li>` of `crmUi/tabset.html`
+the tab (`role="tab"`) and leaves the `<a href>` in it focusable by click
+(`tabindex="-1"`); 6.18's `afTabset.html` writes `role="tab"` on the `<li>` with
+a link inside too. Every tab therefore holds a nested interactive element (axe
+`nested-interactive`, measured on 6.18.1 for both tab sets). The React renderer
+makes the link the tab, inside an item with `role="presentation"` that keeps
+jQuery UI's classes, as `afTabset.html` does on `master` (6.20).
 
 **A required field in a hidden tab blocks submit silently.** afTab hides its
 panel with `ng-show`; the browser refuses to submit while a control in it is

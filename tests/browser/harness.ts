@@ -140,12 +140,14 @@ function isContrastData(data: unknown): data is ContrastData {
 /**
  * Axe findings in `scope` of the loaded page, one per element and without element content:
  * contrast failures by colours and font, which the theme decides, anything else by selector.
- * Admin gear menus are Angular-only.
+ * Admin gear menus are Angular-only. CKEditor's editing frame holds the field's content as a
+ * page of its own, without main landmark or h1, the same under both renderers.
  */
 export async function axeFindings(page: Page, scope: string): Promise<string[]> {
   const { violations } = await new AxeBuilder({ page })
     .include(scope)
     .exclude(".crm-admin-block-context-dropdown")
+    .exclude("iframe.cke_wysiwyg_frame")
     .analyze();
   return violations.flatMap((violation) =>
     violation.nodes.map((node) => {
@@ -166,4 +168,24 @@ export function ownFindings(react: string[], angular: string[]): string[] {
     unmatched.splice(index, 1);
     return false;
   });
+}
+
+export const pause = (ms: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+/** A caption in the corner from the first paint on. */
+export async function label(page: Page, text: string) {
+  await page.addInitScript((content) => {
+    document.addEventListener("DOMContentLoaded", () => {
+      const badge = document.createElement("div");
+      badge.id = "video-label";
+      badge.textContent = content;
+      badge.style.cssText =
+        "position:fixed;left:16px;bottom:16px;z-index:99999;padding:10px 16px;border-radius:6px;" +
+        "background:#111827;color:#fff;font:600 22px system-ui";
+      document.body.append(badge);
+    });
+  }, text);
 }

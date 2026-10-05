@@ -188,4 +188,20 @@ describe("search ranges", () => {
     expect(screen.getByRole("combobox", { name: "Created" })).toHaveValue("{}");
     expect(screen.getByLabelText("Created to")).toHaveValue("");
   });
+
+  it("names a date select without a label by its placeholder, else Select.html's title", async () => {
+    const date = (name: string, placeholder?: string) =>
+      field(name, {
+        label: false,
+        input_type: "Select",
+        data_type: "Timestamp",
+        is_date: 1,
+        input_attrs: placeholder ? { placeholder } : {},
+        options: [{ id: "this.day", label: "Today" }],
+      });
+    renderSearch([date("activity_date_time", "Date"), date("created_date")]);
+    await screen.findByRole("cell", { name: "Row" });
+    expect(screen.getByRole("combobox", { name: "Date" })).toHaveAttribute("title", "Select Value");
+    expect(screen.getByRole("combobox", { name: "Select Value" })).toHaveAttribute("aria-label");
+  });
 });

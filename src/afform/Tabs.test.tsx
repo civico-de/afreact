@@ -330,24 +330,36 @@ describe("crm-ui-tab-set", () => {
     const list = await screen.findByRole("tablist");
     expect(list).toHaveClass("crm-tab-list", "ui-tabs-nav", "ui-widget-header");
     expect(list.parentElement).toHaveClass("crm-tabset", "ui-tabs", "ui-widget");
+    // jQuery UI's classes stay on the item; its link is the tab, with nothing focusable inside.
     const first = tab("Mailing Labels");
-    expect(first.tagName).toBe("LI");
-    expect(first).toHaveClass("crm-tab-button", "ui-tabs-tab", "ui-tabs-active", "ui-state-active");
+    expect(first.tagName).toBe("A");
+    expect(first).toHaveClass("ui-tabs-anchor");
+    expect(first).toHaveAttribute("href", "#tab-mailinglabels");
     expect(first).toHaveAttribute("tabindex", "0");
     expect(first).toHaveAttribute("aria-controls", "tab-mailinglabels");
-    expect(within(first).getByText("Mailing Labels").closest("a")).toHaveAttribute(
-      "href",
-      "#tab-mailinglabels",
+    expect(first.parentElement).toHaveAttribute("role", "presentation");
+    expect(first.parentElement).toHaveClass(
+      "crm-tab-button",
+      "ui-tabs-tab",
+      "ui-tabs-active",
+      "ui-state-active",
     );
+    expect(tab("Name Badges")).toHaveAttribute("tabindex", "-1");
+    expect(within(list).queryAllByRole("link")).toEqual([]);
     const panel = screen.getByRole("tabpanel", { name: "Mailing Labels" });
     expect(panel).toHaveAttribute("id", "tab-mailinglabels");
     expect(panel).toHaveClass("ui-tabs-panel", "ui-widget-content");
     // The fieldset inside keeps its other attributes, not the tab's.
     expect(panel.firstElementChild).not.toHaveAttribute("id");
+    // Both displays run at once: jQuery UI hides the panels only after they started.
     expect(await screen.findByRole("cell", { name: "label_format_table row" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("cell", { name: "name_badge_table row", hidden: true }),
+    ).not.toBeVisible();
+    expect(runs()).toEqual(["label_format_table", "name_badge_table"]);
     await userEvent.click(within(tab("Name Badges")).getByText("Name Badges"));
     expect(tab("Name Badges")).toHaveAttribute("aria-selected", "true");
-    expect(await screen.findByRole("cell", { name: "name_badge_table row" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "name_badge_table row" })).toBeVisible();
     expect(runs()).toEqual(["label_format_table", "name_badge_table"]);
     await userEvent.keyboard("{ArrowLeft}");
     expect(tab("Mailing Labels")).toHaveFocus();
@@ -373,8 +385,9 @@ describe("crm-ui-tab-set", () => {
     const inner = (badges["#children"] as [{ "#children": Record<string, unknown>[] }])[0];
     (inner["#children"][0] as Record<string, unknown>)["total-count"] = "$parent.count";
     renderTabs({ layout: counted });
-    expect(await screen.findByRole("tab", { name: "Mailing Labels 3" })).toHaveClass("crm-count-3");
-    expect(await screen.findByRole("tab", { name: "Name Badges 16" })).toHaveClass("crm-count-16");
+    const item = async (name: string) => (await screen.findByRole("tab", { name })).parentElement;
+    expect(await item("Mailing Labels 3")).toHaveClass("crm-count-3");
+    expect(await item("Name Badges 16")).toHaveClass("crm-count-16");
     expect(layoutProblems(counted)).toEqual([]);
   });
 });

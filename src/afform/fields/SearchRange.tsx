@@ -170,11 +170,15 @@ function DateBound({ time, value, onChange, ...input }: DateBoundProps) {
 function RelativeDate({ id, labelId, defn, value, onChange, disabled }: SearchRangeProps) {
   const options = Array.isArray(defn.options) ? defn.options : [];
   const chosen = isRange(value) ? CHOOSE_DATES : boundText(value);
+  const title = ts("Select Value");
   return (
     <div className={`form-inline ${defn.input_style ?? ""}`.trim()}>
       <span className="afreact-select">
         <select
           id={id}
+          title={title}
+          // Without a label, the placeholder or else Select.html's title names the select.
+          aria-label={defn.label === false ? (defn.input_attrs?.placeholder ?? title) : undefined}
           className="form-control"
           disabled={disabled}
           required={defn.required === true}

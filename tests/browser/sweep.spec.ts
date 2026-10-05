@@ -91,7 +91,8 @@ function reactReady(scope: string): boolean {
 /**
  * Angular has compiled the form and each outer SearchKit display holds its first
  * results (or waits for its search button): SearchKit's 600 ms filter debounce is a plain
- * timeout that Angular's testability does not see.
+ * timeout that Angular's testability does not see. A display in a hidden af-tab runs only once
+ * shown (searchDisplayBaseTrait's visibility check), as on React.
  */
 function angularReady(scope: string): boolean {
   const root = document.querySelector(scope);
@@ -101,6 +102,7 @@ function angularReady(scope: string): boolean {
   const selector = tags.join(", ");
   return [...root.querySelectorAll(selector)]
     .filter((display) => !display.parentElement?.closest(selector))
+    .filter((display) => !display.closest("af-tab > .ng-hide"))
     .every((display) => {
       const name = display.localName.replace(/-([a-z])/g, (_, letter: string) =>
         letter.toUpperCase(),

@@ -126,12 +126,21 @@ describe("Field", () => {
     expect(values).toEqual([[1, 2]]);
   });
 
-  it("names selects without a label by Select.html's title", () => {
+  it("names selects without a label by their placeholder, else Select.html's title", () => {
     const options = [{ id: 1, label: "A" }];
     setup({ input_type: "Select", label: false, options });
     setup({ input_type: "Select", label: false, options, input_attrs: { multiple: true } });
-    expect(screen.getByRole("combobox", { name: "Select Value" })).toBeInTheDocument();
-    expect(screen.getByRole("listbox", { name: "Select Values" })).toBeInTheDocument();
+    const placeholder = { multiple: true, placeholder: "Filter by type" };
+    setup({ input_type: "Select", label: false, options, input_attrs: placeholder });
+    setup({ input_type: "Select", options });
+    // A name of its own, not the title alone (axe label-title-only).
+    expect(screen.getByRole("combobox", { name: "Select Value" })).toHaveAttribute("aria-label");
+    expect(screen.getByRole("listbox", { name: "Select Values" })).toHaveAttribute("aria-label");
+    expect(screen.getByRole("listbox", { name: "Filter by type" })).toHaveAttribute(
+      "title",
+      "Select Values",
+    );
+    expect(screen.getByRole("combobox", { name: "Field" })).not.toHaveAttribute("aria-label");
   });
 
   it("offers Yes/No as real booleans for Boolean radios", async () => {

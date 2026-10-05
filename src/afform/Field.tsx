@@ -246,6 +246,9 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
         );
       case "Select": {
         const options = fieldOptions(defn);
+        // Without a label, the placeholder or else Select.html's title names the select.
+        const named = (title: string) =>
+          label === undefined ? (attrs.placeholder ?? title) : undefined;
         const choices = options.map((option) => (
           <option key={String(option.id)} value={String(option.id)}>
             {option.label}
@@ -260,8 +263,8 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                   {...common}
                   multiple
                   className="form-control"
-                  // Select.html's title, which names a select without a label.
                   title={ts("Select Values")}
+                  aria-label={named(ts("Select Values"))}
                   value={Array.isArray(value) ? value.map(String) : []}
                   onChange={(event) => {
                     onChange(
@@ -278,6 +281,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                   {...common}
                   className="form-control"
                   title={ts("Select Value")}
+                  aria-label={named(ts("Select Value"))}
                   value={textValue(value)}
                   onChange={(event) => {
                     onChange(
