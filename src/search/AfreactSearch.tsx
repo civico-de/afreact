@@ -6,9 +6,12 @@ import { api4, errorMessage, get, type ApiResult } from "../api/civi";
 import { onButtonKey } from "../keys";
 import { useUrlPrefix } from "../url/UrlState";
 import { BodyRows, ControlHeader, PlaceholderRows, TallyRow } from "./Body";
+import { ColumnPicker, useColumnToggles } from "./ColumnPicker";
+import { InlineEditContext, useInlineEdit } from "./inlineEdit";
 import { useAutoOpen, useFormSuccess } from "./links";
 import { Pager, SearchButton } from "./Pager";
 import {
+  editsCells,
   hasControlColumn,
   headerClass,
   isSortable,
@@ -34,6 +37,8 @@ interface AfreactSearchProps {
   typed?: Record<string, unknown> | unknown[];
   /** False while the filters are not final yet, e.g. a saved filter set still loading. */
   enabled?: boolean;
+  /** The columns a loaded saved filter set shows, key or label to label; empty for all. */
+  savedColumns?: Record<string, string>;
 }
 
 const NO_FILTERS = {};
@@ -46,6 +51,7 @@ export function AfreactSearch({
   filters = NO_FILTERS,
   typed = filters,
   enabled = true,
+  savedColumns,
 }: AfreactSearchProps) {
   const client = useQueryClient();
   const loaded = useQuery({
@@ -94,13 +100,21 @@ export function AfreactSearch({
   const limit = url.limit ?? settings?.limit ?? 0;
   const page = filtersChanged ? 1 : (url.page ?? 1);
   const params = { savedSearch: search, display, seed, afform, filters: runFilters ?? {} };
+  const toggles = useColumnToggles(
+    settings?.columns,
+    savedColumns,
+    JSON.stringify([params, activeSort, limit, page]),
+  );
+  const { hidden, params: columnParams } = toggles;
   // The count and totals ignore sort, page and page size, so they are asked once per set of filters.
   const countKey = ["SearchDisplay", "count", params];
+  const rowsKey = ["SearchDisplay", "run", params, activeSort, limit, page, columnParams];
   const rows = useQuery({
-    queryKey: ["SearchDisplay", "run", params, activeSort, limit, page],
+    queryKey: rowsKey,
     queryFn: async () => {
       const result: ApiResult<Row> = await api4<Row>("SearchDisplay", "run", {
         ...params,
+        ...columnParams,
         limit,
         sort: activeSort,
         return: `page:${page}`,
@@ -119,12 +133,14 @@ export function AfreactSearch({
         .count ?? null,
     enabled: rows.isSuccess && (!!settings?.pager || !!settings?.headerCount),
   });
+  const tallyKey = ["SearchDisplay", "tally", params, columnParams];
   const tallied = useQuery({
-    queryKey: ["SearchDisplay", "tally", params],
+    queryKey: tallyKey,
     queryFn: async () =>
       (
         await api4<Record<string, unknown>>("SearchDisplay", "run", {
           ...params,
+          ...columnParams,
           limit,
           return: "tally",
         })
@@ -157,6 +173,16 @@ export function AfreactSearch({
     filtersKey,
     root,
   });
+  const inlineEdit = useInlineEdit({
+    page: rows.data,
+    rowsKey,
+    tallyKey,
+    params: { ...params, ...columnParams, sort: activeSort, limit },
+    // refreshAfterEditing(): a row that left the result reloads every display of the form.
+    reloadAll: () => {
+      if (root) window.CRM.$(root).trigger("crmPopupFormSuccess");
+    },
+  });
 
   if (loaded.error) return <Failure error={loaded.error} />;
   if (!settings) return <p role="status">{ts("Loading…")}</p>;
@@ -187,12 +213,12 @@ export function AfreactSearch({
   };
 
   const pager = settings.pager;
-  const unsupported = [...unsupportedFeatures(settings), ...tasks.notes];
+  const unsupported = [...unsupportedFeatures(settings, shown), ...tasks.notes];
   const failed = counted.error ?? tallied.error ?? tasks.error;
   const tally = settings.tally;
   const columnCount = settings.columns.length + (hasControlColumn(settings) ? 1 : 0);
   const tallyRow = !!result?.rows.length && !!tally && (
-    <TallyRow settings={settings} tally={tallied.data ?? null} />
+    <TallyRow settings={settings} tally={tallied.data ?? null} hidden={hidden} />
   );
   return (
     <div className="crm-search-display crm-search-display-table" ref={setRoot}>
@@ -209,9 +235,17 @@ export function AfreactSearch({
             <SearchButton label={settings.button} loading={loading} onSearch={onSearch} />
           )
         }
+        picker={
+          settings.toggleColumns && (
+            <ColumnPicker columns={settings.columns} hidden={hidden} onChange={toggles.pick} />
+          )
+        }
       />
       <p role="status" className="sr-only">
         {loading ? ts("Loading…") : ""}
+      </p>
+      <p role="status" className="sr-only">
+        {inlineEdit.announcement}
       </p>
       <table className={(settings.classes ?? []).join(" ")} aria-busy={loading}>
         <caption className="sr-only">{label}</caption>
@@ -219,6 +253,7 @@ export function AfreactSearch({
           <tr>
             <ControlHeader settings={settings} selectAll={tasks.header} />
             {settings.columns.map((column, index) => {
+              if (hidden.has(index)) return null;
               const direction = directionOf(column.key);
               const sortKey = isSortable(column, settings) ? column.key : undefined;
               // ARIA allows aria-sort on one header: the column sorted first.
@@ -277,7 +312,7 @@ export function AfreactSearch({
         </thead>
         {/* Core swaps the rows for placeholders while a run loads. */}
         <tbody>
-          {loading && <PlaceholderRows settings={settings} />}
+          {loading && <PlaceholderRows settings={settings} hidden={hidden} />}
           {result?.rows.length === 0 && settings.noResultsText !== false && (
             <tr>
               <td colSpan={columnCount}>
@@ -302,14 +337,17 @@ export function AfreactSearch({
             </tr>
           )}
           {result && (
-            <BodyRows
-              rows={result.rows}
-              settings={settings}
-              subsearch={result.subsearch}
-              afform={afform}
-              select={tasks.rowSelect}
-              onLinkClick={tasks.onRowLink}
-            />
+            <InlineEditContext value={editsCells(settings) ? inlineEdit : null}>
+              <BodyRows
+                rows={result.rows}
+                settings={settings}
+                subsearch={result.subsearch}
+                afform={afform}
+                select={tasks.rowSelect}
+                onLinkClick={tasks.onRowLink}
+                hidden={hidden}
+              />
+            </InlineEditContext>
           )}
         </tbody>
         {tally && tally.footer !== false && tallyRow && <tfoot>{tallyRow}</tfoot>}

@@ -1,0 +1,435 @@
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { editInfo } from "../test/editInfo";
+import { apiError, mockApi, renderWithQuery } from "../test/render";
+import { AfreactSearch } from "./AfreactSearch";
+import { rowLabel } from "./EditableCell";
+import type { CellData, DisplaySettings, EditableInfo, Row } from "./types";
+
+type Info = Partial<EditableInfo> & { value_key: string };
+
+/** A display of a name and one editable column, with the given info and raw value. */
+function setup(
+  info: Info,
+  value: unknown,
+  {
+    shown = value,
+    inlineEdit,
+    data = {},
+    settings: extra = {},
+    cell = {},
+    handlers = {},
+  }: {
+    shown?: unknown;
+    inlineEdit?: (params: Record<string, unknown>) => unknown;
+    data?: Record<string, unknown>;
+    settings?: Partial<DisplaySettings>;
+    cell?: CellData;
+    handlers?: Parameters<typeof mockApi>[0];
+  } = {},
+) {
+  const key = info.value_key;
+  const row = (raw: unknown, text: unknown): Row => ({
+    key: 7,
+    columns: [{ val: "Ada" }, { val: text, edit: true, ...cell }],
+    data: { id: 7, [key]: raw, ...data },
+  });
+  const settings: DisplaySettings = {
+    columns: [
+      { type: "field", key: "sort_name", label: "Name" },
+      { type: "field", key, label: "Value" },
+    ],
+    limit: 10,
+    pager: false,
+    tally: { footer: true },
+    ...extra,
+  };
+  const calls = mockApi({
+    "SearchDisplay.run": (params) =>
+      params.return === "tally"
+        ? [{}]
+        : Object.assign([row(value, shown)], { editable: { [key]: editInfo(info) } }),
+    // By default the server returns the row with the saved value, shown as "Saved".
+    "SearchDisplay.inlineEdit":
+      inlineEdit ?? ((params) => [row(Object.values(params.values ?? {})[0], "Saved")]),
+    ...handlers,
+  });
+  renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} afform="afsearchX" />);
+  const edits = () =>
+    calls.filter(({ call }) => call === "SearchDisplay.inlineEdit").map(({ params }) => params);
+  const runs = () => calls.filter(({ call }) => call === "SearchDisplay.run");
+  return { calls, edits, runs };
+}
+
+const open = async (name = "Edit Value") => {
+  await userEvent.click(await screen.findByRole("button", { name: new RegExp(name) }));
+};
+const field = () => screen.getByLabelText("Value, Ada");
+/** The cell's name: the hidden "Edit" prefix, then the value as the cell shows it. */
+const edit = (text: string) => `Edit Value ${text}`;
+
+describe("in-place editing", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("marks the cell as core does and saves a text with core's parameters", async () => {
+    const { edits, runs } = setup({ value_key: "job_title" }, "Pilot");
+    const cell = await screen.findByRole("button", { name: edit("Pilot") });
+    expect(cell).toHaveClass("crm-editable-enabled");
+    expect(cell).toHaveAttribute("tabindex", "0");
+    expect(
+      within(screen.getByRole("cell", { name: "Ada" })).queryByRole("button"),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(cell);
+    expect(document.querySelector("td.crm-search-field-editing")).toBeInTheDocument();
+    expect(field()).toHaveFocus();
+    expect(field()).toHaveValue("Pilot");
+    await userEvent.clear(field());
+    await userEvent.type(field(), "Captain{Enter}");
+
+    const seed = runs()[0]?.params.seed;
+    expect(edits()).toEqual([
+      {
+        savedSearch: "S",
+        display: "D",
+        seed,
+        afform: "afsearchX",
+        filters: {},
+        sort: [],
+        limit: 10,
+        return: null,
+        rowKey: 7,
+        values: { job_title: "Captain" },
+      },
+    ]);
+    // The returned row replaces the old one; the totals are asked again.
+    const saved = await screen.findByRole("button", { name: edit("Saved") });
+    await waitFor(() => {
+      expect(saved).toHaveFocus();
+    });
+    expect(screen.getByText("Saved", { selector: "[role=status]" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(runs().filter(({ params }) => params.return === "tally")).toHaveLength(2);
+    });
+    expect(runs().filter(({ params }) => params.return === "page:1")).toHaveLength(1);
+  });
+
+  it("opens with Enter, Space and F2 and cancels with Escape, focus back on the cell", async () => {
+    const { edits } = setup({ value_key: "job_title" }, "Pilot");
+    const cell = await screen.findByRole("button", { name: edit("Pilot") });
+    for (const key of ["{Enter}", " ", "{F2}"]) {
+      cell.focus();
+      await userEvent.keyboard(key);
+      expect(field()).toHaveFocus();
+      await userEvent.type(field(), "x");
+      await userEvent.keyboard("{Escape}");
+      const back = screen.getByRole("button", { name: edit("Pilot") });
+      await waitFor(() => {
+        expect(back).toHaveFocus();
+      });
+    }
+    expect(edits()).toEqual([]);
+  });
+
+  it("cancels with its button and saves with its button", async () => {
+    const { edits } = setup({ value_key: "job_title" }, "Pilot");
+    await open();
+    await userEvent.type(field(), "x");
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(edits()).toEqual([]);
+    await open();
+    await userEvent.type(field(), "s");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(edits()[0]?.values).toEqual({ job_title: "Pilots" });
+  });
+
+  it("saves a change on leaving the editor and closes an unchanged one", async () => {
+    // jsdom reports no focus while focus moves; a browser reports whether the window has it.
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    const { edits } = setup({ value_key: "job_title" }, "Pilot");
+    await open();
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(field()).toBeInTheDocument();
+    await userEvent.tab();
+    expect(screen.queryByLabelText("Value, Ada")).not.toBeInTheDocument();
+    expect(edits()).toEqual([]);
+    await open();
+    await userEvent.type(field(), "s");
+    await userEvent.click(document.body);
+    expect(edits()[0]?.values).toEqual({ job_title: "Pilots" });
+  });
+
+  it("stays open when the window loses focus", async () => {
+    vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    const { edits } = setup({ value_key: "job_title" }, "Pilot");
+    await open();
+    await userEvent.type(field(), "s");
+    field().blur();
+    expect(field()).toHaveValue("Pilots");
+    expect(edits()).toEqual([]);
+  });
+
+  it("saves nothing when the value did not change", async () => {
+    const { edits } = setup({ value_key: "job_title" }, "Pilot");
+    await open();
+    await userEvent.keyboard("{Enter}");
+    expect(edits()).toEqual([]);
+    expect(await screen.findByRole("button", { name: edit("Pilot") })).toBeInTheDocument();
+  });
+
+  it("keeps a failed editor open with the error and the typed value", async () => {
+    setup({ value_key: "job_title" }, "Pilot", {
+      inlineEdit: () => {
+        throw apiError("Inline edit failed.");
+      },
+    });
+    await open();
+    await userEvent.type(field(), "s{Enter}");
+    expect(await screen.findByText("Inline edit failed.", { selector: "p" })).toHaveClass(
+      "alert-danger",
+    );
+    expect(field()).toHaveValue("Pilots");
+    expect(field()).toHaveAttribute("aria-invalid", "true");
+    expect(field()).toHaveAccessibleDescription("Inline edit failed.");
+    expect(screen.getByText("Not saved: Inline edit failed.")).toHaveAttribute("role", "status");
+  });
+
+  it("sends null for an emptied nullable field", async () => {
+    const { edits } = setup({ value_key: "job_title" }, "Pilot");
+    await open();
+    await userEvent.clear(field());
+    await userEvent.keyboard("{Enter}");
+    expect(edits()[0]?.values).toEqual({ job_title: null });
+  });
+
+  it("requires a value where the field cannot be emptied", async () => {
+    const { edits } = setup({ value_key: "job_title", nullable: false }, "Pilot");
+    await open();
+    expect(field()).toBeRequired();
+    await userEvent.clear(field());
+    await userEvent.keyboard("{Enter}");
+    expect(field()).toBeInvalid();
+    expect(edits()).toEqual([]);
+  });
+
+  it("reloads the form's displays when the saved row leaves the result", async () => {
+    const { runs } = setup({ value_key: "job_title" }, "Pilot", { inlineEdit: () => [] });
+    await open();
+    await userEvent.type(field(), "s{Enter}");
+    await waitFor(() => {
+      expect(runs().filter(({ params }) => params.return === "page:1")).toHaveLength(2);
+    });
+  });
+
+  it("leaves rows the server marks read-only and full-row editing alone", async () => {
+    setup({ value_key: "job_title" }, "Pilot", { cell: { edit: false } });
+    expect(await screen.findByRole("cell", { name: "Pilot" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Edit/ })).not.toBeInTheDocument();
+  });
+
+  it("names the row by its first other field with a value, else by its key", () => {
+    const settings: DisplaySettings = {
+      columns: [
+        { type: "field", key: "a" },
+        { type: "links" },
+        { type: "field", key: "b" },
+        { type: "field", key: "c" },
+      ],
+    };
+    const named = (columns: CellData[]) => rowLabel({ key: 9, columns }, settings, 3);
+    expect(named([{ val: "" }, { val: "Link" }, { val: ["x", "y"] }, { val: "self" }])).toBe(
+      "x, y",
+    );
+    expect(named([{ val: null }, {}, {}, { val: "self" }])).toBe("ID 9");
+  });
+
+  it("shows no editor in full-row mode", async () => {
+    setup({ value_key: "job_title" }, "Pilot", { settings: { editableRow: { full: true } } });
+    expect(await screen.findByRole("cell", { name: "Pilot" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Edit/ })).not.toBeInTheDocument();
+  });
+
+  it("shows a contact reference read-only and names it as unsupported", async () => {
+    setup({ value_key: "employer_id", fk_entity: "Contact" }, 3, { shown: "Acme" });
+    expect(await screen.findByRole("cell", { name: "Acme" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Edit/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/in-place editing of employer_id \(EntityRef\)/)).toBeInTheDocument();
+  });
+});
+
+describe("in-place editors", () => {
+  it("edits whole numbers and decimals as numbers", async () => {
+    const { edits } = setup({ value_key: "n", data_type: "Integer" }, 4);
+    await open();
+    expect(field()).toHaveAttribute("type", "number");
+    expect(field()).toHaveAttribute("step", "1");
+    await userEvent.clear(field());
+    await userEvent.type(field(), "12{Enter}");
+    expect(edits()[0]?.values).toEqual({ n: 12 });
+  });
+
+  it("allows any step for decimals and clears to null", async () => {
+    const { edits } = setup({ value_key: "f", data_type: "Float", nullable: false }, 1.5);
+    await open();
+    expect(field()).toHaveAttribute("step", "any");
+    expect(field()).toBeRequired();
+    await userEvent.clear(field());
+    await userEvent.type(field(), "2.25{Enter}");
+    expect(edits()[0]?.values).toEqual({ f: 2.25 });
+  });
+
+  it("edits an email address", async () => {
+    const { edits } = setup({ value_key: "email", input_type: "Email" }, "a@example.org");
+    await open();
+    expect(field()).toHaveAttribute("type", "email");
+    await userEvent.clear(field());
+    await userEvent.type(field(), "b@example.org{Enter}");
+    expect(edits()[0]?.values).toEqual({ email: "b@example.org" });
+  });
+
+  it("keeps Enter for new lines in a text area", async () => {
+    const { edits } = setup({ value_key: "note", input_type: "TextArea" }, "One");
+    await open();
+    expect(field().tagName).toBe("TEXTAREA");
+    await userEvent.type(field(), "{Enter}Two");
+    expect(edits()).toEqual([]);
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(edits()[0]?.values).toEqual({ note: "One\nTwo" });
+  });
+
+  it("edits a date and a date with time in the API's format", async () => {
+    const { edits } = setup({ value_key: "d", data_type: "Date" }, "2026-01-02");
+    await open();
+    expect(field()).toHaveAttribute("type", "date");
+    await userEvent.clear(field());
+    await userEvent.type(field(), "2026-03-04{Enter}");
+    expect(edits()[0]?.values).toEqual({ d: "2026-03-04" });
+  });
+
+  it("edits a timestamp", async () => {
+    const { edits } = setup({ value_key: "t", data_type: "Timestamp" }, "2026-01-02 10:30:00");
+    await open();
+    expect(field()).toHaveAttribute("type", "datetime-local");
+    expect(field()).toHaveValue("2026-01-02T10:30");
+    await userEvent.clear(field());
+    await userEvent.type(field(), "2026-03-04T08:15{Enter}");
+    expect(edits()[0]?.values).toEqual({ t: "2026-03-04 08:15:00" });
+  });
+
+  it("edits a colour by picker or as text", async () => {
+    const { edits } = setup({ value_key: "c", input_type: "Color" }, "#112233");
+    await open();
+    const [picker, typed] = screen.getAllByLabelText("Value, Ada");
+    expect(picker).toHaveAttribute("type", "color");
+    expect(typed).toHaveValue("#112233");
+    if (!typed) throw new Error("no text input");
+    await userEvent.clear(typed);
+    await userEvent.type(typed, "#445566{Enter}");
+    expect(edits()[0]?.values).toEqual({ c: "#445566" });
+  });
+
+  it("edits Yes/No with radio buttons", async () => {
+    const { edits } = setup({ value_key: "b", data_type: "Boolean" }, false, { shown: "No" });
+    await open();
+    const group = screen.getByRole("radiogroup", { name: "Value, Ada" });
+    expect(within(group).getByRole("radio", { name: "No" })).toHaveFocus();
+    await userEvent.click(within(group).getByRole("radio", { name: "Yes" }));
+    await userEvent.keyboard("{Enter}");
+    expect(edits()[0]?.values).toEqual({ b: true });
+  });
+
+  it("edits an option list with the option's own id type, and clears it", async () => {
+    const options = [
+      { id: 1, label: "Female" },
+      { id: 2, label: "Male" },
+    ];
+    const { edits } = setup({ value_key: "gender_id", data_type: "Integer", options }, 1, {
+      shown: "Female",
+    });
+    await open();
+    expect(field()).toHaveDisplayValue("Female");
+    expect(screen.getByRole("option", { name: "None" })).toHaveValue("");
+    await userEvent.selectOptions(field(), "Male");
+    await userEvent.keyboard("{Enter}");
+    expect(edits()[0]?.values).toEqual({ gender_id: 2 });
+  });
+
+  it("offers Select instead of None where the value is required", async () => {
+    const { edits } = setup(
+      { value_key: "s", options: [{ id: "a", label: "A" }], nullable: false },
+      null,
+      { shown: "" },
+    );
+    await open();
+    expect(screen.getByRole("option", { name: "Select" })).toBeInTheDocument();
+    expect(field()).toBeRequired();
+    await userEvent.selectOptions(field(), "A");
+    await userEvent.keyboard("{Enter}");
+    expect(edits()[0]?.values).toEqual({ s: "a" });
+  });
+
+  it("edits several options", async () => {
+    const options = [
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
+    ];
+    const { edits } = setup({ value_key: "m", options, serialize: true }, ["a"], { shown: "A" });
+    await open();
+    expect(field()).toHaveAttribute("multiple");
+    await userEvent.selectOptions(field(), "B");
+    await userEvent.keyboard("{Enter}");
+    expect(edits()[0]?.values).toEqual({ m: ["a", "b"] });
+  });
+
+  it("shows why options that depend on the row did not load", async () => {
+    setup({ value_key: "state_province_id", entity: "Address", options: true }, 5, {
+      shown: "Berlin",
+      handlers: {
+        "Address.getFields": () => {
+          throw apiError("Access denied");
+        },
+      },
+    });
+    await open();
+    expect(await screen.findByText("Access denied")).toHaveClass("alert-danger");
+  });
+
+  it("loads options that depend on the row, as loadOptions()", async () => {
+    const { calls, edits } = setup(
+      { value_key: "state_province_id", entity: "Address", options: true },
+      5,
+      {
+        shown: "Berlin",
+        data: { country_id: 9 },
+        handlers: {
+          "Address.getFields": () => [
+            {
+              options: [
+                { id: 5, label: "Berlin" },
+                { id: 6, label: "Hamburg" },
+              ],
+            },
+          ],
+        },
+      },
+    );
+    await open();
+    await waitFor(() => {
+      expect(field()).toHaveDisplayValue("Berlin");
+    });
+    expect(field()).toHaveFocus();
+    expect(calls.find(({ call }) => call === "Address.getFields")?.params).toEqual({
+      action: "update",
+      select: ["options"],
+      values: { id: 7, state_province_id: 5, country_id: 9 },
+      loadOptions: ["id", "name", "label", "description", "color", "icon"],
+      where: [["name", "=", "state_province_id"]],
+    });
+    await userEvent.selectOptions(field(), "Hamburg");
+    await userEvent.keyboard("{Enter}");
+    expect(edits()[0]?.values).toEqual({ state_province_id: 6 });
+  });
+});

@@ -14,6 +14,7 @@ import {
 } from "react";
 import { api4, errorMessage } from "../api/civi";
 import { AfreactSearch } from "../search/AfreactSearch";
+import { savedColumnsOf } from "../search/ColumnPicker";
 import { evaluateDisplayFilters, routeKeys, RouteOptionsContext } from "../search/displayFilters";
 import {
   defaultValues,
@@ -56,6 +57,8 @@ interface FieldsetContextValue {
   /** afFieldset.getName() and the form, for the fields that call the server. */
   name: string;
   formName: string;
+  /** The saved set's shown columns, per "search.display". */
+  columns: unknown;
 }
 
 const SearchFieldsetContext = createContext<FieldsetContextValue | null>(null);
@@ -184,9 +187,10 @@ export function SearchFieldset({ node, formName, children }: SearchFieldsetProps
 
   useUrlWriter(fields, name, state, context);
 
+  const columns = paramSet.data?.columns;
   const value = useMemo(
-    () => ({ state, dispatch, ready, name, formName }),
-    [state, ready, name, formName],
+    () => ({ state, dispatch, ready, name, formName, columns }),
+    [state, ready, name, formName, columns],
   );
   return (
     <SearchFieldsetContext.Provider value={value}>
@@ -321,6 +325,8 @@ interface FieldsetDisplayProps {
  * which win on the same key (getFilters()).
  */
 export function FieldsetDisplay({ node, formName }: FieldsetDisplayProps) {
+  const search = String(node["search-name"]);
+  const display = String(node["display-name"]);
   const fieldset = useSearchFieldset();
   const options = useContext(RouteOptionsContext);
   const check = useMemo(() => searchDisplayCheck(node, options), [node, options]);
@@ -336,9 +342,10 @@ export function FieldsetDisplay({ node, formName }: FieldsetDisplayProps) {
     <>
       {notes}
       <AfreactSearch
-        search={String(node["search-name"])}
-        display={String(node["display-name"])}
+        search={search}
+        display={display}
         settings={check.settings}
+        savedColumns={savedColumnsOf(fieldset?.columns, `${search}.${display}`)}
         afform={formName}
         filters={merged(fieldset?.state.applied)}
         typed={merged(fieldset?.state.values)}

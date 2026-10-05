@@ -30,7 +30,8 @@ final class Assets {
       ->addStyleFile('civicrm', 'ang/crmUI.css')
       ->addStyleFile('org.civicrm.afform', 'ang/afCore.css')
       ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchDisplay.css')
-      ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchDisplayTable.css');
+      ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchDisplayTable.css')
+      ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchTasks.css');
   }
 
   /**

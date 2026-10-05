@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, type Browser, type Locator, type Page } from "@playwright/test";
 import { asRows } from "../../src/api/civi";
 import { isReady } from "../../src/compare/metrics";
@@ -123,4 +124,46 @@ export async function quietApi<T>(
 /** Sets the forms React renders; the page is left on about:blank. */
 export async function setReactForms(page: Page, forms: string[]): Promise<void> {
   await quietApi(page, "Setting", "set", { values: { afreact_forms: forms } });
+}
+
+type ContrastData = Record<"fgColor" | "bgColor" | "fontSize" | "fontWeight", string>;
+
+/** axe's color-contrast check data; its types leave it untyped. */
+function isContrastData(data: unknown): data is ContrastData {
+  if (typeof data !== "object" || data === null) return false;
+  const values: Record<string, unknown> = Object.fromEntries(Object.entries(data));
+  return ["fgColor", "bgColor", "fontSize", "fontWeight"].every(
+    (key) => typeof values[key] === "string",
+  );
+}
+
+/**
+ * Axe findings in `scope` of the loaded page, one per element and without element content:
+ * contrast failures by colours and font, which the theme decides, anything else by selector.
+ * Admin gear menus are Angular-only.
+ */
+export async function axeFindings(page: Page, scope: string): Promise<string[]> {
+  const { violations } = await new AxeBuilder({ page })
+    .include(scope)
+    .exclude(".crm-admin-block-context-dropdown")
+    .analyze();
+  return violations.flatMap((violation) =>
+    violation.nodes.map((node) => {
+      const data: unknown = node.any[0]?.data;
+      return violation.id === "color-contrast" && isContrastData(data)
+        ? `color-contrast: ${data.fgColor} on ${data.bgColor}, ${data.fontSize} ${data.fontWeight}`
+        : `${violation.id}: ${node.target.join(" ")}`;
+    }),
+  );
+}
+
+/** React's findings that Angular does not share as theme contrast. */
+export function ownFindings(react: string[], angular: string[]): string[] {
+  const unmatched = [...angular];
+  return react.filter((finding) => {
+    const index = unmatched.indexOf(finding);
+    if (index === -1 || !finding.startsWith("color-contrast:")) return true;
+    unmatched.splice(index, 1);
+    return false;
+  });
 }

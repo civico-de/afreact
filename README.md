@@ -62,9 +62,14 @@ wherever core places them (see [Rendering forms with React](#rendering-forms-wit
   html, image, links, buttons, menu and subsearch columns, style rules, the
   toolbar, header count, totals, the search button, the page size input, and
   hierarchical and collapsible rows. Row and toolbar menus are native popovers
-  with the menu button keyboard pattern. Bulk actions and task links run API
-  batch, popup and redirect tasks; tasks that are Angular dialogs, in-place
-  and row editing, drag to reorder, the column picker and include columns
+  with the menu button keyboard pattern. Cells the server marks editable open
+  an editor by click, Enter, Space or F2 and save with
+  `SearchDisplay.inlineEdit`; the column picker hides columns and takes them
+  from a saved filter set. Bulk actions and task links run API batch, popup
+  and redirect tasks. Tasks that are Angular dialogs, row editing
+  (`editableRow`), drag to reorder, include columns and the in-place editors
+  for contact references, locations and multi-value text, number, date or
+  Yes/No fields
   show a note instead.
 - **Types:** `src/api/entities.gen.ts` is generated from APIv4
   `getFields` (see [Development](#development)).
@@ -158,7 +163,7 @@ as a dashlet stays Angular, and the report says so.
 | `civicrm/afreact/demo` | demo form and table, React renderer; `?source=page` or `?source=bundle` picks the layout source |
 | `civicrm/afreact/angular` | the same forms, Angular runtime |
 | `civicrm/afreact/compare` | loads every React variant and the Angular page in iframes and compares metrics |
-| `civicrm/afreact/render?name=…&renderer=react\|angular` | any form the user may open, with the renderer named |
+| `civicrm/afreact/render?name=…&renderer=react\|angular` | any form the user may open, with the renderer named; `&options={…}` (a JSON object) stands for a placement's arguments |
 | `civicrm/admin/afreact` | support report: every form with what React cannot show yet |
 | `civicrm/admin/setting/afreact` | the forms React renders |
 
@@ -229,8 +234,18 @@ CIVICRM_BASE_URL=http://localhost:8080 npm run test:e2e
 | `tests/browser/rules.spec.ts` | the rules form on both renderers: expressions, `af-if` (and the values it drops), `af-required`, `af-disabled`, a token default |
 | `tests/browser/joins.spec.ts` | the joins form on both renderers: a Home and a Work email block with Home hidden by `af-if`, the location each saves to on create, and the record each shows and updates from the URL; Angular's deviation is core's (see comparison.md) |
 | `tests/browser/table.spec.ts` | SearchKit tables on both renderers: equal cells, links, classes, toolbar, counts and totals on the demo fixtures and the core forms the React table renders without a note; row menus, the menu keyboard path, collapsible rows, a `crm-popup` link and the reload after a popup form |
+| `tests/browser/editable.spec.ts` | in-place editing on both renderers: a text cell saved with Enter and an option list saved with the Save button store the same values; the column picker hides and shows the same columns; on React, opening by keyboard, focus back on Escape and a failed save that keeps the editor open |
 | `tests/browser/filters.spec.ts` | search filters on both renderers: the same filters and rows from the defaults, the URL, stored values and a saved filter set, with one page request and no excluded row shown on first load; typed filters and a reload; the first-row time of each renderer |
-| `tests/browser/a11y.spec.ts` | axe in light and dark mode finds nothing on the React demo and rules forms, the demo tables (menu and subsearch open) and a filtered search form that the Angular ones pass |
+| `tests/browser/a11y.spec.ts` | axe in light and dark mode finds nothing on the React demo and rules forms, the demo tables (menu and subsearch open), the editable table with its column picker and a filtered search form that the Angular ones pass |
+| `tests/browser/sweep.spec.ts` | every form but blocks on both renderers: the same headings, help, fields (label, input, required, disabled, value), buttons, table headers and first-page rows, and no axe finding that only React has; forms the support report finds nothing unsupported in must pass, the others are reported |
+
+`sweep.spec.ts` renders each form empty, without URL arguments, and with
+empty placement options where the support report checks it with them. It
+submits nothing. `SWEEP_FORMS=name1,name2` limits it to those forms. Per form,
+`test-results/sweep.md` and `sweep.json` give the status (identical, differs,
+"Not supported" note, error), the differences, the notes, the axe findings and
+what the form would read from the URL; cell and field values appear only as
+their length.
 
 `compare.spec.ts` switches `debug_enabled` off for the measurement, so all
 pages load as in production, and restores the previous value afterwards.

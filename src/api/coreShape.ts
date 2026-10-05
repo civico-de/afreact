@@ -60,7 +60,7 @@ type TableSettingsServer =
   | "nested"
   | `columns[].${"dataType" | "empty_value" | "format" | "icons" | "image" | "label_hidden" | "link" | "links" | "rewrite" | "show_linebreaks" | "subsearch" | "text" | "title"}`;
 
-type TableRunOpen = "editable" | "labels";
+type TableRunOpen = "labels";
 /** Used by the list, grid and tree displays only, or by no display. */
 type TableRunIgnored = "rows[].columns[].label" | "rows[].columns[].dataType";
 

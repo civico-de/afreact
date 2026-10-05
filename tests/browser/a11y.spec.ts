@@ -3,16 +3,16 @@
  * only axe findings allowed on it are contrast failures the Angular page has with the same colours
  * and font, i.e. the theme's. Findings are reported without element content.
  */
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { isReady } from "../../src/compare/metrics";
-import { setReactForms } from "./harness";
+import { axeFindings, ownFindings, setReactForms } from "./harness";
 
 const render = (name: string) => (renderer: string) =>
   `/civicrm/afreact/render?name=${name}&renderer=${renderer}`;
 const rules = render("afformAfreactDemoRules");
 const features = render("afsearchAfreactDemoFeatures");
 const types = render("afsearchAfreactDemoContactTypes");
+const editable = render("afsearchAfreactDemoEditable");
 const groups = (renderer: string) => `${render("afsearchManageGroups")(renderer)}#?title=a`;
 // Rows, count and totals are in.
 const tableReady = `!!document.querySelector(".afreact-render tbody tr[data-entity-id]") && !document.querySelector(".afreact-render .crm-search-loading-placeholder")`;
@@ -89,6 +89,13 @@ const PAIRS: Pair[] = [
     ready: tableReady,
   },
   {
+    name: "editable table with column picker",
+    react: editable("react"),
+    angular: editable("angular"),
+    scope: ".afreact-render",
+    ready: tableReady,
+  },
+  {
     name: "filtered search",
     react: groups("react"),
     angular: groups("angular"),
@@ -107,21 +114,7 @@ const TAKEOVER = {
   ready: `!!document.querySelector("#bootstrap-theme af-field input")`,
 };
 
-type ContrastData = Record<"fgColor" | "bgColor" | "fontSize" | "fontWeight", string>;
-
-/** axe's color-contrast check data; its types leave it untyped. */
-function isContrastData(data: unknown): data is ContrastData {
-  if (typeof data !== "object" || data === null) return false;
-  const values: Record<string, unknown> = Object.fromEntries(Object.entries(data));
-  return ["fgColor", "bgColor", "fontSize", "fontWeight"].every(
-    (key) => typeof values[key] === "string",
-  );
-}
-
-/**
- * Axe findings on the demo, one per element: contrast failures by colours and font, which the
- * theme decides, anything else by element selector. Admin gear menus are Angular-only.
- */
+/** Axe findings on the page at `url`, once `pair.ready` holds and `pair.open` has opened. */
 async function findings(
   page: Page,
   url: string,
@@ -135,29 +128,7 @@ async function findings(
     await page.keyboard.press("Enter");
     await page.waitForFunction(pair.open.ready);
   }
-  const { violations } = await new AxeBuilder({ page })
-    .include(pair.scope)
-    .exclude(".crm-admin-block-context-dropdown")
-    .analyze();
-  return violations.flatMap((violation) =>
-    violation.nodes.map((node) => {
-      const data: unknown = node.any[0]?.data;
-      return violation.id === "color-contrast" && isContrastData(data)
-        ? `color-contrast: ${data.fgColor} on ${data.bgColor}, ${data.fontSize} ${data.fontWeight}`
-        : `${violation.id}: ${node.target.join(" ")}`;
-    }),
-  );
-}
-
-/** React's findings that Angular does not share as theme contrast. */
-function ownFindings(react: string[], angular: string[]): string[] {
-  const unmatched = [...angular];
-  return react.filter((finding) => {
-    const index = unmatched.indexOf(finding);
-    if (index === -1 || !finding.startsWith("color-contrast:")) return true;
-    unmatched.splice(index, 1);
-    return false;
-  });
+  return axeFindings(page, pair.scope);
 }
 
 async function attach(testInfo: TestInfo, react: string[], angular: string[]) {

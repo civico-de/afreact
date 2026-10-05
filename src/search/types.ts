@@ -73,11 +73,41 @@ export interface SubsearchDisplay {
   settings: unknown;
 }
 
+export interface EditOption {
+  id: number | string;
+  label: string;
+  name?: string;
+  color?: string;
+  description?: string;
+  icon?: string;
+}
+
+/** What an editable column edits (AbstractRunAction::getEditableInfo), by column key. */
+export interface EditableInfo {
+  entity: string;
+  input_type: string | null;
+  input_attrs: unknown;
+  data_type: string;
+  /** true: options depend on the row and load with getFields (control_field). */
+  options: boolean | EditOption[];
+  serialize: boolean;
+  nullable: boolean;
+  fk_entity: string | null;
+  value_key: string;
+  value_path: string;
+  id_key: string;
+  id_path: string;
+  explicit_join: string | null;
+  control_field: string | null;
+  grouping_fields: unknown;
+}
+
 /** A page of SearchDisplay.run with the extras the result object carries. */
 export interface RunPage {
   rows: Row[];
   toolbar: ToolbarLink[];
   subsearch: Record<string, SubsearchDisplay>;
+  editable: Record<string, EditableInfo>;
 }
 
 export interface DisplaySettings {

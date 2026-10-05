@@ -21,7 +21,7 @@ class RenderPageHeadlessTest extends TestCase implements HeadlessInterface {
   }
 
   protected function tearDown(): void {
-    unset($_GET['name'], $_GET['renderer']);
+    unset($_GET['name'], $_GET['renderer'], $_GET['options']);
     parent::tearDown();
   }
 
@@ -42,6 +42,30 @@ class RenderPageHeadlessTest extends TestCase implements HeadlessInterface {
       . '<form><afform-afreact-demo-contact></afform-afreact-demo-contact></form></div></crm-angular-js>',
       $page,
     );
+  }
+
+  public function testOptionsReachBothRenderersAsAPlacementPassesThem(): void {
+    $_GET['name'] = 'afformAfreactDemoContact';
+    $_GET['options'] = '{}';
+    $_GET['renderer'] = 'react';
+    $this->assertStringContainsString(
+      '<afreact-form name="afformAfreactDemoContact" options="{}"></afreact-form>',
+      RenderPage::render(),
+    );
+    $_GET['renderer'] = 'angular';
+    $_GET['options'] = '{"contact_id":5}';
+    $this->assertStringContainsString(
+      '<form><afform-afreact-demo-contact options="{&quot;contact_id&quot;:5}"></afform-afreact-demo-contact></form>',
+      RenderPage::render(),
+    );
+  }
+
+  public function testOptionsMustBeAJsonObject(): void {
+    $_GET['name'] = 'afformAfreactDemoContact';
+    $_GET['renderer'] = 'react';
+    $_GET['options'] = '[5]';
+    $this->expectExceptionMessage('The options parameter must be a JSON object.');
+    RenderPage::render();
   }
 
   public function testFormPermissionDecidesAccess(): void {

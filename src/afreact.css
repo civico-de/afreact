@@ -25,3 +25,6 @@
 .afreact-dialog .afreact-dialog-title { margin: 0; padding: var(--crm-dialog-header-padding, 0.75rem 1rem); font-size: var(--crm-dialog-header-size, 1.25rem); background: var(--crm-dialog-header-bg-color, Canvas); color: var(--crm-dialog-header-color, CanvasText); }
 .afreact-dialog .afreact-dialog-body { padding: var(--crm-dialog-body-padding, 1rem); }
 .afreact-dialog .afreact-dialog-buttons { display: flex; justify-content: flex-end; gap: 0.5rem; padding: var(--crm-dialog-padding, 0.75rem 1rem); }
+/* React's editable cells (role=button): a visible keyboard focus, and icons without core's dimming. */
+.crm-container .crm-editable-enabled[role="button"]:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
+.crm-container .crm-editable-enabled[role="button"] .crm-i { opacity: 1; }

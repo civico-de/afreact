@@ -152,6 +152,39 @@ describe("SearchFieldset", () => {
     expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Set");
   });
 
+  it("shows the columns a saved filter set picked for its display", async () => {
+    const picking = display("Groups", {
+      settings: {
+        columns: [
+          { type: "field", key: "title", label: "Title" },
+          { type: "field", key: "description", label: "Description" },
+        ],
+        limit: 5,
+        pager: false,
+        toggleColumns: true,
+      },
+    });
+    const { calls } = renderSearch("#?_s=4", searchForm({}, [picking]), {
+      "SearchParamSet.get": () => [
+        {
+          filters: {},
+          columns: {
+            "Groups_search.Groups": { description: "Description" },
+            "Groups_search.Other": { title: "Title" },
+          },
+        },
+      ],
+      "SearchDisplay.run": () => [{ key: 1, columns: [null, { val: "About" }] }],
+    });
+    expect(await screen.findByRole("cell", { name: "About" })).toBeInTheDocument();
+    expect(screen.getAllByRole("columnheader").map((th) => th.textContent.trim())).toEqual([
+      "Description",
+    ]);
+    expect(screen.getByRole("checkbox", { name: "Title" })).not.toBeChecked();
+    const run = calls.find(({ call }) => call === "SearchDisplay.run");
+    expect(run?.params.toggleColumns).toEqual([1]);
+  });
+
   it("keeps a loaded filter set's values when the fieldset mounts again", async () => {
     const { runs, view } = renderSearch("#?_s=4", searchForm(), {
       "SearchParamSet.get": () => [{ filters: { title: { CONTAINS: "Set" }, is_active: false } }],

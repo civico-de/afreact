@@ -14,9 +14,13 @@ export interface FilterField {
   defn: FieldDefn;
 }
 
-/** A saved filter set (SearchParamSet) as `#?_s=<id>` selects it; `filters` holds field values. */
+/**
+ * A saved filter set (SearchParamSet) as `#?_s=<id>` selects it: field values in `filters`,
+ * shown columns per "search.display" in `columns`.
+ */
 export interface ParamSet {
   filters?: FilterValues | null;
+  columns?: unknown;
 }
 
 /** What the conversions need from the page. */

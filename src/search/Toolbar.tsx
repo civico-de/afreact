@@ -39,6 +39,8 @@ interface DisplayHeaderProps {
   /** The bulk actions menu or buttons, after the search button. */
   actions?: ReactNode;
   selected?: number;
+  /** The column picker, last in the bar as in core. */
+  picker?: ReactNode;
 }
 
 /** The description and the form-inline bar above crmSearchDisplayTable's table. */
@@ -49,6 +51,7 @@ export function DisplayHeader({
   button,
   actions,
   selected = 0,
+  picker,
 }: DisplayHeaderProps) {
   return (
     <>
@@ -68,6 +71,7 @@ export function DisplayHeader({
             <Toolbar links={toolbar} />
           </div>
         )}
+        {picker}
       </div>
     </>
   );

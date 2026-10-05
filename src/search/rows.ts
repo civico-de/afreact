@@ -1,4 +1,13 @@
-import type { Column, DisplaySettings, Row, RunPage, SubsearchDisplay, ToolbarLink } from "./types";
+import { unsupportedEditors } from "./inlineEdit";
+import type {
+  Column,
+  DisplaySettings,
+  EditableInfo,
+  Row,
+  RunPage,
+  SubsearchDisplay,
+  ToolbarLink,
+} from "./types";
 
 /** isSortable() of searchDisplaySortableTrait: fields and markup sort unless switched off. */
 export function isSortable(column: Column, settings: DisplaySettings): boolean {
@@ -145,23 +154,26 @@ function isSet(value: unknown): boolean {
   return true;
 }
 
-/** Display features the React table cannot show yet, each named with its setting. */
-export function unsupportedFeatures(settings: DisplaySettings): string[] {
+/** Cells edit one at a time, unless full-row mode edits whole rows (not rendered yet). */
+export function editsCells(settings: DisplaySettings): boolean {
+  return !(settings.editableRow && settings.editableRow.full);
+}
+
+/**
+ * Display features the React table cannot show yet, each named with its setting. Editors
+ * are known only from a loaded page.
+ */
+export function unsupportedFeatures(settings: DisplaySettings, page?: RunPage): string[] {
   const features: string[] = Object.entries(settings)
     .filter(([key, value]) => !TABLE_SETTINGS.has(key) && isSet(value))
     .map(([key]) => `setting ${key}`);
   if (typeof settings.pager === "object")
     for (const [key, value] of Object.entries(settings.pager))
       if (!PAGER_OPTIONS.has(key) && isSet(value)) features.push(`setting pager.${key}`);
-  const editable =
-    settings.editableRow && settings.editableRow.disable
-      ? []
-      : settings.columns.filter((column) => column.editable).map((column) => column.key ?? "");
-  if (editable.length) features.push(`in-place editing (editable: ${editable.join(", ")})`);
   if (settings.editableRow && (settings.editableRow.create || settings.editableRow.full))
     features.push("row editing (editableRow)");
+  if (editsCells(settings)) features.push(...unsupportedEditors(page));
   if (settings.draggable) features.push("drag to reorder (draggable)");
-  if (settings.toggleColumns) features.push("column picker (toggleColumns)");
   return features;
 }
 
@@ -181,13 +193,27 @@ function isSubsearchDisplays(value: unknown): value is Record<string, SubsearchD
   );
 }
 
+/** PHP sends an empty list when no column is editable, and null for a column it cannot edit. */
+function editableInfos(value: unknown): Record<string, EditableInfo> {
+  if (!isObject(value) || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, EditableInfo] =>
+        isObject(entry[1]) && typeof entry[1].value_key === "string",
+    ),
+  );
+}
+
 /** CRM.api4 copies the run result's properties (toolbar, subsearch settings) onto the row list. */
 export function runPage(result: Row[]): RunPage {
-  const toolbar: unknown = Object.getOwnPropertyDescriptor(result, "toolbar")?.value;
-  const subsearch: unknown = Object.getOwnPropertyDescriptor(result, "subsearch")?.value;
+  const property = (name: string): unknown =>
+    Object.getOwnPropertyDescriptor(result, name)?.value;
+  const toolbar = property("toolbar");
+  const subsearch = property("subsearch");
   return {
     rows: [...result],
     toolbar: isLinks(toolbar) ? toolbar : [],
     subsearch: isSubsearchDisplays(subsearch) ? subsearch : {},
+    editable: editableInfos(property("editable")),
   };
 }

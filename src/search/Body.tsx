@@ -1,5 +1,7 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { Cell, cellText } from "./Cell";
+import { EditableCell, editingClass } from "./EditableCell";
+import { useInlineEditContext } from "./inlineEdit";
 import {
   cellClass,
   descendents,
@@ -19,7 +21,11 @@ interface BodyRowsProps {
   /** The checkbox of each row, with bulk actions. */
   select?: RowSelect;
   onLinkClick: (link: Link, key: Row["key"], event: MouseEvent<HTMLAnchorElement>) => void;
+  /** Columns the column picker hides. */
+  hidden?: ReadonlySet<number>;
 }
+
+const NONE: ReadonlySet<number> = new Set();
 
 /** crmSearchDisplayTableBody.html: one row per result, rows under a collapsed parent left out. */
 export function BodyRows({
@@ -29,7 +35,9 @@ export function BodyRows({
   afform,
   select,
   onLinkClick,
+  hidden: hiddenColumns = NONE,
 }: BodyRowsProps) {
+  const edit = useInlineEditContext();
   const [toggled, setToggled] = useState<ReadonlyMap<Row["key"], boolean>>(new Map());
   const control = hasControlColumn(settings);
   const isCollapsed = (row: Row) =>
@@ -70,25 +78,37 @@ export function BodyRows({
           </td>
         )}
         {row.columns.map((cell, index) => {
+          if (hiddenColumns.has(index)) return null;
           const column = settings.columns[index];
+          const editing = editingClass(edit, { rowKey: row.key, colIndex: index });
           return (
             <td
               key={index}
-              className={cellClass(column, row, settings, cell?.cssClass)}
+              className={[cellClass(column, row, settings, cell?.cssClass), editing]
+                .filter(Boolean)
+                .join(" ")}
               title={cell?.title}
               data-field-name={column?.key}
             >
               {cell && (
-                <Cell
+                <EditableCell
+                  edit={edit}
+                  row={row}
                   column={column}
-                  cell={cell}
                   colIndex={index}
-                  subsearch={subsearch}
-                  afform={afform}
-                  onLinkClick={(link, event) => {
-                    onLinkClick(link, row.key, event);
-                  }}
-                />
+                  settings={settings}
+                >
+                  <Cell
+                    column={column}
+                    cell={cell}
+                    colIndex={index}
+                    subsearch={subsearch}
+                    afform={afform}
+                    onLinkClick={(link, event) => {
+                      onLinkClick(link, row.key, event);
+                    }}
+                  />
+                </EditableCell>
               )}
             </td>
           );
@@ -125,7 +145,13 @@ function ToggleCollapse({ count, collapsed, onToggle }: ToggleCollapseProps) {
 }
 
 /** crmSearchDisplayTableLoading.html. */
-export function PlaceholderRows({ settings }: { settings: DisplaySettings }) {
+export function PlaceholderRows({
+  settings,
+  hidden = NONE,
+}: {
+  settings: DisplaySettings;
+  hidden?: ReadonlySet<number>;
+}) {
   const control = hasControlColumn(settings);
   return Array.from({ length: settings.placeholder ?? 5 }, (_, placeholder) => (
     <tr key={placeholder}>
@@ -134,11 +160,13 @@ export function PlaceholderRows({ settings }: { settings: DisplaySettings }) {
           {settings.actions && <input type="checkbox" disabled aria-label={ts("Loading…")} />}
         </td>
       )}
-      {settings.columns.map((_column, index) => (
-        <td key={index}>
-          <div className="crm-search-loading-placeholder" />
-        </td>
-      ))}
+      {settings.columns.map((_column, index) =>
+        hidden.has(index) ? null : (
+          <td key={index}>
+            <div className="crm-search-loading-placeholder" />
+          </td>
+        ),
+      )}
     </tr>
   ));
 }
@@ -172,15 +200,17 @@ interface TallyRowProps {
   settings: DisplaySettings;
   /** Null while the tally request runs. */
   tally: Record<string, unknown> | null;
+  hidden?: ReadonlySet<number>;
 }
 
 /** crmSearchDisplayTally.html: the totals row in the header or footer. */
-export function TallyRow({ settings, tally }: TallyRowProps) {
+export function TallyRow({ settings, tally, hidden = NONE }: TallyRowProps) {
   const label = settings.tally ? settings.tally.label : undefined;
   return (
     <tr className="crm-search-display-tally">
       {hasControlColumn(settings) && <td>{label}</td>}
       {settings.columns.map((column, index) => {
+        if (hidden.has(index)) return null;
         const value = column.key === undefined ? undefined : tally?.[column.key];
         return (
           <td key={index}>

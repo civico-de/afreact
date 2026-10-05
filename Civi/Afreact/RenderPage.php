@@ -15,7 +15,8 @@ use CRM_Afreact_ExtensionUtil as E;
 final class RenderPage {
 
   /**
-   * Route civicrm/afreact/render: one form with the renderer `?renderer=react|angular` names.
+   * Route civicrm/afreact/render: one form with the renderer `?renderer=react|angular` names;
+   * `options` (a JSON object) stands for a placement's arguments, as InlineAfform.tpl passes them.
    */
   public static function render(): string {
     $name = \CRM_Utils_Request::retrieveValue('name', 'String', method: 'GET');
@@ -23,10 +24,27 @@ final class RenderPage {
     if (!is_string($name) || !in_array($renderer, ['react', 'angular'], TRUE)) {
       throw new \CRM_Core_Exception('The page needs a form name and renderer=react or renderer=angular.');
     }
-    return self::renderWith($name, $renderer);
+    $options = \CRM_Utils_Request::retrieveValue('options', 'String', method: 'GET');
+    return self::renderWith($name, $renderer, is_string($options) ? self::options($options) : NULL);
   }
 
-  public static function renderWith(string $name, string $renderer): string {
+  /**
+   * The options parameter as the JSON object both renderers read; objects stay objects.
+   */
+  private static function options(string $json): string {
+    try {
+      $options = json_decode($json, FALSE, 512, JSON_THROW_ON_ERROR);
+    }
+    catch (\JsonException) {
+      $options = NULL;
+    }
+    if (!$options instanceof \stdClass) {
+      throw new \CRM_Core_Exception('The options parameter must be a JSON object.');
+    }
+    return json_encode($options, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+  }
+
+  public static function renderWith(string $name, string $renderer, ?string $options = NULL): string {
     // Afform.get with permission checks drops forms the user may not open.
     $form = Afform::get()
       ->addWhere('name', '=', $name)
@@ -38,9 +56,10 @@ final class RenderPage {
     }
     $title = is_string($form['title'] ?? NULL) ? $form['title'] : $name;
     \CRM_Utils_System::setTitle($title);
+    $optionsAttribute = $options === NULL ? '' : ' options="' . Chrome::escape($options) . '"';
     if ($renderer === 'react') {
       Assets::load();
-      return Chrome::page(self::single('react', '<afreact-form name="' . Chrome::escape($name) . '"></afreact-form>'));
+      return Chrome::page(self::single('react', '<afreact-form name="' . Chrome::escape($name) . '"' . $optionsAttribute . '></afreact-form>'));
     }
     $module = Afforms::field($form, 'module_name');
     $directive = Afforms::field($form, 'directive_name');
@@ -49,7 +68,7 @@ final class RenderPage {
     }
     Chrome::angular()->addModules([$module]);
     // As core's AfformBase.tpl: the form element gives Enter its implicit submit.
-    $element = "<form><{$directive}></{$directive}></form>";
+    $element = "<form><{$directive}{$optionsAttribute}></{$directive}></form>";
     return Chrome::page(
       '<crm-angular-js modules="'
       . Chrome::escape($module)

@@ -11,6 +11,7 @@ import {
   unlabelledHeader,
   unsupportedFeatures,
 } from "./rows";
+import { editInfo } from "../test/editInfo";
 import type { Column, DisplaySettings, Row } from "./types";
 
 const field: Column = { type: "field", key: "name" };
@@ -114,11 +115,19 @@ describe("unsupportedFeatures", () => {
       button: "Search",
       toggleColumns: true,
     };
-    expect(unsupportedFeatures(settings)).toEqual([
-      "in-place editing (editable: name, email)",
+    const page = runPage(
+      Object.assign([{ key: 1, columns: [{ links: [{ task: "delete" }, { url: "/x" }] }, null] }], {
+        toolbar: [{ task: "enable" }],
+        editable: {
+          name: editInfo({ value_key: "name" }),
+          "employer_id.display_name": editInfo({ value_key: "employer_id", fk_entity: "Contact" }),
+        },
+      }),
+    );
+    expect(unsupportedFeatures(settings, page)).toEqual([
       "row editing (editableRow)",
+      "in-place editing of employer_id.display_name (EntityRef)",
       "drag to reorder (draggable)",
-      "column picker (toggleColumns)",
     ]);
   });
 
@@ -164,6 +173,14 @@ describe("unsupportedFeatures", () => {
     expect(unsupportedFeatures(settings)).toEqual(["setting seeMore", "setting pager.jump"]);
   });
 
+  it("leaves cell editors to full-row editing", () => {
+    const page = runPage(
+      Object.assign([], { editable: { e: editInfo({ value_key: "e", fk_entity: "Contact" }) } }),
+    );
+    const settings = { columns: [field], editableRow: { full: true } };
+    expect(unsupportedFeatures(settings, page)).toEqual(["row editing (editableRow)"]);
+  });
+
   it("drops in-place editing when row editing switches it off", () => {
     const settings = { columns: [{ ...field, editable: true }], editableRow: { disable: true } };
     expect(unsupportedFeatures(settings)).toEqual([]);
@@ -187,15 +204,24 @@ describe("runPage", () => {
     const page = runPage(
       Object.assign(rows, { toolbar: [{ url: "/add", text: "Add" }], subsearch }),
     );
-    expect(page).toEqual({ rows: [row(1)], toolbar: [{ url: "/add", text: "Add" }], subsearch });
+    expect(page).toEqual({
+      rows: [row(1)],
+      toolbar: [{ url: "/add", text: "Add" }],
+      subsearch,
+      editable: {},
+    });
+  });
+
+  it("reads the editable columns and drops those the server cannot edit", () => {
+    const name = editInfo({ value_key: "name" });
+    const page = runPage(Object.assign([], { editable: { name, email: null } }));
+    expect(page.editable).toEqual({ name });
   });
 
   it("treats missing or malformed extras as none", () => {
-    expect(runPage(Object.assign([], { toolbar: "x", subsearch: { a: 1 } }))).toEqual({
-      rows: [],
-      toolbar: [],
-      subsearch: {},
-    });
-    expect(runPage([])).toEqual({ rows: [], toolbar: [], subsearch: {} });
+    expect(
+      runPage(Object.assign([], { toolbar: "x", subsearch: { a: 1 }, editable: [] })),
+    ).toEqual({ rows: [], toolbar: [], subsearch: {}, editable: {} });
+    expect(runPage([])).toEqual({ rows: [], toolbar: [], subsearch: {}, editable: {} });
   });
 });

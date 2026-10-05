@@ -14,14 +14,22 @@ prefill and update from `#?Individual1=<id>`, the saved records field by field,
 and the table rows after sorting and paging. All of them pass on both
 renderers.
 
+`tests/browser/sweep.spec.ts` renders every form of the site with both
+renderers and compares what a user sees without typing: texts, fields, buttons
+and the first page of each table. It reads select, reference and date widgets
+for the value they show, so the differences by design below do not count, and
+it leaves out the space core puts before commas in linked lists (see upstream
+bugs).
+
 ## Visual parity
 
 The React renderer writes the markup of core's Angular templates — afField and
 its field templates, afRepeat, afTitle, the SearchKit table and its pager —
 with the same classes, and loads the stylesheets core's Angular modules bring
-for them (`crmUI.css`, `afCore.css`, the SearchKit display styles). The site
-theme therefore styles both renderers; `src/afreact.css` only sizes the
-native controls that replace jQuery widgets.
+for them (`crmUI.css`, `afCore.css`, the SearchKit display and in-place edit
+styles). The site theme therefore styles both renderers; `src/afreact.css`
+only sizes the native controls that replace jQuery widgets, and gives
+editable cells a focus outline and icons at full opacity, where core dims them.
 
 `tests/browser/visual.spec.ts` pairs the parts of both pages — titles, fields,
 labels, controls, clear links, buttons, table header, sort icons, rows, pager —
@@ -42,6 +50,10 @@ that no longer excuses anything fails the test.
 | Reference fields (EntityRef) | select2 over `<Entity>.autocomplete` | ARIA combobox in select2's multi-select markup for single and multiple fields; the search loads with the first such field on a page. A single field shows the chosen label in its input, with a clear link |
 | Stored ids the autocomplete cannot find | dropped from view, kept in the model | kept, with a visible "No record found" message |
 | Chained selects (ChainSelect) | select2 | native `<select>`, options from `Afform.getOptions` as in Angular |
+| In-place editors | select2, datepicker and select2 tags; text inputs at least as wide as the cell was | native `<select>`, `<input type="date">` and `datetime-local`, a colour picker beside a text input; inputs at their own width |
+| Leaving an in-place editor | the editor stays open until Enter, Escape or a button | a valid change saves, an unchanged editor closes; switching windows leaves it open |
+| Emptying an in-place text | saves `""` | saves `null` where the field can be emptied |
+| Totals after an in-place edit | kept (see upstream bugs) | asked again |
 
 ## Accessibility
 
@@ -65,8 +77,10 @@ instead of being dropped:
 - range inputs in search filters (`search_range`)
 - directives outside plain HTML, forms, blocks, joins, repeats, search
   fieldsets and table displays (for example tabs and other search display types)
-- table features: in-place editing, drag to reorder, the column picker,
-  include columns
+- table features: row editing (`editableRow`: new rows and full-row mode),
+  drag to reorder, include columns
+- in-place editors for contact references (EntityRef), locations, and
+  multi-value text, number, date or Yes/No fields; their cells stay read-only
 - bulk actions whose task is an Angular dialog (download, update, tag, merge
   tags, add relationship, and extensions' own), takes input fields
   (`apiBatch.fields`, e.g. soft credits), or uses an expression other than a
@@ -326,6 +340,42 @@ so:
   task is not offered.
 - The row checkboxes have no label (`crmSearchDisplayTableBody.html`). React
   labels each with the row's first column.
+
+**In-place editing.** Read from the source of `master` as of 2026-10-05
+(`ext/search_kit/ang/crmSearchDisplay/`); 6.18 behaves the same.
+- *A failed save leaves a placeholder.* `saveEditing()` closes the editor and
+  marks the cell as loading before the request, and handles only success
+  (`traits/searchDisplayEditableTrait.service.js:52-72`). After an error the
+  cell stays a loading placeholder until the next search, and the typed value
+  is lost; the error shows only as a status notice (`crmStatus`). React opens the editor
+  again with the typed value and the error, marked `aria-invalid`, and
+  announces "Not saved" in a live region.
+- *Enter anywhere on the page saves.* The editor listens for keys on the
+  document (`crmSearchDisplayEditable.component.js:47-55`): Enter in a filter
+  field or another form saves the open edit, Escape anywhere cancels it. React
+  listens on the editor only.
+- *An emptied required field fails with "Inline edit failed."* Enter calls
+  `save()` without the form's validation. The server skips an empty value for
+  a field that cannot be emptied and, with nothing left to do, throws
+  (`Civi/Api4/Action/SearchDisplay/InlineEdit.php:89-91, 119-121`), which
+  then ends in the placeholder above. React marks the input `required` and
+  checks it before sending.
+- *Unchanged lists are saved.* `save()` compares with `!==` (line 73), and the
+  value and its starting copy are separate arrays, so a multi-select saves
+  even when nothing changed. React compares by value.
+- *Totals stay stale.* `refreshAfterEditing()` replaces the row only, so the
+  totals row keeps the old sums and counts. React asks for the totals again.
+- *Editing needs a mouse.* An editable value is a `<span>` with `ng-click`,
+  without role or tab stop (`colType/editable.html:10-15`). React makes it a
+  button in the tab order with an "Edit <column>" name, opens it with Enter,
+  Space or F2, and returns focus to it when the editor closes.
+
+**"Column undefined" in the column picker.** `getColumnToggleLabel()` numbers
+a column without label or key with `col.index`, which nothing sets
+(`crmSearchDisplayTable.component.js:187`), so such a column is listed as
+"Column undefined", and a saved filter set stores that label. React numbers it
+by position ("Column 3"); a set saved by Angular for such a column therefore
+does not match it in React.
 
 **Theme contrast below WCAG AA.** Riverlea (stream Minetta) links on the
 shaded rows of a striped table reach 4.2:1 (`#2c789b` on `#ededed`), and in
