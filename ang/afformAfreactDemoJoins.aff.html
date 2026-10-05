@@ -1,0 +1,14 @@
+<af-form ctrl="afform">
+  <af-entity data="{contact_type: 'Individual', source: 'Afreact demo'}" type="Contact" name="Individual1" label="Individual 1" actions="{create: true, update: true}" security="RBAC" url-autofill="1" />
+  <fieldset af-fieldset="Individual1" class="af-container" af-title="Individual">
+    <af-field name="first_name" />
+    <af-field name="last_name" defn="{required: true}" />
+    <div af-join="Email" actions="{update: true, delete: true}" data="{location_type_id: 1}" af-if="([[&quot;Individual1[0][fields][first_name]&quot;,&quot;=&quot;,&quot;\&quot;home\&quot;&quot;]])">
+      <af-field name="email" defn="{label: 'Home email'}" />
+    </div>
+    <div af-join="Email" actions="{update: true, delete: true}" data="{location_type_id: 2}">
+      <af-field name="email" defn="{label: 'Work email'}" />
+    </div>
+  </fieldset>
+  <button class="af-button btn btn-primary" crm-icon="fa-check" ng-click="afform.submit()">{{:: ts('Save') }}</button>
+</af-form>

@@ -39,8 +39,16 @@ export interface FieldDefn {
     max?: number;
     step?: number;
     maxlength?: number;
+    /** Text and TextArea only, as in core's templates. */
+    minlength?: number;
     rows?: number;
     cols?: number;
+    /** EntityRef: list results before anything is typed. */
+    autoOpen?: boolean;
+    /** EntityRef: links to quick-add forms, all of the entity's (true) or by path. */
+    quickAdd?: boolean | string[];
+    /** ChainSelect: the field whose value filters the options; EntityRef: the one picking dfk_entities. */
+    control_field?: string;
   };
   /** Classes for the inputs, e.g. "btn btn-default" for radio buttons styled as buttons. */
   input_style?: string | null;
@@ -57,6 +65,8 @@ export interface FieldDefn {
   search_range?: boolean;
   is_date?: boolean | number;
   fk_entity?: string | null;
+  /** A dynamic foreign key: the entity for each value of input_attrs.control_field. */
+  dfk_entities?: Record<string, string> | null;
 }
 
 export interface FormDefinition {
@@ -71,7 +81,8 @@ export interface FormDefinition {
 export type Values = Record<string, unknown>;
 export interface EntityItem {
   fields: Values;
-  joins?: Record<string, Values[]>;
+  /** Prefill sends null for a location block whose location type the contact lacks. */
+  joins?: Record<string, (Values | null)[]>;
 }
 /** Afform submission values: entity name => items. */
 export type FormData = Record<string, EntityItem[]>;

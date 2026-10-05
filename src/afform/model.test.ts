@@ -172,17 +172,29 @@ describe("primary records", () => {
       ...joinScope,
       joinIndex: 2,
     });
-    expect(emails(data).map((email) => email.is_primary)).toEqual([false, false, true]);
+    expect(emails(data).map((email) => email?.is_primary)).toEqual([false, false, true]);
   });
 
   it("makes the first record primary only when none is", () => {
     const padded = ensureRepeatItems(emptyData(["Individual1"]), joinScope, 2);
-    expect(emails(ensurePrimary(padded, joinScope)).map((email) => email.is_primary)).toEqual([
+    expect(emails(ensurePrimary(padded, joinScope)).map((email) => email?.is_primary)).toEqual([
       true,
       false,
     ]);
     const chosen = setPrimary(padded, { ...joinScope, joinIndex: 1 });
     expect(ensurePrimary(chosen, joinScope)).toBe(chosen);
+  });
+
+  it("marks a record the prefill sent as null", () => {
+    const data = { Individual1: [{ fields: {}, joins: { Email: [{ email: "x" }, null] } }] };
+    expect(emails(ensurePrimary(data, joinScope))).toEqual([
+      { email: "x", is_primary: true },
+      { is_primary: false },
+    ]);
+    expect(emails(setPrimary(data, { ...joinScope, joinIndex: 1 }))).toEqual([
+      { email: "x", is_primary: false },
+      { is_primary: true },
+    ]);
   });
 });
 

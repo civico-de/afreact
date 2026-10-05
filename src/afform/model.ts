@@ -104,7 +104,7 @@ function entityItemAt(data: FormData, scope: Scope): EntityItem | undefined {
   return data[scope.entity]?.[scope.index];
 }
 
-function recordAt(data: FormData, scope: Scope): Values | undefined {
+function recordAt(data: FormData, scope: Scope): Values | null | undefined {
   const entityItem = entityItemAt(data, scope);
   return scope.join === undefined
     ? entityItem?.fields
@@ -221,7 +221,7 @@ export function setPrimary(data: FormData, scope: Scope): FormData {
   const records =
     scope.join === undefined ? undefined : next[scope.entity]?.[scope.index]?.joins?.[scope.join];
   records?.forEach((record, position) => {
-    record.is_primary = position === (scope.joinIndex ?? 0);
+    records[position] = { ...record, is_primary: position === (scope.joinIndex ?? 0) };
   });
   return next;
 }
@@ -230,7 +230,7 @@ export function setPrimary(data: FormData, scope: Scope): FormData {
 export function ensurePrimary(data: FormData, scope: Scope): FormData {
   const records =
     scope.join === undefined ? undefined : data[scope.entity]?.[scope.index]?.joins?.[scope.join];
-  return records?.length && !records.some((record) => record.is_primary)
+  return records?.length && !records.some((record) => record?.is_primary)
     ? setPrimary(data, { ...scope, joinIndex: 0 })
     : data;
 }
