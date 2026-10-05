@@ -16,6 +16,7 @@ import { api4, errorMessage } from "../api/civi";
 import { AfreactSearch } from "../search/AfreactSearch";
 import { savedColumnsOf } from "../search/ColumnPicker";
 import { evaluateDisplayFilters, routeKeys, RouteOptionsContext } from "../search/displayFilters";
+import { displayTypeOf } from "../search/types";
 import {
   defaultValues,
   fieldsetReducer,
@@ -361,6 +362,7 @@ export function FieldsetDisplay({ node, formName, onLabels }: FieldsetDisplayPro
       <AfreactSearch
         search={search}
         display={display}
+        type={displayTypeOf(node["#tag"]) ?? "table"}
         settings={check.settings}
         savedColumns={savedColumnsOf(fieldset?.columns, `${search}.${display}`)}
         afform={formName}

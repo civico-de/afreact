@@ -219,7 +219,7 @@ describe("subsearch columns", () => {
       ],
     });
     renderWithQuery(
-      <table className="crm-search-display-table">
+      <table className="crm-search-display crm-search-display-table">
         <tbody>
           <tr>
             {data.map((entry, index) => (
@@ -301,10 +301,19 @@ describe("subsearch columns", () => {
     expect(page.params().toString()).toBe("");
   });
 
-  it("flags a nested display that is not a table", () => {
+  it("flags a nested display of a type React does not render", () => {
     subsearchCells([info("inline", 4)], {
-      "Emails.Table": { ...subsearch["Emails.Table"], type: "grid" },
+      "Emails.Table": { ...subsearch["Emails.Table"], type: "batch" },
     });
-    expect(screen.getByRole("note")).toHaveTextContent("subsearch display type grid");
+    expect(screen.getByRole("note")).toHaveTextContent("subsearch display type batch");
+  });
+
+  it("renders a nested display of another type as that type", async () => {
+    subsearchCells([info("inline", 4)], {
+      "Emails.Table": { ...subsearch["Emails.Table"], type: "list" },
+    });
+    const item = (await screen.findByText('mail of {"contact_id":4}')).closest("li");
+    expect(item).toHaveClass("crm-search-display-listitem");
+    expect(item?.closest(".crm-search-display")).toHaveClass("crm-search-display-list");
   });
 });

@@ -66,7 +66,9 @@ describe("nodeKind", () => {
     expect(nodeKind({ "#tag": "div", "ng-if": "afform.showSubmitButton" })).toBe("submitCondition");
     expect(nodeKind({ "#tag": "afblock-name-individual" })).toBe("block");
     expect(nodeKind({ "#tag": "crm-search-display-table" })).toBe("search");
-    expect(nodeKind({ "#tag": "crm-search-display-grid" })).toBe("unknown");
+    for (const type of ["list", "grid", "tree"])
+      expect(nodeKind({ "#tag": `crm-search-display-${type}` })).toBe("search");
+    expect(nodeKind({ "#tag": "crm-search-display-batch" })).toBe("unknown");
     expect(nodeKind({ "#tag": "div", "af-fieldset": "" })).toBe("searchFieldset");
     expect(nodeKind({ "#tag": "div", "af-fieldset": "Individual1" })).toBe("fieldset");
     expect(nodeKind({ "#tag": "div", "af-join": "Email" })).toBe("join");
@@ -155,6 +157,23 @@ describe("layoutProblems", () => {
       },
     ];
     expect(layoutProblems(supported)).toEqual([]);
+  });
+
+  it("checks each display with the settings its type reads", () => {
+    const columns = [{ type: "field", key: "label" }];
+    const display = (tag: string, settings: Record<string, unknown>): LayoutNode => ({
+      "#tag": tag,
+      "search-name": "S",
+      "display-name": "D",
+      settings: { columns, ...settings },
+    });
+    expect(
+      layoutProblems([
+        display("crm-search-display-grid", { colno: "2", draggable: "weight", actions: true }),
+        display("crm-search-display-list", { style: "ol", section_group_by: "kind" }),
+        display("crm-search-display-tree", { parent_field: "parent_id", draggable: "weight" }),
+      ]),
+    ).toEqual(["drag to reorder (draggable)"]);
   });
 
   it("matches the notes the rendered form shows", async () => {

@@ -10,6 +10,11 @@ import {
   startsCollapsed,
   unlabelledHeader,
   unsupportedFeatures,
+  buildTree,
+  fieldClass,
+  sectionStarts,
+  settingsOf,
+  type TreeItem,
 } from "./rows";
 import { editInfo } from "../test/editInfo";
 import type { Column, DisplaySettings, Row } from "./types";
@@ -238,5 +243,66 @@ describe("runPage", () => {
       editable: {},
       labels: [],
     });
+  });
+});
+
+describe("display types", () => {
+  it("drops the settings a type does not read, keeping the columns", () => {
+    const settings: DisplaySettings = {
+      columns: [field],
+      limit: 5,
+      actions: true,
+      tally: { footer: true },
+      pager: {},
+      parent_field: "parent_id",
+    };
+    expect(settingsOf(settings, "table")).toBe(settings);
+    expect(settingsOf(settings, "list")).toEqual({ columns: [field], limit: 5, pager: {} });
+    expect(settingsOf(settings, "tree")).toEqual({
+      columns: [field],
+      limit: 5,
+      parent_field: "parent_id",
+    });
+  });
+
+  it("notes unknown settings for any type, and drag only where the type has it", () => {
+    const settings = { ...base, draggable: "weight", seeMore: 1 };
+    expect(unsupportedFeatures(settings, undefined, "list")).toEqual(["setting seeMore"]);
+    expect(unsupportedFeatures(settings, undefined, "tree")).toEqual([
+      "setting seeMore",
+      "drag to reorder (draggable)",
+    ]);
+    expect(unsupportedFeatures({ ...base, colno: "3", style: "ol" })).toEqual([]);
+  });
+
+  it("classes a column inline unless it breaks the line", () => {
+    expect(fieldClass(field, "nowrap")).toBe("nowrap crm-search-col-type-field crm-inline-block");
+    expect(fieldClass({ ...field, break: true }, undefined)).toBe("crm-search-col-type-field");
+  });
+
+  it("builds a tree in result order, with rows of a missing or own parent at the top", () => {
+    const at = (key: number, parent?: unknown): Row => ({
+      key,
+      columns: [],
+      data: { parent_id: parent },
+    });
+    const keys = (items: TreeItem[]): unknown[] =>
+      items.map((item) =>
+        item.children.length ? [item.row.key, keys(item.children)] : item.row.key,
+      );
+    const rows = [at(1), at(2, 1), at(3, "1"), at(4, 2), at(5, 5), at(6, 42), at(7, { id: 1 })];
+    expect(keys(buildTree(rows, "parent_id"))).toEqual([[1, [[2, [4]], 3]], 5, 6, 7]);
+    expect(keys(buildTree(rows, undefined))).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it("starts a section wherever the value changes, comparing lists by content", () => {
+    const at = (key: number, kind: unknown): Row => ({ key, columns: [], data: { kind } });
+    const rows = [at(1, ["a"]), at(2, ["a"]), at(3, null), at(4, undefined), at(5, "b")];
+    expect([...sectionStarts(rows, "kind")]).toEqual([
+      [1, ["a"]],
+      [3, null],
+      [5, "b"],
+    ]);
+    expect(sectionStarts(rows, undefined).size).toBe(0);
   });
 });

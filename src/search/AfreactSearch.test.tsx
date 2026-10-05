@@ -231,7 +231,7 @@ describe("AfreactSearch", () => {
   it("loads the display settings when the layout carries none", async () => {
     const calls = mockApi({
       "SearchDisplay.get": () => [
-        { label: "Contacts table", settings: { ...settings, pager: false } },
+        { label: "Contacts table", type: "table", settings: { ...settings, pager: false } },
       ],
       "SearchDisplay.run": () => [row(1), row(2)],
     });
@@ -240,7 +240,7 @@ describe("AfreactSearch", () => {
     await screen.findByRole("link", { name: "Name 2" });
     expect(calls.map(({ call }) => call)).toEqual(["SearchDisplay.get", "SearchDisplay.run"]);
     expect(calls[0]?.params).toEqual({
-      select: ["label", "settings"],
+      select: ["label", "type", "settings"],
       where: [
         ["name", "=", "D"],
         ["saved_search_id.name", "=", "S"],

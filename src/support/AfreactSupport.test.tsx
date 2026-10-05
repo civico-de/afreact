@@ -31,7 +31,7 @@ const forms = [
 ];
 const layouts: Record<string, unknown[]> = {
   afformPlaced: [{ "#tag": "div", "#children": [{ "#text": "fine" }] }],
-  afsearchGaps: [{ "#tag": "crm-search-display-grid" }, { "#tag": "crm-search-display-grid" }],
+  afsearchGaps: [{ "#tag": "crm-search-display-batch" }, { "#tag": "crm-search-display-batch" }],
 };
 
 function renderReport(listed: string[], held?: Promise<void>) {
@@ -73,7 +73,7 @@ describe("AfreactSupport", () => {
     );
     expect(within(row("afsearchGaps")).getAllByRole("listitem")).toHaveLength(1);
     expect(within(row("afsearchGaps")).getByRole("listitem")).toHaveTextContent(
-      "<crm-search-display-grid>",
+      "<crm-search-display-batch>",
     );
     expect(within(row("afformBroken")).getByText("Form broke")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Choose the forms React renders" })).toHaveAttribute(

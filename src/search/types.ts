@@ -32,6 +32,8 @@ export interface Column {
   /** Template of an include column, e.g. "~/afAdmin/afListPlacementColumn.html". */
   path?: string;
   tally?: { fn?: string; label?: string; rewrite?: string };
+  /** List, grid and tree: the column starts a new line instead of following inline. */
+  break?: boolean;
 }
 
 /** One formatted cell of a row (AbstractRunAction::formatColumn). */
@@ -40,6 +42,8 @@ export interface CellData {
   links?: Link[];
   /** Button text of a menu column. */
   text?: string;
+  /** List, grid and tree: the column label, with tokens filled in. */
+  label?: string;
   title?: string;
   cssClass?: string;
   edit?: unknown;
@@ -136,6 +140,30 @@ export interface DisplaySettings {
   editableRow?: false | { create?: boolean; full?: boolean; disable?: boolean };
   button?: string | false;
   toggleColumns?: boolean;
+  /** List: "ol" for a numbered list, and the CSS list-style of its markers. */
+  style?: string;
+  symbol?: string;
+  /** Grid: the number of columns, 2 to 5. */
+  colno?: string | number;
+  /** List and grid: a heading before each run of rows with the same value of this field. */
+  section_group_by?: string;
+  header_tag?: string;
+  /** Tree: the field that holds a row's parent key. */
+  parent_field?: string;
+}
+
+/** The SearchKit display types the renderer shows, by the suffix of their element. */
+export const DISPLAY_TYPES = ["table", "list", "grid", "tree"] as const;
+export type DisplayType = (typeof DISPLAY_TYPES)[number];
+
+export function isDisplayType(value: unknown): value is DisplayType {
+  return DISPLAY_TYPES.some((type) => type === value);
+}
+
+/** The display type of a `crm-search-display-<type>` element, or null for another tag. */
+export function displayTypeOf(tag: string): DisplayType | null {
+  const type = tag.replace(/^crm-search-display-/, "");
+  return type !== tag && isDisplayType(type) ? type : null;
 }
 
 /** SearchDisplay.settings as stored; the table needs at least its column list. */

@@ -9,6 +9,7 @@ import { Menu } from "./Menu";
 import { columnNote } from "./rows";
 import {
   isDisplaySettings,
+  isDisplayType,
   type CellData,
   type Column,
   type Link,
@@ -241,7 +242,7 @@ function SubsearchColumn({ cell, colIndex, subsearch, afform }: CellProps) {
     setOpened(true);
     if (!dropdown) return;
     details
-      .closest(".crm-search-display-table")
+      .closest(".crm-search-display")
       ?.querySelectorAll<HTMLDetailsElement>("details.crm-search-display-subsearch-dropdown[open]")
       .forEach((other) => {
         if (other !== details) other.open = false;
@@ -282,14 +283,16 @@ interface NestedDisplayProps {
  */
 function NestedDisplay({ info, display, afform }: NestedDisplayProps) {
   const [store] = useState(() => memoryStore(""));
-  if (display && display.type !== "table")
-    return <Unsupported what={`subsearch display type ${display.type}`} />;
+  const type = display?.type;
+  if (type !== undefined && !isDisplayType(type))
+    return <Unsupported what={`subsearch display type ${type}`} />;
   const settings = display && isDisplaySettings(display.settings) ? display.settings : undefined;
   return (
     <UrlState store={store} onlyElement>
       <AfreactSearch
         search={info.search}
         display={info.display}
+        type={type}
         settings={settings}
         afform={afform}
         filters={info.filters}

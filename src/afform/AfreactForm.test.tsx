@@ -395,7 +395,7 @@ describe("AfreactForm", () => {
       { "#comment": "note" },
       { "#tag": "div", "af-if": "x", "#children": [{ "#text": "never shown" }] },
       { "#text": "{{ total }}" },
-      { "#tag": "crm-search-display-grid", "#children": [] },
+      { "#tag": "crm-search-display-batch", "#children": [] },
       { "#tag": "crm-search-display-table", settings: { limit: 5 } },
       {
         "#tag": "div",
@@ -419,7 +419,7 @@ describe("AfreactForm", () => {
     ).toEqual([
       'af-if="x"',
       "Angular expression {{ total }}",
-      "<crm-search-display-grid>",
+      "<crm-search-display-batch>",
       "search display settings without columns",
       "af-required on first_name",
       "field last_name without metadata",

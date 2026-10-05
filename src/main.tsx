@@ -61,7 +61,7 @@ class AfreactFormElement extends ReactElement {
   }
 }
 
-/** <afreact-search search="SavedSearch" display="SearchDisplay"> renders a SearchKit table. */
+/** <afreact-search search="SavedSearch" display="SearchDisplay"> renders a SearchKit display. */
 class AfreactSearchElement extends ReactElement {
   protected view() {
     return <AfreactSearch search={this.required("search")} display={this.required("display")} />;

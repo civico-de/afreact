@@ -68,6 +68,8 @@ that no longer excuses anything fails the test.
 | Errors from `Afform.submit` and `submitDraft` | an alert only | the same alert, plus a summary above the form that takes focus and lists each message |
 | Confirmation message | replaces the form; the focus is lost with the button | replaces the form and takes the focus |
 | Reset button | `resetForm()` tells the fields to reset (`afFormReset`) and prefills again | the form loads afresh, so repeats, conditions and draft state start over too |
+| Grid displays | boxes in plain `<div>`s | the same boxes with `role="list"` and `role="listitem"`, named by the display label where the display is loaded by name (a form's layout carries no label), as list displays are |
+| Tree items | `<li>` without `data-entity-id` | `<li data-entity-id>`, as list items have it, so focus can return to the row after a reload |
 
 ## Accessibility
 
@@ -90,13 +92,15 @@ instead of being dropped:
   RichTextEditor, File, Range and Location
 - File fields outside a form, as in search filters
 - directives outside plain HTML, forms, blocks, joins, repeats, search
-  fieldsets, tab sets and table displays (for example other search display
-  types); on `af-tabset` also `page-nav-buttons`, `page-nav-submit-text` and
-  `selected-tab` (6.20)
+  fieldsets, tab sets and table, list, grid and tree displays (for example the
+  batch and chart display types); on `af-tabset` also `page-nav-buttons`,
+  `page-nav-submit-text` and `selected-tab` (6.20)
 - FormBuilder's own widgets (`af-admin-list-menu`) and the message template
   editor's `crm-monaco`: both need the Angular application they belong to
 - table features: row editing (`editableRow`: new rows and full-row mode),
   drag to reorder in hierarchical tables, include columns
+- drag to reorder and re-parent in tree displays (`draggable`); the tree
+  itself renders, with the note
 - in-place editors for contact references (EntityRef), locations, and
   multi-value text, number, date or Yes/No fields; their cells stay read-only
 - bulk actions whose task is an Angular dialog (download, update, tag, merge
@@ -475,6 +479,31 @@ renders as an icon with neither text nor title (axe `link-name`, 6.18.1).
 `AbstractRunAction::formatLink` keeps the link's empty text rather than the
 text `getLinks` returns for the action; only `formatMultiLink` uses the
 latter. Both renderers show the link as the server returns it.
+
+**List, grid and tree displays.** Read from the source of `master` as of
+2026-10-05 (`ext/search_kit/ang/crmSearchDisplayTree/`,
+`crmSearchDisplay/traits/searchDisplayBaseTrait.service.js`), not run:
+- *The tree drops rows whose parent is filtered out.* `sortTree()` keeps at the
+  top level only rows without a parent value, so a row whose parent is not in
+  the results (another page, a filter) is not shown at all. React shows it at
+  the top level.
+- *Every reload closes the tree again.* `sortTree()` sets `collapsed` from
+  `collapsible: closed` on each run, so a popup form's save or a new filter
+  closes the branches the user opened. React keeps them open.
+- *The tree's toggle has no name or state.* The button holds an icon and the
+  child count, which the theme hides while the branch is open, and no
+  `aria-expanded` (`crmSearchDisplayTreeLeaf.html`). React names it
+  "%1 sub-items" and sets `aria-expanded` on every button with children.
+- *Focus is lost on a reload.* All three types replace their items with
+  loading placeholders, so a focused link or editor in an item is removed and
+  focus falls to the page. React returns it to the same control in the same
+  row once the rows are back.
+- *A section header for 0 reads "(none)".* The header templates show
+  `row.groupHeader || ts('(none)')` (`crmSearchDisplayListHeader.html`, its grid
+  twin). React shows the value and keeps "(none)" for empty ones.
+- *A multi-valued field starts a section on every row.* `groupRows()` compares
+  values with `!==`, and each row's list is a separate array. React compares
+  them by content.
 
 **Theme contrast below WCAG AA.** Riverlea (stream Minetta) links on the
 shaded rows of a striped table reach 4.2:1 (`#2c789b` on `#ededed`), and in

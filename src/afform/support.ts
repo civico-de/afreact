@@ -1,7 +1,7 @@
 import { parseFiltersAttribute, readsOptions, type DisplayFilters } from "../search/displayFilters";
-import { columnNote, unsupportedFeatures } from "../search/rows";
+import { columnNote, settingsOf, unsupportedFeatures } from "../search/rows";
 import { referencedTasks } from "../search/searchTasks";
-import { isDisplaySettings, type DisplaySettings } from "../search/types";
+import { displayTypeOf, isDisplaySettings, type DisplaySettings } from "../search/types";
 import { parseConditions } from "./conditions";
 import { interpolate } from "./expressions";
 import { INPUT_TYPES, inputTypeNote } from "./Field";
@@ -152,7 +152,7 @@ export function renderedKind(
   if (tag === "button" && node["ng-click"] === "afform.submit()") return "submit";
   if (tag === "button" && node["ng-click"] === "afform.submitDraft()") return "draft";
   if (tag === "button" && isResetButton(node)) return "reset";
-  if (tag === "crm-search-display-table") return "search";
+  if (displayTypeOf(tag) !== null) return "search";
   if (tag === "af-tabset") return "tabset";
   // A tab set renders its own tabs; anywhere else a tab has no set.
   if (tag === "af-tab") return "tab";
@@ -350,8 +350,9 @@ function searchProblems(node: ElementNode, scope: Scope): string[] {
   const check = searchDisplayCheck(node, scope.options, scope.tab);
   if (check.filters === null || !check.settings) return check.notes;
   const columns = check.settings.columns.flatMap((column) => columnNote(column) ?? []);
-  // The table names its features in one note.
-  const features = unsupportedFeatures(check.settings).join(", ");
+  // The display names its features in one note.
+  const type = displayTypeOf(node["#tag"]) ?? "table";
+  const features = unsupportedFeatures(check.settings, undefined, type).join(", ");
   return [...check.notes, ...(features ? [features] : []), ...new Set(columns)];
 }
 
@@ -467,7 +468,8 @@ export function taskDisplays(layout: LayoutNode[]): TaskDisplay[] {
     const { "search-name": search, "display-name": display, settings } = node;
     if (renderedKind(node) !== "search" || typeof search !== "string") return children;
     if (typeof display !== "string" || !isDisplaySettings(settings)) return children;
-    const referenced = referencedTasks(settings);
+    const type = displayTypeOf(node["#tag"]) ?? "table";
+    const referenced = referencedTasks(settingsOf(settings, type));
     return referenced === "all" || referenced.size
       ? [{ search, display, referenced }, ...children]
       : children;

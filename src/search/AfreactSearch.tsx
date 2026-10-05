@@ -1,33 +1,35 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Unsupported } from "../afform/Unsupported";
 import { api4, errorMessage, get, type ApiResult } from "../api/civi";
-import { onButtonKey } from "../keys";
 import { useUrlPrefix } from "../url/UrlState";
-import { BodyRows, ControlHeader, PlaceholderRows, TallyRow } from "./Body";
 import { ColumnPicker, useColumnToggles } from "./ColumnPicker";
-import { InlineEditContext, useInlineEdit } from "./inlineEdit";
+import { useInlineEdit } from "./inlineEdit";
+import { ItemList, TreeView } from "./Items";
+import { useKeptFocus } from "./keptFocus";
 import { useAutoOpen, useFormSuccess } from "./links";
 import { Pager, SearchButton } from "./Pager";
-import { ReorderRows, useReorder } from "./Reorder";
-import {
-  editsCells,
-  hasControlColumn,
-  headerClass,
-  isSortable,
-  runPage,
-  unlabelledHeader,
-  unsupportedFeatures,
-} from "./rows";
+import { useReorder } from "./Reorder";
+import { runPage, settingsOf, unsupportedFeatures } from "./rows";
+import { TableView } from "./Table";
 import { useTasks } from "./Tasks";
 import { DisplayHeader } from "./Toolbar";
-import { isDisplaySettings, type DisplaySettings, type Row, type RunPage } from "./types";
+import {
+  isDisplaySettings,
+  isDisplayType,
+  type DisplaySettings,
+  type DisplayType,
+  type Row,
+  type RunPage,
+} from "./types";
 import { displayKeys, positiveInteger, sortParser, sortText, type Sort } from "./urlKeys";
 
 interface AfreactSearchProps {
   search: string;
   display: string;
+  /** The display type of the layout's element; loaded with the settings when absent. */
+  type?: DisplayType;
   /** Settings Afform already compiled into the layout; loaded via the API when absent. */
   settings?: DisplaySettings;
   /** Embedding Afform, so SearchDisplay.run applies the form's access rules as in Angular. */
@@ -49,6 +51,7 @@ const NO_FILTERS = {};
 export function AfreactSearch({
   search,
   display,
+  type: givenType,
   settings: given,
   afform,
   filters = NO_FILTERS,
@@ -62,7 +65,7 @@ export function AfreactSearch({
     queryKey: ["SearchDisplay", "get", search, display],
     queryFn: async () => {
       const [found] = await get("SearchDisplay", {
-        select: ["label", "settings"],
+        select: ["label", "type", "settings"],
         where: [
           ["name", "=", display],
           ["saved_search_id.name", "=", search],
@@ -73,11 +76,14 @@ export function AfreactSearch({
       const settings = await withAutoColumns(search, found.settings);
       if (!isDisplaySettings(settings))
         throw new Error(ts("Search display %1 has no columns.", { 1: `${search}.${display}` }));
-      return { label: found.label ?? "", settings };
+      return { label: found.label ?? "", type: found.type, settings };
     },
     enabled: !given,
   });
-  const settings = given ?? loaded.data?.settings;
+  const loadedType = loaded.data?.type;
+  const type = givenType ?? (isDisplayType(loadedType) ? loadedType : "table");
+  const stored = given ?? loaded.data?.settings;
+  const settings = useMemo(() => stored && settingsOf(stored, type), [stored, type]);
   const [url, setUrl] = useQueryStates(
     { sort: sortParser, page: positiveInteger, limit: positiveInteger },
     { urlKeys: displayKeys(useUrlPrefix(display)) },
@@ -196,7 +202,11 @@ export function AfreactSearch({
     runParams: { ...params, ...columnParams, sort: activeSort, limit },
   });
 
+  useKeptFocus(root, loading);
+
   if (loaded.error) return <Failure error={loaded.error} />;
+  if (!givenType && loadedType !== undefined && !isDisplayType(loadedType))
+    return <Unsupported what={`display type ${String(loadedType)}`} />;
   if (!settings) return <p role="status">{ts("Loading…")}</p>;
   const label = loaded.data?.label ?? "";
   // A failed run shows no rows and no count, as searchDisplayBaseTrait does.
@@ -210,13 +220,12 @@ export function AfreactSearch({
     setPage(1);
   };
 
-  const directionOf = (key: string | undefined) =>
-    activeSort.find(([sorted]) => sorted === key)?.[1] ?? null;
   // setSort() of searchDisplaySortableTrait: Shift adds the column or flips it in place.
   const toggleSort = (key: string, add: boolean) => {
-    const direction = directionOf(key) === "ASC" ? "DESC" : "ASC";
+    const current = activeSort.find(([sorted]) => sorted === key)?.[1];
+    const direction = current === "ASC" ? "DESC" : "ASC";
     const next: Sort = add
-      ? activeSort.map(([sorted, current]) => [sorted, sorted === key ? direction : current])
+      ? activeSort.map(([sorted, was]) => [sorted, sorted === key ? direction : was])
       : [];
     if (!next.some(([sorted]) => sorted === key)) next.push([key, direction]);
     // Core's setSort() stays on the current page.
@@ -224,16 +233,30 @@ export function AfreactSearch({
     void setUrl({ sort: isDefault ? null : next });
   };
 
-  const pager = settings.pager;
-  const unsupported = [...unsupportedFeatures(settings, shown), ...tasks.notes];
+  const table = type === "table";
+  const pager = type === "tree" ? false : settings.pager;
+  const unsupported = [...unsupportedFeatures(stored ?? settings, shown, type), ...tasks.notes];
   const failed = counted.error ?? tallied.error ?? tasks.error ?? reorder.error;
-  const tally = settings.tally;
-  const columnCount = settings.columns.length + (hasControlColumn(settings) ? 1 : 0);
-  const tallyRow = !!result?.rows.length && !!tally && (
-    <TallyRow settings={settings} tally={tallied.data ?? null} hidden={hidden} />
-  );
+  const view = {
+    settings,
+    label,
+    loading,
+    result,
+    error: rows.error,
+    afform,
+    onLinkClick: tasks.onRowLink,
+    inlineEdit,
+  };
   return (
-    <div className="crm-search-display crm-search-display-table" ref={setRoot}>
+    <div
+      // A table carries the display's classes itself; the other types on this element.
+      className={[
+        "crm-search-display",
+        `crm-search-display-${type}`,
+        ...(table ? [] : (settings.classes ?? [])),
+      ].join(" ")}
+      ref={setRoot}
+    >
       {unsupported.length > 0 && <Unsupported what={unsupported.join(", ")} />}
       {failed ? <Failure error={failed} /> : null}
       <DisplayHeader
@@ -259,116 +282,22 @@ export function AfreactSearch({
       <p role="status" className="sr-only">
         {inlineEdit.announcement}
       </p>
-      <table className={(settings.classes ?? []).join(" ")} aria-busy={loading}>
-        <caption className="sr-only">{label}</caption>
-        <thead hidden={settings.hideThead === true}>
-          <tr>
-            <ControlHeader settings={settings} selectAll={tasks.header} />
-            {settings.columns.map((column, index) => {
-              if (hidden.has(index)) return null;
-              const direction = directionOf(column.key);
-              const sortKey = isSortable(column, settings) ? column.key : undefined;
-              // ARIA allows aria-sort on one header: the column sorted first.
-              const primary = !!column.key && activeSort[0]?.[0] === column.key;
-              const unlabelled = unlabelledHeader(column, index);
-              return (
-                <th
-                  key={index}
-                  scope="col"
-                  className={headerClass(column, !!sortKey)}
-                  title={
-                    sortKey
-                      ? ts("Click to sort results (shift-click to sort by multiple).")
-                      : undefined
-                  }
-                  aria-sort={
-                    primary ? (direction === "DESC" ? "descending" : "ascending") : undefined
-                  }
-                  // The whole cell sorts on click as in SearchKit; the label is the keyboard control.
-                  onClick={
-                    sortKey
-                      ? (event) => {
-                          toggleSort(sortKey, event.shiftKey);
-                        }
-                      : undefined
-                  }
-                >
-                  {sortKey && (
-                    <>
-                      <i
-                        className={`crm-i crm-search-table-column-sort-icon ${direction === "ASC" ? "fa-sort-asc" : direction === "DESC" ? "fa-sort-desc" : "fa-sort disabled"}`}
-                        aria-hidden="true"
-                      />{" "}
-                    </>
-                  )}
-                  <span
-                    className="crm-search-display-table-column-label"
-                    role={sortKey ? "button" : undefined}
-                    tabIndex={sortKey ? 0 : undefined}
-                    onKeyDown={
-                      sortKey
-                        ? onButtonKey((event) => {
-                            toggleSort(sortKey, event.shiftKey);
-                          })
-                        : undefined
-                    }
-                  >
-                    {column.label}
-                  </span>
-                  {unlabelled && <span className="sr-only">{unlabelled}</span>}
-                </th>
-              );
-            })}
-          </tr>
-          {tally && tally.header && tallyRow}
-        </thead>
-        {/* Core swaps the rows for placeholders while a run loads. */}
-        <tbody>
-          {loading && <PlaceholderRows settings={settings} hidden={hidden} />}
-          {result?.rows.length === 0 && settings.noResultsText !== false && (
-            <tr>
-              <td colSpan={columnCount}>
-                <p className="alert alert-info text-center">
-                  {/* Core falls back on an empty text too. */}
-                  {settings.noResultsText === undefined || settings.noResultsText === ""
-                    ? ts("None found.")
-                    : settings.noResultsText}
-                </p>
-              </td>
-            </tr>
-          )}
-          {!loading && rows.error && (
-            // searchDisplayError.html, e.g. for a search that ran past its time limit.
-            <tr>
-              <td colSpan={columnCount}>
-                <p className="alert alert-warning text-center" role="alert">
-                  <i className="crm-i fa-circle-exclamation" role="img" aria-hidden="true" />{" "}
-                  {errorMessage(rows.error)}
-                </p>
-              </td>
-            </tr>
-          )}
-          {result && (
-            <InlineEditContext value={editsCells(settings) ? inlineEdit : null}>
-              <ReorderRows reorder={reorder} rows={result.rows}>
-                {(drag) => (
-                  <BodyRows
-                    rows={result.rows}
-                    settings={settings}
-                    subsearch={result.subsearch}
-                    afform={afform}
-                    select={tasks.rowSelect}
-                    drag={drag}
-                    onLinkClick={tasks.onRowLink}
-                    hidden={hidden}
-                  />
-                )}
-              </ReorderRows>
-            </InlineEditContext>
-          )}
-        </tbody>
-        {tally && tally.footer !== false && tallyRow && <tfoot>{tallyRow}</tfoot>}
-      </table>
+      {type === "tree" ? (
+        <TreeView {...view} />
+      ) : table ? (
+        <TableView
+          {...view}
+          hidden={hidden}
+          activeSort={activeSort}
+          onSort={toggleSort}
+          tally={tallied.data ?? null}
+          selectAll={tasks.header}
+          select={tasks.rowSelect}
+          reorder={reorder}
+        />
+      ) : (
+        <ItemList type={type} {...view} />
+      )}
       {tasks.overlay}
       {pager && !!rowCount && (
         <Pager
@@ -386,6 +315,7 @@ export function AfreactSearch({
     </div>
   );
 }
+
 
 function Failure({ error }: { error: unknown }) {
   return (

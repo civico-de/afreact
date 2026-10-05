@@ -31,6 +31,8 @@ final class Assets {
       ->addStyleFile('org.civicrm.afform', 'ang/afCore.css')
       ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchDisplay.css')
       ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchDisplayTable.css')
+      ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchDisplayGrid.css')
+      ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchDisplayTree.css')
       ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchTasks.css')
       // What AfformMetadataInjector::preprocess() writes into afLocationInput's unit select.
       ->addVars('afreact', ['distanceUnit' => \CRM_Utils_Address::getDefaultDistanceUnit()]);

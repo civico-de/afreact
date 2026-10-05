@@ -89,7 +89,7 @@ function reactReady(scope: string): boolean {
 }
 
 /**
- * Angular has compiled the form and each outer table, grid or list display holds its first
+ * Angular has compiled the form and each outer SearchKit display holds its first
  * results (or waits for its search button): SearchKit's 600 ms filter debounce is a plain
  * timeout that Angular's testability does not see.
  */
@@ -97,7 +97,7 @@ function angularReady(scope: string): boolean {
   const root = document.querySelector(scope);
   if (!root?.querySelector("form > *")?.firstElementChild) return false;
   if (root.querySelector(".crm-search-loading-placeholder")) return false;
-  const tags = ["crm-search-display-table", "crm-search-display-grid", "crm-search-display-list"];
+  const tags = ["table", "grid", "list", "tree"].map((type) => `crm-search-display-${type}`);
   const selector = tags.join(", ");
   return [...root.querySelectorAll(selector)]
     .filter((display) => !display.parentElement?.closest(selector))

@@ -6,10 +6,10 @@ only the browser side changes. The builders (FormBuilder, SearchKit admin) stay
 Angular.
 
 Status: proof of concept. It covers one contact form with a joined email block,
-one SearchKit table and a form with live rules (conditions, required and
-disabled rules, token defaults, `ts()` / `crmUrl()` expressions), and measures
-them against the Angular runtime. Forms listed in a setting render with React
-wherever core places them (see [Rendering forms with React](#rendering-forms-with-react)).
+SearchKit table, list, grid and tree displays and a form with live rules
+(conditions, required and disabled rules, token defaults, `ts()` / `crmUrl()`
+expressions), and measures them against the Angular runtime. Forms listed in
+a setting render with React wherever core places them (see [Rendering forms with React](#rendering-forms-with-react)).
 [docs/plan.md](docs/plan.md) tracks what else Afform uses.
 
 ## How it works
@@ -19,7 +19,7 @@ wherever core places them (see [Rendering forms with React](#rendering-forms-wit
         │
         ├─ layout                       as the Angular runtime sees it (see below)
         ├─ Afform.prefill / .submit     unchanged core actions
-        └─ SearchDisplay.run            unchanged core action (tables)
+        └─ SearchDisplay.run            unchanged core action (displays)
 ```
 
 - **`Afreact.getForm`** (APIv4) runs the form's partial through core's Angular
@@ -49,12 +49,12 @@ wherever core places them (see [Rendering forms with React](#rendering-forms-wit
   | Element | Attributes | Renders |
   |---|---|---|
   | `<afreact-form>` | `name`, `source`, `options` (JSON object of a placement's arguments) | a FormBuilder form or search page |
-  | `<afreact-search>` | `search`, `display` | a SearchKit table display |
+  | `<afreact-search>` | `search`, `display` | a SearchKit table, list, grid or tree display |
   | `<afreact-compare>` | `pages` (JSON list of `{label, url}`) | the comparison page |
   | `<afreact-support>` | `listed` (JSON list of form names), `settings` (URL) | the support report |
 
 - **Data layer:** TanStack Query, one query per API call, keyed by its
-  parameters. Search tables follow SearchKit's rules: placeholder rows while a
+  parameters. Search displays follow SearchKit's rules: placeholder rows while a
   page loads, a `row_count` request only when the first page is full or the
   header shows the count, a `tally` request for a totals row, and a reload of
   all three when a popup form of the display (`crmPopupFormSuccess`) succeeds.
@@ -234,6 +234,7 @@ CIVICRM_BASE_URL=http://localhost:8080 npm run test:e2e
 | `tests/browser/rules.spec.ts` | the rules form on both renderers: expressions, `af-if` (and the values it drops), `af-required`, `af-disabled`, a token default |
 | `tests/browser/joins.spec.ts` | the joins form on both renderers: a Home and a Work email block with Home hidden by `af-if`, the location each saves to on create, and the record each shows and updates from the URL; Angular's deviation is core's (see comparison.md) |
 | `tests/browser/table.spec.ts` | SearchKit tables on both renderers: equal cells, links, classes, toolbar, counts and totals on the demo fixtures and the core forms the React table renders without a note; row menus, the menu keyboard path, collapsible rows, a `crm-popup` link and the reload after a popup form |
+| `tests/browser/displays.spec.ts` | list, grid and tree displays on both renderers: equal items, columns, labels, classes, grid tracks and pager on the demo fixtures; tree branches opening alike, and on React their `aria-expanded` state and the keyboard path |
 | `tests/browser/editable.spec.ts` | in-place editing on both renderers: a text cell saved with Enter and an option list saved with the Save button store the same values; the column picker hides and shows the same columns; on React, opening by keyboard, focus back on Escape and a failed save that keeps the editor open |
 | `tests/browser/reorder.spec.ts` | drag to reorder on the demo options table: keyboard moves with announcements in React, pointer moves on both renderers, the stored weights and the order after a reload |
 | `tests/browser/filters.spec.ts` | search filters on both renderers: the same filters and rows from the defaults, the URL, stored values and a saved filter set, with one page request and no excluded row shown on first load; typed filters and a reload; the first-row time of each renderer |
