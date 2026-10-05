@@ -56,6 +56,8 @@ import {
   unknownFieldAttributes,
   unsupportedElement,
 } from "./support";
+import { Tabset } from "./Tabs";
+import { tabOutsideNote } from "./tabsets";
 import { Unsupported } from "./Unsupported";
 
 export interface FormState {
@@ -116,8 +118,26 @@ const KIND_VIEWS: Record<NodeKind, (props: { node: ElementNode }) => ReactNode> 
   searchFieldset: SearchFieldsetNode,
   fieldset: FieldsetNode,
   join: JoinNode,
+  tabset: TabsetNode,
+  tab: ({ node }) => (
+    <>
+      <Unsupported what={tabOutsideNote(node["#tag"])} />
+      <Children node={node} />
+    </>
+  ),
   element: Element,
 };
+
+function TabsetNode({ node }: { node: ElementNode }) {
+  const { formName, expressions } = useForm();
+  return (
+    <Tabset
+      {...{ node, formName, expressions }}
+      nodes={(nodes) => <Nodes nodes={nodes} />}
+      element={(outer, children) => <Element node={outer}>{children}</Element>}
+    />
+  );
+}
 
 function Node({ node }: { node: LayoutNode }): ReactNode {
   if (!isElement(node)) {

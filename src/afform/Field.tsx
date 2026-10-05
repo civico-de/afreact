@@ -2,6 +2,7 @@ import { useId, type ReactNode } from "react";
 import { onButtonKey } from "../keys";
 import { ChainSelect } from "./fields/ChainSelect";
 import { EntityRef } from "./fields/EntityRef";
+import { Toggle } from "./fields/Toggle";
 import type { FieldDefn, FieldOption } from "./types";
 import { Unsupported } from "./Unsupported";
 
@@ -44,6 +45,7 @@ export const INPUT_TYPES: ReadonlySet<string> = new Set([
   "DisplayOnly",
   "EntityRef",
   "ChainSelect",
+  "Toggle",
 ]);
 
 export function inputTypeNote(defn: FieldDefn): string {
@@ -315,6 +317,13 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
         return <EntityRef {...{ id, defn, value, onChange, disabled, describedBy }} />;
       case "ChainSelect":
         return <ChainSelect {...{ id, defn, value, onChange, disabled, describedBy }} />;
+      case "Toggle":
+        return (
+          <Toggle
+            {...{ id, defn, value, onChange, disabled, describedBy }}
+            options={fieldOptions(defn)}
+          />
+        );
       default:
         return null;
     }

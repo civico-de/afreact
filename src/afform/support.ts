@@ -6,6 +6,7 @@ import { parseConditions } from "./conditions";
 import { interpolate } from "./expressions";
 import { INPUT_TYPES, inputTypeNote } from "./Field";
 import { entityRefProblem } from "./fields/autocomplete";
+import { isTabOf, TAB_COUNT, tabOutsideNote, tabsetProblems, tabsOf } from "./tabsets";
 import type { ElementNode, FieldDefn, LayoutNode } from "./types";
 import { isElement, isFieldDefn } from "./types";
 
@@ -72,6 +73,7 @@ const HANDLED = new Set([
   "ctrl",
   "ng-form",
   "ng-href",
+  "crm-ui-tab-set",
 ]);
 /** af-field attributes the renderer uses; `class` goes onto the field wrapper. */
 const FIELD_ATTRIBUTES = new Set([
@@ -118,6 +120,8 @@ export type NodeKind =
   | "searchFieldset"
   | "fieldset"
   | "join"
+  | "tabset"
+  | "tab"
   | "element";
 
 export const SUBMIT_BUTTON_CONDITION = "afform.showSubmitButton";
@@ -141,7 +145,11 @@ export function renderedKind(
   if (tag === "af-form") return "form";
   if (tag === "button" && node["ng-click"] === "afform.submit()") return "submit";
   if (tag === "crm-search-display-table") return "search";
+  if (tag === "af-tabset") return "tabset";
+  // A tab set renders its own tabs; anywhere else a tab has no set.
+  if (tag === "af-tab") return "tab";
   if (unsupportedElement(node) !== null) return "unknown";
+  if (node["crm-ui-tab-set"] !== undefined) return "tabset";
   // An empty af-fieldset wraps a search page's filters rather than an entity.
   if (node["af-fieldset"] === "") return "searchFieldset";
   if (node["af-fieldset"]) return "fieldset";
@@ -218,11 +226,12 @@ export type SearchDisplayCheck =
 
 /**
  * The notes of a search display element, and whether its table renders (filters not null).
- * `options` are a placement's arguments, undefined outside one.
+ * `options` are a placement's arguments, undefined outside one; `inTab` inside a tab set.
  */
 export function searchDisplayCheck(
   node: ElementNode,
   options: Record<string, unknown> | undefined,
+  inTab: boolean,
 ): SearchDisplayCheck {
   const attributes = unknownSearchAttributes(node);
   const notes = attributes ? [attributes] : [];
@@ -237,8 +246,8 @@ export function searchDisplayCheck(
       notes: [...notes, "display filters from options outside a placement"],
       filters: null,
     };
-  // Core writes the row count into the page's scope; nothing reads it here.
-  if (node["total-count"] !== undefined)
+  // Core writes the row count into the page's scope; only a tab's badge reads it here.
+  if (node["total-count"] !== undefined && !(inTab && node["total-count"] === TAB_COUNT))
     notes.push(`total-count=${JSON.stringify(node["total-count"])}`);
   return { notes, filters: parsed.filters, settings };
 }
@@ -273,6 +282,8 @@ interface Scope {
   filters: boolean;
   /** A placement's arguments, undefined outside one. */
   options: Record<string, unknown> | undefined;
+  /** Inside a tab, whose badge a display's row count can go to. */
+  tab: boolean;
 }
 
 function filterFieldProblems(node: ElementNode): string[] {
@@ -312,7 +323,7 @@ function inputProblems(defn: FieldDefn): string[] {
 
 /** The display's notes, and those its table shows whatever the rows. */
 function searchProblems(node: ElementNode, scope: Scope): string[] {
-  const check = searchDisplayCheck(node, scope.options);
+  const check = searchDisplayCheck(node, scope.options, scope.tab);
   if (check.filters === null || !check.settings) return check.notes;
   const columns = check.settings.columns.flatMap((column) => columnNote(column) ?? []);
   // The table names its features in one note.
@@ -366,6 +377,19 @@ const KIND_PROBLEMS: Record<NodeKind, (node: ElementNode, scope: Scope) => strin
           }),
         ]
       : [joinOutsideFieldsetNote(String(node["af-join"]))],
+  tabset: (node, scope) => [
+    ...elementProblems(node),
+    ...(node["#tag"] === "af-tabset" ? tabsetProblems(node) : []),
+    ...tabsOf(node, CHECK_ONLY).flatMap((tab) => [
+      ...tab.problems,
+      ...layoutProblemsIn(tab.content, { ...scope, tab: true }),
+    ]),
+    ...layoutProblemsIn(
+      (node["#children"] ?? []).filter((child) => !isTabOf(node, child)),
+      scope,
+    ),
+  ],
+  tab: (node, scope) => [tabOutsideNote(node["#tag"]), ...childProblems(node, scope)],
   element: (node, scope) => [...elementProblems(node), ...childProblems(node, scope)],
 };
 
@@ -384,7 +408,13 @@ function layoutProblemsIn(nodes: LayoutNode[], scope: Scope): string[] {
  * `options` stand for a placement's arguments.
  */
 export function layoutProblems(layout: LayoutNode[], options?: Record<string, unknown>): string[] {
-  return layoutProblemsIn(layout, { entity: false, repeated: false, filters: false, options });
+  return layoutProblemsIn(layout, {
+    entity: false,
+    repeated: false,
+    filters: false,
+    options,
+    tab: false,
+  });
 }
 
 export interface TaskDisplay {

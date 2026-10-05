@@ -1,0 +1,20 @@
+<af-form ctrl="afform">
+  <af-entity data="{contact_type: 'Individual', source: 'Afreact demo'}" type="Contact" name="Individual1" label="Individual 1" actions="{create: true, update: true}" security="RBAC" url-autofill="1" />
+  <af-tabset remember-selection="true">
+    <af-tab name="name" title="Name" icon="fa-user">
+      <fieldset af-fieldset="Individual1" class="af-container">
+        <af-field name="first_name" />
+        <af-field name="last_name" defn="{required: true}" />
+      </fieldset>
+    </af-tab>
+    <af-tab name="privacy" title="Privacy" icon="fa-lock">
+      <fieldset af-fieldset="Individual1" class="af-container">
+        <af-field name="is_opt_out" defn="{input_type: 'Toggle'}" />
+      </fieldset>
+    </af-tab>
+    <af-tab name="contacts" title="Contacts" icon="fa-list-alt">
+      <crm-search-display-table search-name="Afreact_Demo_Contacts" display-name="Afreact_Demo_Contacts_Table" total-count="$parent.count"></crm-search-display-table>
+    </af-tab>
+  </af-tabset>
+  <button class="af-button btn btn-primary" crm-icon="fa-check" ng-click="afform.submit()">{{:: ts('Save') }}</button>
+</af-form>

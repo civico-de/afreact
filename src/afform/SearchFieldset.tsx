@@ -39,6 +39,8 @@ import {
   searchRangeNote,
   unknownFilterAttributes,
 } from "./support";
+import { TabCount, useTab } from "./Tabs";
+import { TAB_COUNT } from "./tabsets";
 import type { ElementNode, LayoutNode } from "./types";
 import { isElement, isFieldDefn } from "./types";
 import { FieldEnvContext } from "./fields/env";
@@ -329,7 +331,9 @@ export function FieldsetDisplay({ node, formName }: FieldsetDisplayProps) {
   const display = String(node["display-name"]);
   const fieldset = useSearchFieldset();
   const options = useContext(RouteOptionsContext);
-  const check = useMemo(() => searchDisplayCheck(node, options), [node, options]);
+  const tab = useTab();
+  const inTab = tab !== null;
+  const check = useMemo(() => searchDisplayCheck(node, options, inTab), [node, options, inTab]);
   const params = useHashParams(check.filters ? routeKeys(check.filters) : []);
   const notes = check.notes.map((note) => <Unsupported key={note} what={note} />);
   if (check.filters === null) return notes;
@@ -341,6 +345,14 @@ export function FieldsetDisplay({ node, formName }: FieldsetDisplayProps) {
   return (
     <>
       {notes}
+      {inTab && node["total-count"] === TAB_COUNT && (
+        <TabCount
+          search={String(node["search-name"])}
+          display={String(node["display-name"])}
+          afform={formName}
+          filters={own}
+        />
+      )}
       <AfreactSearch
         search={search}
         display={display}
@@ -349,7 +361,7 @@ export function FieldsetDisplay({ node, formName }: FieldsetDisplayProps) {
         afform={formName}
         filters={merged(fieldset?.state.applied)}
         typed={merged(fieldset?.state.values)}
-        enabled={fieldset?.ready ?? true}
+        enabled={(fieldset?.ready ?? true) && (tab?.shown ?? true)}
       />
     </>
   );

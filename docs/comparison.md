@@ -55,6 +55,12 @@ that no longer excuses anything fails the test.
 | Emptying an in-place text | saves `""` | saves `null` where the field can be emptied |
 | Totals after an in-place edit | kept (see upstream bugs) | asked again |
 | Drag to reorder | jQuery UI sortable, pointer only | dnd-kit: pointer, and keyboard (Space or Enter, arrow keys) with screen-reader announcements; dnd-kit loads with the first draggable table on a page. Hierarchical tables show a note instead |
+| Toggle fields | checkbox drawn as a switch | the same checkbox with `role="switch"` |
+| Tab sets (`af-tabset`, `crm-ui-tab-set`) | tab list with clickable links | ARIA tabs pattern: `role="tab"` on the focusable element with `aria-selected` and `aria-controls`, one tab in the Tab order, arrow keys, Home and End |
+| Tab names without `name` | `tab0`, `tab1` … from one counter per page | numbered per tab set, the same on a page with one tab set |
+| Tab under `url-arg` | written to the URL also when the page opens | written when the user selects a tab |
+| Invalid field in a hidden tab | submit does nothing visible (6.20 also blocks moving to a later tab while the current one has an invalid field) | submit selects the field's tab and the browser points at the field; moving between tabs is free |
+| Tab badge from `total-count="$parent.count"` | counted after 900 ms without the form's filter values | counted at once, also without the form's filter values |
 
 ## Accessibility
 
@@ -72,12 +78,17 @@ instead of being dropped:
 
 - Angular expressions other than `:: ts('…')` and `crmUrl(…)`
 - field types other than Text, Email, Url, Number, Hidden, TextArea, Date,
-  Select, Radio, CheckBox, DisplayOnly, EntityRef and ChainSelect — notably File
+  Select, Radio, CheckBox, DisplayOnly, EntityRef, ChainSelect and Toggle —
+  notably File
 - quick-add links on reference fields (`input_attrs.quickAdd`); the field
   itself still works
 - range inputs in search filters (`search_range`)
 - directives outside plain HTML, forms, blocks, joins, repeats, search
-  fieldsets and table displays (for example tabs and other search display types)
+  fieldsets, tab sets and table displays (for example other search display
+  types); on `af-tabset` also `page-nav-buttons`, `page-nav-submit-text` and
+  `selected-tab` (6.20)
+- FormBuilder's own widgets (`af-admin-list-menu`) and the message template
+  editor's `crm-monaco`: both need the Angular application they belong to
 - table features: row editing (`editableRow`: new rows and full-row mode),
   drag to reorder in hierarchical tables, include columns
 - in-place editors for contact references (EntityRef), locations, and
@@ -226,6 +237,34 @@ form: a click, or Enter in a field, runs `Afform.submit` and submits the case
 form as well (`master` as of 2026-10-05; read from the code, not run). The
 React renderer keeps its own `<form>` inside the case form: controls submit
 that form, and its submit event stops there.
+
+**`url-arg` blanks the tab set outside the Angular page.** On 6.18 afTabset
+binds `url-arg` with `$scope.$bindToRoute()` (`afTabset.component.js:24`),
+which needs the route of a `civicrm/a` page. On a form's own page it throws
+and the tab set renders nothing (read from the code). `master` (6.20) reads
+the hash with `$location.search()` instead
+([`014650dbd5`](https://github.com/civicrm/civicrm-core/commit/014650dbd5)).
+The React renderer keeps the tab in the hash on every page.
+
+**A stale tab name shows an empty tab set.** On 6.18 a `url-arg` value or a
+remembered tab that names no tab becomes the selected tab, so no panel shows
+and no tab is active; fixed on `master` (6.20). The React renderer ignores
+such a name and opens the first tab.
+
+**A tab's title becomes a tooltip on its panel.** afTab reads `title` as a
+binding but leaves the attribute on `<af-tab>`, so hovering anywhere in the
+panel shows the tab's title. The React renderer drops the attribute.
+
+**Nested tab panels in `crm-ui-tab-set`.** `crmUi/tabset.html` gives the
+wrapper around all panels `role="tabpanel"`, and jQuery UI gives each panel
+the same role, so every panel is a tab panel inside another one. The React
+renderer leaves the wrapper without a role.
+
+**A required field in a hidden tab blocks submit silently.** afTab hides its
+panel with `ng-show`; the browser refuses to submit while a control in it is
+invalid and cannot point at it, so nothing visible happens. The React
+renderer selects that tab first, and the browser shows its message at the
+field.
 
 **A space before the comma in linked lists.** SearchKit's `colType/link.html`
 leaves whitespace between each linked value and its comma, so a multi-valued
