@@ -142,6 +142,86 @@ must provide:
 - Afform dashlets rendered by React;
 - URL dashlets loaded as core does, through `CRM.loadPage`.
 
+**How core renders a dashlet** (6.18, unchanged on `master` but for the
+removal of `_` in 2026):
+- `CRM_Contact_Page_DashBoard::run()` queues the Angular module
+  `crmDashboard` (`DashBoard.php:42`). `DashBoardDashlet.tpl` puts
+  `<crm-dashboard>` inside `<crm-angular-js>`. No dashlet data is passed in:
+  the component asks for it with `DashboardContact.initialize` and
+  `Dashboard.get` joined to the user's `DashboardContact` rows
+  (`crmDashboard.component.js:35-50`). The last answer stays in `CRM.cache`
+  (`dashboardDashlets`) for the next load.
+- A dashlet with a `directive` includes the partial
+  `~/crmDashboard/directives/<directive>.html` inside a `<form>`
+  (`Dashlet.html:17`). The module's `partialsCallback`
+  `CRM_Core_BAO_Dashboard::angularPartials` writes that partial as
+  `<directive></directive>` for every Dashboard record with a directive
+  (`crmDashboard.ang.php:12`). `addDashboardModuleDependencies` (an
+  `angularModules` listener at -2000) adds the module exporting each
+  directive to `crmDashboard`'s `requires`.
+- Afform creates one managed Dashboard record per form placed as
+  `dashboard_dashlet`: `name` is the form name, `directive` its dash-case
+  directive, `permission` `@afform:<name>` (`afform.php:103-122`).
+- A URL dashlet loads through `CRM.loadPage` into `.crm-dashlet-content`,
+  cached in `CRM.cache` (`dashboard`) for `cache_minutes`
+  (`crmDashlet.component.js:30-75`). "Refresh" reloads the URL; for a
+  directive it removes the `<form>` and puts it back 10 ms later, which
+  compiles the directive afresh (`:60-70`).
+- Layout writes go through one `DashboardContact.save` 2 s after the last
+  change: `records` of `{dashboard_id, id?, is_active, column_no, weight}`,
+  `defaults: {contact_id: 'user_contact_id'}`, indexed by `dashboard_id`
+  (`crmDashboard.component.js:129-178`). "Delete for all users" runs
+  `Dashboard.delete` (`:219`). Moving and adding dashlets is jQuery UI
+  sortable, mouse only (see the upstream bugs in comparison.md).
+
+**Chosen: React dashlets inside core's dashboard.** The dashboard screen
+stays core's Angular one; only the dashlets of listed forms change renderer.
+- An `angularModules` listener after core's (-2100) wraps `crmDashboard`'s
+  `partialsCallback`. The listed forms' partials become
+  `<afreact-form name="<form>">`, and their modules leave `crmDashboard`'s
+  `requires`, so their Angular code is not loaded on the dashboard.
+- `hook_civicrm_pageRun` on `CRM_Contact_Page_DashBoard` adds the bundle
+  when a listed form is placed as a dashlet.
+- Changing `afreact_forms` clears core's Angular cache and the resource cache
+  code, as saving an Afform does, so the next dashboard load gets the new
+  partials.
+- An element that leaves the page drops the query answers no other element
+  observes. "Refresh" and "View fullscreen", which take the dashlet's markup
+  away and put it back, therefore load the form afresh, as a recompiled
+  directive does.
+- Data, permissions, columns, drag, add and remove, fullscreen, URL dashlets
+  and the writes all stay core's, unchanged. Nothing is written on install;
+  the setting alone switches.
+- Unlisted Afform dashlets and directive dashlets of other extensions stay
+  Angular, as before.
+- Inside core's dashlet the React form element sits in core's `<form>`. A
+  nested form is legal in a script-built DOM; its own submit stays inside it.
+
+Size: about 120 lines PHP, 20 lines TypeScript, 270 lines of tests.
+
+**Follow-up: the dashboard screen in React** (≈ 1,300 including tests). It
+would replace `DashBoardDashlet.tpl`'s `<crm-dashboard>` behind a setting:
+- columns and the "available dashlets" drawer with its filter;
+- dnd-kit drag between columns and from the drawer, with keyboard sensor and
+  live announcements, plus an "Add" button per available dashlet, which core
+  lacks;
+- remove, collapse, refresh, fullscreen in `<dialog>`, admin delete
+  (`Dashboard.delete`);
+- URL dashlets through `CRM.loadPage` with core's `CRM.cache` entries and the
+  `cache_minutes` checker;
+- the same `initialize` / `get` / debounced `save` calls, with dnd-kit as a
+  lazy chunk.
+
+What does not go away is Angular for every directive dashlet React cannot
+render: unlisted Afforms and other extensions' directives. Each would need an
+Angular island, `angular.bootstrap()` on the dashlet with the module that
+exports its directive, and the page would still queue those modules through
+`angularjs.loader`. Separate injectors per island should work, since core's
+crmDashboard shares no service with its dashlets; this is not verified. So
+the React screen pays off when keyboard reordering and adding is wanted, not
+for the number of forms React renders, which the chosen design already
+covers.
+
 Total: roughly 6,000 lines, several weeks of work.
 
 ## Status and next steps

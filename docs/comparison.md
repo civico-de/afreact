@@ -505,6 +505,15 @@ latter. Both renderers show the link as the server returns it.
   values with `!==`, and each row's list is a separate array. React compares
   them by content.
 
+**Dashboard layout needs a mouse.** Core's dashboard moves dashlets between
+columns and adds them from "Available Dashlets" only by drag and drop
+(`ui-sortable`, jQuery UI sortable, in `ang/crmDashboard/Dashboard.html`),
+which has no keyboard path; an available dashlet has no other way onto the
+dashboard. Present on 6.18 and `master` as of 2026-10-05. afreact renders
+listed Afform dashlets inside core's dashboard and leaves its layout alone,
+so the gap remains until the dashboard screen itself moves to React (plan,
+package 8).
+
 **Theme contrast below WCAG AA.** Riverlea (stream Minetta) links on the
 shaded rows of a striped table reach 4.2:1 (`#2c789b` on `#ededed`), and in
 dark mode white text on grey buttons reaches 3.1:1 (`#ffffff` on `#919297`);

@@ -1,0 +1,6 @@
+{
+  "type": "search",
+  "title": "Afreact demo dashlet contact types",
+  "placement": ["dashboard_dashlet"],
+  "permission": ["access CiviCRM"]
+}

@@ -129,9 +129,10 @@ Where React reads the URL differently from core:
 The setting **Forms rendered with React** (`afreact_forms`, at
 `civicrm/admin/setting/afreact`) lists the forms React renders; every other
 form stays Angular. Saving the setting rebuilds the route table, as core's
-settings forms do. The listeners in `Civi\Afreact` (`FormPage`, `Placements`,
-`PlacedSnippets`) run after core's placement listeners and swap only what core
-put there, so placement rules, filters, titles and weights stay core's:
+settings forms do, and clears core's Angular cache, as saving an Afform does.
+The listeners in `Civi\Afreact` (`FormPage`, `Placements`, `PlacedSnippets`,
+`Dashlets`) run after core's placement listeners and swap only what core put
+there, so placement rules, filters, titles and weights stay core's:
 
 | Where core shows the form | What changes for a listed form |
 |---|---|
@@ -140,12 +141,15 @@ put there, so placement rules, filters, titles and weights stay core's:
 | contact summary block, case summary block | the region snippet `afform:<name>` gets the React markup |
 | contact summary block in ContactLayout | the block's template is swapped |
 | contact actions popup | the popup loads the form's page; the form reads its arguments from the popup URL, triggers `crmFormSuccess` on save and closes the popup, as `afForm` does |
+| dashboard dashlet | core's Angular dashboard stays; the partial it includes for the form's directive holds `<afreact-form>`, and the form's Angular module is not loaded there. Refresh and fullscreen load the form afresh |
 
-The dashboard is not taken over yet, nor are the SearchKit and FormBuilder
-previews, which belong to the Angular builders. Core's placement listeners
-still queue the listed form's Angular module on pages that place it; its
-directive is never rendered. Unsupported parts of a listed form show the
-visible "Not supported" note.
+The SearchKit and FormBuilder previews, which belong to the Angular builders,
+are not taken over. Except on the dashboard, core's placement listeners still
+queue the listed form's Angular module on pages that place it; its directive
+is never rendered. Unsupported parts of a listed form show the visible "Not
+supported" note. The dashboard screen itself, with its columns and drag and
+drop, and every unlisted dashlet stay core's (see
+[docs/plan.md](docs/plan.md), package 8).
 
 The **support report** (`civicrm/admin/afreact`) lists every form but blocks,
 which core only places inside other forms, with what React cannot show yet.
@@ -153,8 +157,7 @@ It walks each form's layout with the same checks the renderer words its notes
 with (`src/afform/support.ts`), so the report and the rendered form agree
 (pinned by `tests/browser/support.spec.ts`). A form placed only in tabs or
 summary blocks is checked with its placement's options; its preview has none,
-so a display filtered by them shows a note there only. A listed form shown only
-as a dashlet stays Angular, and the report says so.
+so a display filtered by them shows a note there only.
 
 ## Pages
 
@@ -238,6 +241,7 @@ CIVICRM_BASE_URL=http://localhost:8080 npm run test:e2e
 | `tests/browser/editable.spec.ts` | in-place editing on both renderers: a text cell saved with Enter and an option list saved with the Save button store the same values; the column picker hides and shows the same columns; on React, opening by keyboard, focus back on Escape and a failed save that keeps the editor open |
 | `tests/browser/reorder.spec.ts` | drag to reorder on the demo options table: keyboard moves with announcements in React, pointer moves on both renderers, the stored weights and the order after a reload |
 | `tests/browser/filters.spec.ts` | search filters on both renderers: the same filters and rows from the defaults, the URL, stored values and a saved filter set, with one page request and no excluded row shown on first load; typed filters and a reload; the first-row time of each renderer |
+| `tests/browser/dashboard.spec.ts` | on core's dashboard a listed Afform dashlet renders with React next to an unlisted one in Angular, without the listed form's Angular module; refresh and fullscreen render it again; unlisted, both are Angular |
 | `tests/browser/a11y.spec.ts` | axe in light and dark mode finds nothing on the React demo and rules forms, the demo tables (menu and subsearch open), the editable table with its column picker and a filtered search form that the Angular ones pass |
 | `tests/browser/sweep.spec.ts` | every form but blocks on both renderers: the same headings, help, fields (label, input, required, disabled, value), buttons, table headers and first-page rows, and no axe finding that only React has; forms the support report finds nothing unsupported in must pass, the others are reported |
 

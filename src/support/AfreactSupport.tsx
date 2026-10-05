@@ -58,9 +58,11 @@ export function checkedOptions(row: SupportRow): Record<string, unknown> | undef
   return !row.server_route && inlinePlaced(row) ? {} : undefined;
 }
 
-/** Whether a listed form is rendered by React somewhere: on its page or placed inline. */
+/** Whether a listed form is rendered by React somewhere: on its page, placed inline or as a dashlet. */
 export function takenOver(row: SupportRow): boolean {
-  return !!row.server_route || inlinePlaced(row);
+  return (
+    !!row.server_route || inlinePlaced(row) || strings(row.placement).includes("dashboard_dashlet")
+  );
 }
 
 interface AfreactSupportProps {

@@ -1,7 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { lazy, Suspense } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { queryClient } from "./api/query";
+import { dropUnobserved, queryClient } from "./api/query";
 import { AfreactForm } from "./afform/AfreactForm";
 import { placementOptions } from "./afform/model";
 import { popupLocation } from "./afform/popup";
@@ -31,6 +31,7 @@ abstract class ReactElement extends HTMLElement {
   disconnectedCallback() {
     this.root?.unmount();
     this.root = null;
+    dropUnobserved(queryClient);
   }
 
   protected required(attribute: string): string {

@@ -9,9 +9,10 @@ use Civi\Api4\Afform;
 /**
  * The `afreact_forms` setting: the forms React renders wherever core places them.
  *
- * FormPage takes over their pages, Placements their tabs and ContactLayout blocks, and
- * PlacedSnippets their summary blocks. Each runs after core's listeners (placement listeners
- * at 0, hook functions at -100) and replaces only what core put there.
+ * FormPage takes over their pages, Placements their tabs and ContactLayout blocks,
+ * PlacedSnippets their summary blocks and Dashlets their dashlets. Each runs after core's
+ * listeners (placement listeners at 0, hook functions at -100, the dashboard's modules at
+ * -2000) and replaces only what core put there.
  */
 final class Takeover {
 

@@ -189,10 +189,11 @@ describe("checkedOptions and takenOver", () => {
     expect(checkedOptions({ ...placed, server_route: null, placement: [] })).toBeUndefined();
   });
 
-  it("takes over a form's page and inline placements, not its dashlet", () => {
+  it("takes over a form's page, inline placements and dashlet", () => {
     expect(takenOver(placed)).toBe(true);
     expect(takenOver({ ...placed, server_route: null })).toBe(true);
-    expect(takenOver(dashlet)).toBe(false);
+    expect(takenOver(dashlet)).toBe(true);
+    expect(takenOver({ ...placed, server_route: null, placement: [] })).toBe(false);
   });
 });
 
