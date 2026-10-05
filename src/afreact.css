@@ -1,9 +1,9 @@
 .afreact-unsupported { border: 1px dashed currentColor; padding: 0.25rem 0.5rem; }
 .afreact-status:empty { display: none; }
-/* Native selects take the size and warning border the theme gives select2 boxes. */
+/* Native selects take the size the theme gives select2 boxes, and its warning border once changed. */
 .crm-container af-field .afreact-select { display: inline-block; width: var(--crm-input-width); max-width: 100%; }
 .crm-container af-field .afreact-select > select.form-control { width: 100%; }
-.crm-container af-field .afreact-select > select.form-control:invalid { border-color: var(--crm-warning-color); }
+.crm-container af-field .afreact-select > select.form-control:user-invalid { border-color: var(--crm-warning-color); }
 /* The native date field needs room for its format and calendar icon; the theme sizes for the datepicker. */
 .crm-container .crm-form-date-wrapper > input.crm-form-date { width: auto; }
 .afreact-compare-controls { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
@@ -15,3 +15,8 @@
 /* Row and toolbar menus are popovers in the top layer; the script places them under their button. */
 .crm-container .dropdown-menu.afreact-menu:popover-open { position: fixed; bottom: auto; }
 .afreact-support-problems { margin: 0; padding-left: 1.25rem; }
+/* select2 sizes its search input by script and shows focus only on an open list. */
+.afreact-combobox .select2-choices .select2-search-field { flex: 1 1 8em; }
+.afreact-combobox .select2-choices .select2-search-field input.select2-input { width: 100%; }
+.afreact-combobox:focus-within .select2-choices { outline: 2px solid var(--crm-focus-color, Highlight); outline-offset: 1px; }
+.afreact-combobox .select2-search-choice-close:focus-visible { outline: 2px solid var(--crm-focus-color, Highlight); }

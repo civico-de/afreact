@@ -5,6 +5,7 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 import { isReady } from "../../src/compare/metrics";
+import { api } from "./harness";
 
 const PAGES = { react: "/civicrm/afreact/demo", angular: "/civicrm/afreact/angular" };
 const TOLERANCE_PX = 2;
@@ -50,6 +51,14 @@ const BY_DESIGN: Record<string, { skip: string[]; reason: string }> = {
     reason: "the native date field shows its format and calendar icon, wider than the datepicker's",
   },
   "clear 1": { skip: ["x"], reason: "the date's clear link follows the wider date field" },
+};
+
+/** Up to 6.19 the theme warns on an untouched required select; from 6.20 only on a changed one, as React does. */
+const BEFORE_6_20: typeof BY_DESIGN = {
+  "control 5": {
+    skip: ["border-top-color"],
+    reason: "the untouched required select has no warning border in React",
+  },
 };
 
 interface Measured {
@@ -105,7 +114,12 @@ async function measure(page: Page, url: string): Promise<Measured[]> {
 }
 
 /** Differences per pair; those BY_DESIGN excuses are left out and their entry noted as used. */
-function differences(react: Measured[], angular: Measured[], used: Set<string>): string[] {
+function differences(
+  react: Measured[],
+  angular: Measured[],
+  byDesign: typeof BY_DESIGN,
+  used: Set<string>,
+): string[] {
   const found: string[] = [];
   const byKey = new Map(angular.map((part) => [part.key, part]));
   for (const key of new Set([...react.map((part) => part.key), ...byKey.keys()])) {
@@ -115,10 +129,10 @@ function differences(react: Measured[], angular: Measured[], used: Set<string>):
       found.push(`${key}: only in ${r ? "React" : "Angular"}`);
       continue;
     }
-    const entry = key in BY_DESIGN ? key : key.replace(/ \d+$/, "");
+    const entry = key in byDesign ? key : key.replace(/ \d+$/, "");
     const label = a.text ? `${key} "${a.text}"` : key;
     const report = (aspect: string, message: string) => {
-      if (BY_DESIGN[entry]?.skip.includes(aspect)) used.add(entry);
+      if (byDesign[entry]?.skip.includes(aspect)) used.add(entry);
       else found.push(`${label}: ${message}`);
     };
     if (r.text !== a.text) report("text", `text "${r.text}" vs "${a.text}"`);
@@ -142,12 +156,19 @@ test("the React page looks like the Angular page", async ({ page }, testInfo) =>
   await testInfo.attach("angular.png", { body: await shot(page), contentType: "image/png" });
 
   const used = new Set<string>();
-  const found = differences(measured.react, measured.angular, used);
+  // Core's own extensions carry core's version.
+  const [afform] = await api<{ version: string }>(page, "Extension", "get", {
+    select: ["version"],
+    where: [["key", "=", "org.civicrm.afform"]],
+  });
+  const [major = 0, minor = 0] = afform!.version.split(".").map(Number);
+  const byDesign = major === 6 && minor < 20 ? { ...BY_DESIGN, ...BEFORE_6_20 } : BY_DESIGN;
+  const found = differences(measured.react, measured.angular, byDesign, used);
   await testInfo.attach("differences.txt", { body: found.join("\n"), contentType: "text/plain" });
   expect(measured.react.length).toBeGreaterThan(30);
   expect(found, "React vs Angular (React first)").toEqual([]);
   // An exception that excuses nothing would hide the next regression of that part.
-  expect(Object.keys(BY_DESIGN).filter((entry) => !used.has(entry))).toEqual([]);
+  expect(Object.keys(byDesign).filter((entry) => !used.has(entry))).toEqual([]);
 });
 
 /** Contact rows stay out of the report. */
