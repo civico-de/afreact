@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
+import { renderWithQuery } from "../test/render";
 import { Field, fieldClasses, INPUT_TYPES } from "./Field";
+import { FieldEnvContext } from "./fields/env";
 import type { FieldDefn } from "./types";
 
 function Harness({
@@ -220,9 +222,9 @@ describe("Field", () => {
       <Harness defn={{ input_type: "DisplayOnly" }} initial="Shown" onValue={() => undefined} />,
     );
     expect(screen.getByText("Shown").tagName).toBe("OUTPUT");
-    render(<Harness defn={{ input_type: "EntityRef" }} onValue={() => undefined} />);
+    render(<Harness defn={{ input_type: "RichTextEditor" }} onValue={() => undefined} />);
     expect(screen.getByRole("note")).toHaveTextContent(
-      "Not supported by the React renderer: field type EntityRef (Field)",
+      "Not supported by the React renderer: field type RichTextEditor (Field)",
     );
   });
 
@@ -242,14 +244,17 @@ describe("Field", () => {
 
   it("renders a control for every input type the support report accepts, and a note otherwise", () => {
     const options = [{ id: 1, label: "One" }];
+    const env = { formName: "f", modelName: "Individual1", fieldName: "field", values: {} };
     for (const input_type of INPUT_TYPES) {
-      const { unmount } = render(
-        <Harness defn={{ input_type, options }} onValue={() => undefined} />,
+      const { unmount } = renderWithQuery(
+        <FieldEnvContext.Provider value={env}>
+          <Harness defn={{ input_type, options, fk_entity: "Contact" }} onValue={() => undefined} />
+        </FieldEnvContext.Provider>,
       );
       expect(screen.queryByRole("note"), input_type).toBeNull();
       unmount();
     }
-    render(<Harness defn={{ input_type: "ChainSelect" }} onValue={() => undefined} />);
-    expect(screen.getByRole("note")).toHaveTextContent("field type ChainSelect (Field)");
+    render(<Harness defn={{ input_type: "File" }} onValue={() => undefined} />);
+    expect(screen.getByRole("note")).toHaveTextContent("field type File (Field)");
   });
 });

@@ -304,7 +304,7 @@ describe("SearchFieldset", () => {
           fk_entity: "Contact",
           afform_default: "user_contact_id",
         }),
-        field("state", { label: "State", input_type: "ChainSelect" }),
+        field("state", { label: "State", input_type: "File" }),
         field("created_date", {
           label: "Created",
           input_type: "Date",
@@ -313,16 +313,23 @@ describe("SearchFieldset", () => {
       ],
     );
     window.CRM.config = { cid: 3 };
-    const { runs } = renderSearch("", layout);
+    const { runs, calls } = renderSearch("", layout, {
+      "Contact.autocomplete": () => [{ id: 3, label: "Admin" }],
+    });
     await screen.findByRole("cell", { name: "Row" });
     expect(
       screen.getAllByRole("note").map((note) => note.textContent?.replace(/^.*: /, "")),
-    ).toEqual([
-      "field type EntityRef (Created By)",
-      "field type ChainSelect (State)",
-      "search range (Created)",
-    ]);
+    ).toEqual(["field type File (State)", "search range (Created)"]);
     expect(runs()).toEqual([{ is_active: true, created_id: 3 }]);
+    // The default contact's label comes from the field's autocomplete.
+    expect(await screen.findByRole("combobox", { name: "Created By" })).toHaveValue("Admin");
+    expect(calls.find(({ call }) => call === "Contact.autocomplete")?.params).toMatchObject({
+      quickEdit: false,
+      formName: "afform:afsearchGroups",
+      fieldName: "Groups:created_id",
+      values: { created_id: 3 },
+      ids: [3],
+    });
     delete window.CRM.config;
   });
 

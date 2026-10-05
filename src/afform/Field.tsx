@@ -1,5 +1,7 @@
 import { useId, type ReactNode } from "react";
 import { onButtonKey } from "../keys";
+import { ChainSelect } from "./fields/ChainSelect";
+import { EntityRef } from "./fields/EntityRef";
 import type { FieldDefn, FieldOption } from "./types";
 import { Unsupported } from "./Unsupported";
 
@@ -40,6 +42,8 @@ export const INPUT_TYPES: ReadonlySet<string> = new Set([
   "Radio",
   "CheckBox",
   "DisplayOnly",
+  "EntityRef",
+  "ChainSelect",
 ]);
 
 export function inputTypeNote(defn: FieldDefn): string {
@@ -163,6 +167,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
           value={textValue(value)}
           placeholder={attrs.placeholder}
           maxLength={attrs.maxlength}
+          minLength={defn.input_type === "Text" ? attrs.minlength : undefined}
           min={attrs.min}
           max={attrs.max}
           step={numeric ? (attrs.step ?? 1) : undefined}
@@ -183,6 +188,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
             rows={attrs.rows ?? 4}
             cols={attrs.cols ?? 60}
             maxLength={attrs.maxlength}
+            minLength={attrs.minlength}
             value={textValue(value)}
             onChange={(event) => {
               const text = event.target.value;
@@ -305,6 +311,10 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
         );
       case "DisplayOnly":
         return <output id={id}>{textValue(value)}</output>;
+      case "EntityRef":
+        return <EntityRef {...{ id, defn, value, onChange, disabled, describedBy }} />;
+      case "ChainSelect":
+        return <ChainSelect {...{ id, defn, value, onChange, disabled, describedBy }} />;
       default:
         return null;
     }

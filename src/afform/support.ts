@@ -4,7 +4,8 @@ import { isDisplaySettings, type DisplaySettings } from "../search/types";
 import { parseConditions } from "./conditions";
 import { interpolate } from "./expressions";
 import { INPUT_TYPES, inputTypeNote } from "./Field";
-import type { ElementNode, LayoutNode } from "./types";
+import { entityRefProblem } from "./fields/autocomplete";
+import type { ElementNode, FieldDefn, LayoutNode } from "./types";
 import { isElement, isFieldDefn } from "./types";
 
 /**
@@ -281,7 +282,7 @@ function filterFieldProblems(node: ElementNode): string[] {
   const problems = unknown.length ? [fieldAttributesNote(unknown, name)] : [];
   const label = defn.label === false ? name : (defn.label ?? name);
   if (defn.search_range) problems.push(searchRangeNote(label));
-  else if (!INPUT_TYPES.has(defn.input_type)) problems.push(inputTypeNote(defn));
+  else problems.push(...inputProblems(defn));
   return problems;
 }
 
@@ -297,8 +298,15 @@ function fieldProblems(node: ElementNode, scope: Scope): string[] {
   ];
   const problems = unknown.length ? [fieldAttributesNote(unknown, name)] : [];
   const primary = name === "is_primary" && scope.repeated;
-  if (!primary && !INPUT_TYPES.has(defn.input_type)) problems.push(inputTypeNote(defn));
+  if (!primary) problems.push(...inputProblems(defn));
   return problems;
+}
+
+/** The input type, or the part of an EntityRef's setup, the renderer cannot show. */
+function inputProblems(defn: FieldDefn): string[] {
+  if (!INPUT_TYPES.has(defn.input_type)) return [inputTypeNote(defn)];
+  const problem = defn.input_type === "EntityRef" ? entityRefProblem(defn) : null;
+  return problem === null ? [] : [problem];
 }
 
 /** The display's notes, and those its table shows whatever the rows; task links need rows. */

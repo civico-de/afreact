@@ -31,8 +31,20 @@ export default defineConfig({
         entryFileNames: "afreact.js",
         chunkFileNames: "chunks/[name]-[hash].js",
         assetFileNames: "afreact.[ext]",
-        // Libraries shared with lazy chunks live in a chunk of their own.
-        codeSplitting: { groups: [{ name: "vendor", test: /node_modules/ }] },
+        // Libraries shared with lazy chunks live in a chunk of their own; Downshift and its
+        // dependencies load only with the first EntityRef.
+        codeSplitting: {
+          groups: [
+            {
+              name: "downshift",
+              test: /node_modules\/(downshift|compute-scroll-into-view|prop-types|react-is|tslib|@babel\/runtime)\//,
+              priority: 1,
+              // Otherwise the group pulls in React, which the entry then loads from it.
+              includeDependenciesRecursively: false,
+            },
+            { name: "vendor", test: /node_modules/ },
+          ],
+        },
       },
     },
   },

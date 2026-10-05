@@ -34,8 +34,6 @@ type Unexplained<Hand, Seen, Ignored extends string> =
   | Exclude<UnknownKeys<Hand, Seen>, Ignored>
   | Exclude<Ignored, UnknownKeys<Hand, Seen>>;
 
-/** Read by core's Angular runtime but not yet by the renderer; each is an open item in docs/plan.md. */
-type FieldDefnOpen = "dfk_entities" | "input_attrs.autoOpen" | "input_attrs.control_field";
 /** Not read in the browser: datepicker options for native date inputs, the ng-include path, unused option data. */
 type FieldDefnIgnored =
   | "input_attrs.date"
@@ -67,7 +65,7 @@ type TableRunOpen = "editable" | "labels";
 type TableRunIgnored = "rows[].columns[].label" | "rows[].columns[].dataType";
 
 export const fieldDefn: Record<
-  Unexplained<FieldDefn, Core.FieldDefn, FieldDefnOpen | FieldDefnIgnored>,
+  Unexplained<FieldDefn, Core.FieldDefn, FieldDefnIgnored>,
   never
 > = {};
 export const tableSettings: Record<

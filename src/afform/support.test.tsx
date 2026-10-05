@@ -36,7 +36,7 @@ const layout: LayoutNode[] = [
         "af-title": "{{ person.title }}",
         "#children": [
           field("first_name", {}, { "ng-model": "x", "af-required": "(broken" }),
-          field("state", { label: "State", input_type: "ChainSelect" }),
+          field("state", { label: "State", input_type: "File" }),
           { "#tag": "div", "af-if": always, "#children": [field("last_name")] },
           {
             "#tag": "afblock-contact-email",
@@ -85,7 +85,7 @@ describe("layoutProblems", () => {
       'af-if="(not json"',
       "Angular expression {{ person.title }}",
       'ng-model, af-required="(broken" on first_name',
-      "field type ChainSelect (State)",
+      "field type File (State)",
     ]);
   });
 
@@ -100,12 +100,12 @@ describe("layoutProblems", () => {
             "#tag": "div",
             "af-join": "Phone",
             "af-repeat": "Add",
-            "#children": [field("x", { input_type: "EntityRef" })],
+            "#children": [field("x", { input_type: "RichTextEditor" })],
           },
         ],
       },
     ];
-    expect(layoutProblems(hidden)).toEqual(["<marquee>", "field type EntityRef (x)"]);
+    expect(layoutProblems(hidden)).toEqual(["<marquee>", "field type RichTextEditor (x)"]);
   });
 
   it("finds nothing in a layout the renderer fully supports", () => {
@@ -179,7 +179,7 @@ const healthySearch = searchForm([
 const gappySearch = searchForm([
   field("title", {}, { "ng-model": "x" }),
   field("created_date", { label: "Created", search_range: true }),
-  field("parent", { label: "Parent", input_type: "ChainSelect" }),
+  field("parent", { label: "Parent", input_type: "File" }),
   display(
     {
       columns: [
@@ -223,7 +223,7 @@ describe("search forms", () => {
     expect(report).toEqual([
       "ng-model on title",
       "search range (Created)",
-      "field type ChainSelect (Parent)",
+      "field type File (Parent)",
       "ng-click on <crm-search-display-table>",
       'total-count="count"',
       "setting seeMore, setting pager.jump, drag to reorder (draggable)",

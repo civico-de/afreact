@@ -1,7 +1,12 @@
 import type { AfreactVars } from "../afform/source";
 import type { Entities } from "./entities.gen";
 
-export type ApiResult<R> = R[] & { count?: number; rowCount?: number; countMatched?: number };
+export type ApiResult<R> = R[] & {
+  count?: number;
+  rowCount?: number;
+  countMatched?: number;
+  countFetched?: number;
+};
 
 /** The part of a jQuery object the renderer uses to cooperate with CiviCRM's popups (js/crm.ajax.js). */
 export interface JQueryObject {

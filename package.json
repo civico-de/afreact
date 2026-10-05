@@ -15,7 +15,10 @@
     "core-shape": "docker compose -f .docker/docker-compose.yml exec -T -u www-data -e AFREACT_WRITE_CORE_SHAPE=1 -w /var/www/html/ext/afreact app vendor/bin/phpunit --filter CoreShapeHeadlessTest"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
     "@tanstack/react-query": "^5.104.0",
+    "downshift": "^9.4.0",
     "nuqs": "2.10.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

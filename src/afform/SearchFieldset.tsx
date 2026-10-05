@@ -40,6 +40,7 @@ import {
 } from "./support";
 import type { ElementNode, LayoutNode } from "./types";
 import { isElement, isFieldDefn } from "./types";
+import { FieldEnvContext } from "./fields/env";
 import { Unsupported } from "./Unsupported";
 
 /**
@@ -52,6 +53,9 @@ interface FieldsetContextValue {
   dispatch: ActionDispatch<[FieldsetAction]>;
   /** False until a saved filter set (`#?_s=`) has loaded. */
   ready: boolean;
+  /** afFieldset.getName() and the form, for the fields that call the server. */
+  name: string;
+  formName: string;
 }
 
 const SearchFieldsetContext = createContext<FieldsetContextValue | null>(null);
@@ -180,7 +184,10 @@ export function SearchFieldset({ node, formName, children }: SearchFieldsetProps
 
   useUrlWriter(fields, name, state, context);
 
-  const value = useMemo(() => ({ state, dispatch, ready }), [state, ready]);
+  const value = useMemo(
+    () => ({ state, dispatch, ready, name, formName }),
+    [state, ready, name, formName],
+  );
   return (
     <SearchFieldsetContext.Provider value={value}>
       {paramSet.isError && (
@@ -265,32 +272,41 @@ export function FilterFieldNode({
     defn.search_range ? (
       <Unsupported what={searchRangeNote(label)} />
     ) : (
-      <Field
-        defn={defn}
-        value={value}
-        disabled={false}
-        onChange={(next) => {
-          dispatch({ type: "input", field, value: next });
+      <FieldEnvContext.Provider
+        value={{
+          formName: fieldset.formName,
+          modelName: fieldset.name,
+          fieldName: name,
+          values: state.values,
         }}
-        operator={
-          defn.expose_operator ? (
-            <select
-              className="form-control afform-search-operator"
-              aria-label={ts("Operator")}
-              value={operator ?? ""}
-              onChange={(event) => {
-                dispatch({ type: "operator", field, operator: event.target.value });
-              }}
-            >
-              {Object.entries(defn.operators ?? {}).map(([key, text]) => (
-                <option key={key} value={key}>
-                  {text}
-                </option>
-              ))}
-            </select>
-          ) : undefined
-        }
-      />
+      >
+        <Field
+          defn={defn}
+          value={value}
+          disabled={false}
+          onChange={(next) => {
+            dispatch({ type: "input", field, value: next });
+          }}
+          operator={
+            defn.expose_operator ? (
+              <select
+                className="form-control afform-search-operator"
+                aria-label={ts("Operator")}
+                value={operator ?? ""}
+                onChange={(event) => {
+                  dispatch({ type: "operator", field, operator: event.target.value });
+                }}
+              >
+                {Object.entries(defn.operators ?? {}).map(([key, text]) => (
+                  <option key={key} value={key}>
+                    {text}
+                  </option>
+                ))}
+              </select>
+            ) : undefined
+          }
+        />
+      </FieldEnvContext.Provider>
     ),
   );
 }

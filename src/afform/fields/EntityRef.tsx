@@ -1,0 +1,133 @@
+import { skipToken, useQuery } from "@tanstack/react-query";
+import { lazy, Suspense, useState } from "react";
+import { errorMessage } from "../../api/civi";
+import { ClearButton } from "../Field";
+import type { FieldDefn } from "../types";
+import { Unsupported } from "../Unsupported";
+import {
+  entityRefProblem,
+  hasQuickAdd,
+  itemText,
+  modelValue,
+  resolveIds,
+  searchedEntity,
+  searchPage,
+  valueIds,
+  type AutocompleteItem,
+  type SearchContext,
+} from "./autocomplete";
+import { useFieldEnv } from "./env";
+
+/** Downshift loads with the first EntityRef on a page. */
+const Combobox = lazy(async () => ({ default: (await import("./Combobox")).Combobox }));
+
+interface EntityRefProps {
+  id: string;
+  defn: FieldDefn;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  disabled: boolean;
+  describedBy: string | undefined;
+}
+
+/** fields/EntityRef.html: crm-autocomplete on the field's entity, single or multiple. */
+export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: EntityRefProps) {
+  const env = useFieldEnv("EntityRef");
+  const [known, setKnown] = useState<ReadonlyMap<string, AutocompleteItem>>(new Map());
+  const [failed, setFailed] = useState<string | null>(null);
+  const target = searchedEntity(defn, env);
+  const entity = "entity" in target ? target.entity : null;
+  const attrs = defn.input_attrs ?? {};
+  const multiple = !!attrs.multiple;
+  const ids = valueIds(value);
+  const missing = ids.filter((item) => !known.has(String(item)));
+  const resolved = useQuery({
+    queryKey: [
+      entity,
+      "autocomplete",
+      env.formName,
+      env.modelName,
+      env.joinEntity,
+      env.fieldName,
+      missing,
+    ],
+    queryFn: entity !== null && missing.length ? () => resolveIds(entity, env, missing) : skipToken,
+  });
+  const lookup = new Map(known);
+  for (const item of resolved.data ?? []) lookup.set(String(item.id), item);
+  const selected = ids.flatMap((item) => lookup.get(String(item)) ?? []);
+  const notFound = resolved.isSuccess ? ids.filter((item) => !lookup.has(String(item))) : [];
+
+  const change = (next: (string | number)[]) => {
+    const model = modelValue(defn, next);
+    onChange(model);
+    setFailed(null);
+    // afField's onSelectEntity(): an autofill field loads the chosen record into the form.
+    env.onSelect?.(model).catch((error: unknown) => {
+      setFailed(errorMessage(error));
+    });
+  };
+  const load = async (input: string, context: SearchContext) => {
+    if (entity === null) throw new Error(`${defn.name} has no entity to search`);
+    try {
+      return await searchPage(entity, env, input, context);
+    } catch (error) {
+      throw new Error(errorMessage(error), { cause: error });
+    }
+  };
+  const problem = entityRefProblem(defn);
+  const off = disabled || entity === null;
+  const props = {
+    id,
+    label: defn.label === false ? undefined : (defn.label ?? defn.name),
+    placeholder: attrs.placeholder,
+    describedBy,
+    className: defn.input_style ?? undefined,
+    disabled: off,
+    required: defn.required === true,
+    multiple,
+    // crmAutocomplete: autoOpen lists results before typing, unless quick-add links take the space.
+    minLength: attrs.autoOpen && !hasQuickAdd(defn) ? 0 : 1,
+    selected,
+    resolving: resolved.isFetching,
+    itemText,
+    load,
+    onSelect: (item: AutocompleteItem) => {
+      setKnown((previous) => new Map(previous).set(String(item.id), item));
+      change(multiple ? [...ids, item.id] : [item.id]);
+    },
+    onRemove: (item: AutocompleteItem) => {
+      change(ids.filter((other) => String(other) !== String(item.id)));
+    },
+  };
+  const errors = [
+    "error" in target ? target.error : null,
+    resolved.isError ? errorMessage(resolved.error) : null,
+    notFound.length ? ts("No record found for %1.", { 1: notFound.join(", ") }) : null,
+    failed,
+  ].filter((error) => error !== null);
+  return (
+    <>
+      {problem && <Unsupported what={problem} />}
+      <Suspense
+        fallback={
+          <input id={id} className="form-control" disabled placeholder={attrs.placeholder} />
+        }
+      >
+        <Combobox {...props} />
+      </Suspense>
+      {!multiple && ids.length > 0 && !off && (
+        <ClearButton
+          onClear={() => {
+            change([]);
+          }}
+        />
+      )}
+      {errors.map((error) => (
+        <span key={error} className="crm-error" role="alert">
+          {error}
+        </span>
+      ))}
+    </>
+  );
+}
