@@ -142,11 +142,63 @@ export function controlFieldName(defn: FieldDefn, env: FieldEnv, control: string
 export function entityRefProblem(defn: FieldDefn): string | null {
   if (!defn.fk_entity && !(defn.dfk_entities && defn.input_attrs?.control_field))
     return `field type EntityRef without fk_entity (${defn.name})`;
-  return hasQuickAdd(defn) ? `input_attrs.quickAdd on ${defn.name}` : null;
+  return null;
 }
 
 /** crmAutocomplete's quick-add links: true for every form of the entity, or a list of paths. */
 export function hasQuickAdd(defn: FieldDefn): boolean {
   const quickAdd = defn.input_attrs?.quickAdd;
   return quickAdd === true || (Array.isArray(quickAdd) && quickAdd.length > 0);
+}
+
+export interface QuickAddLink {
+  /** The form's path, with the field it fills in the hash. */
+  path: string;
+  title: string;
+  icon: string;
+}
+
+/**
+ * $.fn.crmAutocomplete's getQuickAddLinks(): the page's quick-add forms for the entity, a
+ * contact's being those of its contact types, or the listed paths; null without the page's list.
+ */
+export function quickAddLinks(
+  defn: FieldDefn,
+  entity: string,
+  env: FieldEnv,
+): QuickAddLink[] | null {
+  const quickAdd = defn.input_attrs?.quickAdd;
+  if (!hasQuickAdd(defn)) return [];
+  const forms = window.CRM.config?.quickAdd;
+  if (!forms) return null;
+  const types = entity === "Contact" ? ["Individual", "Organization", "Household"] : [entity];
+  const paths = Array.isArray(quickAdd)
+    ? quickAdd
+    : forms.filter((form) => types.includes(form.entity)).map((form) => form.path);
+  const { formName, fieldName } = autocompleteParams(env);
+  const hash = new URLSearchParams({ parentFormName: formName, parentFormFieldName: fieldName });
+  return paths.flatMap((path) => {
+    const form = forms.find((candidate) => candidate.path === path);
+    if (!form) return [];
+    return [{ path: `${path}#?${hash.toString()}`, title: form.title, icon: form.icon ?? "" }];
+  });
+}
+
+/** The id a quick-add form created: the first record of an entity in its submit response. */
+export function createdId(data: unknown): string | number | undefined {
+  const response: unknown =
+    isRecord(data) && Array.isArray(data.submissionResponse) ? data.submissionResponse[0] : null;
+  if (!isRecord(response)) return undefined;
+  let id: string | number | undefined;
+  // Core keeps the last entity's; a quick-add form saves one.
+  for (const records of Object.values(response)) {
+    const first: unknown = Array.isArray(records) ? records[0] : null;
+    const value = isRecord(first) ? first.id : undefined;
+    if ((typeof value === "number" || typeof value === "string") && value) id = value;
+  }
+  return id;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -12,8 +12,8 @@ export type ApiResult<R> = R[] & {
 /** The part of a jQuery object the renderer uses to cooperate with CiviCRM's popups (js/crm.ajax.js). */
 export interface JQueryObject {
   length: number;
-  on: (events: string, handler: () => void) => JQueryObject;
-  off: (events: string, handler: () => void) => JQueryObject;
+  on: (events: string, handler: (event: unknown, data?: unknown) => void) => JQueryObject;
+  off: (events: string, handler: (event: unknown, data?: unknown) => void) => JQueryObject;
   data: (key: string) => unknown;
   closest: (selector: string) => JQueryObject;
   trigger: (event: string, data?: unknown) => JQueryObject;
@@ -49,7 +49,18 @@ declare global {
         get: (name: string, defaultValue?: unknown) => unknown;
         set: (name: string, value: unknown) => void;
       };
-      config?: { cid?: number };
+      config?: {
+        cid?: number;
+        /** The quick-add forms the user may open (CRM_Core_Resources::getQuickAddForms). */
+        quickAdd?: { path: string; entity: string; title: string; icon?: string | null }[];
+      };
+      /** The site's rich text editor on a textarea (js/wysiwyg/crm.wysiwyg.js); create() resolves once it is ready. */
+      wysiwyg?: {
+        create: (item: Element) => { done: (callback: () => void) => unknown };
+        destroy: (item: Element) => void;
+        getVal: (item: Element) => string;
+        setVal: (item: Element, value: string) => void;
+      };
     };
   }
 }

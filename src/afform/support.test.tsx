@@ -36,7 +36,7 @@ const layout: LayoutNode[] = [
         "af-title": "{{ person.title }}",
         "#children": [
           field("first_name", {}, { "ng-model": "x", "af-required": "(broken" }),
-          field("state", { label: "State", input_type: "File" }),
+          field("state", { label: "State", input_type: "Signature" }),
           { "#tag": "div", "af-if": always, "#children": [field("last_name")] },
           {
             "#tag": "afblock-contact-email",
@@ -85,7 +85,7 @@ describe("layoutProblems", () => {
       'af-if="(not json"',
       "Angular expression {{ person.title }}",
       'ng-model, af-required="(broken" on first_name',
-      "field type File (State)",
+      "field type Signature (State)",
     ]);
   });
 
@@ -100,12 +100,12 @@ describe("layoutProblems", () => {
             "#tag": "div",
             "af-join": "Phone",
             "af-repeat": "Add",
-            "#children": [field("x", { input_type: "RichTextEditor" })],
+            "#children": [field("x", { input_type: "Signature" })],
           },
         ],
       },
     ];
-    expect(layoutProblems(hidden)).toEqual(["<marquee>", "field type RichTextEditor (x)"]);
+    expect(layoutProblems(hidden)).toEqual(["<marquee>", "field type Signature (x)"]);
   });
 
   it("finds nothing in a layout the renderer fully supports", () => {
@@ -163,6 +163,18 @@ const searchForm = (children: LayoutNode[]): LayoutNode[] => [
 /** A search form the renderer fully supports, as core's own search forms store it. */
 const healthySearch = searchForm([
   field("title", { search_operator: "CONTAINS" }, { class: "wide", "af-if": always }),
+  field("created_date", { input_type: "Date", data_type: "Timestamp", search_range: true }),
+  field("modified_date", {
+    input_type: "Select",
+    data_type: "Timestamp",
+    search_range: true,
+    is_date: 1,
+    options: [
+      { id: "{}", label: "Choose Date Range" },
+      { id: "this.month", label: "This month" },
+    ],
+  }),
+  field("children", { input_type: "Number", data_type: "Integer", search_range: true }),
   display(
     {
       pager: { show_count: true, hide_single: true, expose_limit: true },
@@ -178,7 +190,7 @@ const healthySearch = searchForm([
 /** Something of every kind the renderer flags in a search form. */
 const gappySearch = searchForm([
   field("title", {}, { "ng-model": "x" }),
-  field("created_date", { label: "Created", search_range: true }),
+  field("created_date", { label: "Created", input_type: "Radio", search_range: true }),
   field("parent", { label: "Parent", input_type: "File" }),
   display(
     {
@@ -224,7 +236,7 @@ describe("search forms", () => {
     expect(report).toEqual([
       "ng-model on title",
       "search range (Created)",
-      "field type File (Parent)",
+      "file upload outside a form (Parent)",
       "ng-click on <crm-search-display-table>",
       'total-count="count"',
       "setting seeMore, setting pager.jump, drag to reorder in hierarchical tables (draggable)",

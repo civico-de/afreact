@@ -1,0 +1,191 @@
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { mockApi, renderWithQuery } from "../../test/render";
+import { memoryStore } from "../../url/hash";
+import { AfreactForm } from "../AfreactForm";
+import type { FieldDefn, LayoutNode } from "../types";
+
+const field = (name: string, defn: Partial<FieldDefn>): LayoutNode => ({
+  "#tag": "af-field",
+  name,
+  defn: { name, label: name, input_type: "Text", data_type: "String", search_range: true, ...defn },
+});
+
+function renderSearch(fields: LayoutNode[], hash = "") {
+  const layout: LayoutNode[] = [
+    {
+      "#tag": "div",
+      "af-fieldset": "",
+      "#children": [
+        ...fields,
+        {
+          "#tag": "crm-search-display-table",
+          "search-name": "Contacts",
+          "display-name": "Table",
+          settings: { columns: [{ type: "field", key: "id", label: "ID" }], limit: 5, pager: false },
+        },
+      ],
+    },
+  ];
+  const calls = mockApi({
+    "Afreact.getForm": () => [{ name: "afsearchTest", title: "T", type: "search", layout, strings: [] }],
+    "SearchDisplay.run": () => [{ key: 1, columns: [{ val: "Row" }] }],
+  });
+  const store = memoryStore(hash);
+  renderWithQuery(<AfreactForm name="afsearchTest" location={{ search: "", hash }} />, store);
+  const runs = () =>
+    calls.filter(({ call }) => call === "SearchDisplay.run").map(({ params }) => params.filters);
+  /** Waits for the search after the last change. */
+  const lastRun = async (expected: unknown) => {
+    await waitFor(
+      () => {
+        expect(runs().at(-1)).toEqual(expected);
+      },
+      { timeout: 2000 },
+    );
+  };
+  return { runs, lastRun, store };
+}
+
+describe("search ranges", () => {
+  it("searches a number range with both bounds as numbers, in a group named by the label", async () => {
+    const { runs, lastRun } = renderSearch([
+      field("count", {
+        label: "Count",
+        input_type: "Number",
+        data_type: "Integer",
+        input_attrs: { step: 5, min: 0, placeholder: "Low", placeholder2: "High" },
+      }),
+    ]);
+    await screen.findByRole("cell", { name: "Row" });
+    expect(runs()).toEqual([{}]);
+    const group = screen.getByRole("group", { name: "Count" });
+    const low = within(group).getByRole("spinbutton", { name: "Count from" });
+    const high = within(group).getByRole("spinbutton", { name: "Count to" });
+    expect(low).toHaveAttribute("step", "5");
+    expect(low).toHaveAttribute("min", "0");
+    expect(low).toHaveAttribute("placeholder", "Low");
+    expect(high).toHaveAttribute("placeholder", "High");
+    // The label points at the low input.
+    await userEvent.click(screen.getByText("Count"));
+    expect(low).toHaveFocus();
+    await userEvent.type(low, "5");
+    await userEvent.type(high, "10");
+    await lastRun({ count: { ">=": 5, "<=": 10 } });
+    await userEvent.clear(high);
+    await lastRun({ count: { ">=": 5 } });
+  });
+
+  it("keeps the operator out of a range and searches text bounds as typed", async () => {
+    const { lastRun } = renderSearch([
+      field("postal_code", { label: "Postal code", search_operator: "CONTAINS" }),
+    ]);
+    await screen.findByRole("cell", { name: "Row" });
+    await userEvent.type(screen.getByRole("textbox", { name: "Postal code from" }), "10115");
+    await userEvent.type(screen.getByRole("textbox", { name: "Postal code to" }), "10999");
+    await lastRun({ postal_code: { ">=": "10115", "<=": "10999" } });
+  });
+
+  it("fills a date range from the URL and clears one bound", async () => {
+    const { runs, lastRun } = renderSearch(
+      [field("created_date", { label: "Created", input_type: "Date", data_type: "Timestamp" })],
+      `#?created_date=${encodeURIComponent('{">=":"2026-01-01","<=":"2026-01-31"}')}`,
+    );
+    await screen.findByRole("cell", { name: "Row" });
+    expect(runs()).toEqual([{ created_date: { ">=": "2026-01-01", "<=": "2026-01-31" } }]);
+    expect(screen.getByLabelText("Created from")).toHaveValue("2026-01-01");
+    const [, clearHigh] = screen.getAllByRole("button", { name: "Clear" });
+    await userEvent.click(clearHigh ?? document.body);
+    expect(screen.getByLabelText("Created to")).toHaveValue("");
+    await lastRun({ created_date: { ">=": "2026-01-01" } });
+  });
+
+  it("writes date and time bounds of a field with time as the datepicker does", async () => {
+    const { lastRun } = renderSearch([
+      field("start", {
+        label: "Start",
+        input_type: "Date",
+        data_type: "Timestamp",
+        input_attrs: { time: true },
+      }),
+    ]);
+    await screen.findByRole("cell", { name: "Row" });
+    const low = screen.getByLabelText("Start from");
+    expect(low).toHaveAttribute("type", "datetime-local");
+    await userEvent.type(low, "2026-02-03T04:05");
+    await lastRun({ start: { ">=": "2026-02-03 04:05:00" } });
+  });
+
+  it("searches a select range with typed option ids", async () => {
+    const { lastRun } = renderSearch([
+      field("priority", {
+        label: "Priority",
+        input_type: "Select",
+        data_type: "Integer",
+        input_attrs: { placeholder: "Select" },
+        options: [
+          { id: 1, label: "Low" },
+          { id: 2, label: "Medium" },
+          { id: 3, label: "High" },
+        ],
+      }),
+    ]);
+    await screen.findByRole("cell", { name: "Row" });
+    const high = screen.getByRole("combobox", { name: "Priority to" });
+    expect(within(high).getAllByRole("option")[0]).toHaveTextContent("Select");
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Priority from" }), "Medium");
+    await userEvent.selectOptions(high, "High");
+    await lastRun({ priority: { ">=": 2, "<=": 3 } });
+    await userEvent.selectOptions(high, "Select");
+    await lastRun({ priority: { ">=": 2 } });
+  });
+
+  it("offers relative dates and a chosen pair of dates for a date shown as a select", async () => {
+    const { runs, lastRun, store } = renderSearch([
+      field("created_date", {
+        label: "Created",
+        input_type: "Select",
+        data_type: "Timestamp",
+        is_date: 1,
+        afform_default: "this.month",
+        options: [
+          { id: "{}", label: "Choose Date Range" },
+          { id: "this.month", label: "This month" },
+          { id: "previous.year", label: "Last year" },
+        ],
+      }),
+    ]);
+    await screen.findByRole("cell", { name: "Row" });
+    expect(runs()).toEqual([{ created_date: "this.month" }]);
+    const select = screen.getByRole("combobox", { name: "Created" });
+    expect(screen.queryByLabelText("Created from")).not.toBeInTheDocument();
+    await userEvent.selectOptions(select, "Last year");
+    await lastRun({ created_date: "previous.year" });
+    await waitFor(() => {
+      expect(store.params().get("created_date")).toBe("previous.year");
+    });
+    await userEvent.selectOptions(select, "Choose Date Range");
+    const group = screen.getByRole("group", { name: "Created" });
+    await userEvent.type(within(group).getByLabelText("Created from"), "2025-03-01");
+    await lastRun({ created_date: { ">=": "2025-03-01" } });
+    // Choosing the range again keeps the dates.
+    await userEvent.selectOptions(select, "Choose Date Range");
+    expect(within(group).getByLabelText("Created from")).toHaveValue("2025-03-01");
+  });
+
+  it("starts a date select on its date pair when the default is the range choice", async () => {
+    renderSearch([
+      field("created_date", {
+        label: "Created",
+        input_type: "Select",
+        data_type: "Date",
+        is_date: 1,
+        afform_default: "{}",
+        options: [{ id: "{}", label: "Choose Date Range" }],
+      }),
+    ]);
+    await screen.findByRole("cell", { name: "Row" });
+    expect(screen.getByRole("combobox", { name: "Created" })).toHaveValue("{}");
+    expect(screen.getByLabelText("Created to")).toHaveValue("");
+  });
+});

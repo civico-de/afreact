@@ -4,6 +4,7 @@ import { api4, errorMessage } from "../api/civi";
 import { RouteOptionsContext } from "../search/displayFilters";
 import type { ExpressionContext } from "./expressions";
 import { DisplayCountContext } from "../url/UrlState";
+import { uploadAll, UploadsContext, type Uploads } from "./fields/upload";
 import { FormContext, Nodes, type FormState } from "./Layout";
 import {
   applyPrefill,
@@ -22,6 +23,8 @@ import type { FormData, FormDefinition } from "./types";
 interface SubmitResponse {
   redirect?: string;
   message?: string;
+  /** Authorises the file uploads for the saved records (Afform.submitFile). */
+  token?: string;
 }
 
 interface AfreactFormProps {
@@ -143,13 +146,18 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
   const [data, setData] = useState(initial);
   const [invalid, setInvalid] = useState<string | null>(null);
   const host = useRef<HTMLDivElement>(null);
+  const [uploads] = useState<Uploads>(() => new Map());
+  const [uploading, setUploading] = useState<string | null>(null);
   const save = useMutation({
     mutationFn: async (values: FormData) => {
       const response = await api4<SubmitResponse>("Afform", "submit", { name, args, values });
-      return { values, response };
+      // afForm uploads the chosen files once the records exist, then finishes the submit.
+      const failed = await uploadAll(name, response[0]?.token, uploads, setUploading);
+      return { values, response, failed };
     },
-    onSuccess: ({ values, response }) => {
-      const { redirect, message } = response[0] ?? {};
+    onSuccess: ({ values, response, failed }) => {
+      // A failed upload keeps the form with its error, instead of a confirmation or redirect.
+      const { redirect, message } = failed.length ? {} : (response[0] ?? {});
       if (host.current) {
         const detail = {
           afform: { name, title: form.title },
@@ -164,7 +172,7 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
           : redirect;
     },
   });
-  const saved = save.data?.response[0];
+  const saved = save.data?.failed.length ? undefined : save.data?.response[0];
   const offsets = useMemo(() => joinOffsets(form.layout), [form]);
   const entities = useMemo(() => entityDeclarations(form.layout), [form]);
   // A redirect keeps the form busy until the browser leaves the page.
@@ -209,7 +217,8 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
       />
     );
   }
-  const failure = invalid ?? (save.isError ? errorMessage(save.error) : null);
+  const failure =
+    invalid ?? (save.isError ? errorMessage(save.error) : save.data?.failed.join(" ") || null);
   // afCore marks every form element afform-directive; theme rules anchor dropdowns and toolbars on it.
   return (
     <div className="afreact-form afform-directive" aria-busy={busy} ref={host}>
@@ -220,7 +229,13 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
       )}
       <p role="status" className="afreact-status">
         {/* Without a confirmation message Angular keeps the filled form and shows a "Saved" status. */}
-        {busy ? ts("Saving…") : save.isSuccess ? ts("Saved") : ""}
+        {uploading
+          ? ts("Uploading %1", { 1: uploading })
+          : busy
+            ? ts("Saving…")
+            : save.isSuccess
+              ? ts("Saved")
+              : ""}
       </p>
       <FormContext.Provider value={state}>
         <DisplayCountContext.Provider value={displays}>
@@ -237,7 +252,9 @@ function LoadedForm({ name, form, args, initial }: Loaded & { name: string }) {
                 submit();
               }}
             >
-              {createElement("af-form", null, <Nodes nodes={form.layout} />)}
+              <UploadsContext.Provider value={uploads}>
+                {createElement("af-form", null, <Nodes nodes={form.layout} />)}
+              </UploadsContext.Provider>
             </form>
           ) : (
             <Nodes nodes={form.layout} />

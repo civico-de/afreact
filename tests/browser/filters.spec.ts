@@ -50,7 +50,10 @@ const RECORD_ROWS = () => {
   Object.assign(window, { afreactSeenRows: seen });
   new MutationObserver(() => {
     for (const row of document.querySelectorAll(".afreact-render tbody tr")) {
-      const text = row.textContent?.trim() ?? "";
+      // React's editable cells also name their column for screen readers.
+      const copy = row.cloneNode(true) as Element;
+      for (const hidden of copy.querySelectorAll(".sr-only")) hidden.remove();
+      const text = (copy.textContent ?? "").replace(/\s+/g, " ").trim();
       if (text && !row.querySelector(".crm-search-loading-placeholder") && !seen.includes(text))
         seen.push(text);
     }
@@ -72,7 +75,14 @@ async function column(page: Page, header: string): Promise<string[]> {
   const headers = (await table.locator("thead th").allInnerTexts()).map((text) => text.trim());
   const index = headers.indexOf(header);
   if (index < 0) throw new Error(`No column "${header}" in ${JSON.stringify(headers)}`);
-  const cells = await table.locator(`tbody tr td:nth-child(${index + 1})`).allInnerTexts();
+  // React's editable cells also name their column for screen readers.
+  const cells = await table.locator(`tbody tr td:nth-child(${index + 1})`).evaluateAll((all) =>
+    all.map((td) => {
+      const copy = td.cloneNode(true) as Element;
+      for (const hidden of copy.querySelectorAll(".sr-only")) hidden.remove();
+      return copy.textContent ?? "";
+    }),
+  );
   return cells.map((text) => text.trim());
 }
 

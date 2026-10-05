@@ -14,6 +14,9 @@ export interface FieldEnv {
   fieldName: string;
   /** The record the field's value lives in (afField's dataProvider.getFieldData()). */
   values: Values;
+  /** In a form: the entity item, and the join record inside it, that the field belongs to. */
+  entityIndex?: number;
+  joinIndex?: number;
   /** Set for a field that selects a record to load (input_attrs.autofill); resolves once loaded. */
   onSelect?: (id: unknown) => Promise<void>;
 }

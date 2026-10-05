@@ -1,0 +1,11 @@
+<af-form ctrl="afform">
+  <af-entity data="{contact_type: 'Individual', source: 'Afreact demo'}" type="Contact" name="Individual1" label="Individual 1" actions="{create: true, update: true}" security="RBAC" url-autofill="1" />
+  <fieldset af-fieldset="Individual1" class="af-container" af-title="Individual">
+    <af-field name="last_name" defn="{required: true}" />
+    <af-field name="gender_id" defn="{input_type: 'Range', label: 'Gender scale'}" />
+    <af-field name="nick_name" defn="{input_type: 'RichTextEditor', label: 'Nickname'}" />
+    <af-field name="image_URL" defn="{label: 'Photo'}" />
+    <af-field name="employer_id" defn="{input_attrs: {quickAdd: ['civicrm/quick-add/Organization']}}" />
+  </fieldset>
+  <button class="af-button btn btn-primary" crm-icon="fa-check" ng-click="afform.submit()">{{:: ts('Save') }}</button>
+</af-form>

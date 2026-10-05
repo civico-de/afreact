@@ -34,6 +34,8 @@ export interface FieldDefn {
     autofill?: string;
     multiple?: boolean;
     placeholder?: string;
+    /** Search ranges: the placeholder of the high input. */
+    placeholder2?: string;
     time?: boolean;
     min?: number;
     max?: number;

@@ -7,6 +7,8 @@ import { interpolate } from "./expressions";
 import { INPUT_TYPES, inputTypeNote } from "./Field";
 import { entityRefProblem } from "./fields/autocomplete";
 import { isTabOf, TAB_COUNT, tabOutsideNote, tabsetProblems, tabsOf } from "./tabsets";
+import { fileOutsideFormNote } from "./fields/File";
+import { RANGE_TYPES } from "./fields/SearchRange";
 import type { ElementNode, FieldDefn, LayoutNode } from "./types";
 import { isElement, isFieldDefn } from "./types";
 
@@ -293,7 +295,9 @@ function filterFieldProblems(node: ElementNode): string[] {
   const unknown = unknownFilterAttributes(node);
   const problems = unknown.length ? [fieldAttributesNote(unknown, name)] : [];
   const label = defn.label === false ? name : (defn.label ?? name);
-  if (defn.search_range) problems.push(searchRangeNote(label));
+  if (defn.search_range && !RANGE_TYPES.has(defn.input_type)) problems.push(searchRangeNote(label));
+  // A filter has no record to attach a file to.
+  else if (defn.input_type === "File") problems.push(fileOutsideFormNote(defn));
   else problems.push(...inputProblems(defn));
   return problems;
 }

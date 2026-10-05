@@ -64,6 +64,22 @@ class AssetsHeadlessTest extends TestCase implements HeadlessInterface {
     $this->assertNull($bundle['url']);
   }
 
+  public function testLoadHandsLocationFieldsTheSitesDistanceUnit(): void {
+    $country = \Civi::settings()->get('defaultContactCountry');
+    try {
+      // 1228 is the United States, 1082 Germany.
+      \Civi::settings()->set('defaultContactCountry', '1228');
+      Assets::load();
+      $this->assertSame('miles', $this->vars()['distanceUnit']);
+      \Civi::settings()->set('defaultContactCountry', '1082');
+      Assets::load();
+      $this->assertSame('km', $this->vars()['distanceUnit']);
+    }
+    finally {
+      \Civi::settings()->set('defaultContactCountry', $country);
+    }
+  }
+
   public function testUnknownSourceIsRejected(): void {
     $this->expectExceptionMessage('Unknown layout source "file".');
     Assets::layouts('file', Pages::FORMS);

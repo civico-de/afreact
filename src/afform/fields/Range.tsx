@@ -1,0 +1,59 @@
+import { useEffect, useRef } from "react";
+import type { FieldDefn } from "../types";
+
+interface RangeProps {
+  id: string;
+  defn: FieldDefn;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  disabled: boolean;
+  describedBy: string | undefined;
+}
+
+/**
+ * fields/Range.html: a slider over the field's options, with the chosen option's label beside
+ * it; the server sets min, max and step from the option ids (AfformMetadataInjector).
+ */
+export function Range({ id, defn, value, onChange, disabled, describedBy }: RangeProps) {
+  const input = useRef<HTMLInputElement>(null);
+  const options = Array.isArray(defn.options) ? defn.options : [];
+  const attrs = defn.input_attrs ?? {};
+  const shown = typeof value === "number" || typeof value === "string" ? String(value) : "";
+  const label = options.find((option) => String(option.id) === shown)?.label;
+
+  // As ngModel's range input: an unset slider submits the position the browser shows.
+  useEffect(() => {
+    if (typeof value !== "number" && input.current) onChange(Number(input.current.value));
+  }, [value, onChange]);
+
+  return (
+    <>
+      <label className="crm-af-field-label">
+        <input
+          ref={input}
+          type="range"
+          id={id}
+          name={defn.name}
+          step={attrs.step ?? 1}
+          min={attrs.min}
+          max={attrs.max}
+          list={`${id}-list`}
+          disabled={disabled}
+          aria-describedby={describedBy}
+          aria-valuetext={label}
+          value={shown}
+          onChange={(event) => {
+            onChange(Number(event.target.value));
+          }}
+        />
+        {/* Already the slider's value text; read once. */}
+        <span aria-hidden="true">{options.length ? label : shown}</span>
+      </label>
+      <datalist id={`${id}-list`}>
+        {options.map((option) => (
+          <option key={String(option.id)} value={String(option.id)} />
+        ))}
+      </datalist>
+    </>
+  );
+}

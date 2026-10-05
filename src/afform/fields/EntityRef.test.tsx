@@ -1,5 +1,7 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
+import { jquerySelection } from "../../test/jquery";
 import { apiError, mockApi, renderWithQuery } from "../../test/render";
 import { AfreactForm } from "../AfreactForm";
 import { layoutProblems } from "../support";
@@ -403,7 +405,7 @@ describe("EntityRef", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Not allowed");
   });
 
-  it("notes quick-add links and a field without an entity, which it does not render", () => {
+  it("notes a field without an entity, which it does not render, and not quick-add links", () => {
     expect(
       layoutProblems(
         form([
@@ -411,9 +413,120 @@ describe("EntityRef", () => {
           entityRef("other_id", { fk_entity: null }),
         ]),
       ),
-    ).toEqual([
-      "input_attrs.quickAdd on contact_id",
-      "field type EntityRef without fk_entity (other_id)",
+    ).toEqual(["field type EntityRef without fk_entity (other_id)"]);
+  });
+});
+
+describe("EntityRef quick-add links", () => {
+  const quickAddForms = [
+    {
+      path: "civicrm/quick-add/Individual",
+      entity: "Individual",
+      title: "Add Individual",
+      icon: "fa-user",
+    },
+    { path: "civicrm/quick-add/Organization", entity: "Organization", title: "Add Organization" },
+    { path: "civicrm/quick-add/Activity", entity: "Activity", title: "Add Activity" },
+  ];
+  /** CRM.loadForm's popup: hands back the URL and lets the test announce the saved form. */
+  function popup() {
+    const opened: string[] = [];
+    let succeed = (_data: unknown) => undefined as void;
+    vi.mocked(window.CRM.loadForm).mockImplementation((url) => {
+      opened.push(url);
+      const selection = jquerySelection({
+        on: (name, handler) => {
+          if (name === "crmFormSuccess") succeed = (data) => handler(new Event(name), data);
+          return selection;
+        },
+      });
+      return selection;
+    });
+    return { opened, succeed: (data: unknown) => act(() => succeed(data)) };
+  }
+
+  beforeEach(() => {
+    window.CRM.config = { quickAdd: quickAddForms };
+  });
+  afterEach(() => {
+    delete window.CRM.config;
+    vi.mocked(window.CRM.loadForm).mockReset();
+  });
+
+  it("offers the contact types' forms, opens one and selects the record it saved", async () => {
+    const { opened, succeed } = popup();
+    const quickAdd = entityRef("employer_id", { input_attrs: { quickAdd: true } });
+    const calls = renderForm(form([quickAdd]), {
+      "Contact.autocomplete": ({ ids }) => (ids ? rows([{ id: 9, label: "Dee" }]) : rows([])),
+    });
+    const input = await screen.findByRole("combobox", { name: "Employer" });
+    const links = screen.getAllByRole("link");
+    expect(links.map((link) => link.textContent.trim())).toEqual([
+      "Add Individual",
+      "Add Organization",
     ]);
+    const hash = "parentFormName=afform%3AafformTest&parentFormFieldName=Individual1%3Aemployer_id";
+    expect(links[0]).toHaveAttribute("href", `/civicrm/quick-add/Individual#?${hash}`);
+    expect(links[0]?.closest("div")).toHaveClass("crm-entityref-links", "crm-entityref-quick-add");
+
+    links[0]?.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(opened).toEqual([`/civicrm/quick-add/Individual#?${hash}`]);
+    succeed({ submissionResponse: [{ Individual1: [{ id: 9 }] }] });
+    await waitFor(() => {
+      expect(input).toHaveValue("Dee");
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({
+        Individual1: [{ fields: { employer_id: 9 }, joins: {} }],
+      });
+    });
+  });
+
+  it("offers only the listed forms the page knows, and adds to a multiple field", async () => {
+    const { succeed } = popup();
+    renderForm(
+      form([
+        entityRef("tag_ids", {
+          label: "Tags",
+          input_attrs: {
+            multiple: true,
+            quickAdd: ["civicrm/quick-add/Organization", "civicrm/quick-add/Unknown"],
+          },
+        }),
+      ]),
+      { "Contact.autocomplete": ({ ids }) => rows(ids ? [ADA, BOB] : []) },
+    );
+    await screen.findByRole("combobox", { name: "Tags" });
+    expect(screen.getAllByRole("link").map((link) => link.textContent.trim())).toEqual([
+      "Add Organization",
+    ]);
+    await userEvent.click(screen.getByRole("link", { name: "Add Organization" }));
+    succeed({ submissionResponse: [{ Organization1: [{ id: 1 }] }] });
+    expect(await screen.findByText("Ada")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("link", { name: "Add Organization" }));
+    succeed({ submissionResponse: [{ Organization1: [{ id: 2 }] }] });
+    expect(await screen.findByText("Bob")).toBeInTheDocument();
+    expect(screen.getByText("Ada")).toBeInTheDocument();
+  });
+
+  it("says when the form saved no record", async () => {
+    const { succeed } = popup();
+    renderForm(form([entityRef("employer_id", { input_attrs: { quickAdd: true } })]), {});
+    await userEvent.click(await screen.findByRole("link", { name: "Add Organization" }));
+    succeed({ submissionResponse: [{}] });
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The form saved no record to select.",
+    );
+  });
+
+  it("reports a page without the quick-add list", async () => {
+    delete window.CRM.config;
+    renderForm(form([entityRef("employer_id", { input_attrs: { quickAdd: true } })]), {});
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The page lists no quick-add forms.",
+    );
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 });

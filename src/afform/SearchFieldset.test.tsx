@@ -338,9 +338,10 @@ describe("SearchFieldset", () => {
           afform_default: "user_contact_id",
         }),
         field("state", { label: "State", input_type: "File" }),
+        // Radio has no range template in core.
         field("created_date", {
           label: "Created",
-          input_type: "Date",
+          input_type: "Radio",
           search_range: true,
         }),
       ],
@@ -352,7 +353,7 @@ describe("SearchFieldset", () => {
     await screen.findByRole("cell", { name: "Row" });
     expect(
       screen.getAllByRole("note").map((note) => note.textContent?.replace(/^.*: /, "")),
-    ).toEqual(["field type File (State)", "search range (Created)"]);
+    ).toEqual(["file upload outside a form (State)", "search range (Created)"]);
     expect(runs()).toEqual([{ is_active: true, created_id: 3 }]);
     // The default contact's label comes from the field's autocomplete.
     expect(await screen.findByRole("combobox", { name: "Created By" })).toHaveValue("Admin");

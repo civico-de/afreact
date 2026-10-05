@@ -71,6 +71,11 @@ export function relativeDate(text: string, includeTime: boolean, now: Date): str
   return includeTime ? `${day} ${date.toTimeString().slice(0, 8)}` : day;
 }
 
+/** Search ranges and Location write their whole value, whatever the operator (their templates). */
+export function writesWhole(defn: FieldDefn): boolean {
+  return !!defn.search_range || defn.input_type === "Location";
+}
+
 /** The operator a field writes with: the one chosen for it, or its defn's. */
 export function operatorOf(field: FilterField, operators: Record<string, string>): string | null {
   return operators[field.name] ?? field.defn.search_operator ?? null;
@@ -109,7 +114,8 @@ export function convertValue(defn: FieldDefn, raw: unknown, context: ValueContex
     value = Array.isArray(value) ? value.map(user) : user(value);
   const isNumberRange = defn.input_type === "Number" && !!defn.search_range;
   // Core converts a range string to a number first, which turns "5-10" into NaN.
-  if (defn.input_type !== "DisplayOnly" && !isNumberRange)
+  // A Location value is an object of its own; core's correctValueType() makes it false.
+  if (!["DisplayOnly", "Location"].includes(defn.input_type) && !isNumberRange)
     value = correctValueType(value, defn.data_type);
   if (defn.input_type === "Date" && typeof value === "string" && value.startsWith("now")) {
     value = relativeDate(value, !!defn.input_attrs?.time, context.now ?? new Date());
@@ -142,7 +148,7 @@ export function assignValue(
 ): FieldsetState {
   const { defn, name } = field;
   let operators = state.operators;
-  let operator = operatorOf(field, operators);
+  let operator = defn.input_type === "Location" ? null : operatorOf(field, operators);
   let value = raw;
   if (typeof value === "string" && isMultiple(defn)) value = value.split(",");
   if (isPlainObject(value) && operator) {
@@ -194,7 +200,7 @@ function initializeValue(
 /** A URL value in the form React writes it; an empty one clears the field. */
 function fromUrl(text: string, defn: FieldDefn): unknown {
   if (text === "") return null;
-  if ((defn.search_operator || defn.search_range) && text.startsWith("{")) {
+  if ((defn.search_operator || writesWhole(defn)) && text.startsWith("{")) {
     try {
       const parsed: unknown = JSON.parse(text);
       if (isPlainObject(parsed)) return parsed;
@@ -333,7 +339,9 @@ export function fieldsetReducer(
 ): FieldsetReducerState {
   switch (action.type) {
     case "input": {
-      const operator = operatorOf(action.field, state.operators);
+      const operator = writesWhole(action.field.defn)
+        ? null
+        : operatorOf(action.field, state.operators);
       const current = state.values[action.field.name];
       const value = operator
         ? { ...(isPlainObject(current) ? current : {}), [operator]: action.value }

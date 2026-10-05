@@ -5,10 +5,12 @@ import { ClearButton } from "../Field";
 import type { FieldDefn } from "../types";
 import { Unsupported } from "../Unsupported";
 import {
+  createdId,
   entityRefProblem,
   hasQuickAdd,
   itemText,
   modelValue,
+  quickAddLinks,
   resolveIds,
   searchedEntity,
   searchPage,
@@ -75,6 +77,15 @@ export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: 
       throw new Error(errorMessage(error), { cause: error });
     }
   };
+  const links = entity === null ? [] : quickAddLinks(defn, entity, env);
+  // $.fn.crmAutocomplete's quick-add click: the popup's submit response names the new record.
+  const quickAdd = (url: string) => {
+    window.CRM.loadForm(url).on("crmFormSuccess", (_event, data) => {
+      const created = createdId(data);
+      if (created === undefined) setFailed(ts("The form saved no record to select."));
+      else change(multiple ? [...ids, created] : [created]);
+    });
+  };
   const problem = entityRefProblem(defn);
   const off = disabled || entity === null;
   const props = {
@@ -104,6 +115,7 @@ export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: 
     "error" in target ? target.error : null,
     resolved.isError ? errorMessage(resolved.error) : null,
     notFound.length ? ts("No record found for %1.", { 1: notFound.join(", ") }) : null,
+    links === null ? ts("The page lists no quick-add forms.") : null,
     failed,
   ].filter((error) => error !== null);
   return (
@@ -122,6 +134,28 @@ export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: 
             change([]);
           }}
         />
+      )}
+      {/* Beside the field rather than in its dropdown, so the keyboard reaches them. */}
+      {links && links.length > 0 && !off && (
+        <div className="crm-entityref-links crm-entityref-quick-add">
+          {links.map((link) => {
+            const url = window.CRM.url(link.path);
+            return (
+              <a
+                key={link.path}
+                className="crm-hover-button"
+                href={url}
+                onClick={(event) => {
+                  event.preventDefault();
+                  quickAdd(url);
+                }}
+              >
+                <i className={`crm-i ${link.icon}`.trim()} role="img" aria-hidden="true" />{" "}
+                {link.title}
+              </a>
+            );
+          })}
+        </div>
       )}
       {errors.map((error) => (
         <span key={error} className="crm-error" role="alert">

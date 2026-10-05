@@ -48,6 +48,7 @@ that no longer excuses anything fails the test.
 | Admin block menus | gear menu per block for administrators | not rendered |
 | API calls | calls made together share one request | one request per call |
 | Reference fields (EntityRef) | select2 over `<Entity>.autocomplete` | ARIA combobox in select2's multi-select markup for single and multiple fields; the search loads with the first such field on a page. A single field shows the chosen label in its input, with a clear link |
+| Quick-add links on reference fields (`input_attrs.quickAdd`) | in the dropdown while the input is too short or nothing matches, out of the keyboard's reach; a popup that saves no record changes nothing | below the field while it is enabled, reachable by Tab; a popup that saves no record shows an error |
 | Stored ids the autocomplete cannot find | dropped from view, kept in the model | kept, with a visible "No record found" message |
 | Chained selects (ChainSelect) | select2 | native `<select>`, options from `Afform.getOptions` as in Angular |
 | In-place editors | select2, datepicker and select2 tags; text inputs at least as wide as the cell was | native `<select>`, `<input type="date">` and `datetime-local`, a colour picker beside a text input; inputs at their own width |
@@ -61,6 +62,8 @@ that no longer excuses anything fails the test.
 | Tab under `url-arg` | written to the URL also when the page opens | written when the user selects a tab |
 | Invalid field in a hidden tab | submit does nothing visible (6.20 also blocks moving to a later tab while the current one has an invalid field) | submit selects the field's tab and the browser points at the field; moving between tabs is free |
 | Tab badge from `total-count="$parent.count"` | counted after 900 ms without the form's filter values | counted at once, also without the form's filter values |
+| File fields | upload progress in a CRM.status popup; the Replace link has no `href` and no role | progress in the form's status line, errors in its alert; Replace is a focusable button named after the file, and moves focus to the new file input |
+| Search ranges (`search_range`) | two inputs after the field's label | the same pair as a group named by the label, the inputs named "… from" and "… to"; a select range sends its bounds as typed option ids (`2`) where select2 sends strings (`"2"`) |
 
 ## Accessibility
 
@@ -78,11 +81,9 @@ instead of being dropped:
 
 - Angular expressions other than `:: ts('…')` and `crmUrl(…)`
 - field types other than Text, Email, Url, Number, Hidden, TextArea, Date,
-  Select, Radio, CheckBox, DisplayOnly, EntityRef, ChainSelect and Toggle —
-  notably File
-- quick-add links on reference fields (`input_attrs.quickAdd`); the field
-  itself still works
-- range inputs in search filters (`search_range`)
+  Select, Radio, CheckBox, DisplayOnly, EntityRef, ChainSelect, Toggle,
+  RichTextEditor, File, Range and Location
+- File fields outside a form, as in search filters
 - directives outside plain HTML, forms, blocks, joins, repeats, search
   fieldsets, tab sets and table displays (for example other search display
   types); on `af-tabset` also `page-nav-buttons`, `page-nav-submit-text` and
@@ -220,6 +221,21 @@ an empty bound into 0: `5` searches `>= 5 AND <= 0`, and on a Money field
 ([civicrm-core#37198](https://github.com/civicrm/civicrm-core/pull/37198)). The
 React renderer splits at the first `-` after a leading sign and leaves an empty
 bound out: `-5-10` is −5 to 10, `5-` and `5` are `>= 5`.
+
+**A date range's inputs have no label.** In a search range, `fields/Date.html`
+gives the two datepickers the ids `<field>1` and `<field>2`, while afField's
+label points at `<field>`, so neither input is labelled; the high input of the
+other range templates has no label either (`master` as of 2026-10-05; read
+from the code, not run). The React renderer names the pair after the label and
+each input "… from" and "… to".
+
+**A rich text field is never disabled.** `fields/RichTextEditor.html` has no
+`ng-disabled`, so `af-disabled` and a saving form leave the editor writable,
+and `crm-ui-richtext` never destroys the editor when `af-if` removes the field
+(`master` as of 2026-10-05; read from the code, not run). The React renderer
+restarts the editor on a disabled textarea, which core's CKEditor 4 opens
+read-only (its `readOnly` setting follows the textarea), and destroys it with
+the field.
 
 **The current user as default of a multiple contact field.** afField's
 `setValue()` splits a multiple field's default into a list before it compares
@@ -437,3 +453,46 @@ and replaces the column object "to trigger an Angular view refresh", but the
 cell is repeated `track by $index` and keeps its text, so a moved row shows
 its old weight until the next reload. Measured on CiviCRM 6.18 with the
 drag-to-reorder browser spec. The React renderer shows the returned weights.
+**A failed upload still completes the submit.** afForm's uploader calls
+`postProcess()` from `onCompleteAll`, which also runs when an upload failed,
+so the form shows its confirmation message or redirects while the file is
+missing; only the CRM.status popup reports the error (`afForm.component.js`,
+`master` as of 2026-10-05; read from the code, not run). The React renderer
+keeps the form with the error in its alert and neither confirms nor redirects.
+
+**Replacing a join's file never clears it.** The Replace link sets the stored
+file's `id` to null and keeps `file_name`. For a join record,
+`AbstractProcessor::preprocessSubmittedValues()` treats a set `file_name` as
+"unchanged" and a `file_name` key that is null as "deleted", so a replaced file
+without a new upload stays (`master` as of 2026-10-05; read from the code, not
+run). The React renderer sends `{id: null, file_name: null}`, which clears the
+field on the entity and on a join record.
+
+**The first join record's upload carries no index.** afField sends `joinIndex:
+afJoin && repeatIndex || null`, so record 0 sends null. Saving the record
+casts it to 0, but uploading into a draft stores the file under an empty key
+(`SubmitFile::updateDraft()`, `master` as of 2026-10-05; read from the code,
+not run). The React renderer sends the record's index.
+
+**A range slider is never disabled.** `fields/Range.html` has no
+`ng-disabled`, so `af-disabled` and a saving form leave the slider movable
+(`master` as of 2026-10-05; read from the code, not run). The React renderer
+disables it with the form.
+
+**A bound of 0 is dropped.** `fields/Number.html` and `fields/Range.html` write
+`min="{{:: input_attrs.min || '' }}"`, and the same for `max`, so a minimum or
+maximum of 0 leaves the input unbounded: a field limited to 0–10 accepts
+negative numbers (`master` as of 2026-10-05; read from the code, not run). The
+React renderer keeps a bound of 0.
+
+**A Location filter's inputs have no label.** `afLocationInput.html` shows the
+distance, unit and address with placeholders only, and afField's label points
+at an id no input carries (`master` as of 2026-10-05; read from the code, not
+run). The React renderer names the three as a group after the label, and each
+input "Distance", "Distance unit" and "Address".
+
+**A saved Location filter loads as false.** Restoring a filter value from a
+saved filter set (`_s`) runs it through afField's `correctValueType()`, which
+compares the proximity filter's object with 1 because the field is Boolean
+(`master` as of 2026-10-05; read from the code, not run). The React renderer
+keeps the object, also from the URL.

@@ -18,6 +18,8 @@ export function layoutSource(value: string | null): LayoutSource {
 export interface AfreactVars {
   layouts?: Record<string, FormDefinition>;
   bundle?: BundleVars;
+  /** The site's default for Location fields (Civi\Afreact\Assets::load). */
+  distanceUnit?: string;
 }
 
 function vars(): AfreactVars {

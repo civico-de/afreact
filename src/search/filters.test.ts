@@ -249,3 +249,31 @@ describe("fieldsetReducer", () => {
     expect(state.commits).toBe(0);
   });
 });
+
+describe("Location filters", () => {
+  // Address proximity: a Boolean filter field whose value is an object (AddressGetSpecProvider).
+  const proximity = field("address_primary.proximity", {
+    input_type: "Location",
+    data_type: "Boolean",
+    search_operator: "<=",
+  });
+  const near = { distance: 5, distance_unit: "km", address: "Berlin" };
+
+  it("keep the whole object, whatever the operator, from typing, storage and the URL", () => {
+    const typed = fieldsetReducer(
+      { ...empty, applied: {}, commits: 0 },
+      { type: "input", field: proximity, value: near },
+    );
+    expect(typed.values).toEqual({ "address_primary.proximity": near });
+    expect(assignValue(empty, proximity, near).values).toEqual({
+      "address_primary.proximity": near,
+    });
+    const text = urlText(near, "<=");
+    const state = initialState({
+      fields: [proximity],
+      fieldsetName: name,
+      params: params(`address_primary.proximity=${encodeURIComponent(text)}`),
+    });
+    expect(state.values).toEqual({ "address_primary.proximity": near });
+  });
+});

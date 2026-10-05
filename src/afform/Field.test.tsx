@@ -4,6 +4,7 @@ import { useState } from "react";
 import { renderWithQuery } from "../test/render";
 import { Field, fieldClasses, INPUT_TYPES } from "./Field";
 import { FieldEnvContext } from "./fields/env";
+import { UploadsContext } from "./fields/upload";
 import type { FieldDefn } from "./types";
 
 function Harness({
@@ -74,6 +75,24 @@ describe("Field", () => {
     await userEvent.type(screen.getByRole("spinbutton", { name: "Field" }), "4");
     await userEvent.clear(screen.getByRole("spinbutton", { name: "Field" }));
     expect(number).toEqual([4, null]);
+  });
+
+  it("keeps a number's bounds, a minimum of 0 included, and flags a value outside them", async () => {
+    const number = setup({
+      input_type: "Number",
+      data_type: "Float",
+      input_style: "short",
+      input_attrs: { min: 0, max: 10, step: 0.5, placeholder: "Hours" },
+    });
+    const input = screen.getByRole("spinbutton", { name: "Field" });
+    expect(input).toHaveAttribute("min", "0");
+    expect(input).toHaveAttribute("max", "10");
+    expect(input).toHaveAttribute("step", "0.5");
+    expect(input).toHaveAttribute("placeholder", "Hours");
+    expect(input).toHaveClass("form-control", "short");
+    await userEvent.type(input, "-1.5");
+    expect(number.at(-1)).toBe(-1.5);
+    expect((input as HTMLInputElement).validity.rangeUnderflow).toBe(true);
   });
 
   it("keeps numeric option IDs in selects", async () => {
@@ -222,9 +241,9 @@ describe("Field", () => {
       <Harness defn={{ input_type: "DisplayOnly" }} initial="Shown" onValue={() => undefined} />,
     );
     expect(screen.getByText("Shown").tagName).toBe("OUTPUT");
-    render(<Harness defn={{ input_type: "RichTextEditor" }} onValue={() => undefined} />);
+    render(<Harness defn={{ input_type: "Signature" }} onValue={() => undefined} />);
     expect(screen.getByRole("note")).toHaveTextContent(
-      "Not supported by the React renderer: field type RichTextEditor (Field)",
+      "Not supported by the React renderer: field type Signature (Field)",
     );
   });
 
@@ -244,17 +263,25 @@ describe("Field", () => {
 
   it("renders a control for every input type the support report accepts, and a note otherwise", () => {
     const options = [{ id: 1, label: "One" }];
-    const env = { formName: "f", modelName: "Individual1", fieldName: "field", values: {} };
+    const env = {
+      formName: "f",
+      modelName: "Individual1",
+      fieldName: "field",
+      values: {},
+      entityIndex: 0,
+    };
     for (const input_type of INPUT_TYPES) {
       const { unmount } = renderWithQuery(
-        <FieldEnvContext.Provider value={env}>
-          <Harness defn={{ input_type, options, fk_entity: "Contact" }} onValue={() => undefined} />
-        </FieldEnvContext.Provider>,
+        <UploadsContext.Provider value={new Map()}>
+          <FieldEnvContext.Provider value={env}>
+            <Harness defn={{ input_type, options, fk_entity: "Contact" }} onValue={() => undefined} />
+          </FieldEnvContext.Provider>
+        </UploadsContext.Provider>,
       );
       expect(screen.queryByRole("note"), input_type).toBeNull();
       unmount();
     }
-    render(<Harness defn={{ input_type: "File" }} onValue={() => undefined} />);
-    expect(screen.getByRole("note")).toHaveTextContent("field type File (Field)");
+    render(<Harness defn={{ input_type: "Signature" }} onValue={() => undefined} />);
+    expect(screen.getByRole("note")).toHaveTextContent("field type Signature (Field)");
   });
 });

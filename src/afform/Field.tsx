@@ -3,6 +3,11 @@ import { onButtonKey } from "../keys";
 import { ChainSelect } from "./fields/ChainSelect";
 import { EntityRef } from "./fields/EntityRef";
 import { Toggle } from "./fields/Toggle";
+import { FileField } from "./fields/File";
+import { Location } from "./fields/Location";
+import { Range } from "./fields/Range";
+import { RichTextEditor } from "./fields/RichTextEditor";
+import { RANGE_TYPES, SearchRange } from "./fields/SearchRange";
 import type { FieldDefn, FieldOption } from "./types";
 import { Unsupported } from "./Unsupported";
 
@@ -46,6 +51,10 @@ export const INPUT_TYPES: ReadonlySet<string> = new Set([
   "EntityRef",
   "ChainSelect",
   "Toggle",
+  "RichTextEditor",
+  "File",
+  "Range",
+  "Location",
 ]);
 
 export function inputTypeNote(defn: FieldDefn): string {
@@ -78,10 +87,10 @@ function fieldOptions(defn: FieldDefn): FieldOption[] {
 }
 
 /** "2026-09-29 14:30:00" <-> "2026-09-29T14:30" for datetime-local inputs. */
-function toLocalDateTime(value: unknown): string {
+export function toLocalDateTime(value: unknown): string {
   return typeof value === "string" ? value.replace(" ", "T").slice(0, 16) : "";
 }
-function fromLocalDateTime(value: string): string | null {
+export function fromLocalDateTime(value: string): string | null {
   return value ? `${value.replace("T", " ")}:00` : null;
 }
 
@@ -157,7 +166,12 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
     defn.input_type === "Radio" || (defn.input_type === "CheckBox" && defn.data_type !== "Boolean");
   const booleanCheckbox = defn.input_type === "CheckBox" && !grouped;
 
+  const ranged = !!defn.search_range && RANGE_TYPES.has(defn.input_type);
+  // Controls in a group named by the label.
+  const labelsGroup = grouped || ranged || defn.input_type === "Location";
+
   const control = ((): ReactNode => {
+    if (ranged) return <SearchRange {...{ id, labelId, defn, value, onChange, disabled }} />;
     const textType = TEXT_TYPES[defn.input_type];
     if (textType) {
       const numeric = textType === "number";
@@ -324,6 +338,14 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
             options={fieldOptions(defn)}
           />
         );
+      case "RichTextEditor":
+        return <RichTextEditor {...{ id, defn, value, onChange, disabled, describedBy }} />;
+      case "File":
+        return <FileField {...{ id, defn, value, onChange, disabled, describedBy }} />;
+      case "Range":
+        return <Range {...{ id, defn, value, onChange, disabled, describedBy }} />;
+      case "Location":
+        return <Location {...{ id, labelId, value, onChange, disabled, describedBy }} />;
       default:
         return null;
     }
@@ -337,7 +359,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
       {label && !booleanCheckbox && (
         <label
           className="crm-af-field-label"
-          id={grouped ? labelId : undefined}
+          id={labelsGroup ? labelId : undefined}
           htmlFor={grouped ? undefined : id}
         >
           {label}

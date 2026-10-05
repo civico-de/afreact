@@ -24,6 +24,7 @@ import {
   operatorOf,
   SEARCH_DELAY_MS,
   urlText,
+  writesWhole,
   type FieldsetAction,
   type FieldsetReducerState,
   type FilterField,
@@ -44,6 +45,7 @@ import { TAB_COUNT } from "./tabsets";
 import type { ElementNode, LayoutNode } from "./types";
 import { isElement, isFieldDefn } from "./types";
 import { FieldEnvContext } from "./fields/env";
+import { RANGE_TYPES } from "./fields/SearchRange";
 import { Unsupported } from "./Unsupported";
 
 /**
@@ -265,7 +267,8 @@ export function FilterFieldNode({
   const { state, dispatch } = fieldset;
   const operator = operatorOf(field, state.operators);
   const current = state.values[name];
-  const value = operator ? (isRecord(current) ? current[operator] : undefined) : current;
+  const value =
+    operator && !writesWhole(defn) ? (isRecord(current) ? current[operator] : undefined) : current;
   const unknown = unknownFilterAttributes(node);
   const label = defn.label === false ? name : (defn.label ?? name);
   return createElement(
@@ -275,7 +278,7 @@ export function FilterFieldNode({
       className: `${fieldClasses(defn)} ${typeof node.class === "string" ? node.class : ""}`.trim(),
     },
     unknown.length > 0 && <Unsupported what={fieldAttributesNote(unknown, name)} />,
-    defn.search_range ? (
+    defn.search_range && !RANGE_TYPES.has(defn.input_type) ? (
       <Unsupported what={searchRangeNote(label)} />
     ) : (
       <FieldEnvContext.Provider

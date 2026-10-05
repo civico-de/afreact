@@ -607,6 +607,8 @@ function fieldEnv(
     joinEntity: scope.join,
     fieldName: name,
     values: values ?? {},
+    entityIndex: scope.index,
+    joinIndex: scope.join === undefined ? undefined : (scope.joinIndex ?? 0),
     onSelect: autofill
       ? async (id) => {
           form.update(await loadSelected(form.formName, scope, name, id, form.entities));
