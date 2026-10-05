@@ -33,11 +33,15 @@ that no longer excuses anything fails the test.
 
 | Area | Angular | React |
 |---|---|---|
-| Select fields | select2 | native `<select>`, sized and marked like select2 (warning border when required and empty) |
+| Select fields | select2, with option colours, icons and descriptions | native `<select>`, sized like select2, with its warning border on a required select emptied by the user (core up to 6.19 also warns on an untouched one); options show their label only |
 | Date fields | jQuery UI datepicker, site input format | native `<input type="date">`, wider than the datepicker to fit its format and calendar icon |
+| Search filter text shorter than `minlength` | the value is dropped from the filter while typing, so the table shows unfiltered rows | filters by what was typed |
 | Clear links | `<a>` without `href`, not reachable by keyboard | same link with `role="button"`, focusable, Enter and Space |
 | Admin block menus | gear menu per block for administrators | not rendered |
 | API calls | calls made together share one request | one request per call |
+| Reference fields (EntityRef) | select2 over `<Entity>.autocomplete` | ARIA combobox in select2's multi-select markup for single and multiple fields; the search loads with the first such field on a page. A single field shows the chosen label in its input, with a clear link |
+| Stored ids the autocomplete cannot find | dropped from view, kept in the model | kept, with a visible "No record found" message |
+| Chained selects (ChainSelect) | select2 | native `<select>`, options from `Afform.getOptions` as in Angular |
 
 ## Accessibility
 
@@ -55,7 +59,9 @@ instead of being dropped:
 
 - Angular expressions other than `:: ts('…')` and `crmUrl(…)`
 - field types other than Text, Email, Url, Number, Hidden, TextArea, Date,
-  Select, Radio, CheckBox and DisplayOnly — notably EntityRef, ChainSelect and File
+  Select, Radio, CheckBox, DisplayOnly, EntityRef and ChainSelect — notably File
+- quick-add links on reference fields (`input_attrs.quickAdd`); the field
+  itself still works
 - range inputs in search filters (`search_range`)
 - directives outside plain HTML, forms, blocks, joins, repeats, search
   fieldsets and table displays (for example tabs and other search display types)
@@ -147,15 +153,53 @@ Present on upstream `master` as of 2026-10-02; fix proposed in
 [civicrm-core#37197](https://github.com/civicrm/civicrm-core/pull/37197)
 (`_afform_clear()` also clears the `metadata` cache).
 
+**"Choose undefined first".** When a chained select's control field is empty,
+afField looks the control field's label up among its neighbours and puts
+`Choose %1 first` in the placeholder. If that field has no label or sits
+outside the nearest repeat item, join or fieldset, the placeholder reads
+"Choose undefined first" (read from the code on `master` as of 2026-10-03).
+The React renderer uses the control field's name instead.
+
 **Number ranges from the URL or a default.** afField converts the value of an
 Integer or Float range field to a number before splitting it, so `5-10` becomes
 `NaN` and the search runs with `>= null`. It then splits on every `-` and turns
 an empty bound into 0: `5` searches `>= 5 AND <= 0`, and on a Money field
-`-5-10` searches `>= 0 AND <= 5`. Reproduced in the browser on 6.18.1, present
-on `master` as of 2026-10-02; fix proposed in
-[civicrm-core#37198](https://github.com/civicrm/civicrm-core/pull/37198). The
+`-5-10` searches `>= 0 AND <= 5`. Reproduced in the browser on 6.18.1; fixed on
+`master` (6.20) in
+[`d116180483`](https://github.com/civicrm/civicrm-core/commit/d116180483)
+([civicrm-core#37198](https://github.com/civicrm/civicrm-core/pull/37198)). The
 React renderer splits at the first `-` after a leading sign and leaves an empty
 bound out: `-5-10` is −5 to 10, `5-` and `5` are `>= 5`.
+
+**The current user as default of a multiple contact field.** afField's
+`setValue()` splits a multiple field's default into a list before it compares
+the value with `user_contact_id`, so the list never matches and is then typed
+as numbers: the field starts as `[NaN]`, which the request sends as `[null]`
+(`afField.component.js`, `master` as of 2026-10-05; read from the code, not
+run). The React renderer replaces `user_contact_id` in each list item, for
+form fields and search filters alike.
+
+**Saving a case summary block also submits the case form.** The case
+summary screen is a QuickForm `<form>`, so `CaseSummaryBlockPlacement` wraps
+the Afform in a `div` instead of a form. The Save button has no `type`
+(`ng-click="afform.submit()"`), which makes it a submit button of the case
+form: a click, or Enter in a field, runs `Afform.submit` and submits the case
+form as well (`master` as of 2026-10-05; read from the code, not run). The
+React renderer keeps its own `<form>` inside the case form: controls submit
+that form, and its submit event stops there.
+
+**A space before the comma in linked lists.** SearchKit's `colType/link.html`
+leaves whitespace between each linked value and its comma, so a multi-valued
+link column reads "German , French". Fixed on `master` (6.20) in
+[`6cbc2bab82`](https://github.com/civicrm/civicrm-core/commit/6cbc2bab82). The
+React renderer writes the fixed markup; on 6.19 and older the Angular table
+still shows the space.
+
+**The minlength message names the required marker.** afForm words the
+message for a too short text from the label's `textContent`, so a required
+field reads "First Name \* must be at least 3 characters." (`master`, 6.20,
+added in [`d777c0f29b`](https://github.com/civicrm/civicrm-core/commit/d777c0f29b)).
+The React renderer leaves the marker out.
 
 **A saved filter set is dropped after loading.** With `#?_s=<id>` afFieldset
 loads the `SearchParamSet`, then resets the fields to their defaults, so the
@@ -166,6 +210,31 @@ URL leaves out take the set's values).
 opens after prefill gets its field defaults over the loaded values, and
 copying a repeat item overwrites the copied values with defaults. The React
 renderer keeps the loaded and copied values.
+
+**Join blocks are numbered in link order.** afJoin takes its record index
+from a counter in afFieldset each time it links (`afJoin.directive.js`,
+`afFieldset.directive.js` `getJoinOffset`). The server pairs record n with
+block n of that join in the layout: the block's `data`, such as its location
+type (`FormDataModel::parseFields`, `preprocessSubmittedValues`), and its
+prefilled record (`loadJoins` sorts location blocks by type). The two disagree
+whenever blocks link out of layout order or more than once:
+- A block hidden by `af-if` at load links later, so the next block takes its
+  index. With Home hidden and Work shown, the Work field shows the Home email,
+  saves over the Home record, and a new email is saved as Home.
+- A block shown after load takes the index after the others: Home and Work
+  swap location types. Each re-show takes a new index past the blocks, where
+  the block has no location type of its own.
+- In a repeated fieldset all items share one counter, so item n writes its
+  block to record n of its contact. The form submits `[null, {…}]`, which made
+  submitting fail until 6.2 (dev/core#5801, fixed on the server by dropping
+  the nulls). A later item's prefilled email still shows empty, and an email
+  typed there is added beside the old one instead of updating it.
+
+Read from the source of `master` as of 2026-10-03; `joins.spec.ts` pins the
+first case in the browser. The React renderer numbers blocks by their
+position in the layout, shown or not, and sends `null` for a block without a
+record, as core's own prefill does for a missing location type; the server
+drops the nulls and keeps the positions.
 
 **Word replacements on Standalone.** On Standalone sites in en_US, word and
 translation replacements never apply: `CRM_Core_I18n` caches an empty list
@@ -196,9 +265,11 @@ afform 6.18.1 on both paths:
 The redirect URL is built by the same function without URL encoding. The
 contribution checkout passes the same unescaped message to its landing page,
 which sets it as `innerHTML` (read from the code, not run). Processing a
-submission by `sid` also warns `Undefined variable $submission` at
-`Submit.php:101`. Present on upstream `master` as of 2026-09-29; to go to the
-CiviCRM security team rather than the public tracker.
+submission by `sid` also warned `Undefined variable $submission` at
+`Submit.php:101`, fixed in 6.19
+([`cb183eb64e`](https://github.com/civicrm/civicrm-core/commit/cb183eb64e)).
+The missing escaping is present on upstream `master` as of 2026-10-05; to go to
+the CiviCRM security team rather than the public tracker.
 
 afreact escapes the submitted values site-wide, whichever
 renderer shows it: a `civi.api.respond` listener on `Afform.submit` rebuilds
