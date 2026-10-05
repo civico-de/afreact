@@ -43,20 +43,21 @@ class GetForm extends AbstractAction {
     // Unset on forms saved before the option existed.
     $afform['autosave_draft'] = !empty($afform['autosave_draft']);
     $module = Afforms::field($afform, 'module_name');
-    $afform['layout'] = self::layout($module);
     $afform['strings'] = Afforms::cached("strings_{$module}", static fn (): array => Afforms::translatedStrings(
       $module,
     ));
+    $afform['layout'] = self::layout($module, $afform['strings']);
     $result[] = $afform;
   }
 
   /**
+   * @param array<string, string> $strings
    * @return array<mixed>
    */
-  private static function layout(string $module): array {
+  private static function layout(string $module, array $strings): array {
     return Afforms::cached(
       "layout_{$module}",
-      static fn (): array => (new LayoutCompiler(Afforms::angular(), Afforms::blocks()))->compile($module),
+      static fn (): array => (new LayoutCompiler(Afforms::angular(), Afforms::blocks(), $strings))->compile($module),
     );
   }
 

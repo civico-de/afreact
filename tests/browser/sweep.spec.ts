@@ -64,7 +64,7 @@ interface Result {
   renderedEmpty: string[];
   differences: string[];
   notes: string[];
-  axe: { react: string[]; angular: string[]; reactOnly: string[] };
+  axe: { react: string[]; angular: string[]; reactOnly: string[]; excused: string[] };
   errors: string[];
   /** Why the gate fails this form; empty for forms it passes or does not gate. */
   failures: string[];
@@ -145,8 +145,10 @@ function observe(scope: string): Observed {
       (isControl(control) && control.required) || control?.getAttribute("aria-required") === "true",
     disabled: isControl(control) && control.disabled,
   });
+  // The option's own label; the field label may point at a lone option too (is_primary).
   const optionText = (input: HTMLInputElement) =>
-    text(input.labels?.[0]) || (input.getAttribute("aria-label") ?? "");
+    text([...(input.labels ?? [])].find((label) => !label.matches(".crm-af-field-label"))) ||
+    (input.getAttribute("aria-label") ?? "");
   const group = (kind: string, inputs: HTMLInputElement[]): Partial<Field> => ({
     kind,
     options: inputs.map(optionText),
@@ -155,10 +157,13 @@ function observe(scope: string): Observed {
   });
 
   // Select, EntityRef and ChainSelect: select2 on Angular, native select or combobox on React.
-  const choice = (field: Element, widget: Element): Partial<Field> => {
+  const choice = (widget: Element): Partial<Field> => {
+    // select2 hides the input it replaces and names its container s2id_<input id>.
+    const replaced = widget.id.startsWith("s2id_")
+      ? document.getElementById(widget.id.slice("s2id_".length))
+      : null;
     const model =
-      field.querySelector(".select2-offscreen") ??
-      (widget instanceof HTMLSelectElement ? widget : widget.querySelector("input"));
+      replaced ?? (widget instanceof HTMLSelectElement ? widget : widget.querySelector("input"));
     let value: string[];
     if (widget instanceof HTMLSelectElement)
       value = [...widget.selectedOptions].filter((o) => o.value !== "").map((o) => text(o));
@@ -177,7 +182,7 @@ function observe(scope: string): Observed {
     const note = field.querySelector(".afreact-unsupported");
     if (note) return { kind: "unsupported", value: [text(note)] };
     const widget = field.querySelector(".select2-container, select");
-    if (widget) return choice(field, widget);
+    if (widget) return choice(widget);
     // Date fields: jQuery's datepicker keeps the ISO value in the input it hides; React's native
     // input holds it with a "T" before the time (comparison.md, "Date fields").
     const date = field.querySelector(
@@ -453,6 +458,40 @@ async function supportReport(page: Page): Promise<Map<string, Reported>> {
   );
 }
 
+/**
+ * axe rules a form's own layout or display settings break on both renderers, which React renders
+ * as written (comparison.md, upstream bugs). Per form and rule, React may have as many findings as
+ * Angular; an entry that excuses nothing fails.
+ */
+const SHARED_CONTENT: Record<string, { rule: string; reason: string }[]> = {
+  ...Object.fromEntries(
+    ["afformTabMember", "afsearchTabMember", "afsearchTabRel"].map((name) => [
+      name,
+      [{ rule: "heading-order", reason: "the layout's h3 follows the page's h1" }],
+    ]),
+  ),
+  afsearchSettingsDatePreferences: [
+    { rule: "link-name", reason: "the display's edit link has an icon and neither text nor title" },
+  ],
+};
+
+const ruleOf = (finding: string) => finding.slice(0, finding.indexOf(":"));
+
+function sharedContent(name: string, reactOnly: string[], angular: string[]) {
+  const rules = new Map<string, string>();
+  const stale: string[] = [];
+  for (const { rule, reason } of SHARED_CONTENT[name] ?? []) {
+    const count = (findings: string[]) => findings.filter((f) => ruleOf(f) === rule).length;
+    if (!count(reactOnly)) stale.push(rule);
+    else if (count(reactOnly) <= count(angular)) rules.set(rule, reason);
+  }
+  const excused = reactOnly.flatMap((finding) => {
+    const reason = rules.get(ruleOf(finding));
+    return reason ? [`${finding} (${reason})`] : [];
+  });
+  return { reactOnly: reactOnly.filter((f) => !rules.has(ruleOf(f))), excused, stale };
+}
+
 async function sweepForm(
   page: Page,
   row: SupportRow,
@@ -480,8 +519,11 @@ async function sweepForm(
   const notes = (react.observed?.notes ?? []).map((note) => note.replace(NOTE_PREFIX, ""));
   const found =
     react.observed && angularLoad.observed ? differences(react.observed, angularLoad.observed) : [];
-  const reactOnly =
-    react.observed && angularLoad.observed ? ownFindings(react.axe, angularLoad.axe) : [];
+  const shared =
+    react.observed && angularLoad.observed
+      ? sharedContent(row.name, ownFindings(react.axe, angularLoad.axe), angularLoad.axe)
+      : { reactOnly: [], excused: [], stale: [] };
+  const { reactOnly, stale } = shared;
   const status: Status = errors.length
     ? "error"
     : notes.length
@@ -489,14 +531,17 @@ async function sweepForm(
       : found.length
         ? "differs"
         : "identical";
-  const failures = supported
-    ? [
-        ...errors,
-        ...notes.map((note) => `"Not supported" note: ${note}`),
-        ...found,
-        ...reactOnly.map((finding) => `axe on React only: ${finding}`),
-      ]
-    : [];
+  const failures = [
+    ...(supported
+      ? [
+          ...errors,
+          ...notes.map((note) => `"Not supported" note: ${note}`),
+          ...found,
+          ...reactOnly.map((finding) => `axe on React only: ${finding}`),
+        ]
+      : []),
+    ...stale.map((rule) => `SHARED_CONTENT excuses no ${rule} finding any more`),
+  ];
   return {
     name: row.name,
     title: row.title,
@@ -507,7 +552,7 @@ async function sweepForm(
     renderedEmpty,
     differences: found,
     notes: [...new Set(notes)],
-    axe: { react: react.axe, angular: angularLoad.axe, reactOnly },
+    axe: { react: react.axe, angular: angularLoad.axe, reactOnly, excused: shared.excused },
     errors,
     failures,
   };
@@ -547,6 +592,7 @@ function markdown(results: Result[], total: number): string {
       ['"Not supported" notes shown', result.notes],
       ["The support report lists", result.reported],
       ["axe on React only", result.axe.reactOnly],
+      ["axe excused as the form's own content (SHARED_CONTENT)", result.axe.excused],
     ];
     for (const [heading, items] of sections)
       if (items.length) lines.push("", `${heading}:`, "", bullets(items));
@@ -576,6 +622,8 @@ test("every form renders alike on both renderers", async ({ page }, testInfo) =>
     .filter(Boolean);
   const unknown = only.filter((name) => !forms.some((form) => form.name === name));
   expect(unknown, "names in SWEEP_FORMS that are no form or a block").toEqual([]);
+  const gone = Object.keys(SHARED_CONTENT).filter((name) => !forms.some((f) => f.name === name));
+  expect(gone, "forms in SHARED_CONTENT that are no form or a block").toEqual([]);
   const swept = only.length ? forms.filter((form) => only.includes(form.name)) : forms;
   expect(swept.length, "forms to sweep").toBeGreaterThan(0);
   test.setTimeout(300_000 + swept.length * 4 * LOAD_MS);

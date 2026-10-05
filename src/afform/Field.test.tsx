@@ -126,6 +126,14 @@ describe("Field", () => {
     expect(values).toEqual([[1, 2]]);
   });
 
+  it("names selects without a label by Select.html's title", () => {
+    const options = [{ id: 1, label: "A" }];
+    setup({ input_type: "Select", label: false, options });
+    setup({ input_type: "Select", label: false, options, input_attrs: { multiple: true } });
+    expect(screen.getByRole("combobox", { name: "Select Value" })).toBeInTheDocument();
+    expect(screen.getByRole("listbox", { name: "Select Values" })).toBeInTheDocument();
+  });
+
   it("offers Yes/No as real booleans for Boolean radios", async () => {
     const values = setup({ input_type: "Radio", data_type: "Boolean", required: true });
     expect(screen.getByRole("radiogroup", { name: "Field" })).toBeInTheDocument();

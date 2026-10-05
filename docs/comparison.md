@@ -76,7 +76,8 @@ fails when the React page breaks a rule on more elements than the Angular page.
 Findings only on the Angular page: the select2 widgets carry roles their
 elements do not allow, the clear link carries `aria-label` without a role, and
 the primary-email radio has no label. Both pages share the theme's contrast
-findings listed under upstream bugs.
+findings and the layouts' own headings and links listed under upstream bugs;
+`tests/browser/sweep.spec.ts` excuses the latter per form (`SHARED_CONTENT`).
 
 ### Not implemented in the React renderer
 
@@ -453,6 +454,27 @@ a column without label or key with `col.index`, which nothing sets
 "Column undefined", and a saved filter set stores that label. React numbers it
 by position ("Column 3"); a set saved by Angular for such a column therefore
 does not match it in React.
+
+**The primary radio of a repeat has no name.** In a repeated join, afField
+gives `is_primary` a single option with an empty label
+(`afField.component.js:72-74`), and `fields/Radio.html` names each radio by
+`aria-label="{{opt.label}}"`, so screen readers announce an unnamed radio
+(6.18.1). The React renderer names the radio by the field's label.
+
+**Tab forms put an h3 under the page's h1.** The contact summary tabs for
+memberships and relationships start their second section with a literal
+`<h3>` (`civicrm_admin_ui/ang/afsearchTabMember.aff.html:3`,
+`afformTabMember.aff.html:3`, afform's `afsearchTabRel.aff.html:3`), which
+skips h2 (axe `heading-order`, 6.18.1). Both renderers show the layout's markup
+as it is.
+
+**Icon-only row links without a name.** A display link whose `text` is empty
+and that has no `title`, such as the edit link of the Date Preferences
+settings display (`civicrm_admin_ui/managed/SavedSearch_Settings_Date_Preferences.mgd.php`),
+renders as an icon with neither text nor title (axe `link-name`, 6.18.1).
+`AbstractRunAction::formatLink` keeps the link's empty text rather than the
+text `getLinks` returns for the action; only `formatMultiLink` uses the
+latter. Both renderers show the link as the server returns it.
 
 **Theme contrast below WCAG AA.** Riverlea (stream Minetta) links on the
 shaded rows of a striped table reach 4.2:1 (`#2c789b` on `#ededed`), and in

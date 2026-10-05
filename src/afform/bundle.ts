@@ -73,6 +73,21 @@ export function decodeJs(text: string): unknown {
   }
 }
 
+const TS_CALL = /^ts\(\s*('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")\s*\)$/s;
+
+/** Civi\Afreact\LayoutHtml: decodeJs(), with `ts('…')` translated as Angular evaluates it. */
+export function decodeAttribute(text: string, translate: (text: string) => string): unknown {
+  const js = text.trim();
+  const call = TS_CALL.exec(js);
+  if (call) {
+    const literal = decodeJs(call[1] ?? "");
+    return typeof literal === "string" ? translate(literal) : null;
+  }
+  if (/^(\{[\s\S]*\}|\[[\s\S]*\])$/.test(js))
+    return phpArray(rawProps(js).map(([key, value]) => [key, decodeAttribute(value, translate)]));
+  return decodeJs(js);
+}
+
 /** CRM_Utils_JS::convertSingleQuoteString(). */
 function singleQuoteToJson(js: string): string | null {
   const backslash = "\u0000backslash\u0000";
@@ -157,31 +172,40 @@ const BOOLEAN_ATTRIBUTES = new Set(
   ),
 );
 
-/** CRM_Afform_ArrayHtml::convertHtmlToArray() in the browser's HTML parser. */
-export function htmlToLayout(html: string, types: AttributeTypes): LayoutNode[] {
-  if (html === "") return [];
-  const body = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html").body;
-  return convertNodes(body.childNodes, types);
+/** How a partial's attributes decode: their types, and ts() for JS attributes. */
+interface Decoding {
+  types: AttributeTypes;
+  translate: (text: string) => string;
 }
 
-function convertNodes(nodes: NodeListOf<ChildNode>, types: AttributeTypes): LayoutNode[] {
+/** CRM_Afform_ArrayHtml::convertHtmlToArray() in the browser's HTML parser. */
+export function htmlToLayout(html: string, decoding: Decoding): LayoutNode[] {
+  if (html === "") return [];
+  const body = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html").body;
+  return convertNodes(body.childNodes, decoding);
+}
+
+function convertNodes(nodes: NodeListOf<ChildNode>, decoding: Decoding): LayoutNode[] {
   return [...nodes].flatMap((node) => {
-    const converted = convertNode(node, types);
+    const converted = convertNode(node, decoding);
     return converted === null || ("#text" in converted && converted["#text"] === "")
       ? []
       : [converted];
   });
 }
 
-function convertNode(node: ChildNode, types: AttributeTypes): LayoutNode | null {
+function convertNode(node: ChildNode, decoding: Decoding): LayoutNode | null {
   if (node instanceof Element) {
     const tag = node.localName;
     const element: LayoutNode = { "#tag": tag };
     for (const { name, value } of node.attributes) {
       const text = value === "" && BOOLEAN_ATTRIBUTES.has(name) ? name : value;
-      element[name] = attributeType(types, tag, name) === "js" ? decodeJs(text) : text;
+      element[name] =
+        attributeType(decoding.types, tag, name) === "js"
+          ? decodeAttribute(text, decoding.translate)
+          : text;
     }
-    if (node.childNodes.length > 0) element["#children"] = convertNodes(node.childNodes, types);
+    if (node.childNodes.length > 0) element["#children"] = convertNodes(node.childNodes, decoding);
     else if (tag === "div" || tag === "fieldset") element["#children"] = [];
     return element;
   }
@@ -221,7 +245,14 @@ function compileModule(compilation: Compilation, module: string, trail: string[]
   const html = compilation.file[module]?.partials[`~/${module}/${module}.aff.html`];
   if (typeof html !== "string") throw new Error(`No layout for Afform module ${module}.`);
   compilation.compiled.push(module);
-  const nodes = withoutAdminMenu(htmlToLayout(html, compilation.vars.attributeTypes));
+  const strings = compilation.file[module]?.strings;
+  const own = new Map(strings && !Array.isArray(strings) ? Object.entries(strings) : []);
+  const nodes = withoutAdminMenu(
+    htmlToLayout(html, {
+      types: compilation.vars.attributeTypes,
+      translate: (text) => own.get(text) ?? ts(text),
+    }),
+  );
   return prepare(compilation, nodes, [...trail, module]);
 }
 

@@ -13,17 +13,21 @@ use Civi\Angular\Manager;
  * The partial runs through core's change sets, so every `af-field` carries the
  * `defn` that AfformMetadataInjector merged from the entity metadata. Block
  * elements get their own compiled layout as children, and embedded search
- * displays carry their settings as an array.
+ * displays carry their settings as an array. `ts('…')` in JS attributes is
+ * translated with the form's strings (LayoutHtml).
  */
 final class LayoutCompiler {
 
   /**
    * @param array<string, string> $blocks
    *   Block directive name => Angular module name.
+   * @param array<string, string> $strings
+   *   The form's translated strings, blocks included.
    */
   public function __construct(
     private readonly Manager $angular,
     private readonly array $blocks,
+    private readonly array $strings,
   ) {}
 
   /**
@@ -35,7 +39,7 @@ final class LayoutCompiler {
     if (in_array($module, $trail, TRUE)) {
       throw new \CRM_Core_Exception("Afform block {$module} includes itself.");
     }
-    $layout = (new \CRM_Afform_ArrayHtml())->convertHtmlToArray($this->html($module));
+    $layout = (new LayoutHtml($this->strings))->convertHtmlToArray($this->html($module));
     return $this->prepareNodes($layout, [...$trail, $module]);
   }
 

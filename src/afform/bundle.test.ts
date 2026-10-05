@@ -1,10 +1,18 @@
-import { compileBundle, decodeJs, htmlToLayout, type BundleVars, type ModuleFile } from "./bundle";
+import {
+  compileBundle,
+  decodeAttribute,
+  decodeJs,
+  htmlToLayout,
+  type BundleVars,
+  type ModuleFile,
+} from "./bundle";
 
 const TYPES: BundleVars["attributeTypes"] = {
   "*": { "*": "text", data: "js", actions: "js" },
   "af-field": { name: "text", defn: "js" },
   "af-entity": { actions: "js", data: "text" },
 };
+const DECODING = { types: TYPES, translate: (text: string) => `[${text}]` };
 
 describe("decodeJs", () => {
   it("reads JS literal notation as CRM_Utils_JS::decode does", () => {
@@ -40,13 +48,30 @@ describe("decodeJs", () => {
   });
 });
 
+describe("decodeAttribute", () => {
+  it("translates ts() with a string literal at any depth, as Angular evaluates it", () => {
+    expect(
+      decodeAttribute(
+        String.raw`{help_pre: ts('It\'s'), input_attrs: {placeholder: ts( "Say \"hi\"" )}, list: [ts('a')]}`,
+        DECODING.translate,
+      ),
+    ).toEqual({ help_pre: "[It's]", input_attrs: { placeholder: '[Say "hi"]' }, list: ["[a]"] });
+  });
+
+  it("leaves string literals and other calls as CRM_Utils_JS::decode reads them", () => {
+    expect(
+      decodeAttribute(`{label: 'ts(x)', other: ts(name), more: ts('a', {1: 'b'})}`, (t) => t),
+    ).toEqual({ label: "ts(x)", other: null, more: null });
+  });
+});
+
 describe("htmlToLayout", () => {
   it("converts markup to ArrayHtml's format with typed attributes", () => {
     expect(
       htmlToLayout(
         `<af-form ctrl="afform"><af-entity data="{source: 'Web'}" actions="{update: false}" name="A"></af-entity>
 <div class="af-container"><af-field name="x" defn="{label: 'X'}"></af-field><div></div></div><!-- note --><p>a b</p></af-form>`,
-        TYPES,
+        DECODING,
       ),
     ).toEqual([
       {
@@ -76,7 +101,7 @@ describe("htmlToLayout", () => {
   });
 
   it("gives valueless HTML 4 boolean attributes their name as libxml does", () => {
-    expect(htmlToLayout(`<input disabled checked af-fieldset required>`, TYPES)).toEqual([
+    expect(htmlToLayout(`<input disabled checked af-fieldset required>`, DECODING)).toEqual([
       {
         "#tag": "input",
         disabled: "disabled",
@@ -128,6 +153,22 @@ describe("compileBundle", () => {
         { "#text": "\n" },
       ],
     });
+  });
+
+  it("translates ts() in field definitions with the strings of the module it is in", () => {
+    const file: ModuleFile = {
+      afformA: partial("afformA", `<afblock-b></afblock-b>`),
+      afblockB: {
+        ...partial("afblockB", `<af-field name="x" defn="{help_pre: ts('Help')}"></af-field>`),
+        strings: { Help: "Hilfe" },
+      },
+    };
+    expect(compileBundle(vars, file, "afformA").layout).toEqual([
+      {
+        "#tag": "afblock-b",
+        "#children": [{ "#tag": "af-field", name: "x", defn: { help_pre: "Hilfe" } }],
+      },
+    ]);
   });
 
   it("rejects forms the page did not hand over and blocks that include themselves", () => {

@@ -118,6 +118,29 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
     $this->assertSame(['Block probe' => 'Block replaced'], $this->form('afformAfreactTestHost')['strings']);
   }
 
+  public function testTsCallsInFieldDefinitionsAreTranslated(): void {
+    Afform::create(checkPermissions: FALSE)
+      ->setValues([
+        'name' => 'afformAfreactTestHost',
+        'type' => 'form',
+        'title' => 'Host',
+        'layout' => '<af-form ctrl="afform"><af-entity type="Individual" name="Individual1" />'
+        . '<fieldset af-fieldset="Individual1"><af-field name="first_name" '
+        . 'defn="{help_pre: ts(\'Defn probe\'), input_attrs: {placeholder: ts(\'It\\\'s me\')}, '
+        . 'label: \'ts(x)\'}" /></fieldset></af-form>',
+      ])
+      ->execute();
+    WordReplacement::create(checkPermissions: FALSE)
+      ->setValues(['find_word' => 'Defn probe', 'replace_word' => 'Defn replaced', 'match_type' => 'exactMatch'])
+      ->execute();
+    unset(\Civi::$statics[\CRM_Core_I18n::class]);
+    $defn = $this->findTag($this->form('afformAfreactTestHost')['layout'], 'af-field', 'first_name')[0]['defn'];
+    $this->assertSame('Defn replaced', $defn['help_pre']);
+    $this->assertSame("It's me", $defn['input_attrs']['placeholder']);
+    // A string literal stays as written.
+    $this->assertSame('ts(x)', $defn['label']);
+  }
+
   public function testFormPermissionDecidesAccess(): void {
     \CRM_Core_Config::singleton()->userPermissionClass->permissions = ['access CiviCRM'];
     $this->assertSame(

@@ -193,12 +193,8 @@ function Element({ node, children }: { node: ElementNode; children?: ReactNode }
   // afTitle's elements.
   const resolvedTitle = resolve(node["af-title"]);
   const title = typeof resolvedTitle === "string" ? resolvedTitle : null;
-  const legend =
-    title && node["#tag"] === "fieldset" ? (
-      <legend className="af-title">{title}</legend>
-    ) : title ? (
-      <h4 className="af-title">{title}</h4>
-    ) : null;
+  const titleTag = TITLE_TAGS.get(node["#tag"]) ?? "h4";
+  const heading = title ? createElement(titleTag, { className: "af-title" }, title) : null;
   const note = unsupported.length > 0 && <Unsupported what={expressionNote(unsupported)} />;
   if (VOID_TAGS.has(node["#tag"]))
     return (
@@ -211,10 +207,16 @@ function Element({ node, children }: { node: ElementNode; children?: ReactNode }
     node["#tag"],
     props,
     note,
-    legend,
+    heading,
     children ?? <Nodes nodes={node["#children"] ?? []} />,
   );
 }
+
+/** afTitle's title element by container; other elements get an h4. */
+const TITLE_TAGS = new Map([
+  ["fieldset", "legend"],
+  ["details", "summary"],
+]);
 
 type Evaluated = { value: boolean } | { error: string };
 

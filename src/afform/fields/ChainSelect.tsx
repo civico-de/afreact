@@ -109,7 +109,8 @@ export function ChainSelect({
     id,
     ref: element,
     className: "form-control",
-    disabled: disabled || !options.length,
+    // ChainSelect.html leaves a select without options enabled, showing why it is empty.
+    disabled,
     required: defn.required === true,
     "aria-describedby": describedBy,
     "aria-busy": chained && loaded.isFetching,

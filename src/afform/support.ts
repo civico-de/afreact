@@ -24,6 +24,8 @@ const HTML_TAGS = new Set([
   "span",
   "p",
   "fieldset",
+  "details",
+  "summary",
   "section",
   "article",
   "header",
@@ -187,6 +189,8 @@ export function elementAttributes(node: ElementNode): [string, unknown][] {
   return Object.entries(node).flatMap(([attr, value]): [string, unknown][] => {
     if (attr === "class") return [["className", value]];
     if (attr === "ng-href") return [["href", value]];
+    // A boolean attribute: present, even as open="", means open.
+    if (attr === "open") return [["open", true]];
     return PASSTHROUGH.has(attr) || attr.startsWith("aria-") ? [[attr, value]] : [];
   });
 }

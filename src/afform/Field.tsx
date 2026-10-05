@@ -260,6 +260,8 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                   {...common}
                   multiple
                   className="form-control"
+                  // Select.html's title, which names a select without a label.
+                  title={ts("Select Values")}
                   value={Array.isArray(value) ? value.map(String) : []}
                   onChange={(event) => {
                     onChange(
@@ -275,6 +277,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                 <select
                   {...common}
                   className="form-control"
+                  title={ts("Select Value")}
                   value={textValue(value)}
                   onChange={(event) => {
                     onChange(

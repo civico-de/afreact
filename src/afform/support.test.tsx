@@ -24,7 +24,7 @@ const layout: LayoutNode[] = [
     "#children": [
       { "#tag": "af-entity", type: "Contact", name: "Individual1" },
       { "#text": "Hello {{ person.name }}" },
-      { "#tag": "details", "#children": [{ "#tag": "p", "#children": [{ "#text": "inner" }] }] },
+      { "#tag": "iframe", "#children": [{ "#tag": "p", "#children": [{ "#text": "inner" }] }] },
       { "#tag": "div", "ng-if": "show", "ng-click": "go()" },
       { "#tag": "a", href: "#", title: "{{ link.title }}", "#children": [{ "#text": "a" }] },
       field("nick_name"),
@@ -77,7 +77,7 @@ describe("layoutProblems", () => {
   it("names every part the renderer cannot show", () => {
     expect(layoutProblems(layout)).toEqual([
       "Angular expression {{ person.name }}",
-      "<details>",
+      "<iframe>",
       'ng-if, ng-click="go()"',
       "Angular expression {{ link.title }}",
       "field nick_name without entity or metadata",
@@ -259,6 +259,25 @@ describe("search forms", () => {
     expect(layoutProblems(healthySearch)).toEqual([]);
     expect(await shownNotes(healthySearch)).toEqual([]);
     expect(screen.getByRole("textbox", { name: "title" })).toBeInTheDocument();
+  });
+
+  it("titles an open details element by a summary, as afTitle", async () => {
+    const filters: LayoutNode = {
+      "#tag": "details",
+      class: "af-container",
+      "af-title": "Filters",
+      open: "",
+      "#children": [field("title", { search_operator: "CONTAINS" })],
+    };
+    const details = searchForm([filters, display({})]);
+    expect(layoutProblems(details)).toEqual([]);
+    expect(await shownNotes(details)).toEqual([]);
+    const summary = screen.getByText("Filters");
+    expect(summary.tagName).toBe("SUMMARY");
+    expect(summary).toHaveClass("af-title");
+    expect(summary.parentElement?.firstElementChild).toBe(summary);
+    expect(summary.closest("details")).toHaveProperty("open", true);
+    expect(screen.getByRole("textbox", { name: "title" })).toBeVisible();
   });
 
   it("matches the notes the rendered search form shows", async () => {

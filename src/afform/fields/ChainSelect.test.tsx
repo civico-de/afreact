@@ -73,14 +73,13 @@ describe("ChainSelect", () => {
   it("waits for the control field, loads its options, and drops a value they no longer offer", async () => {
     const calls = renderForm([country, state()]);
     const select = await screen.findByRole("combobox", { name: "State" });
-    expect(select).toBeDisabled();
+    // Angular leaves it enabled, its only entry saying why.
+    expect(select).toBeEnabled();
     expect(screen.getByRole("option", { name: "Choose Country first" })).toBeInTheDocument();
     expect(lookups(calls)).toEqual([]);
 
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Country" }), "Germany");
-    await waitFor(() => {
-      expect(select).toBeEnabled();
-    });
+    await screen.findByRole("option", { name: "Hamburg" });
     expect(lookups(calls)).toEqual([
       {
         name: "afformTest",
@@ -95,7 +94,7 @@ describe("ChainSelect", () => {
 
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Country" }), "Iceland");
     await screen.findByRole("option", { name: "None Found" });
-    expect(select).toBeDisabled();
+    expect(select).toBeEnabled();
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
@@ -120,9 +119,7 @@ describe("ChainSelect", () => {
       "Germany",
     );
     const list = await screen.findByRole("listbox", { name: "State" });
-    await waitFor(() => {
-      expect(list).toBeEnabled();
-    });
+    await screen.findByRole("option", { name: "Hamburg" });
     expect(lookups(calls)[0]).toMatchObject({ joinEntity: "Address", values: { country_id: 1 } });
     await userEvent.selectOptions(list, ["Berlin", "Hamburg"]);
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
