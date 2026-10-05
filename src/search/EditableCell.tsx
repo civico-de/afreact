@@ -95,7 +95,9 @@ function EditableValue(props: EditableValueProps) {
   const target = { rowKey: row.key, colIndex };
   const control = useRef<HTMLSpanElement>(null);
   useEffect(() => {
-    if (edit.takeFocus(target)) control.current?.focus();
+    // Only a focus the closed editor dropped comes back; one the user moved on stays.
+    const dropped = !document.activeElement || document.activeElement === document.body;
+    if (edit.takeFocus(target) && dropped) control.current?.focus();
   });
   if (edit.isSaving(target)) return <span className="crm-search-loading-placeholder" />;
   if (edit.isEditing(target)) return <CellEditor {...props} />;
@@ -141,7 +143,9 @@ function CellEditor({
   const id = useId();
   useEffect(() => {
     const first = (selector: string) => form.current?.querySelector<HTMLElement>(selector);
-    (first("input:checked") ?? first("input, select, textarea"))?.focus();
+    // Options still loading leave no input to focus; a button keeps Escape and blur working.
+    const input = first("input:checked") ?? first("input, select:enabled, textarea");
+    (input ?? first("button"))?.focus();
   }, []);
 
   const finish = (save: boolean) => {
@@ -419,8 +423,15 @@ function LoadedSelect(props: InputProps) {
       });
       return field?.options || [];
     },
+    // The options follow the row's values, so each opening loads them, as in core.
+    gcTime: 0,
   });
-  if (loaded.error) return <p className="alert alert-danger">{errorMessage(loaded.error)}</p>;
+  if (loaded.error)
+    return (
+      <p className="alert alert-danger" role="alert">
+        {errorMessage(loaded.error)}
+      </p>
+    );
   if (!loaded.data)
     return <select {...props.common} disabled className="form-control loading" aria-busy />;
   return <Select {...props} options={loaded.data} autoFocus />;

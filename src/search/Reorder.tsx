@@ -3,6 +3,7 @@ import { Suspense, use, useState, type ComponentType, type ReactNode } from "rea
 import { dragField, moveRow, withWeights } from "./dragOrder";
 import type * as SortableModule from "./Sortable";
 import { rowName } from "./Tasks";
+import { writePage } from "./inlineEdit";
 import type { DisplaySettings, Row, RunPage } from "./types";
 
 /** What Body needs to render draggable rows. */
@@ -38,7 +39,7 @@ export function useReorder({ settings, runKey, runParams }: ReorderOptions): Reo
 
   const save = async (page: RunPage, active: Row["key"], over: Row["key"], field: string) => {
     const moved = moveRow(page.rows, active, over, field);
-    client.setQueryData<RunPage>(runKey, { ...page, rows: moved.rows });
+    writePage(client, runKey, (current) => ({ ...current, rows: moved.rows }));
     const weights = await window.CRM.api4("SearchDisplay", "inlineEdit", {
       ...runParams,
       return: "draggableWeight",
@@ -47,14 +48,10 @@ export function useReorder({ settings, runKey, runParams }: ReorderOptions): Reo
     });
     if (typeof weights !== "object" || weights === null)
       throw new Error("SearchDisplay.inlineEdit answered without weights.");
-    client.setQueryData<RunPage>(
-      runKey,
-      (current) =>
-        current && {
-          ...current,
-          rows: withWeights(current.rows, { ...weights }, field, settings?.columns ?? []),
-        },
-    );
+    writePage(client, runKey, (current) => ({
+      ...current,
+      rows: withWeights(current.rows, { ...weights }, field, settings?.columns ?? []),
+    }));
     window.CRM.status(ts("Saved"));
   };
 
@@ -65,7 +62,13 @@ export function useReorder({ settings, runKey, runParams }: ReorderOptions): Reo
     setSaving(true);
     save(page, active, over, weightField)
       .catch((failure: unknown) => {
-        client.setQueryData<RunPage>(runKey, page);
+        // Only the order goes back; what the rows took meanwhile stays.
+        const place = new Map(page.rows.map((row, index) => [row.key, index]));
+        const at = (row: Row) => place.get(row.key) ?? page.rows.length;
+        writePage(client, runKey, (current) => ({
+          ...current,
+          rows: [...current.rows].sort((a, b) => at(a) - at(b)),
+        }));
         setError(failure);
       })
       .finally(() => {

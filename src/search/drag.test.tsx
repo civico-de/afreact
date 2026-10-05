@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi, type MockInstance } from "vitest";
+import { editInfo } from "../test/editInfo";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
 import { AfreactSearch } from "./AfreactSearch";
 import type { Column, DisplaySettings, Row } from "./types";
@@ -163,6 +164,40 @@ describe("AfreactSearch drag to reorder", () => {
     expect(orderColumn()).toEqual(["1", "2", "3"]);
     expect(window.CRM.status).not.toHaveBeenCalled();
     expect(handle("Name 1")).toHaveAttribute("aria-disabled", "false");
+  });
+
+  it("keeps a cell saved during the move when the move fails", async () => {
+    let fail: (error: unknown) => void = () => undefined;
+    const editable = (key: number): Row => ({
+      ...row(key),
+      columns: [{ val: `Name ${String(key)}`, edit: true }, { val: key }],
+      data: { id: key, weight: key, label: `Name ${String(key)}` },
+    });
+    mockApi({
+      "SearchDisplay.run": () =>
+        Object.assign([editable(1), editable(2), editable(3)], {
+          editable: { label: editInfo({ value_key: "label" }) },
+        }),
+      "SearchDisplay.inlineEdit": (params) =>
+        params.return === "draggableWeight"
+          ? new Promise((_, reject) => {
+              fail = reject;
+            })
+          : [{ ...editable(2), columns: [{ val: "Renamed", edit: true }, { val: 2 }] }],
+    });
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+    await screen.findByRole("button", { name: "Move Name 1" });
+    await keyboardMove("Name 1", 2);
+    await waitFor(() => {
+      expect(shownOrder()).toEqual(["2", "3", "1"]);
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Edit Label Name 2" }));
+    await userEvent.type(screen.getByRole("textbox"), "x{Enter}");
+    await screen.findByRole("button", { name: "Edit Label Renamed" });
+    fail(apiError("Cannot drag-sort 'Contact'."));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Cannot drag-sort 'Contact'.");
+    expect(shownOrder()).toEqual(["1", "2", "3"]);
+    expect(screen.getByRole("button", { name: "Edit Label Renamed" })).toBeInTheDocument();
   });
 
   it("puts the rows back when the server answers without weights", async () => {

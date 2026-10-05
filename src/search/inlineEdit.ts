@@ -1,4 +1,4 @@
-import { useQueryClient, type QueryKey } from "@tanstack/react-query";
+import { useQueryClient, type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { createContext, useContext, useState } from "react";
 import { api4, errorMessage } from "../api/civi";
 import type { EditableInfo, Row, RunPage } from "./types";
@@ -73,6 +73,18 @@ export function mergeRow(old: Row, fresh: Row): Row {
   return { ...kept, ...fresh, data: { ...old.data, ...fresh.data } };
 }
 
+/** The run each locally changed page came from. */
+const runs = new WeakMap<RunPage, RunPage>();
+const runOf = (page: RunPage) => runs.get(page) ?? page;
+
+/** Changes the cached page in place of a reload; it still counts as the run it came from. */
+export function writePage(client: QueryClient, key: QueryKey, change: (page: RunPage) => RunPage) {
+  const old = client.getQueryData<RunPage>(key);
+  if (!old) return;
+  const next = client.setQueryData<RunPage>(key, change(old));
+  if (next) runs.set(next, runOf(old));
+}
+
 export interface CellTarget {
   rowKey: Row["key"];
   colIndex: number;
@@ -133,7 +145,7 @@ export function useInlineEdit({
   const [saving, setSaving] = useState<readonly CellTarget[]>([]);
   const [focus, setFocus] = useState<CellTarget | null>(null);
   const [announcement, setAnnouncement] = useState("");
-  const open = editing && editing.page === page ? editing : null;
+  const open = editing && page && runOf(editing.page) === runOf(page) ? editing : null;
   const close = (target: CellTarget | null) => {
     setEditing(null);
     setFocus(target);
@@ -161,10 +173,10 @@ export function useInlineEdit({
         const fresh = result[0];
         const shown = client.getQueryData<RunPage>(key);
         if (fresh && shown?.rows.some((old) => old.key === row.key)) {
-          client.setQueryData<RunPage>(key, {
-            ...shown,
-            rows: shown.rows.map((old) => (old.key === row.key ? mergeRow(old, fresh) : old)),
-          });
+          writePage(client, key, (current) => ({
+            ...current,
+            rows: current.rows.map((old) => (old.key === row.key ? mergeRow(old, fresh) : old)),
+          }));
           void client.invalidateQueries({ queryKey: tallyKey });
           setFocus(target);
         } else {
@@ -177,8 +189,9 @@ export function useInlineEdit({
         const message = errorMessage(error);
         setAnnouncement(ts("Not saved: %1", { 1: message }));
         // The editor opens again unless another one opened meanwhile.
-        if (page)
-          setEditing((current) => current ?? { ...target, page, value, error: message });
+        const shown = client.getQueryData<RunPage>(key);
+        if (shown)
+          setEditing((current) => current ?? { ...target, page: shown, value, error: message });
       },
     );
   };

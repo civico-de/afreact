@@ -5,7 +5,7 @@ const FOCUSABLE = [
   "button:not([disabled])",
   "input:not([disabled])",
   "select:not([disabled])",
-  "textarea",
+  "textarea:not([disabled])",
   '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
 
@@ -33,9 +33,15 @@ export function useKeptFocus(root: HTMLElement | null, loading: boolean) {
       const element = event.target instanceof Element ? event.target : null;
       const item = element?.closest("[data-entity-id]");
       const key = item?.getAttribute("data-entity-id");
+      // A cell editor stands where its cell's control will be again.
+      const editor = element?.closest("crm-search-display-editable")?.querySelector(FOCUSABLE);
       spot.current =
         element && item && key
-          ? { element, key, index: [...item.querySelectorAll(FOCUSABLE)].indexOf(element) }
+          ? {
+              element,
+              key,
+              index: [...item.querySelectorAll(FOCUSABLE)].indexOf(editor ?? element),
+            }
           : null;
     };
     root.addEventListener("focusin", onFocus);

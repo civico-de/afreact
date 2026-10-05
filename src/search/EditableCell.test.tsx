@@ -197,6 +197,46 @@ describe("in-place editing", () => {
     expect(screen.getByText("Not saved: Inline edit failed.")).toHaveAttribute("role", "status");
   });
 
+  it("keeps a second editor and what it holds when the first cell's save arrives", async () => {
+    const person = (key: number, name: string, title: string): Row => ({
+      key,
+      columns: [{ val: name }, { val: title, edit: true }],
+      data: { id: key, job_title: title },
+    });
+    let answer: (rows: Row[]) => void = () => undefined;
+    mockApi({
+      "SearchDisplay.run": (params) =>
+        params.return === "tally"
+          ? [{}]
+          : Object.assign([person(7, "Ada", "Pilot"), person(8, "Bob", "Cook")], {
+              editable: { job_title: editInfo({ value_key: "job_title" }) },
+            }),
+      "SearchDisplay.inlineEdit": () =>
+        new Promise<Row[]>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    const settings: DisplaySettings = {
+      columns: [
+        { type: "field", key: "sort_name", label: "Name" },
+        { type: "field", key: "job_title", label: "Value" },
+      ],
+      pager: false,
+    };
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+    await open(edit("Pilot"));
+    await userEvent.type(field(), "s{Enter}");
+    // The second editor opens while the first cell's save runs.
+    await userEvent.click(screen.getByRole("button", { name: edit("Cook") }));
+    const second = screen.getByLabelText("Value, Bob");
+    await userEvent.type(second, "s");
+    answer([person(7, "Ada", "Pilots")]);
+    expect(await screen.findByRole("button", { name: edit("Pilots") })).toBeInTheDocument();
+    expect(second).toBeInTheDocument();
+    expect(second).toHaveValue("Cooks");
+    expect(second).toHaveFocus();
+  });
+
   it("sends null for an emptied nullable field", async () => {
     const { edits } = setup({ value_key: "job_title" }, "Pilot");
     await open();
@@ -394,7 +434,38 @@ describe("in-place editors", () => {
       },
     });
     await open();
-    expect(await screen.findByText("Access denied")).toHaveClass("alert-danger");
+    const error = await screen.findByRole("alert");
+    expect(error).toHaveTextContent("Access denied");
+    expect(error).toHaveClass("alert-danger");
+    // Nothing to edit, yet Escape still closes it.
+    await userEvent.keyboard("{Escape}");
+    expect(await screen.findByRole("button", { name: edit("Berlin") })).toHaveFocus();
+  });
+
+  it("closes with Escape while its options load", async () => {
+    setup({ value_key: "state_province_id", entity: "Address", options: true }, 5, {
+      shown: "Berlin",
+      handlers: { "Address.getFields": () => new Promise(() => undefined) },
+    });
+    await open();
+    expect(await screen.findByRole("button", { name: "Save" })).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(await screen.findByRole("button", { name: edit("Berlin") })).toHaveFocus();
+  });
+
+  it("loads the row's options again on each opening", async () => {
+    const { calls } = setup({ value_key: "state_province_id", entity: "Address", options: true }, 5, {
+      shown: "Berlin",
+      handlers: { "Address.getFields": () => [{ options: [{ id: 5, label: "Berlin" }] }] },
+    });
+    for (const loads of [1, 2]) {
+      await open();
+      await waitFor(() => {
+        expect(field()).toHaveDisplayValue("Berlin");
+      });
+      expect(calls.filter(({ call }) => call === "Address.getFields")).toHaveLength(loads);
+      await userEvent.keyboard("{Escape}");
+    }
   });
 
   it("loads options that depend on the row, as loadOptions()", async () => {
