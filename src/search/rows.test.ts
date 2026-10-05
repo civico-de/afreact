@@ -201,17 +201,18 @@ describe("columnNote", () => {
 });
 
 describe("runPage", () => {
-  it("reads the toolbar and subsearch settings CRM.api4 copies onto the rows", () => {
+  it("reads the toolbar, subsearch settings and filter labels CRM.api4 copies onto the rows", () => {
     const rows: Row[] = [row(1)];
     const subsearch = { "S.D": { type: "table", api_entity: "Email", settings: { columns: [] } } };
     const page = runPage(
-      Object.assign(rows, { toolbar: [{ url: "/add", text: "Add" }], subsearch }),
+      Object.assign(rows, { toolbar: [{ url: "/add", text: "Add" }], subsearch, labels: ["Ada"] }),
     );
     expect(page).toEqual({
       rows: [row(1)],
       toolbar: [{ url: "/add", text: "Add" }],
       subsearch,
       editable: {},
+      labels: ["Ada"],
     });
   });
 
@@ -222,9 +223,20 @@ describe("runPage", () => {
   });
 
   it("treats missing or malformed extras as none", () => {
-    expect(
-      runPage(Object.assign([], { toolbar: "x", subsearch: { a: 1 }, editable: [] })),
-    ).toEqual({ rows: [], toolbar: [], subsearch: {}, editable: {} });
-    expect(runPage([])).toEqual({ rows: [], toolbar: [], subsearch: {}, editable: {} });
+    const malformed = { toolbar: "x", subsearch: { a: 1 }, editable: [], labels: [1, "Ada"] };
+    expect(runPage(Object.assign([], malformed))).toEqual({
+      rows: [],
+      toolbar: [],
+      subsearch: {},
+      editable: {},
+      labels: ["Ada"],
+    });
+    expect(runPage([])).toEqual({
+      rows: [],
+      toolbar: [],
+      subsearch: {},
+      editable: {},
+      labels: [],
+    });
   });
 });

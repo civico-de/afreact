@@ -76,7 +76,7 @@ final class Assets {
   private static function bundle(array $names): array {
     $forms = [];
     $records = Afform::get()
-      ->addSelect('name', 'module_name', 'title', 'type')
+      ->addSelect('name', 'module_name', 'title', 'type', 'autosave_draft')
       ->addWhere('name', 'IN', $names)
       ->execute();
     foreach ($records as $form) {
@@ -85,6 +85,7 @@ final class Assets {
         // Afform titles are optional.
         'title' => is_array($form) && is_string($form['title'] ?? NULL) ? $form['title'] : NULL,
         'type' => Afforms::field($form, 'type'),
+        'autosave_draft' => is_array($form) && !empty($form['autosave_draft']),
       ];
     }
     $modules = array_column($forms, 'module');

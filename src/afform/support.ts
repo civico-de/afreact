@@ -117,6 +117,8 @@ export type NodeKind =
   | "block"
   | "form"
   | "submit"
+  | "draft"
+  | "reset"
   | "search"
   | "unknown"
   | "searchFieldset"
@@ -146,6 +148,8 @@ export function renderedKind(
   if (tag.startsWith("afblock-")) return "block";
   if (tag === "af-form") return "form";
   if (tag === "button" && node["ng-click"] === "afform.submit()") return "submit";
+  if (tag === "button" && node["ng-click"] === "afform.submitDraft()") return "draft";
+  if (tag === "button" && isResetButton(node)) return "reset";
   if (tag === "crm-search-display-table") return "search";
   if (tag === "af-tabset") return "tabset";
   // A tab set renders its own tabs; anywhere else a tab has no set.
@@ -157,6 +161,11 @@ export function renderedKind(
   if (node["af-fieldset"]) return "fieldset";
   if (typeof node["af-join"] === "string") return "join";
   return "element";
+}
+
+/** afButton takes over a reset button by its class. */
+function isResetButton(node: ElementNode): boolean {
+  return node.type === "reset" && String(node.class).split(/\s+/).includes("af-button");
 }
 
 /** An element's unknown tag or unknown directive attributes, as its note names them. */
@@ -192,6 +201,11 @@ export function conditionNote(name: string, attribute: string): string {
 
 export function missingFieldNote(name: string): string {
   return `field ${name} without entity or metadata`;
+}
+
+/** A draft or reset button outside af-form, where afForm does not handle it. */
+export function buttonOutsideFormNote(kind: "draft" | "reset"): string {
+  return `${kind === "draft" ? "save draft" : "reset"} button outside af-form`;
 }
 
 export function joinOutsideFieldsetNote(join: string): string {
@@ -286,6 +300,8 @@ interface Scope {
   options: Record<string, unknown> | undefined;
   /** Inside a tab, whose badge a display's row count can go to. */
   tab: boolean;
+  /** Inside af-form, where draft and reset buttons act on the form. */
+  form: boolean;
 }
 
 function filterFieldProblems(node: ElementNode): string[] {
@@ -355,8 +371,16 @@ const KIND_PROBLEMS: Record<NodeKind, (node: ElementNode, scope: Scope) => strin
   entity: () => [],
   field: fieldProblems,
   block: childProblems,
-  form: childProblems,
+  form: (node, scope) => childProblems(node, { ...scope, form: true }),
   submit: childProblems,
+  draft: (node, scope) => [
+    ...(scope.form ? [] : [buttonOutsideFormNote("draft")]),
+    ...childProblems(node, scope),
+  ],
+  reset: (node, scope) => [
+    ...(scope.form ? [] : [buttonOutsideFormNote("reset")]),
+    ...childProblems(node, scope),
+  ],
   search: searchProblems,
   unknown: (node, scope) => [
     ...[unsupportedElement(node)].filter((note) => note !== null),
@@ -418,6 +442,7 @@ export function layoutProblems(layout: LayoutNode[], options?: Record<string, un
     filters: false,
     options,
     tab: false,
+    form: false,
   });
 }
 

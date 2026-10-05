@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import { mockApi, renderWithQuery } from "../test/render";
 import { AfreactForm } from "./AfreactForm";
 import { layoutProblems, nodeKind } from "./support";
-import type { FieldDefn, LayoutNode } from "./types";
+import type { ElementNode, FieldDefn, LayoutNode } from "./types";
 
 const field = (
   name: string,
@@ -106,6 +106,36 @@ describe("layoutProblems", () => {
       },
     ];
     expect(layoutProblems(hidden)).toEqual(["<marquee>", "field type Signature (x)"]);
+  });
+
+  it("flags draft and reset buttons only outside af-form, which handles them", async () => {
+    const buttons: ElementNode[] = [
+      { "#tag": "button", "ng-click": "afform.submitDraft()", "#children": [{ "#text": "Draft" }] },
+      {
+        "#tag": "button",
+        type: "reset",
+        class: "af-button btn",
+        "#children": [{ "#text": "Reset" }],
+      },
+    ];
+    const [draft, reset] = buttons;
+    expect(nodeKind(draft!)).toBe("draft");
+    expect(nodeKind(reset!)).toBe("reset");
+    // Without the af-button class it is no afForm reset button.
+    expect(nodeKind({ "#tag": "button", type: "reset", class: "btn" })).toBe("unknown");
+    expect(layoutProblems([{ "#tag": "af-form", "#children": buttons }])).toEqual([]);
+    const outside = ["save draft button outside af-form", "reset button outside af-form"];
+    expect(layoutProblems(buttons)).toEqual(outside);
+    mockApi({
+      "Afreact.getForm": () => [
+        { name: "afsearchTest", title: "S", type: "search", layout: buttons, strings: [] },
+      ],
+    });
+    renderWithQuery(<AfreactForm name="afsearchTest" location={{ search: "", hash: "" }} />);
+    const notes = await screen.findAllByRole("note");
+    expect(notes.map((note) => note.textContent)).toEqual(
+      outside.map((note) => `Not supported by the React renderer: ${note}`),
+    );
   });
 
   it("finds nothing in a layout the renderer fully supports", () => {

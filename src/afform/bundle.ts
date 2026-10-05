@@ -10,7 +10,10 @@ import { isElement, type FormDefinition, type LayoutNode, type TextNode } from "
 export interface BundleVars {
   /** Null when the user may open none of the page's forms. */
   url: string | null;
-  forms: Record<string, { module: string; title: string | null; type: string }>;
+  forms: Record<
+    string,
+    { module: string; title: string | null; type: string; autosave_draft: boolean }
+  >;
   /** Block directive => Angular module name. */
   blocks: Record<string, string>;
   /** Tag ('*' for every tag) => attribute ('*' for every attribute) => 'text' or 'js'. */
@@ -198,6 +201,7 @@ export function compileBundle(vars: BundleVars, file: ModuleFile, name: string):
     name,
     title: form.title,
     type: form.type,
+    autosave_draft: form.autosave_draft,
     layout,
     strings: Object.fromEntries(
       compiled.flatMap((module) => Object.entries(file[module]?.strings ?? {})),

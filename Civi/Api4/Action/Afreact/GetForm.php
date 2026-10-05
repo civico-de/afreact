@@ -34,12 +34,14 @@ class GetForm extends AbstractAction {
     // Afform.get with permission checks drops forms the user may not open.
     $afform = Afform::get($this->getCheckPermissions())
       ->addWhere('name', '=', $this->name)
-      ->addSelect('name', 'title', 'type', 'module_name')
+      ->addSelect('name', 'title', 'type', 'autosave_draft', 'module_name')
       ->execute()
       ->first();
     if ($afform === NULL) {
       throw new UnauthorizedException(E::ts('Form "%1" does not exist or you may not open it.', [1 => $this->name]));
     }
+    // Unset on forms saved before the option existed.
+    $afform['autosave_draft'] = !empty($afform['autosave_draft']);
     $module = Afforms::field($afform, 'module_name');
     $afform['layout'] = self::layout($module);
     $afform['strings'] = Afforms::cached("strings_{$module}", static fn (): array => Afforms::translatedStrings(

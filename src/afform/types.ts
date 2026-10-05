@@ -75,6 +75,8 @@ export interface FormDefinition {
   name: string;
   title: string | null;
   type: string;
+  /** afForm saves a draft on its own a while after each change. */
+  autosave_draft?: boolean;
   layout: LayoutNode[];
   /** Translations of the ts() texts in the form's and its blocks' layouts; PHP sends [] for none. */
   strings: Record<string, string> | [];

@@ -60,6 +60,20 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
     $this->assertStringNotContainsString('checkLinkPerm', json_encode($form['layout'], JSON_THROW_ON_ERROR));
   }
 
+  public function testAutosaveDraftIsABooleanOnEveryForm(): void {
+    $this->assertFalse($this->form('afformAfreactDemoContact')['autosave_draft']);
+    Afform::create(checkPermissions: FALSE)
+      ->setValues([
+        'name' => 'afformAfreactTestHost',
+        'type' => 'form',
+        'title' => 'Host',
+        'autosave_draft' => TRUE,
+        'layout' => '<af-form ctrl="afform"></af-form>',
+      ])
+      ->execute();
+    $this->assertTrue($this->form('afformAfreactTestHost')['autosave_draft']);
+  }
+
   public function testSearchDisplaySettingsArriveAsArray(): void {
     $form = Afreact::getForm(checkPermissions: FALSE)->setName('afsearchAfreactDemoContacts')->execute()->single();
     $display = $this->findTag($form['layout'], 'crm-search-display-table')[0];

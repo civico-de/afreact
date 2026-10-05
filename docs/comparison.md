@@ -64,6 +64,10 @@ that no longer excuses anything fails the test.
 | Tab badge from `total-count="$parent.count"` | counted after 900 ms without the form's filter values | counted at once, also without the form's filter values |
 | File fields | upload progress in a CRM.status popup; the Replace link has no `href` and no role | progress in the form's status line, errors in its alert; Replace is a focusable button named after the file, and moves focus to the new file input |
 | Search ranges (`search_range`) | two inputs after the field's label | the same pair as a group named by the label, the inputs named "… from" and "… to"; a select range sends its bounds as typed option ids (`2`) where select2 sends strings (`"2"`) |
+| Form closed for submissions | "Sorry" alert; only the submit button is disabled, the fields stay editable | the same alert, the reason above the form, and every control disabled |
+| Errors from `Afform.submit` and `submitDraft` | an alert only | the same alert, plus a summary above the form that takes focus and lists each message |
+| Confirmation message | replaces the form; the focus is lost with the button | replaces the form and takes the focus |
+| Reset button | `resetForm()` tells the fields to reset (`afFormReset`) and prefills again | the form loads afresh, so repeats, conditions and draft state start over too |
 
 ## Accessibility
 
@@ -100,6 +104,7 @@ instead of being dropped:
   literal, an object literal, `ids[n]`, `ids.join(',')` and the task's data
   names. They stay in the actions menu, disabled, with the note as their
   title; a row link to one alerts.
+- save-draft and reset buttons outside `af-form`, as on a search page
 
 The support report (`civicrm/admin/afreact`) lists these per form; for bulk
 actions it asks the server for each display's tasks.
@@ -356,7 +361,8 @@ afform 6.18.1 on both paths:
   processes the stored submission (`#?sid=`) gets the confirmation message
   with the submitter's markup in their own session.
 
-The redirect URL is built by the same function without URL encoding. The
+The redirect URL is built by the same function without URL encoding, so a
+submitted `&`, `=` or `#` adds query parameters or cuts the URL short. The
 contribution checkout passes the same unescaped message to its landing page,
 which sets it as `innerHTML` (read from the code, not run). Processing a
 submission by `sid` also warned `Undefined variable $submission` at
@@ -372,7 +378,22 @@ kept (`Civi/Afreact/ConfirmationMessage.php`). Values that hold HTML, such
 as a rich-text field, therefore show as text. A message another listener set
 is left as it is. The contribution checkout sets its own; afreact escapes it
 only where it equals core's (no `[token]`, no entity saved after the
-contribution). The redirect and the checkout page are unchanged.
+contribution). The same listener rebuilds the redirect with each token value
+URL-encoded, unless another listener set it, as the checkout does with its
+payment URL. The checkout page is unchanged.
+
+**"Draft Saved" before any draft.** afForm starts its draft watcher after
+prefill, and Angular's first call of a `$watch` listener, made with the
+unchanged data, marks a pristine draft as saved (`setupDraftWatcher`,
+`afForm.component.js` on 6.18; read from the code, not run). Every save-draft
+button therefore reads "Draft Saved", disabled, as soon as the form has
+loaded. The React renderer keeps the button's own text, disabled, until the
+form holds a change no draft has saved.
+
+**Search labels stay in the page title.** A search display adds the labels of
+its filters to the title of a search page (`searchDisplayBaseTrait`, afCore's
+`addTitle`), but only when there are any, so clearing the filter keeps the old
+labels in the title. The React renderer shows the plain title again.
 
 **Bulk actions.** Read from the source of `master` as of 2026-10-05
 (`ext/search_kit/ang/crmSearchTasks/`), not run. Where React differs it says

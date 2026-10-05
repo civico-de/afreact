@@ -44,7 +44,8 @@ abstract class ReactElement extends HTMLElement {
 
 /**
  * <afreact-form name="afformName" source="api|page|bundle" options='{"contact_id": 5}'> renders a
- * FormBuilder form; `options` carries a placement's arguments as core's InlineAfform.tpl does.
+ * FormBuilder form; `options` carries a placement's arguments as core's InlineAfform.tpl does,
+ * and `page-title` marks the form a page is made of, as core's AfformBase.tpl.
  */
 class AfreactFormElement extends ReactElement {
   protected view() {
@@ -54,6 +55,7 @@ class AfreactFormElement extends ReactElement {
         source={layoutSource(this.getAttribute("source"))}
         location={popupLocation(this) ?? window.location}
         options={placementOptions(this.getAttribute("options"))}
+        pageTitle={this.hasAttribute("page-title")}
       />
     );
   }

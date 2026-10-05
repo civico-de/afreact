@@ -47,7 +47,12 @@ class AssetsHeadlessTest extends TestCase implements HeadlessInterface {
     Assets::layouts('bundle', Pages::FORMS);
     $bundle = $this->vars()['bundle'];
     $this->assertSame(
-      ['module' => 'afformAfreactDemoContact', 'title' => 'Afreact demo contact', 'type' => 'form'],
+      [
+        'module' => 'afformAfreactDemoContact',
+        'title' => 'Afreact demo contact',
+        'type' => 'form',
+        'autosave_draft' => FALSE,
+      ],
       $bundle['forms']['afformAfreactDemoContact'],
     );
     $this->assertSame(['afblock-contact-email' => 'afblockContactEmail'], $bundle['blocks']);

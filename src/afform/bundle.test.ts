@@ -91,7 +91,7 @@ describe("htmlToLayout", () => {
 describe("compileBundle", () => {
   const vars: BundleVars = {
     url: "/bundle.json",
-    forms: { afformA: { module: "afformA", title: "A", type: "form" } },
+    forms: { afformA: { module: "afformA", title: "A", type: "form", autosave_draft: true } },
     blocks: { "afblock-b": "afblockB" },
     attributeTypes: TYPES,
   };
@@ -117,6 +117,7 @@ describe("compileBundle", () => {
       name: "afformA",
       title: "A",
       type: "form",
+      autosave_draft: true,
       strings: { Block: "Baustein" },
       layout: [
         {

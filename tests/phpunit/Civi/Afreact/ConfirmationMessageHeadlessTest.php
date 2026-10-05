@@ -114,6 +114,32 @@ class ConfirmationMessageHeadlessTest extends TestCase implements HeadlessInterf
     );
   }
 
+  public function testSubmittedValuesAreUrlEncodedInTheRedirect(): void {
+    $this->saveForm([
+      'confirmation_type' => 'redirect_to_url',
+      'redirect' => 'civicrm/contact/view?reset=1&cid=[Individual1.0.id]&name=[Individual1.0.last_name]',
+    ]);
+    $response = $this->submit('Probe', 'A&B=C #x');
+    $this->assertSame(
+      "civicrm/contact/view?reset=1&cid={$response['Individual1'][0]['id']}&name=A%26B%3DC%20%23x",
+      $response['redirect'],
+    );
+  }
+
+  public function testARedirectAnotherListenerSetIsLeftAsItIs(): void {
+    $this->saveForm(['confirmation_type' => 'redirect_to_url', 'redirect' => 'civicrm/home?x=[Individual1.0.last_name]']);
+    $set = static function (AfformSubmitEvent $event): void {
+      $event->getApiRequest()->setResponseItem('redirect', 'https://pay.example.org/?a=1&b=2');
+    };
+    \Civi::dispatcher()->addListener('civi.afform.submit', $set);
+    try {
+      $this->assertSame('https://pay.example.org/?a=1&b=2', $this->submit('Probe', 'A&B')['redirect']);
+    }
+    finally {
+      \Civi::dispatcher()->removeListener('civi.afform.submit', $set);
+    }
+  }
+
   public function testAMessageAnotherListenerSetIsLeftAsItIs(): void {
     $set = static function (AfformSubmitEvent $event): void {
       $event->getApiRequest()->setResponseItem('message', '<em>Set by a listener</em>');

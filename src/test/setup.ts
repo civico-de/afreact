@@ -14,8 +14,8 @@ window.CRM = {
   url: (path) => `/${path}`,
   $: vi.fn($),
   loadForm: vi.fn(() => events(new EventTarget())),
+  status: vi.fn(() => ({ resolve: vi.fn(), reject: vi.fn() })),
   alert: vi.fn(),
-  status: vi.fn(),
   utils: { colorContrast: () => "white" },
 };
 installPopover();

@@ -44,6 +44,7 @@ import {
 import type { ElementNode, FieldDefn, FormData, LayoutNode, Scope } from "./types";
 import { isElement, isFieldDefn } from "./types";
 import {
+  buttonOutsideFormNote,
   conditionNote,
   elementAttributes,
   expressionNote,
@@ -72,7 +73,16 @@ export interface FormState {
   expressions: ExpressionContext;
   /** Item keys per repeated array, shared by every af-repeat over that array. */
   itemKeys: Map<string, number[]>;
+  /** afForm.resetForm(); undefined outside af-form. */
+  reset?: () => void;
+  /** afForm.submitDraft() and the state its buttons show; undefined outside af-form. */
+  draft?: { status: DraftStatus; save: () => void };
+  /** afCore's addTitle(): a search display reports the labels of its filters. */
+  addTitle: (labels: string[]) => void;
 }
+
+/** A saved draft matches the form ("saved"), or nothing was changed since loading ("pristine"). */
+export type DraftStatus = "pristine" | "unsaved" | "saving" | "saved";
 
 export const FormContext = createContext<FormState | null>(null);
 const ScopeContext = createContext<Scope | null>(null);
@@ -108,6 +118,8 @@ const KIND_VIEWS: Record<NodeKind, (props: { node: ElementNode }) => ReactNode> 
   block: Children,
   form: Children,
   submit: SubmitButton,
+  draft: DraftButton,
+  reset: ResetButton,
   search: SearchNode,
   unknown: ({ node }) => (
     <>
@@ -652,24 +664,63 @@ function PrimaryField({ label, group, checked, disabled, onSelect, onClear }: Pr
   );
 }
 
-function SubmitButton({ node }: { node: ElementNode }) {
-  const form = useForm();
-  const icon = typeof node["crm-icon"] === "string" ? node["crm-icon"] : null;
+interface FormButtonProps {
+  node: ElementNode;
+  disabled: boolean;
+  onClick?: () => void;
+  /** afForm's text and icon for a draft being saved or saved. */
+  shown?: { text: string; icon: string };
+}
+
+function FormButton({ node, disabled, onClick, shown }: FormButtonProps) {
+  const icon = shown?.icon ?? (typeof node["crm-icon"] === "string" ? node["crm-icon"] : null);
   return (
     <button
-      type="submit"
+      type={onClick ? "button" : "submit"}
       className={typeof node.class === "string" ? node.class : "btn btn-primary"}
-      disabled={form.disabled}
+      disabled={disabled}
+      onClick={onClick}
     >
       {icon && <i className={`crm-i ${icon}`} aria-hidden="true" />}{" "}
-      <Nodes nodes={node["#children"] ?? []} />
+      {shown?.text ?? <Nodes nodes={node["#children"] ?? []} />}
     </button>
   );
+}
+
+function SubmitButton({ node }: { node: ElementNode }) {
+  return <FormButton node={node} disabled={useForm().disabled} />;
+}
+
+/** afForm's draft buttons: enabled while the form holds changes no draft has saved. */
+function DraftButton({ node }: { node: ElementNode }) {
+  const form = useForm();
+  const { draft } = form;
+  if (!draft) return <Unsupported what={buttonOutsideFormNote("draft")} />;
+  const shown =
+    draft.status === "saving"
+      ? { text: ts("Saving Draft"), icon: "fa-spinner fa-spin" }
+      : draft.status === "saved"
+        ? { text: ts("Draft Saved"), icon: "fa-check" }
+        : undefined;
+  return (
+    <FormButton
+      node={node}
+      disabled={form.disabled || draft.status !== "unsaved"}
+      onClick={draft.save}
+      shown={shown}
+    />
+  );
+}
+
+function ResetButton({ node }: { node: ElementNode }) {
+  const form = useForm();
+  if (!form.reset) return <Unsupported what={buttonOutsideFormNote("reset")} />;
+  return <FormButton node={node} disabled={form.disabled} onClick={form.reset} />;
 }
 
 function SearchNode({ node }: { node: ElementNode }) {
   const form = useForm();
   // A display under a hidden af-if loads nothing.
   if (useContext(HiddenContext) !== null) return null;
-  return <FieldsetDisplay node={node} formName={form.formName} />;
+  return <FieldsetDisplay node={node} formName={form.formName} onLabels={form.addTitle} />;
 }

@@ -40,6 +40,8 @@ interface AfreactSearchProps {
   enabled?: boolean;
   /** The columns a loaded saved filter set shows, key or label to label; empty for all. */
   savedColumns?: Record<string, string>;
+  /** Takes the labels of each run's own filters, which core puts before the page title. */
+  onLabels?: (labels: string[]) => void;
 }
 
 const NO_FILTERS = {};
@@ -53,6 +55,7 @@ export function AfreactSearch({
   typed = filters,
   enabled = true,
   savedColumns,
+  onLabels,
 }: AfreactSearchProps) {
   const client = useQueryClient();
   const loaded = useQuery({
@@ -156,6 +159,9 @@ export function AfreactSearch({
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   useFormSuccess(root, refresh);
   useAutoOpen(rows.data, refresh);
+  useEffect(() => {
+    if (rows.data) onLabels?.(rows.data.labels);
+  }, [rows.data, onLabels]);
   // Core keeps the toolbar of the last run while the next page loads.
   const [shown, setShown] = useState<RunPage | undefined>(undefined);
   if (rows.data && rows.data !== shown) setShown(rows.data);

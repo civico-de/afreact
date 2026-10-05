@@ -323,13 +323,15 @@ export function FilterFieldNode({
 interface FieldsetDisplayProps {
   node: ElementNode;
   formName: string;
+  /** Takes the labels of the display's own filters; core reads them only inside a fieldset. */
+  onLabels: (labels: string[]) => void;
 }
 
 /**
  * An embedded search display: searches with the fieldset's values and its own `filters`,
  * which win on the same key (getFilters()).
  */
-export function FieldsetDisplay({ node, formName }: FieldsetDisplayProps) {
+export function FieldsetDisplay({ node, formName, onLabels }: FieldsetDisplayProps) {
   const search = String(node["search-name"]);
   const display = String(node["display-name"]);
   const fieldset = useSearchFieldset();
@@ -365,6 +367,7 @@ export function FieldsetDisplay({ node, formName }: FieldsetDisplayProps) {
         filters={merged(fieldset?.state.applied)}
         typed={merged(fieldset?.state.values)}
         enabled={(fieldset?.ready ?? true) && (tab?.shown ?? true)}
+        onLabels={fieldset ? onLabels : undefined}
       />
     </>
   );

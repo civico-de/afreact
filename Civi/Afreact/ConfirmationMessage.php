@@ -11,8 +11,9 @@ use Civi\API\Event\RespondEvent;
 use Civi\Core\Service\AutoSubscriber;
 
 /**
- * Afform.submit returns the confirmation message with the submitted values HTML-escaped. Core
- * substitutes them into the admin's HTML as they are, which lets a submitter inject markup.
+ * Afform.submit returns the confirmation message with the submitted values HTML-escaped and the
+ * redirect with them URL-encoded. Core substitutes them as they are, which lets a submitter
+ * inject markup or reshape the redirect's query string.
  */
 final class ConfirmationMessage extends AutoSubscriber {
 
@@ -20,6 +21,14 @@ final class ConfirmationMessage extends AutoSubscriber {
    * Core's token pattern in AbstractProcessor::replaceTokens, plus the JWT token it also replaces.
    */
   private const PLACEHOLDER = '/\[[a-zA-Z0-9_]+\.[0-9]+\.[^]]+]|\[token]/';
+
+  /**
+   * Response key => the form setting it is made from and how a token value is encoded.
+   */
+  private const TEMPLATES = [
+    'message' => ['confirmation_message', 'htmlspecialchars'],
+    'redirect' => ['redirect', 'rawurlencode'],
+  ];
 
   public static function getSubscribedEvents(): array {
     return ['civi.api.respond' => ['onRespond', Takeover::AFTER_CORE]];
@@ -32,27 +41,31 @@ final class ConfirmationMessage extends AutoSubscriber {
       return;
     }
     $response = $result[0] ?? NULL;
-    $message = Record::string($response, 'message');
-    if (!is_array($response) || $message === NULL) {
+    if (!is_array($response)) {
       return;
     }
-    $template = Record::string(
-      Afform::get(checkPermissions: FALSE)
+    $form = NULL;
+    foreach (self::TEMPLATES as $key => [$setting, $encode]) {
+      $value = Record::string($response, $key);
+      if ($value === NULL) {
+        continue;
+      }
+      $form ??= Afform::get(checkPermissions: FALSE)
         ->addWhere('name', '=', $submit->getName())
-        ->addSelect('confirmation_message')
+        ->addSelect('confirmation_message', 'redirect')
         ->execute()
-        ->first(),
-      'confirmation_message',
-    );
-    // A message another listener set stays as it is.
-    if ($template === NULL || $message !== $submit->replaceTokens($template)) {
-      return;
+        ->first();
+      $template = Record::string($form, $setting);
+      // A value another listener set, such as a payment checkout URL, stays as it is.
+      if ($template === NULL || $value !== $submit->replaceTokens($template)) {
+        continue;
+      }
+      $response[$key] = preg_replace_callback(
+        self::PLACEHOLDER,
+        static fn (array $token): string => $encode($submit->replaceTokens($token[0])),
+        $template,
+      ) ?? throw new \RuntimeException("Confirmation {$key}: " . preg_last_error_msg());
     }
-    $response['message'] = preg_replace_callback(
-      self::PLACEHOLDER,
-      static fn (array $token): string => htmlspecialchars($submit->replaceTokens($token[0])),
-      $template,
-    ) ?? throw new \RuntimeException('Confirmation message: ' . preg_last_error_msg());
     $result[0] = $response;
   }
 

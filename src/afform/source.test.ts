@@ -4,7 +4,7 @@ import { layoutSource, loadDefinition } from "./source";
 
 const bundle: BundleVars = {
   url: "/bundle.json",
-  forms: { afformA: { module: "afformA", title: "A", type: "form" } },
+  forms: { afformA: { module: "afformA", title: "A", type: "form", autosave_draft: false } },
   blocks: {},
   attributeTypes: { "*": { "*": "text" } },
 };

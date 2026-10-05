@@ -17,7 +17,13 @@ export interface JQueryObject {
   data: (key: string) => unknown;
   closest: (selector: string) => JQueryObject;
   trigger: (event: string, data?: unknown) => JQueryObject;
-  dialog: (method: "close") => JQueryObject;
+  dialog: (method: "close" | "option", key?: string, value?: unknown) => JQueryObject;
+}
+
+/** The jQuery Deferred CRM.status returns; settling it ends the status box (js/Common.js). */
+export interface StatusBox {
+  resolve: () => unknown;
+  reject: () => unknown;
 }
 
 /** Rejection payload of CRM.api4 (see CRM/Api4/Page/AJAX.php). */
@@ -37,10 +43,10 @@ declare global {
       $: (target: Element) => JQueryObject;
       /** Opens a form in a popup (js/crm.ajax.js); `post` sends data on its first load. */
       loadForm: (url: string, options?: { post?: unknown }) => JQueryObject;
-      /** A notification (js/Common.js); type is "success", "error", "info" or "alert". */
-      alert: (text: string, title?: string, type?: string) => void;
-      /** The short status message in the corner (js/Common.js). */
-      status: (text: string) => void;
+      /** A notification on CiviCRM screens, a dialog elsewhere; `text` is HTML (js/Common.js). */
+      alert: (text: string, title?: string, type?: "alert" | "success" | "info" | "error" | "warning") => unknown;
+      /** The status box in the corner (js/Common.js): a text, or a box the caller settles. */
+      status: (options: string | { start?: string; success?: string; error?: string }) => StatusBox;
       utils: { colorContrast: (color: string) => string };
       /** Page variables from Civi::resources()->addVars(), by extension. */
       vars?: { afreact?: AfreactVars };

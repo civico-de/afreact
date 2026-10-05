@@ -108,6 +108,8 @@ export interface RunPage {
   toolbar: ToolbarLink[];
   subsearch: Record<string, SubsearchDisplay>;
   editable: Record<string, EditableInfo>;
+  /** Labels of the values the display's own filters select, for the page title (addFilterLabel). */
+  labels: string[];
 }
 
 export interface DisplaySettings {
