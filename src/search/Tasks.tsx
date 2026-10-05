@@ -376,7 +376,7 @@ function queryOf(value: unknown): Record<string, unknown> {
 }
 
 /** The first column's text names a row for its checkbox; its key where the column is empty. */
-function rowName(row: Row): string {
+export function rowName(row: Row): string {
   const value = row.columns[0]?.val;
   const text = Array.isArray(value)
     ? value.join(", ")

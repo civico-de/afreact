@@ -10,6 +10,7 @@ import { ColumnPicker, useColumnToggles } from "./ColumnPicker";
 import { InlineEditContext, useInlineEdit } from "./inlineEdit";
 import { useAutoOpen, useFormSuccess } from "./links";
 import { Pager, SearchButton } from "./Pager";
+import { ReorderRows, useReorder } from "./Reorder";
 import {
   editsCells,
   hasControlColumn,
@@ -183,6 +184,11 @@ export function AfreactSearch({
       if (root) window.CRM.$(root).trigger("crmPopupFormSuccess");
     },
   });
+  const reorder = useReorder({
+    settings,
+    runKey: rowsKey,
+    runParams: { ...params, ...columnParams, sort: activeSort, limit },
+  });
 
   if (loaded.error) return <Failure error={loaded.error} />;
   if (!settings) return <p role="status">{ts("Loading…")}</p>;
@@ -214,7 +220,7 @@ export function AfreactSearch({
 
   const pager = settings.pager;
   const unsupported = [...unsupportedFeatures(settings, shown), ...tasks.notes];
-  const failed = counted.error ?? tallied.error ?? tasks.error;
+  const failed = counted.error ?? tallied.error ?? tasks.error ?? reorder.error;
   const tally = settings.tally;
   const columnCount = settings.columns.length + (hasControlColumn(settings) ? 1 : 0);
   const tallyRow = !!result?.rows.length && !!tally && (
@@ -338,15 +344,20 @@ export function AfreactSearch({
           )}
           {result && (
             <InlineEditContext value={editsCells(settings) ? inlineEdit : null}>
-              <BodyRows
-                rows={result.rows}
-                settings={settings}
-                subsearch={result.subsearch}
-                afform={afform}
-                select={tasks.rowSelect}
-                onLinkClick={tasks.onRowLink}
-                hidden={hidden}
-              />
+              <ReorderRows reorder={reorder} rows={result.rows}>
+                {(drag) => (
+                  <BodyRows
+                    rows={result.rows}
+                    settings={settings}
+                    subsearch={result.subsearch}
+                    afform={afform}
+                    select={tasks.rowSelect}
+                    drag={drag}
+                    onLinkClick={tasks.onRowLink}
+                    hidden={hidden}
+                  />
+                )}
+              </ReorderRows>
             </InlineEditContext>
           )}
         </tbody>

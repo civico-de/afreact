@@ -82,6 +82,8 @@ describe("collapsible rows", () => {
     expect(hasControlColumn({ ...base, tally: { label: "Total" } })).toBe(true);
     expect(hasControlColumn({ ...base, tally: {} })).toBe(false);
     expect(hasControlColumn({ ...base, actions: true })).toBe(true);
+    expect(hasControlColumn({ ...base, draggable: "weight" })).toBe(true);
+    expect(hasControlColumn({ ...base, draggable: "" })).toBe(false);
   });
 
   it("starts rows with sub-rows closed only on collapsible: closed", () => {
@@ -112,6 +114,7 @@ describe("unsupportedFeatures", () => {
       actions: true,
       editableRow: { create: true },
       draggable: "weight",
+      hierarchical: true,
       button: "Search",
       toggleColumns: true,
     };
@@ -127,7 +130,7 @@ describe("unsupportedFeatures", () => {
     expect(unsupportedFeatures(settings, page)).toEqual([
       "row editing (editableRow)",
       "in-place editing of employer_id.display_name (EntityRef)",
-      "drag to reorder (draggable)",
+      "drag to reorder in hierarchical tables (draggable)",
     ]);
   });
 

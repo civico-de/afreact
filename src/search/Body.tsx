@@ -1,7 +1,9 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { Cell, cellText } from "./Cell";
+import { dragField } from "./dragOrder";
 import { EditableCell, editingClass } from "./EditableCell";
 import { useInlineEditContext } from "./inlineEdit";
+import type { RowDrag } from "./Reorder";
 import {
   cellClass,
   descendents,
@@ -20,6 +22,8 @@ interface BodyRowsProps {
   afform?: string;
   /** The checkbox of each row, with bulk actions. */
   select?: RowSelect;
+  /** Sortable rows with their handles, on a draggable display. */
+  drag?: RowDrag;
   onLinkClick: (link: Link, key: Row["key"], event: MouseEvent<HTMLAnchorElement>) => void;
   /** Columns the column picker hides. */
   hidden?: ReadonlySet<number>;
@@ -34,6 +38,7 @@ export function BodyRows({
   subsearch,
   afform,
   select,
+  drag,
   onLinkClick,
   hidden: hiddenColumns = NONE,
 }: BodyRowsProps) {
@@ -43,16 +48,18 @@ export function BodyRows({
   const isCollapsed = (row: Row) =>
     descendents(row) > 0 && (toggled.get(row.key) ?? startsCollapsed(row, settings));
   const hidden = hiddenRows(rows, isCollapsed);
+  const Tr = drag?.Row ?? PlainRow;
   return rows
     .filter((row) => !hidden.has(row.key))
     .map((row) => (
-      <tr key={row.key} data-entity-id={row.key}>
+      <Tr key={row.key} rowKey={row.key}>
         {control && (
           <td
             className={["crm-search-ctrl-column", rowClass(row, settings), row.cssClass ?? ""]
               .filter(Boolean)
               .join(" ")}
           >
+            {drag?.handle(row)}
             {select && (
               <input
                 type="checkbox"
@@ -113,8 +120,12 @@ export function BodyRows({
             </td>
           );
         })}
-      </tr>
+      </Tr>
     ));
+}
+
+function PlainRow({ rowKey, children }: { rowKey: Row["key"]; children: ReactNode }) {
+  return <tr data-entity-id={rowKey}>{children}</tr>;
 }
 
 interface ToggleCollapseProps {
@@ -183,14 +194,32 @@ export function ControlHeader({
   selectAll?: ReactNode;
 }) {
   if (!hasControlColumn(settings)) return null;
-  if (selectAll) return <th className="crm-search-result-select">{selectAll}</th>;
+  // crmSearchDisplayTaskHeader.html marks a draggable table with an icon.
+  const dragIcon = dragField(settings) && (
+    <i
+      className="crm-i fa-sort-amount-asc"
+      title={ts("Drag columns to reposition")}
+      role="img"
+      aria-hidden="true"
+    />
+  );
+  if (selectAll)
+    return (
+      <th className="crm-search-result-select">
+        {dragIcon}
+        {selectAll}
+      </th>
+    );
   const label = settings.collapsible
     ? ts("Show sub-rows")
     : settings.tally
       ? settings.tally.label
-      : "";
+      : dragField(settings)
+        ? ts("Drag to reposition")
+        : "";
   return (
     <th>
+      {dragIcon}
       <span className="sr-only">{label}</span>
     </th>
   );

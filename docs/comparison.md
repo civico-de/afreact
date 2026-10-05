@@ -54,6 +54,7 @@ that no longer excuses anything fails the test.
 | Leaving an in-place editor | the editor stays open until Enter, Escape or a button | a valid change saves, an unchanged editor closes; switching windows leaves it open |
 | Emptying an in-place text | saves `""` | saves `null` where the field can be emptied |
 | Totals after an in-place edit | kept (see upstream bugs) | asked again |
+| Drag to reorder | jQuery UI sortable, pointer only | dnd-kit: pointer, and keyboard (Space or Enter, arrow keys) with screen-reader announcements; dnd-kit loads with the first draggable table on a page. Hierarchical tables show a note instead |
 
 ## Accessibility
 
@@ -78,7 +79,7 @@ instead of being dropped:
 - directives outside plain HTML, forms, blocks, joins, repeats, search
   fieldsets and table displays (for example tabs and other search display types)
 - table features: row editing (`editableRow`: new rows and full-row mode),
-  drag to reorder, include columns
+  drag to reorder in hierarchical tables, include columns
 - in-place editors for contact references (EntityRef), locations, and
   multi-value text, number, date or Yes/No fields; their cells stay read-only
 - bulk actions whose task is an Angular dialog (download, update, tag, merge
@@ -381,3 +382,19 @@ does not match it in React.
 shaded rows of a striped table reach 4.2:1 (`#2c789b` on `#ededed`), and in
 dark mode white text on grey buttons reaches 3.1:1 (`#ffffff` on `#919297`);
 normal-size text needs 4.5:1. Measured with axe on CiviCRM 6.18.
+
+**A failed drag-sort keeps the new order on screen.** crmSearchDisplayTable
+moves the row before `SearchDisplay.inlineEdit` (`return: draggableWeight`)
+answers and has no failure path but the error message, so after a refused
+save the table shows an order that is not stored until the next reload. A
+second drag before the first answer sends the displaced row's old weight,
+which can store a different order than the one shown. Read from the code on
+6.18 and `master` (2026-10-05). The React renderer puts the rows back and shows
+the error, and offers no drag while a save runs.
+
+**The weight column keeps the old numbers after a drag.**
+crmSearchDisplayTable writes the weights `inlineEdit` returns into its rows
+and replaces the column object "to trigger an Angular view refresh", but the
+cell is repeated `track by $index` and keeps its text, so a moved row shows
+its old weight until the next reload. Measured on CiviCRM 6.18 with the
+drag-to-reorder browser spec. The React renderer shows the returned weights.

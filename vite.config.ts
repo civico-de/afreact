@@ -42,6 +42,13 @@ export default defineConfig({
               // Otherwise the group pulls in React, which the entry then loads from it.
               includeDependenciesRecursively: false,
             },
+            // dnd-kit loads only with the first draggable table.
+            {
+              name: "dnd-kit",
+              test: /node_modules\/@dnd-kit\//,
+              priority: 1,
+              includeDependenciesRecursively: false,
+            },
             { name: "vendor", test: /node_modules/ },
           ],
         },

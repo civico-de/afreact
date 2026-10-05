@@ -66,10 +66,10 @@ wherever core places them (see [Rendering forms with React](#rendering-forms-wit
   an editor by click, Enter, Space or F2 and save with
   `SearchDisplay.inlineEdit`; the column picker hides columns and takes them
   from a saved filter set. Bulk actions and task links run API batch, popup
-  and redirect tasks. Tasks that are Angular dialogs, row editing
-  (`editableRow`), drag to reorder, include columns and the in-place editors
-  for contact references, locations and multi-value text, number, date or
-  Yes/No fields
+  and redirect tasks. Rows of draggable tables move by pointer or keyboard.
+  Tasks that are Angular dialogs, row editing (`editableRow`), drag to reorder
+  in hierarchical tables, include columns and the in-place editors for contact
+  references, locations and multi-value text, number, date or Yes/No fields
   show a note instead.
 - **Types:** `src/api/entities.gen.ts` is generated from APIv4
   `getFields` (see [Development](#development)).
@@ -235,6 +235,7 @@ CIVICRM_BASE_URL=http://localhost:8080 npm run test:e2e
 | `tests/browser/joins.spec.ts` | the joins form on both renderers: a Home and a Work email block with Home hidden by `af-if`, the location each saves to on create, and the record each shows and updates from the URL; Angular's deviation is core's (see comparison.md) |
 | `tests/browser/table.spec.ts` | SearchKit tables on both renderers: equal cells, links, classes, toolbar, counts and totals on the demo fixtures and the core forms the React table renders without a note; row menus, the menu keyboard path, collapsible rows, a `crm-popup` link and the reload after a popup form |
 | `tests/browser/editable.spec.ts` | in-place editing on both renderers: a text cell saved with Enter and an option list saved with the Save button store the same values; the column picker hides and shows the same columns; on React, opening by keyboard, focus back on Escape and a failed save that keeps the editor open |
+| `tests/browser/reorder.spec.ts` | drag to reorder on the demo options table: keyboard moves with announcements in React, pointer moves on both renderers, the stored weights and the order after a reload |
 | `tests/browser/filters.spec.ts` | search filters on both renderers: the same filters and rows from the defaults, the URL, stored values and a saved filter set, with one page request and no excluded row shown on first load; typed filters and a reload; the first-row time of each renderer |
 | `tests/browser/a11y.spec.ts` | axe in light and dark mode finds nothing on the React demo and rules forms, the demo tables (menu and subsearch open), the editable table with its column picker and a filtered search form that the Angular ones pass |
 | `tests/browser/sweep.spec.ts` | every form but blocks on both renderers: the same headings, help, fields (label, input, required, disabled, value), buttons, table headers and first-page rows, and no axe finding that only React has; forms the support report finds nothing unsupported in must pass, the others are reported |

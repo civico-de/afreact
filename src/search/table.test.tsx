@@ -225,12 +225,15 @@ describe("AfreactSearch table features", () => {
       <AfreactSearch
         search="S"
         display="D"
-        settings={{ columns, actions: true, draggable: "weight" }}
+        settings={{ columns, actions: true, draggable: "weight", hierarchical: true }}
       />,
     );
     await screen.findByText("Name 1");
     // Bulk actions render; their tasks load only once the menu is used.
-    expect(screen.getByRole("note")).toHaveTextContent(/: drag to reorder \(draggable\)$/);
+    expect(screen.getByRole("note")).toHaveTextContent(
+      /: drag to reorder in hierarchical tables \(draggable\)$/,
+    );
+    expect(screen.queryByTitle("Drag to reposition")).not.toBeInTheDocument();
     // A drag order switches header sorting off, as in core.
     expect(within(screen.getByRole("table")).queryAllByTitle(/Click to sort/)).toHaveLength(0);
   });

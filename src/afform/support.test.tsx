@@ -189,6 +189,7 @@ const gappySearch = searchForm([
       seeMore: true,
       pager: { jump: true },
       draggable: "weight",
+      hierarchical: true,
     },
     { "total-count": "count", "ng-click": "go()" },
   ),
@@ -226,7 +227,7 @@ describe("search forms", () => {
       "field type File (Parent)",
       "ng-click on <crm-search-display-table>",
       'total-count="count"',
-      "setting seeMore, setting pager.jump, drag to reorder (draggable)",
+      "setting seeMore, setting pager.jump, drag to reorder in hierarchical tables (draggable)",
       "include column ~/x.html",
       "display filters from options outside a placement",
     ]);

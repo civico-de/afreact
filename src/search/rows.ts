@@ -76,11 +76,16 @@ export function cellClass(
 }
 
 /**
- * The control column before the data columns. Core also shows it for drag handles and row
+ * The control column before the data columns (hasExtraFirstColumn). Core also shows it for row
  * editing, which the React renderer reports as unsupported instead.
  */
 export function hasControlColumn(settings: DisplaySettings): boolean {
-  return !!settings.actions || !!settings.collapsible || !!(settings.tally && settings.tally.label);
+  return (
+    !!settings.actions ||
+    !!settings.draggable ||
+    !!settings.collapsible ||
+    !!(settings.tally && settings.tally.label)
+  );
 }
 
 /** crmSearchDisplayToggleCollapse's initial state: rows with sub-rows start closed on "closed". */
@@ -173,7 +178,8 @@ export function unsupportedFeatures(settings: DisplaySettings, page?: RunPage): 
   if (settings.editableRow && (settings.editableRow.create || settings.editableRow.full))
     features.push("row editing (editableRow)");
   if (editsCells(settings)) features.push(...unsupportedEditors(page));
-  if (settings.draggable) features.push("drag to reorder (draggable)");
+  if (settings.draggable && settings.hierarchical)
+    features.push("drag to reorder in hierarchical tables (draggable)");
   return features;
 }
 
