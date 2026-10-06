@@ -1,0 +1,17 @@
+<af-form ctrl="afform">
+  <af-entity data="{contact_type: 'Individual', source: 'Afreact demo'}" type="Contact" name="Individual1" label="Individual 1" actions="{create: true, update: true}" security="RBAC" />
+  <fieldset af-fieldset="Individual1" class="af-container" af-title="Individual" style="border: 2px solid rgb(0, 96, 160); background-color: rgb(240, 248, 255)">
+    <af-field name="first_name" defn="{label: 'Your <em>first</em> name', help_post: 'As in your <strong>passport</strong>'}" />
+    <af-field name="last_name" />
+    <div class="af-markup"><p class="afreact-demo-greeting">Hello [Individual1.0.first_name]!</p></div>
+    <af-field name="nick_name" defn="{input_type: 'TextArea', input_attrs: {maxlength: 20}}" />
+    <af-field name="preferred_communication_method" defn="{input_type: 'CheckBox', required: true}" />
+    <af-field name="birth_date" defn="{input_type: 'DisplayOnly'}" />
+    <div af-join="Email" af-repeat="Add email" min="1" max="3">
+      <af-field name="email" />
+      <af-field name="is_primary" />
+    </div>
+  </fieldset>
+  <af-field defn="{name: 'remark', label: 'Remark', input_type: 'Text', data_type: 'String'}" />
+  <button class="af-button btn btn-primary" crm-icon="fa-check" ng-click="afform.submit()">{{:: ts('Save') }}</button>
+</af-form>
