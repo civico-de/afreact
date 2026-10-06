@@ -498,6 +498,12 @@ const SHARED_CONTENT: Record<string, { rule: string; reason: string }[]> = {
       [{ rule: "heading-order", reason: "the layout's h3 follows the page's h1" }],
     ]),
   ),
+  ...Object.fromEntries(
+    ["afsearchAdministerUserAccounts", "afsearchProfiles"].map((name) => [
+      name,
+      [{ rule: "heading-order", reason: "afTitle's h4 on a div follows the page's h1" }],
+    ]),
+  ),
   afsearchSettingsDatePreferences: [
     { rule: "link-name", reason: "the display's edit link has an icon and neither text nor title" },
   ],

@@ -74,7 +74,7 @@ that no longer excuses anything fails the test.
 | Errors from `Afform.submit` and `submitDraft` | an alert only | the same alert, plus a summary above the form that lists each message and takes focus, except after an autosave |
 | Invalid input on submit | an alert only (the browser shows its own hint on the field); while a typed value breaks `min`, `max`, `step` or `minlength`, ngModel holds `undefined`, which conditions and tokens see; an `af-required` condition that flips re-validates, so an emptied field changes between `""` and `undefined` with it | the same alert plus a summary above the form; the typed value stays in the data until it is valid; an emptied field keeps the empty value it was given, so a required flip after emptying does not rewrite it (a submit sends `""` or nothing accordingly) |
 | `crmFormSuccess` and `crmFormError` | triggered on the `af-form` element | triggered on the renderer's wrapper element, so a listener bound to `af-form` itself hears nothing; `document` or an ancestor hears both |
-| Calculated default (`afform_default` with tokens) | calculated when the field initialises and whenever a referenced field changes, until an input of the field was touched; a prefilled or route value lands afterwards and so outlasts the first calculation | the same outcome by rule rather than timing: a field holding a value when it mounts keeps it until a referenced field changes |
+| Calculated default (`afform_default` with tokens) | calculated when the field initialises and whenever a referenced field changes, until an input of the field was touched; a route value lands afterwards and outlasts the first calculation, a loaded record's value does not (upstream bug below) | a field holding a value when it mounts (route, loaded record) keeps it until a referenced field changes |
 | `afFormPreSubmit` | broadcast to Angular widgets such as a captcha before the submit | not sent; such widgets are Angular directives, which the renderer reports as unsupported |
 | Confirmation message | replaces the form; the focus is lost with the button | replaces the form and takes the focus |
 | Reset button | `resetForm()` tells the fields to reset (`afFormReset`) and prefills again | the form loads afresh, so repeats, conditions and draft state start over too |
@@ -524,6 +524,23 @@ memberships and relationships start their second section with a literal
 `afformTabMember.aff.html:3`, afform's `afsearchTabRel.aff.html:3`), which
 skips h2 (axe `heading-order`, 6.18.1). Both renderers show the layout's markup
 as it is.
+
+**A token default overwrites the loaded value.** afField watches the values
+of the fields a token default refers to (`afField.component.js:118-128`) and
+recalculates on any change. `Afform.prefill` merges the loaded record in one
+step, so when it fills a referenced field too, the next digest recalculates
+and replaces the record's own value: a contact with nickname "Stored" and a
+field defaulting to `Dear [Individual1.0.first_name]` opens as "Dear Ada" and
+saves that (reproduced on civikitchen 6.18.1 with `afformAfreactDemoRules`,
+`tests/browser/rules.spec.ts`). The React renderer keeps the loaded value
+until a referenced field changes.
+
+**afTitle puts an h4 under the page's h1.** `af-title` on an element other
+than a fieldset or details becomes an `<h4>` (`afTitle.directive.js`),
+whatever heading came before, so the filter titles of the user accounts
+(`standaloneusers/ang/afsearchAdministerUserAccounts.aff.html`) and profiles
+(`civicrm_admin_ui/ang/afsearchProfiles.aff.html`) pages skip h2 and h3
+(axe `heading-order`, 6.18.1). Both renderers follow afTitle.
 
 **Icon-only row links without a name.** A display link whose `text` is empty
 and that has no `title`, such as the edit link of the Date Preferences

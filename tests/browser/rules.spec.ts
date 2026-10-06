@@ -4,10 +4,10 @@
  * af-disabled and a token default.
  */
 import { expect, test, type Page } from "@playwright/test";
-import type { Renderer } from "./harness";
+import { api, AUTH, type Renderer } from "./harness";
 
-const render = (renderer: Renderer) =>
-  `/civicrm/afreact/render?name=afformAfreactDemoRules&renderer=${renderer}`;
+const render = (renderer: Renderer, suffix = "") =>
+  `/civicrm/afreact/render?name=afformAfreactDemoRules&renderer=${renderer}${suffix}`;
 
 const input = (page: Page, name: string) =>
   page.locator(`.afreact-render af-field[name="${name}"] input`);
@@ -92,4 +92,44 @@ test("both renderers apply the form's live rules alike", async ({ page }) => {
     button: "Save",
   });
   expect(react.href).toContain("civicrm/admin/setting/preferences/address");
+});
+
+const RUN = Date.now().toString(36);
+const contacts: number[] = [];
+
+test.afterAll(async ({ browser }) => {
+  if (!contacts.length) return;
+  const context = await browser.newContext({ storageState: AUTH });
+  const page = await context.newPage();
+  await page.goto("/civicrm/afreact/compare");
+  await api(page, "Contact", "delete", { where: [["id", "IN", contacts]], useTrash: false });
+  await context.close();
+});
+
+/**
+ * Core recalculates a token default once the prefill changes the fields it refers to, which
+ * rewrites the stored value (comparison.md, "A token default overwrites the loaded value").
+ * React keeps the loaded value until the user changes a referenced field.
+ */
+test("a loaded record keeps its stored value over the token default on React", async ({ page }) => {
+  await page.goto("/civicrm/afreact/compare");
+  const [contact] = await api<{ id: number }>(page, "Individual", "create", {
+    values: {
+      first_name: "Ada",
+      last_name: `Rules${RUN}`,
+      nick_name: "Stored",
+      source: "Afreact demo",
+    },
+  });
+  contacts.push(contact!.id);
+  const nick: Record<Renderer, string> = { react: "", angular: "" };
+  for (const renderer of ["react", "angular"] as const) {
+    await page.goto(render(renderer, `#?Individual1=${String(contact!.id)}`));
+    await expect(input(page, "first_name")).toHaveValue("Ada");
+    await settled(page, renderer);
+    nick[renderer] = await input(page, "nick_name").inputValue();
+  }
+  expect(nick).toEqual({ react: "Stored", angular: "Dear Ada" });
+  await input(page, "first_name").fill("Grace");
+  await expect(input(page, "nick_name")).toHaveValue("Dear Grace");
 });
