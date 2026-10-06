@@ -30,7 +30,7 @@
     <comments>Listed versions. For example, specify both "4" and "5".</comments>
     <ver>5</ver>
   </smarty_compatibility>
-  <comments>Proof of concept.</comments>
+  <comments>Alpha. The README lists what the renderer covers.</comments>
   <requires>
     <ext>org.civicrm.afform</ext>
     <ext>org.civicrm.search_kit</ext>

@@ -5,11 +5,14 @@ and search definitions, the APIs and the permission checks stay those of core;
 only the browser side changes. The builders (FormBuilder, SearchKit admin) stay
 Angular.
 
-Status: proof of concept. It covers one contact form with a joined email block,
-SearchKit table, list, grid and tree displays and a form with live rules
+Status: alpha. It renders forms with blocks, joins, repeats, live rules
 (conditions, required and disabled rules, token defaults, `ts()` / `crmUrl()`
-expressions), and measures them against the Angular runtime. Forms listed in
-a setting render with React wherever core places them (see [Rendering forms with React](#rendering-forms-with-react)).
+expressions), drafts and the checkout block, and table, list, grid and tree
+displays with filters, in-place editing, drag ordering and the bulk actions;
+what is left out is listed in [comparison.md](docs/comparison.md#not-implemented-in-the-react-renderer).
+Forms listed in a setting render with React wherever core places them (see
+[Rendering forms with React](#rendering-forms-with-react)), and browser tests
+measure every page against the Angular runtime.
 
 ## How it works
 
