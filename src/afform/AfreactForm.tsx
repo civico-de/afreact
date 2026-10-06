@@ -131,7 +131,7 @@ type Control = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 /** ngMinlength: the minlength a set value falls short of, else 0. Browsers flag only typed values. */
 function shortOf(control: Control): number {
   if (!("minLength" in control) || control.minLength <= 0) return 0;
-  const { length } = control.value;
+  const { length } = control.value.trim();
   return length > 0 && length < control.minLength ? control.minLength : 0;
 }
 

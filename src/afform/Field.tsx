@@ -49,12 +49,15 @@ function useTrimmedText(
   enabled: boolean,
   value: unknown,
   required: boolean,
+  minlength: number | undefined,
   onChange: (value: unknown) => void,
 ) {
   const model = enabled ? textValue(value) : "";
   const [shown, setShown] = useState(model);
   if (shown.trim() !== model.trim()) setShown(model);
   const blank = shown !== "" && shown.trim() === "";
+  const trimmedLength = shown.trim().length;
+  const short = !!minlength && trimmedLength > 0 && trimmedLength < minlength;
   return {
     value: shown,
     onChange: (event: { target: { value: string } }) => {
@@ -62,9 +65,11 @@ function useTrimmedText(
       setShown(text);
       onChange(text.trim() === "" ? emptied(required, false) : text.trim());
     },
-    // Only spaces pass the browser's required check, but leave ngModel's value empty.
+    // The browser checks the raw text; ngModel's required and minlength see the trimmed one.
     ref: (node: HTMLInputElement | HTMLTextAreaElement | null) => {
-      node?.setCustomValidity(required && blank ? ts("This field is required.") : "");
+      const tooShort = ts("Enter at least %1 characters.", { 1: minlength });
+      const message = required && blank ? ts("This field is required.") : short ? tooShort : "";
+      node?.setCustomValidity(message);
     },
   };
 }
@@ -231,6 +236,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
     !ranged && (defn.input_type === "Text" || defn.input_type === "TextArea"),
     value,
     required,
+    defn.input_attrs?.minlength,
     onChange,
   );
 
@@ -311,7 +317,11 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                 value={datePrefix(value, 7)}
                 onChange={(event) => {
                   const month = event.target.value;
-                  onChange(month ? `${month}-01` : emptied(required, false));
+                  // A browser without a month picker hands over text, stored only as yyyy-mm.
+                  event.target.setCustomValidity(
+                    month && !/^\d{4}-\d{2}$/.test(month) ? ts("Enter a month as yyyy-mm.") : "",
+                  );
+                  onChange(/^\d{4}-\d{2}$/.test(month) ? `${month}-01` : emptied(required, false));
                 }}
               />
             )}
@@ -528,8 +538,6 @@ function YearInput({
       {...common}
       type="number"
       className={`form-control crm-form-number ${style ?? ""}`.trim()}
-      min={1000}
-      max={4000}
       value={stored(draft) === current ? draft : datePrefix(value, 4)}
       onChange={(event) => {
         const text = event.target.value;

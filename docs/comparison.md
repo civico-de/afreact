@@ -45,7 +45,7 @@ that no longer excuses anything fails the test.
 | Area | Angular | React |
 |---|---|---|
 | Select fields | select2, with option colours, icons and descriptions | native `<select>`, sized like select2, with its warning border on a required select emptied by the user (core up to 6.19 also warns on an untouched one); options show their label only; a select without a label is named by its placeholder, else by Select.html's title |
-| Date fields | jQuery UI datepicker, site input format, a number input for the year-only format `yy`; the calendar offers the years from `start_date_years` back to `end_date_years` ahead (100 each by default) | native `<input type="date">` or `datetime-local`, wider than the datepicker to fit its format and calendar icon, without a limit on the years, so a stored date outside them stays as it is; a number input for `yy` and `<input type="month">` for formats without a day (`yy-mm`, `M yy`), which Safari and Firefox show as a text field. Both offer the clear link only on a field that is not required |
+| Date fields | jQuery UI datepicker, site input format, a number input for the year-only format `yy`; the calendar offers the years from `start_date_years` back to `end_date_years` ahead (100 each by default) | native `<input type="date">` or `datetime-local`, wider than the datepicker to fit its format and calendar icon, without a limit on the years, so a stored date outside them stays as it is; a number input for `yy` and `<input type="month">` for formats without a day (`yy-mm`, `M yy`), which Safari and Firefox show as a text field that accepts `yyyy-mm` only. Both offer the clear link only on a field that is not required |
 | Character count of a text area with `maxlength` | "n / max" below the field, not tied to it | the same count, which describes the text area (`aria-describedby`): a screen reader reads it with the field, not on each keystroke |
 | Search filter text shorter than `minlength` | the value is dropped from the filter while typing, so the table shows unfiltered rows | filters by what was typed |
 | Clear links | `<a>` without `href`, not reachable by keyboard | same link with `role="button"`, focusable, Enter and Space |
@@ -55,7 +55,7 @@ that no longer excuses anything fails the test.
 | Reference fields (EntityRef) | select2 over `<Entity>.autocomplete` | ARIA combobox in select2's multi-select markup for single and multiple fields; the search loads with the first such field on a page. A single field shows the chosen label in its input, with a clear link |
 | Quick-add links on reference fields (`input_attrs.quickAdd`) | in the dropdown while the input is too short or nothing matches, out of the keyboard's reach; a popup that saves no record changes nothing | below the field while it is enabled, reachable by Tab; a popup that saves no record shows an error |
 | Stored ids the autocomplete cannot find | dropped from view, kept in the model | kept, with a visible "No record found" message |
-| Chained selects (ChainSelect) | select2, disabled while the options load and when none came back; a required one without options blocks the submit for good | native `<select>`, options from `Afform.getOptions` as in Angular, disabled the same way; the browser skips a disabled select, so the server reports the missing value instead |
+| Chained selects (ChainSelect) | select2, disabled while the options load and when none came back (`master` also disables it while the control field is empty); a required one without options blocks the submit for good | native `<select>`, options from `Afform.getOptions` as in Angular, disabled the same way; the browser skips a disabled select, so the server reports the missing value instead |
 | In-place editors | select2, datepicker and select2 tags; text inputs at least as wide as the cell was | native `<select>`, `<input type="date">` and `datetime-local`, a colour picker beside a text input; inputs at their own width |
 | Leaving an in-place editor | the editor stays open until Enter, Escape or a button | a valid change saves, an unchanged editor closes; switching windows leaves it open |
 | Emptying an in-place text | saves `""` | saves `null` where the field can be emptied |
@@ -72,7 +72,7 @@ that no longer excuses anything fails the test.
 | Repeat buttons (`af-repeat`) | add button labelled by the attribute's value, icon only when it is empty; remove button icon only | the same visible content; an icon-only button carries a screen-reader name, "Add" or "Remove" (see upstream bugs) |
 | Form closed for submissions | "Sorry" alert; only the submit button is disabled, the fields stay editable | the same alert, the reason above the form, and every control disabled |
 | Errors from `Afform.submit` and `submitDraft` | an alert only | the same alert, plus a summary above the form that lists each message and takes focus, except after an autosave |
-| Invalid input on submit | an alert only (the browser shows its own hint on the field); while a typed value breaks `min`, `max` or `step`, ngModel holds `undefined`, which conditions and tokens see | the same alert plus a summary above the form; the typed value stays in the data until it is valid |
+| Invalid input on submit | an alert only (the browser shows its own hint on the field); while a typed value breaks `min`, `max`, `step` or `minlength`, ngModel holds `undefined`, which conditions and tokens see | the same alert plus a summary above the form; the typed value stays in the data until it is valid |
 | `crmFormSuccess` and `crmFormError` | triggered on the `af-form` element | triggered on the renderer's wrapper element, so a listener bound to `af-form` itself hears nothing; `document` or an ancestor hears both |
 | `afFormPreSubmit` | broadcast to Angular widgets such as a captcha before the submit | not sent; such widgets are Angular directives, which the renderer reports as unsupported |
 | Confirmation message | replaces the form; the focus is lost with the button | replaces the form and takes the focus |
@@ -438,7 +438,7 @@ attributes, and React blocks `javascript:` URLs.
 
 **An emptied field shows "null" in a token.** afForm's `getTokenValues()`
 and `replaceTokens()` treat only `undefined` as empty, so a token for a field
-set to `null` (a cleared select or number; a cleared date is `""`) reads
+set to `null` (a cleared number, or a cleared select of an Integer or Float field; a cleared date is `""`, a cleared String select `""`, a cleared Boolean one `false`) reads
 "null" in labels, content blocks and calculated defaults (read from the code
 on `master` as of 2026-10-06, not run). The React renderer shows nothing and
 leaves the default's text without it.

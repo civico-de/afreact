@@ -52,7 +52,6 @@ import {
   buttonOutsideFormNote,
   conditionNote,
   elementAttributes,
-  styleObject,
   expressionNote,
   fieldAttributesNote,
   joinOutsideFieldsetNote,
@@ -215,8 +214,12 @@ function Element({ node, children }: { node: ElementNode; children?: ReactNode }
   };
   for (const [prop, value] of elementAttributes(node)) {
     const resolved = resolve(value);
-    const css = prop === "style" && typeof resolved === "string";
-    props[prop] = css ? styleObject(resolved) : resolved;
+    // The style text goes to the element as written: shorthands, var() and !important included.
+    if (prop === "style" && typeof resolved === "string") {
+      props.ref = (element: HTMLElement | null) => {
+        if (element) element.style.cssText = resolved;
+      };
+    } else props[prop] = resolved;
   }
   // afTitle's elements.
   const resolvedTitle = resolve(node["af-title"]);

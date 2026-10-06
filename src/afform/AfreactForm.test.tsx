@@ -226,6 +226,19 @@ describe("AfreactForm", () => {
       });
     });
 
+    it("measures the trimmed text, as ng-minlength does", async () => {
+      const calls = renderFields(
+        [field("first_name", { label: "First Name", input_attrs: { minlength: 3 } })],
+        { first_name: "Ada" },
+      );
+      const name = await screen.findByRole("textbox", { name: "First Name" });
+      await userEvent.clear(name);
+      await userEvent.type(name, "ab ");
+      await save();
+      expect(screen.getByRole("alert")).toHaveTextContent("First Name must be at least 3 characters.");
+      expect(calls.map(({ call }) => call)).not.toContain("Afform.submit");
+    });
+
     it("lets an empty value through and leaves minlength off other input types", async () => {
       const calls = renderFields(
         [

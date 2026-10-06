@@ -361,7 +361,8 @@ describe("Field", () => {
     const values = setup({ input_type: "Date", input_attrs: { date: "yy" } }, "1990-05-17");
     const input = screen.getByRole("spinbutton", { name: "Field" });
     expect(input).toHaveValue(1990);
-    expect(input).toHaveAttribute("min", "1000");
+    // No year limit, as for the date input.
+    expect(input).not.toHaveAttribute("min");
     await userEvent.clear(input);
     await userEvent.type(input, "2001");
     expect(values).toEqual(["", "2001-01-01"]);

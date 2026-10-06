@@ -197,20 +197,6 @@ export function elementAttributes(node: ElementNode): [string, unknown][] {
   });
 }
 
-/** A style attribute as React's style object, read by the browser's CSS parser. */
-export function styleObject(css: string): Record<string, string> {
-  const { style } = document.createElement("span");
-  style.cssText = css;
-  return Object.fromEntries(
-    Array.from(style, (name) => [
-      name.startsWith("--")
-        ? name
-        : name.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase()),
-      style.getPropertyValue(name),
-    ]),
-  );
-}
-
 export function expressionNote(expressions: string[]): string {
   return `Angular expression ${expressions.join(", ")}`;
 }
