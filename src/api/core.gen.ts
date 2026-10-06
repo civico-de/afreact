@@ -98,7 +98,7 @@ export type FieldDefn = {
     step?: number;
     time?: boolean;
   };
-  input_type?: "ChainSelect" | "CheckBox" | "Date" | "Email" | "EntityRef" | "File" | "Hidden" | "Number" | "Radio" | "Range" | "RichTextEditor" | "Select" | "Text" | "TextArea" | "Toggle" | "Url";
+  input_type?: "ChainSelect" | "CheckBox" | "Date" | "DisplayOnly" | "Email" | "EntityRef" | "File" | "Hidden" | "Number" | "Radio" | "Range" | "RichTextEditor" | "Select" | "Text" | "TextArea" | "Toggle" | "Url";
   is_date?: number;
   label: boolean | string;
   name?: string;
