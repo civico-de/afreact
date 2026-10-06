@@ -169,7 +169,7 @@ so a display filtered by them shows a note there only.
 | `civicrm/afreact/demo` | demo form and table, React renderer; `?source=page` or `?source=bundle` picks the layout source |
 | `civicrm/afreact/angular` | the same forms, Angular runtime |
 | `civicrm/afreact/compare` | loads every React variant and the Angular page in iframes and compares metrics |
-| `civicrm/afreact/render?name=…&renderer=react\|angular` | any form the user may open, with the renderer named; `&options={…}` (a JSON object) stands for a placement's arguments |
+| `civicrm/afreact/render?name=…&renderer=react\|angular` | any form the user may open, with the renderer named (React with `source="page"`); `&options={…}` (a JSON object) stands for a placement's arguments |
 | `civicrm/admin/afreact` | support report: every form with what React cannot show yet |
 | `civicrm/admin/setting/afreact` | the forms React renders |
 

@@ -72,6 +72,8 @@ interface Prefilled {
   initial: FormData;
   /** Why Afform.prefill refused the form, e.g. closed for submissions; afForm then disables it. */
   closed: string | null;
+  /** False while Afform.prefill is still out: the form shows, blocked, as afForm shows it. */
+  prefilled: boolean;
 }
 
 interface Loaded extends Prefilled {
@@ -81,6 +83,17 @@ interface Loaded extends Prefilled {
   params: Record<string, string>;
 }
 
+/** Afform.prefill's records merged over `data`, then the layout's items and defaults ensured. */
+function prefilledData(
+  form: FormDefinition,
+  data: FormData,
+  prefill: PrefillItem[],
+  params: Record<string, string>,
+): FormData {
+  const entities = entityDeclarations(form.layout);
+  return initialiseData(form.layout, applyPrefill(data, prefill, entities), params);
+}
+
 /** afForm.loadData(): Angular prefills every af-form on load; search pages have none. */
 async function prefillForm(
   name: string,
@@ -88,18 +101,21 @@ async function prefillForm(
   args: Record<string, unknown>,
   params: Record<string, string>,
 ): Promise<Prefilled> {
-  const entities = entityDeclarations(form.layout);
-  const prefilled = (prefill: PrefillItem[]) =>
-    applyPrefill(emptyData(Object.keys(entities)), prefill, entities);
-  const initial = (prefill: PrefillItem[]) =>
-    initialiseData(form.layout, prefilled(prefill), params);
-  if (!isForm(form)) return { initial: initial([]), closed: null };
+  const { initial } = unfilled(form, params);
+  if (!isForm(form)) return { initial, closed: null, prefilled: true };
   try {
     const prefill = await api4<PrefillItem>("Afform", "prefill", { name, args, fillMode: "form" });
-    return { initial: initial(prefill), closed: null };
+    return { initial: prefilledData(form, initial, prefill, params), closed: null, prefilled: true };
   } catch (error) {
-    return { initial: initial([]), closed: errorMessage(error) };
+    return { initial, closed: errorMessage(error), prefilled: true };
   }
+}
+
+/** The form before its prefill: route values and defaults in place, nothing loaded yet. */
+function unfilled(form: FormDefinition, params: Record<string, string>): Prefilled {
+  const entities = entityDeclarations(form.layout);
+  const initial = initialiseData(form.layout, emptyData(Object.keys(entities)), params);
+  return { initial, closed: null, prefilled: !isForm(form) };
 }
 
 async function loadForm(
@@ -112,7 +128,7 @@ async function loadForm(
   const form = await loadDefinition(name, source, client);
   const args = routeArgs(location, Object.keys(entityDeclarations(form.layout)), options);
   const params = routeParams(location);
-  return { form, args, params, ...(await prefillForm(name, form, args, params)) };
+  return { form, args, params, ...unfilled(form, params) };
 }
 
 /** ts() looks up the form's own translations first, then CiviCRM's page-wide strings; crmUrl() is CRM.url. */
@@ -245,8 +261,12 @@ interface LoadedFormProps extends Loaded {
 }
 
 function LoadedForm(props: LoadedFormProps) {
-  const { name, form, args, params, initial, closed, pageTitle, onReset } = props;
+  const { name, form, args, params, initial, pageTitle, onReset } = props;
   const [data, setData] = useState(initial);
+  const latest = useRef(data);
+  latest.current = data;
+  const [closed, setClosed] = useState(props.closed);
+  const [prefilled, setPrefilled] = useState(props.prefilled);
   /** The message above the form; the summary takes focus for what the server rejected. */
   const [failure, setFailure] = useState<{
     message: string;
@@ -343,6 +363,24 @@ function LoadedForm(props: LoadedFormProps) {
     mutationFn: () => prefillForm(name, form, args, params),
     onSuccess: onReset,
   });
+  // The form shows before its prefill; the loaded records land over what it holds by then.
+  const prefill = useMutation({
+    mutationFn: () => api4<PrefillItem>("Afform", "prefill", { name, args, fillMode: "form" }),
+    onSuccess: (records) => {
+      const filled = prefilledData(form, latest.current, records, params);
+      setData(filled);
+      setDraftSaved(JSON.stringify([filled, 0]));
+      setPrefilled(true);
+    },
+    onError: (error) => {
+      setClosed(errorMessage(error));
+      setPrefilled(true);
+    },
+  });
+  const { mutate: loadPrefill } = prefill;
+  useEffect(() => {
+    if (!props.prefilled) loadPrefill();
+  }, [props.prefilled, loadPrefill]);
   const saved = save.data?.failed.length ? undefined : save.data?.response[0];
   const retry = save.data?.failed.length ? save.data : undefined;
   const uploadsState = useMemo<UploadsState>(
@@ -378,12 +416,13 @@ function LoadedForm(props: LoadedFormProps) {
     update: setData,
     disabled: busy || closed !== null || reset.isPending || !!retry,
     // A submit waits for a running draft save, whose files and late answer would cross it.
-    submitDisabled: busy || closed !== null || reset.isPending || draft.isPending,
+    submitDisabled: busy || closed !== null || reset.isPending || !prefilled || draft.isPending,
     joinOffsets: offsets,
     routeParams: params,
     entities,
     formName: name,
     showSubmitButton,
+    prefilled,
     expressions,
     itemKeys,
     ...(isForm(form) && {
@@ -472,7 +511,9 @@ function LoadedForm(props: LoadedFormProps) {
   const lines = failure?.message.split("\n") ?? [];
   const status = uploading
     ? ts("Uploading %1", { 1: uploading })
-    : busy
+    : !prefilled
+      ? ts("Loading…")
+      : busy
       ? ts("Saving…")
       : draftStatus === "saving"
         ? ts("Saving Draft")
@@ -483,7 +524,7 @@ function LoadedForm(props: LoadedFormProps) {
             : "";
   // afCore marks every form element afform-directive; theme rules anchor dropdowns and toolbars on it.
   return (
-    <div className="afreact-form afform-directive" aria-busy={busy} ref={host}>
+    <div className="afreact-form afform-directive" aria-busy={busy || !prefilled} ref={host}>
       {closed !== null && (
         <div className="alert alert-danger" role="alert">
           {closed}

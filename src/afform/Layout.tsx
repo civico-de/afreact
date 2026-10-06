@@ -78,6 +78,8 @@ export interface FormState {
   formName: string;
   /** afForm hides the submit button when the route opens a stored submission (sid). */
   showSubmitButton: boolean;
+  /** False until Afform.prefill has landed; a token default waits for it. */
+  prefilled: boolean;
   expressions: ExpressionContext;
   /** Item keys per repeated array, shared by every af-repeat over that array. */
   itemKeys: Map<string, number[]>;
@@ -540,9 +542,11 @@ function useTokenDefault(
   const loops = template !== null && refersToItself(template, scope, name);
   const tokens = template === null ? null : JSON.stringify(tokenValues(template, form.data));
   const touched = useRef(false);
-  // A value from the route or a prefill outlasts the first calculation, as afForm sets it last.
+  // A value from the route or the prefill outlasts the first calculation, as afForm sets it last.
   const held = getValue(form.data, scope, name) !== undefined;
-  const calculatedFor = useRef<string | null>(held ? tokens : null);
+  const ready = form.prefilled;
+  const calculatedFor = useRef<string | null>(null);
+  const started = useRef(false);
   useEffect(() => {
     const target = element.current;
     const touch = ({ target: left }: FocusEvent) => {
@@ -555,12 +559,20 @@ function useTokenDefault(
     };
   }, [element]);
   useEffect(() => {
-    if (template === null || loops || touched.current || calculatedFor.current === tokens) return;
+    if (!ready || template === null || loops || touched.current) return;
+    if (!started.current) {
+      started.current = true;
+      if (held) {
+        calculatedFor.current = tokens;
+        return;
+      }
+    }
+    if (calculatedFor.current === tokens) return;
     calculatedFor.current = tokens;
     update((data) =>
       setValue(data, scope, name, defaultValue(given, replaceTokens(template, data))),
     );
-  }, [template, loops, tokens, update, scope, name, given]);
+  }, [ready, held, template, loops, tokens, update, scope, name, given]);
   return loops ? `afform_default ${JSON.stringify(template)} refers to its own field` : null;
 }
 

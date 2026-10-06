@@ -84,6 +84,7 @@ that no longer excuses anything fails the test.
 | Calculated default (`afform_default` with tokens) | calculated when the field initialises and whenever a referenced field changes, until an input of the field was touched; a route value lands afterwards and outlasts the first calculation, a loaded record's value does not (upstream bug below) | a field holding a value when it mounts (route, loaded record) keeps it until a referenced field changes |
 | `afFormPreSubmit` | broadcast to Angular widgets such as a captcha before the submit | not sent; such widgets are Angular directives, which the renderer reports as unsupported |
 | Confirmation message | replaces the form; the focus is lost with the button | replaces the form and takes the focus |
+| Prefill on load | the fields show at once under a blocking overlay (`$element.block()`) until `Afform.prefill` lands, then its records are merged over the data | the fields show at once and take input; the form is `aria-busy` with "Loading…" in its status line and the submit, draft and reset buttons wait; the records then land over the data, so a prefilled field typed into meanwhile takes the stored value; a token default waits for the prefill |
 | Reset button | `resetForm()` tells the fields to reset (`afFormReset`) and prefills again | the form loads afresh, so repeats, conditions and draft state start over too |
 | Grid displays | boxes in plain `<div>`s | the same boxes with `role="list"` and `role="listitem"`, named by the display label where the display is loaded by name (a form's layout carries no label), as list displays are |
 | Field labels and help texts (`label`, `help_pre`, `help_post`) | set as HTML (`af-markup`), tokens such as `[Individual1.0.first_name]` show the field's value inside `af-form` | the same, with the HTML rebuilt from a list of plain elements and attributes: scripts, event handlers and inline styles are dropped, other unknown tags keep their text; a token updates while the user types, where Angular waits for the input's `change` |
@@ -206,6 +207,10 @@ includes responses served from the HTTP cache. The server needs 85–120 ms
   waits for filter values to settle. The React table has no filters yet and
   starts at once; see the plan's first open decision for what keeping that
   lead takes.
+- **Prefill.** A form counts as ready with its first input. Both renderers show
+  the inputs before `Afform.prefill` returns (Angular under its blocking
+  overlay); before 2026-10-06 the React form waited for the prefill, which
+  put it 200–400 ms behind Angular on forms without a display.
 - **Layout source.** `api` adds one round trip before `Afform.prefill` and
   `SearchDisplay.run` can start. The layout is cached in core's Angular
   cache, so `getForm` costs about 60 ms, the same as an empty API request;

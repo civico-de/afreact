@@ -174,6 +174,33 @@ describe("submitting", () => {
   });
 });
 
+describe("the prefill", () => {
+  it("lands over a form that shows at once and is busy until then", async () => {
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const calls = renderForm({ "Afform.prefill": () => held.then(() => prefill) });
+    const input = await firstName();
+    const form = input.closest(".afreact-form");
+    expect(form).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading…");
+    expect(input).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save Draft" })).toBeDisabled();
+    await userEvent.type(input, "B");
+    release?.();
+    await waitFor(() => {
+      expect(form).toHaveAttribute("aria-busy", "false");
+    });
+    // The loaded record wins over what was typed meanwhile, as afForm's merge does.
+    expect(input).toHaveValue("Ada");
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Save Draft" })).toBeDisabled();
+    expect(called(calls, "Afform.prefill")).toHaveLength(1);
+  });
+});
+
 describe("a form closed for submissions", () => {
   it("is disabled, says why inline and alerts it as afForm does", async () => {
     const calls = renderForm({
