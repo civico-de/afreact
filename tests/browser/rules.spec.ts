@@ -43,6 +43,8 @@ async function observe(page: Page, renderer: Renderer): Promise<Observed> {
   await page.goto(render(renderer));
   const first = input(page, "first_name");
   await expect(first).toBeVisible();
+  // The token default is calculated once the prefill has landed.
+  await expect(input(page, "nick_name")).toHaveValue("Dear ");
   const help = page.locator(".afreact-render p.help");
   const shown = () => input(page, "job_title").isVisible();
   const required = () =>
