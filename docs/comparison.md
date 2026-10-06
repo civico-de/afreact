@@ -262,8 +262,9 @@ it records while loading and runs each page once.
   module runtime) are preloaded from the page head
   (`Civi\Afreact\Assets::load`), so they arrive with `afreact.js` instead of
   after it has run; lazy chunks (comboboxes, drag and drop, the compare page)
-  still load on demand. On localhost that saves about 10 ms, on a real network
-  one round trip.
+  still load on demand. Measured on the membership types page with 10 cold
+  loads each way: 20 ms on localhost, 50 ms with 50 ms of emulated latency,
+  which is the one round trip it saves.
 - **Critical path.** `Afform.prefill` and `SearchDisplay.run` run in parallel
   and take 200–400 ms each on the server. Both are unchanged core actions and
   cost the same under Angular.
