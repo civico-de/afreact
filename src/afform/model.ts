@@ -56,24 +56,18 @@ export function emptyData(names: string[]): FormData {
   return Object.fromEntries(names.map((name) => [name, []]));
 }
 
-/**
- * afCore's routeParams: every query parameter; Angular-style hash parameters
- * ("#?Individual1=5") count too, so existing Afform links work.
- */
-export function routeParams(location: { search: string; hash: string }): Record<string, string> {
-  const params: Record<string, string> = {};
-  const hashQuery = location.hash.replace(/^#\/?\??/, "");
-  new URLSearchParams(`${location.search.replace(/^\?/, "")}&${hashQuery}`).forEach(
-    (value, key) => {
-      params[key] = value;
-    },
-  );
-  return params;
+function queryParams(query: string): Record<string, string> {
+  return Object.fromEntries(new URLSearchParams(query));
+}
+
+/** afCore's routeParams: the hash parameters ("#?Individual1=5"), not the page's query string. */
+export function routeParams(location: { hash: string }): Record<string, string> {
+  return queryParams(location.hash.replace(/^#\/?\??/, ""));
 }
 
 /**
- * Route arguments as afForm sends them to the server: the route parameters, then the
- * placement's options (e.g. contact_id on a contact summary tab) over them, with
+ * Route arguments as afForm sends them to the server: the query string, the route parameters
+ * over it, then the placement's options (e.g. contact_id on a contact summary tab) over them, with
  * comma-separated IDs split for entity names.
  */
 export function routeArgs(
@@ -81,7 +75,11 @@ export function routeArgs(
   names: string[],
   options: Record<string, unknown> = {},
 ): Record<string, unknown> {
-  const args: Record<string, unknown> = { ...routeParams(location), ...options };
+  const args: Record<string, unknown> = {
+    ...queryParams(location.search.replace(/^\?/, "")),
+    ...routeParams(location),
+    ...options,
+  };
   for (const name of names) {
     const value = args[name];
     if (typeof value === "string" && value) args[name] = value.split(",");
@@ -211,18 +209,25 @@ export function addRepeatItem(data: FormData, scope: Scope): FormData {
   return next;
 }
 
+/** A copy is a new record: it has no id and is not the primary one. */
+function copied(record: Values): Values {
+  const { id: _id, ...rest } = structuredClone(record);
+  if ("is_primary" in rest) rest.is_primary = false;
+  return rest;
+}
+
 /** afRepeat's copyItem(): appends a copy of the last item; an entity's copy leaves its joins out. */
 export function copyRepeatItem(data: FormData, scope: Scope): FormData {
   const next = structuredClone(data);
   if (scope.join === undefined) {
     const items = next[scope.entity] ?? [];
     const last = items.at(-1);
-    if (last) items.push({ fields: structuredClone(last.fields), joins: {} });
+    if (last) items.push({ fields: copied(last.fields), joins: {} });
     return next;
   }
   const records = entityItemAt(next, scope)?.joins?.[scope.join] ?? [];
   const last = records.at(-1);
-  if (last) records.push(structuredClone(last));
+  if (last) records.push(copied(last));
   return next;
 }
 

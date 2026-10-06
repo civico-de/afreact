@@ -84,6 +84,19 @@ describe("checkConditions", () => {
     }
   });
 
+  it("takes an emptied list or range as empty, and false or 0 as an answer", () => {
+    const answers = (value: unknown): FormData => ({ Individual1: [{ fields: { answer: value } }] });
+    const answer = "Individual1[0][fields][answer]";
+    for (const empty of [undefined, null, "", [], {}]) {
+      expect(checkConditions([[answer, "IS EMPTY"]], answers(empty))).toBe(true);
+      expect(checkConditions([[answer, "IS NOT EMPTY"]], answers(empty))).toBe(false);
+    }
+    for (const given of [false, 0, "0", [1], { min: 1 }]) {
+      expect(checkConditions([[answer, "IS EMPTY"]], answers(given))).toBe(false);
+      expect(checkConditions([[answer, "IS NOT EMPTY"]], answers(given))).toBe(true);
+    }
+  });
+
   it("checks BETWEEN and NOT BETWEEN against both bounds, inclusive", () => {
     const age = "Individual1[0][fields][age]";
     expect(check([[age, "BETWEEN", "[30,40]"]])).toBe(true);

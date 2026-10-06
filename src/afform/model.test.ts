@@ -15,6 +15,7 @@ import {
   removeRepeatItem,
   repeatCount,
   routeArgs,
+  routeParams,
   setPrimary,
   setValue,
   submission,
@@ -25,6 +26,17 @@ import type { FormData } from "./types";
 const emails = (data: FormData) => data.Individual1?.[0]?.joins?.Email ?? [];
 
 describe("routeArgs", () => {
+  it("reads route parameters from the hash only, as afCore does", () => {
+    expect(routeParams({ hash: "#?first_name=Ada&id=3" })).toEqual({ first_name: "Ada", id: "3" });
+    expect(routeParams({ hash: "" })).toEqual({});
+  });
+
+  it("lets the hash win over the query string", () => {
+    expect(routeArgs({ search: "?Individual1=1", hash: "#?Individual1=2" }, [])).toEqual({
+      Individual1: "2",
+    });
+  });
+
   it("merges query and Angular hash parameters and splits only entity IDs", () => {
     expect(
       routeArgs({ search: "?Individual1=5,6&tag=a,b", hash: "#?Email1=7" }, [
@@ -165,6 +177,21 @@ describe("repeats", () => {
     const copied = copyRepeatItem(data, scope).Individual1?.[1];
     expect(copied).toEqual({ fields: { first_name: "Ada" }, joins: {} });
     expect(copyRepeatItem(emptyData(["Individual1"]), scope)).toEqual({ Individual1: [] });
+  });
+
+  it("copies a record as a new one: without its id and not primary", () => {
+    let data = ensureRepeatItems(emptyData(["Individual1"]), joinScope, 1);
+    const first = { ...joinScope, joinIndex: 0 };
+    data = setValue(setValue(data, first, "id", 12), first, "email", "a@example.org");
+    data = copyRepeatItem(setPrimary(data, first), joinScope);
+    expect(emails(data)).toEqual([
+      { id: 12, email: "a@example.org", is_primary: true },
+      { email: "a@example.org", is_primary: false },
+    ]);
+
+    const scope = { entity: "Individual1", index: 0 };
+    data = setValue(setValue(data, scope, "id", 5), scope, "first_name", "Ada");
+    expect(copyRepeatItem(data, scope).Individual1?.[1]?.fields).toEqual({ first_name: "Ada" });
   });
 });
 

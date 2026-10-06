@@ -109,7 +109,9 @@ const SEARCH_ATTRIBUTES = new Set([
   "search",
   "display",
 ]);
-const PASSTHROUGH = new Set(["id", "href", "title", "role", "target", "type"]);
+const PASSTHROUGH = new Set(
+  "id href title role target type style lang dir".split(" "),
+);
 
 export type NodeKind =
   | "conditional"
@@ -191,8 +193,22 @@ export function elementAttributes(node: ElementNode): [string, unknown][] {
     if (attr === "ng-href") return [["href", value]];
     // A boolean attribute: present, even as open="", means open.
     if (attr === "open") return [["open", true]];
-    return PASSTHROUGH.has(attr) || attr.startsWith("aria-") ? [[attr, value]] : [];
+    return PASSTHROUGH.has(attr) || /^(aria|data)-/.test(attr) ? [[attr, value]] : [];
   });
+}
+
+/** A style attribute as React's style object, read by the browser's CSS parser. */
+export function styleObject(css: string): Record<string, string> {
+  const { style } = document.createElement("span");
+  style.cssText = css;
+  return Object.fromEntries(
+    Array.from(style, (name) => [
+      name.startsWith("--")
+        ? name
+        : name.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase()),
+      style.getPropertyValue(name),
+    ]),
+  );
 }
 
 export function expressionNote(expressions: string[]): string {

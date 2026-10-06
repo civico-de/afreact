@@ -101,6 +101,13 @@ function order(left: unknown, right: unknown): number {
   return Number(a) - Number(b);
 }
 
+/** No answer: unset, "", an empty list or an empty range; false and 0 are answers. */
+function isEmpty(value: unknown): boolean {
+  if (value === undefined || value === null || value === "") return true;
+  if (Array.isArray(value)) return !value.length;
+  return typeof value === "object" && !Object.keys(value).length;
+}
+
 /** undefined for an operator afForm does not know (IS NULL): the clause decides nothing. */
 function compare(left: unknown, op: string, right: unknown): boolean | undefined {
   const yes = op !== "!=" && !op.includes("NOT ");
@@ -118,9 +125,8 @@ function compare(left: unknown, op: string, right: unknown): boolean | undefined
     case "<=":
       return order(left, right) <= 0;
     case "IS EMPTY":
-      return !left;
     case "IS NOT EMPTY":
-      return !!left;
+      return isEmpty(left) === yes;
     case "CONTAINS":
     case "NOT CONTAINS":
       if (Array.isArray(left)) return left.includes(right) === yes;

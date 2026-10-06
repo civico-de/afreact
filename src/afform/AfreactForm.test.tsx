@@ -366,11 +366,14 @@ describe("AfreactForm", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
     expect(screen.getAllByRole("textbox", { name: "Email" })).toHaveLength(1);
 
-    const remaining = screen.getByRole("radio", { name: "Primary" });
-    await userEvent.click(remaining);
+    // The primary record went; afField's watcher makes the first one primary again.
+    expect(screen.getByRole("radio", { name: "Primary" })).toBeChecked();
+    await userEvent.click(screen.getByRole("button", { name: "Add email" }));
+    const [kept, added] = screen.getAllByRole("radio", { name: "Primary" });
+    await userEvent.click(added!);
     await userEvent.click(screen.getByRole("button", { name: "Clear" }));
-    expect(remaining).not.toBeChecked();
-    expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
+    expect(kept).toBeChecked();
+    expect(added).not.toBeChecked();
   });
 
   it("reports a form that cannot be loaded", async () => {

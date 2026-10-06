@@ -38,13 +38,14 @@ function form(children: LayoutNode[], extra: LayoutNode[] = [submit]): LayoutNod
   ];
 }
 
-function renderForm(layout: LayoutNode[], search = "", strings: Record<string, string> | [] = []) {
+function renderForm(layout: LayoutNode[], route = "", strings: Record<string, string> | [] = []) {
   const calls = mockApi({
     "Afreact.getForm": () => [{ name: "afformTest", title: "Test", type: "form", layout, strings }],
     "Afform.prefill": () => [],
     "Afform.submit": () => [{}],
   });
-  renderWithQuery(<AfreactForm name="afformTest" location={{ search, hash: "" }} />);
+  const location = { search: "", hash: route && `#${route}` };
+  renderWithQuery(<AfreactForm name="afformTest" location={location} />);
   return calls;
 }
 
@@ -699,6 +700,18 @@ describe("values from the route", () => {
     type: "reset",
     "#children": [{ "#text": "Reset" }],
   };
+
+  it("come from the hash; the page's query string fills nothing", async () => {
+    mockApi({
+      "Afreact.getForm": () => [
+        { name: "afformTest", title: "Test", type: "form", layout: form([field("id")]), strings: [] },
+      ],
+      "Afform.prefill": () => [],
+    });
+    const location = { search: "?id=3&reset=1", hash: "" };
+    renderWithQuery(<AfreactForm name="afformTest" location={location} />);
+    expect(await screen.findByRole("textbox", { name: "id" })).toHaveValue("");
+  });
 
   it("fill fields over their default and survive a reset", async () => {
     const calls = renderForm(

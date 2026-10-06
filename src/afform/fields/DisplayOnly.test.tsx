@@ -81,6 +81,15 @@ describe("DisplayOnly", () => {
     expect(output().querySelector("img")).not.toHaveAttribute("onerror");
   });
 
+  it("drops ids, roles and ARIA from stored rich text and leaves an odd URL unlinked", () => {
+    const { unmount } = show({ display_format: "html" }, '<span id="f" role="alert">Text</span>');
+    expect(screen.getByText("Text").getAttributeNames()).toEqual([]);
+    unmount();
+    show({ display_format: "url" }, "data:text/html,x");
+    expect(output()).toHaveTextContent("data:text/html,x");
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
   it("links a URL and a file", () => {
     const { unmount } = show({ display_format: "url" }, "https://example.org/");
     expect(screen.getByRole("link", { name: "https://example.org/" })).toHaveAttribute(

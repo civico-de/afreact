@@ -20,7 +20,9 @@ import {
   addRepeatItem,
   copyRepeatItem,
   deleteValue,
+  ensurePrimary,
   fieldPlace,
+  findElements,
   getValue,
   keepOffered,
   removeRepeatItem,
@@ -50,6 +52,7 @@ import {
   buttonOutsideFormNote,
   conditionNote,
   elementAttributes,
+  styleObject,
   expressionNote,
   fieldAttributesNote,
   joinOutsideFieldsetNote,
@@ -210,7 +213,11 @@ function Element({ node, children }: { node: ElementNode; children?: ReactNode }
     unsupported.push(result.unsupported);
     return undefined;
   };
-  for (const [prop, value] of elementAttributes(node)) props[prop] = resolve(value);
+  for (const [prop, value] of elementAttributes(node)) {
+    const resolved = resolve(value);
+    const css = prop === "style" && typeof resolved === "string";
+    props[prop] = css ? styleObject(resolved) : resolved;
+  }
   // afTitle's elements.
   const resolvedTitle = resolve(node["af-title"]);
   const title = typeof resolvedTitle === "string" ? resolvedTitle : null;
@@ -385,9 +392,14 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
   const canAdd = !max || count < max;
   const children = node["#children"] ?? [];
   // A new item's fields and repeats initialise as afField and afRepeat do on render.
+  // afField's watcher: while the items have an is_primary field, one of them is primary.
+  const hasPrimary = findElements(children, "af-field").some(
+    (field) => field.name === "is_primary",
+  );
+  const primaryKept = (data: FormData) => (hasPrimary ? ensurePrimary(data, scope) : data);
   const initialiseLast = (data: FormData) => {
     const last = itemScope(repeatCount(data, scope) - 1);
-    return initialiseNodes(children, data, last, form.joinOffsets, form.routeParams);
+    return primaryKept(initialiseNodes(children, data, last, form.joinOffsets, form.routeParams));
   };
   const items = keys.map((key, position) => (
     <div af-repeat-item="" key={key}>
@@ -403,7 +415,7 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
           disabled={form.disabled}
           onClick={() => {
             removeKey(position);
-            form.update((data) => removeRepeatItem(data, scope, position));
+            form.update((data) => primaryKept(removeRepeatItem(data, scope, position)));
           }}
         >
           <i className="crm-i fa-ban" aria-hidden="true" />
@@ -615,7 +627,7 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
           form.update((data) => setPrimary(data, scope));
         }}
         onClear={() => {
-          form.update((data) => setValue(data, scope, name, null));
+          form.update((data) => ensurePrimary(setValue(data, scope, name, null), scope));
         }}
       />
     ) : (

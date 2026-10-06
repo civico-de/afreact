@@ -299,6 +299,25 @@ describe("search forms", () => {
     expect(screen.getByRole("textbox", { name: "title" })).toBeVisible();
   });
 
+  it("keeps a container's style, language and data attributes as FormBuilder wrote them", async () => {
+    const box: LayoutNode = {
+      "#tag": "div",
+      class: "af-container",
+      style: "background-color: rgb(1, 2, 3); border: 2px solid rgb(4, 5, 6); --gap: 4px",
+      lang: "de",
+      "data-kind": "box",
+      "#children": [field("title", { search_operator: "CONTAINS" })],
+    };
+    const styled = searchForm([box, display({})]);
+    expect(layoutProblems(styled)).toEqual([]);
+    expect(await shownNotes(styled)).toEqual([]);
+    const container = screen.getByRole("textbox", { name: "title" }).closest("div.af-container");
+    expect(container).toHaveStyle({ backgroundColor: "rgb(1, 2, 3)", borderTopWidth: "2px" });
+    expect(container).toHaveStyle("--gap: 4px");
+    expect(container).toHaveAttribute("lang", "de");
+    expect(container).toHaveAttribute("data-kind", "box");
+  });
+
   it("matches the notes the rendered search form shows", async () => {
     const report = layoutProblems(gappySearch);
     expect(report).toEqual([

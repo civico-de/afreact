@@ -54,6 +54,24 @@ describe("Markup", () => {
     expect(screen.getByText("c").getAttribute("href")).not.toMatch(/^javascript:alert/);
   });
 
+  it("keeps names, roles and plain addresses only in admin HTML, not in a record's", () => {
+    const html =
+      '<span id="x" role="alert" aria-live="assertive" title="t">S</span>' +
+      '<a href="data:text/html,x">D</a><a href="/civicrm/a">R</a><a href="mailto:a@example.org">M</a>' +
+      '<img src="data:text/html,x" alt="bad"><img src="data:image/png;base64,AA" alt="ok">';
+    const { container, rerender } = render(<Markup html={html} />);
+    expect(container.querySelector("span")).toHaveAttribute("id", "x");
+    expect(screen.getByRole("alert")).toHaveAttribute("aria-live", "assertive");
+    rerender(<Markup html={html} record />);
+    const span = container.querySelector("span");
+    expect(span?.getAttributeNames()).toEqual(["title"]);
+    expect(screen.getByText("D")).not.toHaveAttribute("href");
+    expect(screen.getByText("R")).toHaveAttribute("href", "/civicrm/a");
+    expect(screen.getByText("M")).toHaveAttribute("href", "mailto:a@example.org");
+    expect(screen.getByAltText("bad")).not.toHaveAttribute("src");
+    expect(screen.getByAltText("ok")).toHaveAttribute("src", "data:image/png;base64,AA");
+  });
+
   it("shows tokens in a label as the live field value inside af-form only", () => {
     const { unmount } = field({ label: "Hello [Individual1.0.first_name]" }, data);
     expect(screen.getByRole("textbox", { name: "Hello Ada" })).toBeInTheDocument();

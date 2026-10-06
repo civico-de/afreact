@@ -37,6 +37,12 @@ export function withTokens(text: string): ReactNode {
   });
 }
 
+interface MarkupProps {
+  html: string;
+  tokens?: boolean;
+  record?: boolean;
+}
+
 /** Elements markup keeps; their content cannot run script. */
 const TAGS = new Set(
   (
@@ -60,18 +66,36 @@ const ATTRIBUTES: Record<string, string> = {
   ),
 };
 
-function convert(nodes: NodeListOf<ChildNode>, tokens: boolean): ReactNode[] {
+const LINKS = ["http:", "https:", "ftp:", "sftp:", "mailto:", "tel:", "file:"];
+const IMAGES = ["http:", "https:", "ftp:", "file:", "blob:"];
+
+/** $sanitize's URL rule: a link or image address of a plain scheme; relative ones count. */
+export function plainUrl(url: string, image = false): boolean {
+  if (!URL.canParse(url, document.baseURI)) return false;
+  const { protocol, href } = new URL(url, document.baseURI);
+  if (!image) return LINKS.includes(protocol);
+  return IMAGES.includes(protocol) || href.startsWith("data:image/");
+}
+
+/** What a record's HTML may not carry: names and roles other parts of the page rely on. */
+function kept(name: string, value: string, record: boolean): boolean {
+  if (!record) return true;
+  if (name === "id" || name === "role" || name.startsWith("aria-")) return false;
+  return (name !== "href" && name !== "src") || plainUrl(value, name === "src");
+}
+
+function convert(nodes: NodeListOf<ChildNode>, tokens: boolean, record: boolean): ReactNode[] {
   return [...nodes].map((node, index): ReactNode => {
     const text = node.textContent ?? "";
     if (node.nodeType === Node.TEXT_NODE) return tokens ? withTokens(text) : text;
     if (!(node instanceof Element) || DROPPED.has(node.localName)) return null;
-    const children = convert(node.childNodes, tokens);
+    const children = convert(node.childNodes, tokens, record);
     // Formatting outside the list falls away; its text stays.
     if (!TAGS.has(node.localName)) return createElement(Fragment, { key: index }, ...children);
     const props: Record<string, string> = { key: String(index) };
     for (const { name, value } of Array.from(node.attributes)) {
       const prop = name.startsWith("aria-") ? name : ATTRIBUTES[name];
-      if (prop) props[prop] = value;
+      if (prop && kept(name, value, record)) props[prop] = value;
     }
     return VOID.has(node.localName)
       ? createElement(node.localName, props)
@@ -82,12 +106,13 @@ function convert(nodes: NodeListOf<ChildNode>, tokens: boolean): ReactNode[] {
 /**
  * afMarkup: admin HTML from a label, help text or content block, rebuilt from a list of plain
  * elements and attributes so it cannot run script; React also blocks javascript: URLs.
+ * `record` is for a stored value anyone may have submitted, filtered as ng-bind-html does.
  */
-export function Markup({ html, tokens = true }: { html: string; tokens?: boolean }) {
+export function Markup({ html, tokens = true, record = false }: MarkupProps) {
   return useMemo(() => {
     // A template's content is inert: nothing in it loads or runs while it is read.
     const template = document.createElement("template");
     template.innerHTML = html;
-    return convert(template.content.childNodes, tokens);
-  }, [html, tokens]);
+    return convert(template.content.childNodes, tokens, record);
+  }, [html, tokens, record]);
 }

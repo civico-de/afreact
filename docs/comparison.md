@@ -75,7 +75,9 @@ that no longer excuses anything fails the test.
 | Reset button | `resetForm()` tells the fields to reset (`afFormReset`) and prefills again | the form loads afresh, so repeats, conditions and draft state start over too |
 | Grid displays | boxes in plain `<div>`s | the same boxes with `role="list"` and `role="listitem"`, named by the display label where the display is loaded by name (a form's layout carries no label), as list displays are |
 | Field labels and help texts (`label`, `help_pre`, `help_post`) | set as HTML (`af-markup`), tokens such as `[Individual1.0.first_name]` show the field's value inside `af-form` | the same, with the HTML rebuilt from a list of plain elements and attributes: scripts, event handlers and inline styles are dropped, other unknown tags keep their text; a token updates while the user types, where Angular waits for the input's `change` |
-| Display-only fields (`DisplayOnly`) | option labels, dates in the site format, reference labels from `<Entity>.autocomplete`, rich text as HTML, URL and file links; a value matching no option, or not of the option's type (`"2"` for `2`), shows nothing, as does a date it cannot format | the same, with values compared as text and a value without option or a date that cannot be formatted shown as stored; rich text is filtered as labels are; a failed label lookup shows its error |
+| Display-only fields (`DisplayOnly`) | option labels, dates in the site format, reference labels from `<Entity>.autocomplete`, rich text as HTML, URL and file links; a value matching no option, or not of the option's type (`"2"` for `2`), shows nothing, as does a date it cannot format | the same, with values compared as text and a value without option or a date that cannot be formatted shown as stored; rich text keeps what `ng-bind-html` keeps (no `id`, `role` or `aria-*`, links and images of plain schemes only), and a URL of another scheme stays text; a failed label lookup shows its error |
+| Route parameters | the hash (`#?first_name=…`), for the fields and for the server's `args` | the same for the fields; `args` also carry the page's query string, with the hash over it |
+| Reference field whose dynamic entity has no mapping for the controlling value | disabled, without a word | disabled, with "No entity to search for …" |
 | Tree items | `<li>` without `data-entity-id` | `<li data-entity-id>`, as list items have it, so focus can return to the row after a reload |
 
 ## Accessibility
@@ -666,3 +668,24 @@ keys among the field values, which the next save stores with them
 code, not run). The React renderer restores the field values only. It sends
 `extra` only once a form holds an extra field's value; afForm always sends
 `extra: {fields: {}}`, which the server treats as no values.
+
+**`IS EMPTY` reads an emptied list as filled and "No" as empty.** A
+condition's `IS EMPTY` and `IS NOT EMPTY` test the value with `!val1`
+(`afForm.component.js` `compareConditions()`; read from the code, not run):
+a checkbox list or multi-select emptied again (`[]`) and an emptied range
+(`{}`) count as filled, a Yes/No answer "No" and the number 0 as empty. The
+React renderer takes unset, `""`, `[]` and `{}` as empty and `false` and `0`
+as answers.
+
+**`BETWEEN` conditions decide nothing.** FormBuilder's condition editor
+offers `BETWEEN` and `NOT BETWEEN` (`afGuiCondition.component.js`), but
+`compareConditions()` has no case for them, so the clause is skipped (read
+from the code, not run). The React renderer checks the value against both
+bounds, inclusive.
+
+**A copied repeat item is the same record.** `af-copy` appends
+`angular.copy()` of the last item (`afRepeat.directive.js` `copyItem()`; read
+from the code, not run), including a loaded record's `id` and its
+`is_primary`, so the copy and the original submit under one ID and two join
+records are primary. The React renderer copies the values without `id` and
+with `is_primary` off.

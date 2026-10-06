@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useContext } from "react";
 import { errorMessage } from "../../api/civi";
-import { Markup } from "../Markup";
+import { Markup, plainUrl } from "../Markup";
 import type { FieldDefn, FieldOption } from "../types";
 import { resolveIds, searchedEntity, valueIds } from "./autocomplete";
 import { FieldEnvContext, type FieldEnv } from "./env";
@@ -103,9 +103,11 @@ function Shown({ id, defn, value, text, error }: ShownProps & { text: string; er
         );
       }
       case "html":
-        return <Markup html={text} tokens={false} />;
+        return <Markup html={text} tokens={false} record />;
       case "url":
-        return isEmpty(value) ? null : <a href={String(value)}>{text}</a>;
+        // ng-href leaves a link of another scheme dead; here it stays text.
+        if (isEmpty(value) || !plainUrl(String(value))) return text;
+        return <a href={String(value)}>{text}</a>;
       default:
         return text;
     }
