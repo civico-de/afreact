@@ -32,3 +32,6 @@ Thumbs.db
 /playwright-report/
 /tests/browser/.auth/
 /video/
+
+# Where ckrelease dist writes the archive locally
+/.ckrelease/
