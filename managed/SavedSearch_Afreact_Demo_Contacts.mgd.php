@@ -46,6 +46,7 @@ return [
           'classes' => ['table', 'table-striped'],
           'pager' => ['show_count' => TRUE],
           'sort' => [['sort_name', 'ASC']],
+          'actions' => TRUE,
           'columns' => [
             [
               'type' => 'field',

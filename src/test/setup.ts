@@ -4,9 +4,15 @@ import { events } from "./jquery";
 import { installDialog } from "./dialog";
 import { installPopover } from "./popover";
 
-// CiviCRM's globals: ts() fills %1-style placeholders, CRM.api4 is replaced per test.
-globalThis.ts = (text, params = {}) =>
-  text.replace(/%(\d+)/g, (match, key: string) => (key in params ? String(params[key]) : match));
+// CiviCRM's globals: ts() fills %1-style placeholders and picks `plural` for a `count` other
+// than 1, as Common.js does; CRM.api4 is replaced per test.
+globalThis.ts = (text, params = {}) => {
+  const { plural, count } = params;
+  const form = typeof plural === "string" && count !== 1 ? plural : text;
+  return form
+    .replace(/%count/g, String(count))
+    .replace(/%(\d+)/g, (match, key: string) => (key in params ? String(params[key]) : match));
+};
 // CRM.$ stands for jQuery outside a popup; tests replace it per call with vi.mocked().
 const $ = (target: Element) => events(target);
 window.CRM = {

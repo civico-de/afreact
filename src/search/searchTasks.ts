@@ -29,7 +29,15 @@ export interface ApiBatch {
   successMsg?: string;
   /** The success alert's title; the task's "… Complete" when unset. */
   successTitle?: string;
+  /** The renderer's own dialogs word the result from the counts; takes the place of successMsg. */
+  summary?: (counts: BatchCounts) => string;
   errorMsg?: string;
+}
+
+/** crmSearchBatchRunner's batchCount and countMatched over every batch. */
+export interface BatchCounts {
+  fetched: number;
+  matched: number;
 }
 
 /** Angular expressions over the task's data (ids, entity, …), as GetSearchTasks writes them. */
@@ -180,11 +188,13 @@ export type TaskRun =
   | { kind: "popup" | "redirect"; target: TaskTarget }
   | { kind: "download" }
   | { kind: "update" }
+  | { kind: "tag" }
   | { kind: "unsupported"; reason: string };
 
 /** The core task dialogs the renderer replaces with its own. */
 const DOWNLOAD_DIALOG = "~/crmSearchTasks/crmSearchTaskDownload.html";
 const UPDATE_DIALOG = "~/crmSearchTasks/crmSearchTaskUpdate.html";
+const TAG_DIALOG = "~/crmSearchTasks/crmSearchTaskTag.html";
 
 /** A field the update task may set, as searchTaskFieldsTrait and GetSearchTasks read getFields. */
 export interface UpdateField {
@@ -290,6 +300,97 @@ export function updateBatch(values: Record<string, unknown>): ApiBatch {
   };
 }
 
+/** A tag's row of Tag.get as the tag dialog reads it. */
+export interface TagRow {
+  id: number;
+  label: string;
+  color?: string | null;
+  description?: string | null;
+  is_selectable?: boolean;
+  parent_id?: number | null;
+}
+
+export interface Tagset {
+  id: number;
+  name: string;
+  label: string;
+}
+
+/** Tags are used for "Contact", whatever contact type a search lists (see comparison.md). */
+export function tagEntity(entity: string): string {
+  return ["Individual", "Organization", "Household"].includes(entity) ? "Contact" : entity;
+}
+
+/** crmSearchTaskTag's two queries: the plain tags in a hierarchy, and the tagsets. */
+export function tagCalls(entity: string): { tags: ApiCall; tagsets: ApiCall } {
+  const usedFor = ["used_for:name", "CONTAINS", tagEntity(entity)];
+  return {
+    tags: [
+      "Tag",
+      "get",
+      {
+        select: ["id", "label", "color", "description", "is_selectable", "parent_id"],
+        where: [
+          ["is_tagset", "=", false],
+          usedFor,
+          ["OR", [["parent_id", "IS NULL"], ["parent_id.is_tagset", "=", false]]],
+        ],
+        orderBy: { label: "ASC" },
+      },
+    ],
+    tagsets: [
+      "Tag",
+      "get",
+      { select: ["id", "name", "label"], where: [["is_tagset", "=", true], usedFor] },
+    ],
+  };
+}
+
+/** sortTagsForSelect2(): the tags in a tree, each with its depth, children under their parent. */
+export function tagTree(tags: TagRow[]): { tag: TagRow; depth: number }[] {
+  const byParent = new Map<number | null, TagRow[]>();
+  const known = new Set(tags.map((tag) => tag.id));
+  for (const tag of tags) {
+    const parent = tag.parent_id != null && known.has(tag.parent_id) ? tag.parent_id : null;
+    byParent.set(parent, [...(byParent.get(parent) ?? []), tag]);
+  }
+  const walk = (parent: number | null, depth: number): { tag: TagRow; depth: number }[] =>
+    (byParent.get(parent) ?? []).flatMap((tag) => [{ tag, depth }, ...walk(tag.id, depth + 1)]);
+  return walk(null, 0);
+}
+
+/** saveTags(): an EntityTag per record and tag, or the chosen tags' removal; core's messages. */
+export function tagBatch(action: "save" | "delete", entity: string, tagIds: number[]): ApiBatch {
+  const table = tagEntity(entity);
+  const summary = ({ fetched, matched }: BatchCounts) => {
+    if (action === "delete")
+      return ts("1 tag removed.", { plural: "%count tags removed.", count: fetched });
+    const added = ts("1 tag added", { plural: "%count tags added.", count: fetched - matched });
+    const existing = ts("1 tag already exists and was not added.", {
+      plural: "%count tags already exist and were not added.",
+      count: matched,
+    });
+    return matched > 0 ? `${added} ${existing}` : added;
+  };
+  return {
+    entity: "EntityTag",
+    action,
+    idField: "entity_id",
+    params:
+      action === "save"
+        ? {
+            defaults: { "entity_table:name": table },
+            records: tagIds.map((tag_id) => ({ tag_id })),
+            match: ["entity_id", "tag_id", "entity_table"],
+          }
+        : { where: [["entity_table:name", "=", table], ["tag_id", "IN", tagIds]] },
+    runMsg: action === "save" ? "Adding tags..." : "Removing tags...",
+    successTitle: "Saved",
+    summary,
+    errorMsg: "An error occurred while updating tags.",
+  };
+}
+
 /** searchTaskFieldsTrait: the clauses a hook preset for the update task; a list presets none. */
 export function presetValues(task: SearchTask): [string, unknown][] {
   const values = task.values;
@@ -362,6 +463,7 @@ export function taskRun(task: SearchTask): TaskRun {
   const template = task.uiDialog?.templateUrl;
   if (template === DOWNLOAD_DIALOG) return { kind: "download" };
   if (template === UPDATE_DIALOG) return { kind: "update" };
+  if (template === TAG_DIALOG) return { kind: "tag" };
   if (template) return { kind: "unsupported", reason: `Angular dialog ${template}` };
   const batch = task.apiBatch;
   if (!isRecord(batch) || !isString(batch.action))

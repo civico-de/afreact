@@ -79,6 +79,13 @@ const tag: SearchTask = {
   number: "> 0",
   uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskTag.html" },
 };
+const relationship: SearchTask = {
+  name: "contact.relationship",
+  title: "Add Relationship",
+  icon: "fa-handshake-o",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskRelationship.html" },
+};
 const label: SearchTask = {
   name: "contact.label",
   title: "Mailing labels - print",
@@ -561,19 +568,23 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("names the tasks it cannot run and keeps them in the menu, disabled", async () => {
-    const calls = serve({ tasks: [enable, tag] });
+    const calls = serve({ tasks: [enable, relationship] });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await screen.findByText("Name 1");
     await selectRows("Name 1");
     expect(
       await screen.findByText(
-        "Not supported by the React renderer: task tag (Angular dialog ~/crmSearchTasks/crmSearchTaskTag.html)",
+        "Not supported by the React renderer: task contact.relationship " +
+          "(Angular dialog ~/crmSearchTasks/crmSearchTaskRelationship.html)",
       ),
     ).toHaveAttribute("role", "note");
     await openActions();
-    const item = screen.getByRole("menuitem", { name: /Tag/, hidden: true });
+    const item = screen.getByRole("menuitem", { name: /Add Relationship/, hidden: true });
     expect(item).toHaveAttribute("aria-disabled", "true");
-    expect(item).toHaveAttribute("title", "Not supported by the React renderer: task tag");
+    expect(item).toHaveAttribute(
+      "title",
+      "Not supported by the React renderer: task contact.relationship",
+    );
     await userEvent.click(item);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(calls.map(({ call }) => call)).not.toContain("Contact.update");
@@ -680,8 +691,8 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("alerts for a row link to a task React cannot run", async () => {
-    const links = [{ task: "tag", text: "Tag" }];
-    serve({ rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })], tasks: [tag] });
+    const links = [{ task: "contact.relationship", text: "Relate" }];
+    serve({ rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })], tasks: [relationship] });
     renderWithQuery(
       <AfreactSearch
         search="S"
@@ -689,10 +700,11 @@ describe("AfreactSearch bulk actions", () => {
         settings={{ columns: [...columns, linksColumn(links)] }}
       />,
     );
-    await userEvent.click(await screen.findByRole("button", { name: "Tag" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Relate" }));
     await waitFor(() => {
       expect(window.CRM.alert).toHaveBeenCalledWith(
-        "Not supported by the React renderer: task tag (Angular dialog ~/crmSearchTasks/crmSearchTaskTag.html)",
+        "Not supported by the React renderer: task contact.relationship " +
+          "(Angular dialog ~/crmSearchTasks/crmSearchTaskRelationship.html)",
         "Error",
         "error",
       );
@@ -1051,6 +1063,126 @@ describe("AfreactSearch bulk actions", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(named(calls, "Contact.update")).toHaveLength(0);
       expect(checkbox("Name 1")).toBeChecked();
+    });
+  });
+
+  describe("tag", () => {
+    const tagRows = [
+      { id: 1, label: "Alpha", is_selectable: true, parent_id: null },
+      { id: 2, label: "Alpha child", is_selectable: true, parent_id: 1 },
+      { id: 3, label: "Heading only", is_selectable: false, parent_id: null },
+    ];
+    const tagsets = [{ id: 10, name: "topics", label: "Topics" }];
+    const topics = [{ id: 11, label: "Science" }];
+    const tagGet = (params: Record<string, unknown>) => {
+      const where = JSON.stringify(params.where);
+      if (where.includes('["is_tagset","=",true]')) return tagsets;
+      if (where.includes('["parent_id","=",10]')) return topics;
+      return tagRows;
+    };
+
+    async function openTagDialog(...names: string[]) {
+      await screen.findByText("Name 1");
+      await selectRows(...names);
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /Tag/, hidden: true }));
+      return screen.findByRole("dialog", { name: "Tag - Add/Remove Tags" });
+    }
+
+    it("adds the chosen tags, from the tree and a tagset, to the selected rows", async () => {
+      const calls = serve({
+        tasks: [enable, tag],
+        handlers: {
+          "Tag.get": tagGet,
+          "EntityTag.save": () => Object.assign([], { countFetched: 4, countMatched: 1 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openTagDialog("Name 1", "Name 2");
+      const add = within(dialog).getByRole("button", { name: "Add tags" });
+      expect(add).toBeDisabled();
+      const tags = await within(dialog).findByRole("listbox", { name: "Tags" });
+      expect(within(tags).getByRole("option", { name: "Heading only" })).toBeDisabled();
+      // Tags are used for "Contact" whatever contact type the search lists.
+      expect(named(calls, "Tag.get")[0]?.params.where).toContainEqual([
+        "used_for:name",
+        "CONTAINS",
+        "Contact",
+      ]);
+      await userEvent.selectOptions(tags, ["2"]);
+      const set = await within(dialog).findByRole("listbox", { name: "Topics" });
+      await userEvent.selectOptions(set, ["11"]);
+      expect(add).toBeEnabled();
+      await userEvent.click(add);
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "3 tags added. 1 tag already exists and was not added.",
+          "Saved",
+          "success",
+        );
+      });
+      expect(named(calls, "EntityTag.save").map(({ params }) => params)).toEqual([
+        {
+          defaults: { "entity_table:name": "Contact" },
+          records: [
+            { tag_id: 2, entity_id: 1 },
+            { tag_id: 11, entity_id: 1 },
+            { tag_id: 2, entity_id: 2 },
+            { tag_id: 11, entity_id: 2 },
+          ],
+          match: ["entity_id", "tag_id", "entity_table"],
+        },
+      ]);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(pageRuns(calls)).toHaveLength(2);
+      });
+      expect(checkbox("Name 1")).not.toBeChecked();
+    });
+
+    it("removes the chosen tags from the selected rows", async () => {
+      const calls = serve({
+        tasks: [enable, tag],
+        handlers: {
+          "Tag.get": tagGet,
+          "EntityTag.delete": () => Object.assign([], { countFetched: 2, count: 2 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openTagDialog("Name 3");
+      await userEvent.click(within(dialog).getByRole("radio", { name: "Remove Tags" }));
+      const tags = await within(dialog).findByRole("listbox", { name: "Tags" });
+      await userEvent.selectOptions(tags, ["1", "2"]);
+      await userEvent.click(within(dialog).getByRole("button", { name: "Remove tags" }));
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith("2 tags removed.", "Saved", "success");
+      });
+      expect(named(calls, "EntityTag.delete").map(({ params }) => params)).toEqual([
+        {
+          where: [
+            ["entity_table:name", "=", "Contact"],
+            ["tag_id", "IN", [1, 2]],
+            ["entity_id", "IN", [3]],
+          ],
+        },
+      ]);
+    });
+
+    it("shows a failed tag lookup and lets the dialog close", async () => {
+      const calls = serve({
+        tasks: [enable, tag],
+        handlers: {
+          "Tag.get": () => {
+            throw apiError("No such entity");
+          },
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openTagDialog("Name 1");
+      expect((await within(dialog).findAllByRole("alert"))[0]).toHaveTextContent("No such entity");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(named(calls, "EntityTag.save")).toHaveLength(0);
     });
   });
 });

@@ -12,6 +12,10 @@ import {
   inlineEditCall,
   parseTaskList,
   referencedTasks,
+  tagBatch,
+  tagCalls,
+  tagEntity,
+  tagTree,
   taskRun,
   unsupportedTaskNotes,
   updateBatch,
@@ -50,6 +54,12 @@ const tag: SearchTask = {
   title: "Tag - Add/Remove Tags",
   number: "> 0",
   uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskTag.html" },
+};
+const relationship: SearchTask = {
+  name: "contact.relationship",
+  title: "Add Relationship",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskRelationship.html" },
 };
 const merge: SearchTask = {
   name: "contact.merge",
@@ -142,16 +152,17 @@ describe("taskRun", () => {
     expect(taskRun(label)).toEqual({ kind: "redirect", target: merge.crmPopup });
   });
 
-  it("runs the download and update tasks itself", () => {
+  it("runs the download, update and tag tasks itself", () => {
     expect(taskRun(download)).toEqual({ kind: "download" });
     const update = { ...tag, uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskUpdate.html" } };
     expect(taskRun(update)).toEqual({ kind: "update" });
+    expect(taskRun(tag)).toEqual({ kind: "tag" });
   });
 
   it("names why it cannot run Angular dialogs, input fields and the rest", () => {
-    expect(taskRun(tag)).toEqual({
+    expect(taskRun(relationship)).toEqual({
       kind: "unsupported",
-      reason: "Angular dialog ~/crmSearchTasks/crmSearchTaskTag.html",
+      reason: "Angular dialog ~/crmSearchTasks/crmSearchTaskRelationship.html",
     });
     const where = { name: "geo", label: "Where", input_type: "Location", data_type: "String" };
     const located = { ...disable, apiBatch: { action: "save", fields: [where] } };
@@ -192,9 +203,9 @@ describe("referencedTasks and unsupportedTaskNotes", () => {
   });
 
   it("notes only the referenced tasks the renderer cannot run", () => {
-    const tasks = [disable, download, tag, merge];
+    const tasks = [disable, download, tag, relationship, merge];
     expect(unsupportedTaskNotes(tasks, "all")).toEqual([
-      "task tag (Angular dialog ~/crmSearchTasks/crmSearchTaskTag.html)",
+      "task contact.relationship (Angular dialog ~/crmSearchTasks/crmSearchTaskRelationship.html)",
     ]);
     expect(unsupportedTaskNotes(tasks, new Set(["disable"]))).toEqual([]);
   });
@@ -351,5 +362,80 @@ describe("update task", () => {
     const preset = { ...task, values: { is_deceased: true } };
     expect(presetValues(preset)).toEqual([["is_deceased", true]]);
     expect(presetValues({ ...task, values: [1] })).toEqual([]);
+  });
+});
+
+describe("tag task", () => {
+  it("looks tags up for Contact whatever contact type the search lists", () => {
+    expect(tagEntity("Individual")).toBe("Contact");
+    expect(tagEntity("Household")).toBe("Contact");
+    expect(tagEntity("Activity")).toBe("Activity");
+    const { tags, tagsets } = tagCalls("Organization");
+    expect(tags[2].where).toContainEqual(["used_for:name", "CONTAINS", "Contact"]);
+    expect(tagsets).toEqual([
+      "Tag",
+      "get",
+      {
+        select: ["id", "name", "label"],
+        where: [
+          ["is_tagset", "=", true],
+          ["used_for:name", "CONTAINS", "Contact"],
+        ],
+      },
+    ]);
+  });
+
+  it("nests the tags under their parents in order, a missing parent counting as none", () => {
+    const tags = [
+      { id: 1, label: "A" },
+      { id: 2, label: "A1", parent_id: 1 },
+      { id: 3, label: "B" },
+      { id: 4, label: "A1a", parent_id: 2 },
+      { id: 5, label: "Orphan", parent_id: 9 },
+    ];
+    expect(tagTree(tags).map(({ tag, depth }) => `${String(depth)}:${tag.label}`)).toEqual([
+      "0:A",
+      "1:A1",
+      "2:A1a",
+      "0:B",
+      "0:Orphan",
+    ]);
+  });
+
+  it("adds tags as EntityTag rows per record and removes them by tag", () => {
+    const add = tagBatch("save", "Individual", [3, 4]);
+    expect(batchCall(add, { ...contact, name: "Individual" }, [1, 2])).toEqual([
+      "EntityTag",
+      "save",
+      {
+        defaults: { "entity_table:name": "Contact" },
+        records: [
+          { tag_id: 3, entity_id: 1 },
+          { tag_id: 4, entity_id: 1 },
+          { tag_id: 3, entity_id: 2 },
+          { tag_id: 4, entity_id: 2 },
+        ],
+        match: ["entity_id", "tag_id", "entity_table"],
+      },
+    ]);
+    expect(add).toMatchObject({ runMsg: "Adding tags...", successTitle: "Saved" });
+    expect(add.summary?.({ fetched: 4, matched: 0 })).toBe("4 tags added.");
+    expect(add.summary?.({ fetched: 4, matched: 3 })).toBe(
+      "1 tag added 3 tags already exist and were not added.",
+    );
+    const remove = tagBatch("delete", "Activity", [3]);
+    expect(batchCall(remove, { ...contact, name: "Activity" }, [1])).toEqual([
+      "EntityTag",
+      "delete",
+      {
+        where: [
+          ["entity_table:name", "=", "Activity"],
+          ["tag_id", "IN", [3]],
+          ["entity_id", "IN", [1]],
+        ],
+      },
+    ]);
+    expect(remove.summary?.({ fetched: 1, matched: 1 })).toBe("1 tag removed.");
+    expect(remove.summary?.({ fetched: 2, matched: 2 })).toBe("2 tags removed.");
   });
 });

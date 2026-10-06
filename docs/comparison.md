@@ -122,9 +122,9 @@ instead of being dropped:
   itself renders, with the note
 - in-place editors for locations and multi-value text, number, date or Yes/No
   fields; their cells stay read-only
-- bulk actions whose task is an Angular dialog (tag, merge tags, add
-  relationship, and extensions' own; download and update have their own
-  dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
+- bulk actions whose task is an Angular dialog (add relationship, schedule a
+  mailing, open a case, and extensions' own; download, update and tag have
+  their own dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
   with a contact reference, as soft credits do), or uses an expression other
   than a literal, an object literal, `ids[n]`, `ids.join(',')` and the task's
   data names. They stay in the actions menu, disabled, with the note as their
@@ -138,8 +138,9 @@ actions it asks the server for each display's tasks.
 
 The React table runs the tasks `SearchDisplay.getSearchTasks` returns:
 API batches (enable, disable, delete, …) in a confirmation dialog with
-progress, the spreadsheet download and the update of chosen fields in dialogs
-of their own, `CRM.loadForm` popups, and redirects to a new window. Selection
+progress, the spreadsheet download, the update of chosen fields and the tag
+task in dialogs of their own, `CRM.loadForm` popups, and redirects to a new
+window. Selection
 follows core: per page or all pages (a `return: 'id'` run), Shift for a range,
 kept across sorting and paging, cleared by new filters and after a task.
 
@@ -153,7 +154,9 @@ kept across sorting and paging, cleared by new filters and after a task.
 | Update from a row link | a row link's single-row update runs `SearchDisplay.inlineEdit`; the update dialog's batch always runs `Entity.update` on the row's id | the same |
 | Update dialog preset on a field `getFields` does not list | the clause shows an empty picker and its value is sent | the clause shows the field's name, can be removed, and its value is sent |
 | Download dialog | format select; a progress bar grows by 10 % each second whatever the server does; the dialog's close button is hidden while it runs | the same format select; a full striped bar in a status region while the file loads, the title takes the focus; Escape and both buttons are off while it runs |
-| Delete task without `confirmMsg` (changed by a hook) | runs at once | asks with core's delete question |
+| Tag dialog | add or remove; the plain tags in a select2 tree, each tagset's tags in an entityref search; the batch runs inside the dialog; looks tags up for the search's entity name (see upstream bugs) | the same choice; the tags in a native multi-select with the tree indented, each tagset's tags in a multi-select of their own; the batch then runs in the task dialog; looks tags up for "Contact" on any contact-type search; the result message counts as core's |
+| Delete task without `confirmMsg` (changed by a hook) | runs at once | asks with core's delete question; a delete on another entity (the removal of tags) runs as its dialog decided |
+| Actions menu longer than the space below its button | the page scrolls to the rest | the menu scrolls within the viewport |
 | After a row link updates its row | reloads that row (`refreshAfterEditing`) | reloads the table |
 | Select-all control | icon buttons | the same buttons with `role="checkbox"` and `aria-checked` (`mixed` for some) |
 | Selection count, task result | visible count only | also announced in a live region |
@@ -758,3 +761,11 @@ dialog, and disables the buttons while the file loads.
 `af-disabled`, a saving form and a read-only autofill field leave URL inputs
 editable (read from the code, not run). The React renderer disables them like
 every other input.
+
+**The tag dialog offers no tags on a contact-type search.** `crmSearchTaskTag`
+queries `Tag.get` with `used_for:name CONTAINS <entity>` and saves
+`entity_table:name = <entity>`, where the entity is the saved search's
+`api_entity`. Tags are used for "Contact", so a search of Individuals,
+Organizations or Households lists no tags at all (run on 6.18.1: the select2
+holds no data). The React renderer looks tags up for "Contact" on any
+contact-type search, and the EntityTag rows name that table.

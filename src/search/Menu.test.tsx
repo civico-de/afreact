@@ -51,6 +51,20 @@ describe("Menu", () => {
     expect(item("View")).toHaveFocus();
   });
 
+  it("sits under its button and scrolls within the space below it", async () => {
+    const { button, list } = menu();
+    vi.spyOn(button, "getBoundingClientRect").mockReturnValue({
+      ...button.getBoundingClientRect(),
+      bottom: 100,
+      left: 20,
+    });
+    vi.spyOn(document.documentElement, "clientHeight", "get").mockReturnValue(500);
+    await userEvent.click(button);
+    expect(list.style.top).toBe("100px");
+    expect(list.style.left).toBe("20px");
+    expect(list.style.maxHeight).toBe("392px");
+  });
+
   it("opens on Enter and Space like any button", async () => {
     const { button, list } = menu();
     button.focus();

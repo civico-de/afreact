@@ -6,6 +6,7 @@ import { Input } from "./EditableCell";
 import { editorFor } from "./inlineEdit";
 import { Icon } from "./LinkContent";
 import { onLinkClick } from "./links";
+import { TagDialog } from "./TagDialog";
 import { UpdateDialog } from "./UpdateDialog";
 import { Menu } from "./Menu";
 import {
@@ -30,6 +31,7 @@ import {
   inlineEditCall,
   parseTaskList,
   referencedTasks,
+  tagBatch,
   taskData,
   taskRun,
   unsupportedTaskNotes,
@@ -73,7 +75,12 @@ interface Running {
   returnTo: HTMLElement | null;
 }
 type RunningTask = Running &
-  ({ kind: "batch"; apiBatch: ApiBatch } | { kind: "download" } | { kind: "update" });
+  (
+    | { kind: "batch"; apiBatch: ApiBatch }
+    | { kind: "download" }
+    | { kind: "update" }
+    | { kind: "tag" }
+  );
 
 const TASKS = "getSearchTasks";
 const NO_ROW: Row = { key: "", columns: [] };
@@ -174,7 +181,7 @@ export function useTasks(options: TasksOptions) {
       setRunning({ kind: "batch", task, apiBatch: run.apiBatch, ids, isLink, returnTo });
       return;
     }
-    if (run.kind === "download" || run.kind === "update") {
+    if (run.kind === "download" || run.kind === "update" || run.kind === "tag") {
       setRunning({ kind: run.kind, task, ids, isLink, returnTo });
       return;
     }
@@ -370,6 +377,16 @@ export function useTasks(options: TasksOptions) {
         }}
         onCancel={() => onDone({ ran: false, message: "" })}
       />
+    ) : running.kind === "tag" ? (
+      <TagDialog
+        task={running.task}
+        entity={entityInfo}
+        onSave={(action, tagIds) => {
+          const apiBatch = tagBatch(action, entityInfo.name, tagIds);
+          setRunning({ ...running, kind: "batch", apiBatch, isLink: false });
+        }}
+        onCancel={() => onDone({ ran: false, message: "" })}
+      />
     ) : running.kind === "download" ? (
       <DownloadDialog
         running={running}
@@ -451,10 +468,12 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
   const entityTitle = (count: number) => (count === 1 ? entity.title : entity.title_plural);
   const message = (text: string | undefined, count: number) =>
     text ? ts(text, { 1: count, 2: entityTitle(count) }) : "";
-  // A delete asks first even when a hook removed its question; the text is core's own.
+  // Deleting the listed records asks first even when a hook removed the question; the text is
+  // core's own. A delete on another entity (tags) runs as its dialog decided.
+  const deletesRows =
+    apiBatch.action === "delete" && (apiBatch.entity ?? entity.name) === entity.name;
   const confirmMsg =
-    apiBatch.confirmMsg ||
-    (apiBatch.action === "delete" ? "Are you sure you want to delete %1 %2?" : undefined);
+    apiBatch.confirmMsg || (deletesRows ? "Are you sure you want to delete %1 %2?" : undefined);
 
   const start = async () => {
     if (started.current) return;
@@ -462,6 +481,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
     const inline = isLink && apiBatch.action === "update" && ids.length === 1;
     const ranges = batches(ids);
     let fetched = 0;
+    let matched = 0;
     let ran = false;
     try {
       for (const [index, range] of ranges.entries()) {
@@ -474,6 +494,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
         if (result.countFetched === undefined)
           throw new Error(`${callEntity}.${action} answered without countFetched.`);
         fetched += result.countFetched;
+        matched += result.countMatched ?? result.count ?? 0;
       }
       setProgress({ percent: 100, first: 0, last: ids.length });
       let text: string;
@@ -481,7 +502,9 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
         text = ts("Saved");
         window.CRM.status(text);
       } else {
-        text = message(apiBatch.successMsg, fetched);
+        text = apiBatch.summary
+          ? apiBatch.summary({ fetched, matched })
+          : message(apiBatch.successMsg, fetched);
         const title = apiBatch.successTitle
           ? ts(apiBatch.successTitle)
           : ts("%1 Complete", { 1: task.title });
