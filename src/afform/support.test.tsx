@@ -91,6 +91,17 @@ describe("layoutProblems", () => {
     ]);
   });
 
+  it("takes an extra field, named by its definition alone, as supported", () => {
+    const extra: LayoutNode = {
+      "#tag": "af-field",
+      defn: { name: "remark", label: "Remark", input_type: "Text", data_type: "String" },
+    };
+    expect(layoutProblems([extra])).toEqual([]);
+    expect(layoutProblems([{ "#tag": "af-field", defn: { label: "Remark" } }])).toEqual([
+      "af-field without a name or definition",
+    ]);
+  });
+
   it("reports parts behind a condition or an empty repeat, whatever the data", () => {
     const hidden: LayoutNode[] = [
       { "#tag": "div", "af-if": "([])", "#children": [{ "#tag": "marquee" }] },

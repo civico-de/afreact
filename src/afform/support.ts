@@ -206,7 +206,7 @@ export function conditionNote(name: string, attribute: string): string {
 }
 
 export function missingFieldNote(name: string): string {
-  return `field ${name} without entity or metadata`;
+  return name ? `field ${name} without entity or metadata` : "af-field without a name or definition";
 }
 
 /** A draft or reset button outside af-form, where afForm does not handle it. */
@@ -325,10 +325,12 @@ function filterFieldProblems(node: ElementNode): string[] {
 }
 
 function fieldProblems(node: ElementNode, scope: Scope): string[] {
-  const name = String(node.name);
   const defn = node.defn;
+  // An af-field without a name is an "extra" field, named and typed by its definition alone.
+  const name = String(node.name || (isFieldDefn(defn) ? defn.name : ""));
   if (scope.filters && !scope.entity) return filterFieldProblems(node);
-  if (!scope.entity || !isFieldDefn(defn)) return [missingFieldNote(name)];
+  if (!(scope.entity || (!node.name && name)) || !isFieldDefn(defn))
+    return [missingFieldNote(name)];
   const unknown = [
     ...unknownFieldAttributes(node),
     ...conditionProblem(node, "af-required"),

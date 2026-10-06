@@ -614,7 +614,8 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
     "af-field",
     {
       ref: element,
-      name,
+      // An extra field's element has no name attribute, as in the form's own markup.
+      name: node.name ? name : undefined,
       className:
         `${primary ? "af-field-type-radio" : fieldClasses(defn)} ${typeof node.class === "string" ? node.class : ""}`.trim(),
     },
