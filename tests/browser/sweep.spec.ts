@@ -97,12 +97,15 @@ function reactReady(scope: string): boolean {
  * Angular has compiled the form and each outer SearchKit display holds its first
  * results (or waits for its search button): SearchKit's 600 ms filter debounce is a plain
  * timeout that Angular's testability does not see. A display in a hidden af-tab runs only once
- * shown (searchDisplayBaseTrait's visibility check), as on React.
+ * shown (searchDisplayBaseTrait's visibility check), as on React. afTabset selects its first
+ * tab in a timeout, so until then every panel is hidden and no display has started.
  */
 function angularReady(scope: string): boolean {
   const root = document.querySelector(scope);
   if (!root?.querySelector("form > *")?.firstElementChild) return false;
   if (root.querySelector(".crm-search-loading-placeholder")) return false;
+  const panels = [...root.querySelectorAll("af-tab > [role=tabpanel]")];
+  if (panels.length && panels.every((panel) => panel.classList.contains("ng-hide"))) return false;
   const tags = ["table", "grid", "list", "tree"].map((type) => `crm-search-display-${type}`);
   const selector = tags.join(", ");
   return [...root.querySelectorAll(selector)]
