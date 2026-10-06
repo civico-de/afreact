@@ -120,8 +120,9 @@ instead of being dropped:
   itself renders, with the note
 - in-place editors for contact references (EntityRef), locations, and
   multi-value text, number, date or Yes/No fields; their cells stay read-only
-- bulk actions whose task is an Angular dialog (update, tag, merge tags, add
-  relationship, and extensions' own; download has its own dialog), takes input fields
+- bulk actions whose task is an Angular dialog (tag, merge tags, add
+  relationship, and extensions' own; download and update have their own
+  dialogs), takes input fields
   (`apiBatch.fields`, e.g. soft credits), or uses an expression other than a
   literal, an object literal, `ids[n]`, `ids.join(',')` and the task's data
   names. They stay in the actions menu, disabled, with the note as their
@@ -135,8 +136,8 @@ actions it asks the server for each display's tasks.
 
 The React table runs the tasks `SearchDisplay.getSearchTasks` returns:
 API batches (enable, disable, delete, …) in a confirmation dialog with
-progress, the spreadsheet download in its own dialog, `CRM.loadForm` popups,
-and redirects to a new window. Selection
+progress, the spreadsheet download and the update of chosen fields in dialogs
+of their own, `CRM.loadForm` popups, and redirects to a new window. Selection
 follows core: per page or all pages (a `return: 'id'` run), Shift for a range,
 kept across sorting and paging, cleared by new filters and after a task.
 
@@ -144,6 +145,7 @@ kept across sorting and paging, cleared by new filters and after a task.
 |---|---|---|
 | Confirmation dialog | jQuery UI dialog through `dialogService` | native modal `<dialog>`: focus moves in and back to the menu button, Escape cancels before the run starts |
 | Progress bar | moves forward every second while a batch runs | moves per finished batch |
+| Update dialog | select2 pickers for the field to add and for each clause's field; `crm-search-input` for the value, unlabelled; fields of every writable type | native selects; the value input of the in-place editors, labelled by the field; fields whose input the in-place editor lacks (EntityRef, multi-value) stay in the list, disabled, with the reason as their title; the batch then runs in the task dialog |
 | Download dialog | format select; a progress bar grows by 10 % each second whatever the server does; the dialog's close button is hidden while it runs | the same format select; a full striped bar while the file loads; Escape and Cancel are off while it runs |
 | Delete task without `confirmMsg` (changed by a hook) | runs at once | asks with core's delete question |
 | After a row link updates its row | reloads that row (`refreshAfterEditing`) | reloads the table |

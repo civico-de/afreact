@@ -4,6 +4,7 @@ import { api4, errorMessage } from "../api/civi";
 import { fetchDownload, saveBlob } from "./download";
 import { Icon } from "./LinkContent";
 import { onLinkClick } from "./links";
+import { UpdateDialog } from "./UpdateDialog";
 import { Menu } from "./Menu";
 import {
   isSelected,
@@ -28,6 +29,7 @@ import {
   taskData,
   taskRun,
   unsupportedTaskNotes,
+  updateBatch,
   type ApiBatch,
   type DownloadFormat,
   type Key,
@@ -66,7 +68,8 @@ interface Running {
   isLink: boolean;
   returnTo: HTMLElement | null;
 }
-type RunningTask = Running & ({ kind: "batch"; apiBatch: ApiBatch } | { kind: "download" });
+type RunningTask = Running &
+  ({ kind: "batch"; apiBatch: ApiBatch } | { kind: "download" } | { kind: "update" });
 
 const TASKS = "getSearchTasks";
 
@@ -166,8 +169,8 @@ export function useTasks(options: TasksOptions) {
       setRunning({ kind: "batch", task, apiBatch: run.apiBatch, ids, isLink, returnTo });
       return;
     }
-    if (run.kind === "download") {
-      setRunning({ kind: "download", task, ids, isLink, returnTo });
+    if (run.kind === "download" || run.kind === "update") {
+      setRunning({ kind: run.kind, task, ids, isLink, returnTo });
       return;
     }
     const data = taskData(task, ids, tasks, { search, display }, isLink);
@@ -351,7 +354,17 @@ export function useTasks(options: TasksOptions) {
   const dialog: ReactNode =
     running &&
     entityInfo &&
-    (running.kind === "download" ? (
+    (running.kind === "update" ? (
+      <UpdateDialog
+        task={running.task}
+        entity={entityInfo}
+        ids={running.ids}
+        onSave={(values) => {
+          setRunning({ ...running, kind: "batch", apiBatch: updateBatch(values) });
+        }}
+        onCancel={() => onDone({ ran: false, message: "" })}
+      />
+    ) : running.kind === "download" ? (
       <DownloadDialog
         running={running}
         entity={entityInfo}

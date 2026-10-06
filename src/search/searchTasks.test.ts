@@ -7,11 +7,14 @@ import {
   dispositionFileName,
   downloadParams,
   evaluateTaskExpression,
+  initialUpdateValue,
   inlineEditCall,
   parseTaskList,
   referencedTasks,
   taskRun,
   unsupportedTaskNotes,
+  updateBatch,
+  updateFieldsCall,
   type EntityInfo,
   type SearchTask,
 } from "./searchTasks";
@@ -138,8 +141,10 @@ describe("taskRun", () => {
     expect(taskRun(label)).toEqual({ kind: "redirect", target: merge.crmPopup });
   });
 
-  it("runs the download task itself", () => {
+  it("runs the download and update tasks itself", () => {
     expect(taskRun(download)).toEqual({ kind: "download" });
+    const update = { ...tag, uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskUpdate.html" } };
+    expect(taskRun(update)).toEqual({ kind: "update" });
   });
 
   it("names why it cannot run Angular dialogs, input fields and the rest", () => {
@@ -291,5 +296,43 @@ describe("dispositionFileName", () => {
     ).toBe("Köpfe.csv");
     expect(dispositionFileName("inline")).toBeNull();
     expect(dispositionFileName(null)).toBeNull();
+  });
+});
+
+describe("update task", () => {
+  const field = { name: "f", label: "F", input_type: "Text", data_type: "String" };
+
+  it("starts a field with the value searchTaskFieldsTrait.addField() picks", () => {
+    expect(initialUpdateValue(field)).toBe("");
+    expect(initialUpdateValue({ ...field, serialize: 1 })).toEqual([]);
+    expect(initialUpdateValue({ ...field, data_type: "Array" })).toEqual([]);
+    expect(initialUpdateValue({ ...field, data_type: "Boolean" })).toBe(true);
+    expect(initialUpdateValue({ ...field, default_value: "x" })).toBe("x");
+    expect(initialUpdateValue({ ...field, options: [{ id: 2, label: "Two" }] })).toBe(2);
+    expect(initialUpdateValue({ ...field, options: false })).toBe("");
+  });
+
+  it("asks getFields for the writable fields and runs one update batch with core's messages", () => {
+    const [entity, action, params] = updateFieldsCall("Contact");
+    expect([entity, action]).toEqual(["Contact", "getFields"]);
+    expect(params).toMatchObject({
+      action: "update",
+      where: [
+        ["deprecated", "=", false],
+        ["readonly", "=", false],
+      ],
+    });
+    expect(updateBatch({ job_title: "Pilot" })).toEqual({
+      action: "update",
+      params: { values: { job_title: "Pilot" } },
+      runMsg: "Updating %1 %2...",
+      successMsg: "Successfully updated %1 %2.",
+      errorMsg: "An error occurred while attempting to update %1 %2.",
+    });
+    expect(batchCall(updateBatch({ job_title: "Pilot" }), contact, [1, 2])).toEqual([
+      "Contact",
+      "update",
+      { values: { job_title: "Pilot" }, where: [["id", "IN", [1, 2]]] },
+    ]);
   });
 });

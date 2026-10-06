@@ -46,7 +46,7 @@ return [
           'limit' => 10,
           'classes' => ['table'],
           'pager' => ['show_count' => TRUE],
-          'actions' => ['enable', 'disable', 'delete', 'download'],
+          'actions' => ['enable', 'disable', 'delete', 'download', 'update'],
           'sort' => [['title', 'ASC']],
           'columns' => [
             ['type' => 'field', 'key' => 'title', 'label' => E::ts('Title'), 'sortable' => TRUE],

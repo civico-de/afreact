@@ -1,6 +1,6 @@
 import { decodeJs, rawProps } from "../afform/bundle";
 import type { ApiResult } from "../api/civi";
-import type { DisplaySettings, Row } from "./types";
+import type { DisplaySettings, EditOption, Row } from "./types";
 
 /**
  * SearchKit's bulk actions as SearchDisplay.getSearchTasks returns them, and how the renderer
@@ -166,10 +166,76 @@ export type TaskRun =
   | { kind: "batch"; apiBatch: ApiBatch }
   | { kind: "popup" | "redirect"; target: TaskTarget }
   | { kind: "download" }
+  | { kind: "update" }
   | { kind: "unsupported"; reason: string };
 
-/** The download task's dialog, which the renderer replaces with its own. */
+/** The core task dialogs the renderer replaces with its own. */
 const DOWNLOAD_DIALOG = "~/crmSearchTasks/crmSearchTaskDownload.html";
+const UPDATE_DIALOG = "~/crmSearchTasks/crmSearchTaskUpdate.html";
+
+/** A field the update task may set, as searchTaskFieldsTrait selects it from getFields. */
+export interface UpdateField {
+  name: string;
+  label: string;
+  description?: string | null;
+  input_type: string | null;
+  data_type: string;
+  serialize?: number | boolean | null;
+  options?: EditOption[] | false | null;
+  fk_entity?: string | null;
+  nullable?: boolean;
+  required?: boolean;
+  default_value?: unknown;
+}
+
+/** searchTaskFieldsTrait's getFields call: the writable, current fields with their options. */
+export function updateFieldsCall(entity: string): ApiCall {
+  return [
+    entity,
+    "getFields",
+    {
+      action: "update",
+      select: [
+        "name",
+        "label",
+        "description",
+        "input_type",
+        "data_type",
+        "serialize",
+        "options",
+        "fk_entity",
+        "nullable",
+        "required",
+        "default_value",
+      ],
+      loadOptions: ["id", "name", "label", "description", "color", "icon"],
+      where: [
+        ["deprecated", "=", false],
+        ["readonly", "=", false],
+      ],
+    },
+  ];
+}
+
+/** searchTaskFieldsTrait.addField(): the value a field starts with when added to the update. */
+export function initialUpdateValue(field: UpdateField): unknown {
+  if (field.serialize || field.data_type === "Array") return [];
+  if (field.data_type === "Boolean") return true;
+  if (field.default_value) return field.default_value;
+  const options = field.options || [];
+  return options.length ? options[0]?.id : "";
+}
+
+/** crmSearchTaskUpdate's batch: one update of every id with the chosen values, core's messages. */
+export function updateBatch(values: Record<string, unknown>): ApiBatch {
+  return {
+    action: "update",
+    params: { values },
+    runMsg: "Updating %1 %2...",
+    successMsg: "Successfully updated %1 %2.",
+    errorMsg: "An error occurred while attempting to update %1 %2.",
+  };
+}
 
 /** The spreadsheet formats SearchDisplay.download writes, labelled as crmSearchTaskDownload.html. */
 export const DOWNLOAD_FORMATS = ["csv", "xlsx", "ods", "pdf"] as const;
@@ -236,6 +302,7 @@ export function taskRun(task: SearchTask): TaskRun {
     return checkTarget("redirect", task.redirect, task);
   const template = task.uiDialog?.templateUrl;
   if (template === DOWNLOAD_DIALOG) return { kind: "download" };
+  if (template === UPDATE_DIALOG) return { kind: "update" };
   if (template) return { kind: "unsupported", reason: `Angular dialog ${template}` };
   const batch = task.apiBatch;
   if (!isRecord(batch) || !isString(batch.action))

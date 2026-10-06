@@ -247,7 +247,7 @@ function CellEditor({
   );
 }
 
-interface InputProps {
+export interface InputProps {
   kind: EditorKind;
   multiple: boolean;
   info: EditableInfo;
@@ -272,7 +272,8 @@ function text(value: unknown): string {
 const toLocalDateTime = (value: unknown) => text(value).replace(" ", "T").slice(0, 16);
 const fromLocalDateTime = (value: string) => (value ? `${value.replace("T", " ")}:00` : null);
 
-function Input(props: InputProps) {
+/** The input crmSearchInput shows for a field: in a cell, and in the update task's dialog. */
+export function Input(props: InputProps) {
   const { kind, value, nullable, common, onChange } = props;
   // An emptied input clears the value where the record allows it; otherwise `required` holds.
   const typed = (next: string) => {
