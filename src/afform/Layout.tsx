@@ -43,7 +43,6 @@ import {
   initialiseNodes,
   refersToItself,
   replaceTokens,
-  routeValue,
   tokenValues,
 } from "./structure";
 import type { ElementNode, FieldDefn, FormData, LayoutNode, Scope } from "./types";
@@ -541,9 +540,9 @@ function useTokenDefault(
   const loops = template !== null && refersToItself(template, scope, name);
   const tokens = template === null ? null : JSON.stringify(tokenValues(template, form.data));
   const touched = useRef(false);
-  // A value from the route replaces the first calculation, as afField sets it afterwards.
-  const fromRoute = routeValue(form.routeParams, scope, name) !== undefined;
-  const calculatedFor = useRef<string | null>(fromRoute ? tokens : null);
+  // A value from the route or a prefill outlasts the first calculation, as afForm sets it last.
+  const held = getValue(form.data, scope, name) !== undefined;
+  const calculatedFor = useRef<string | null>(held ? tokens : null);
   useEffect(() => {
     const target = element.current;
     const touch = ({ target: left }: FocusEvent) => {

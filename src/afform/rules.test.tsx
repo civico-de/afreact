@@ -804,4 +804,29 @@ describe("values from the route", () => {
     await userEvent.type(box("first_name"), "Ada");
     expect(nick).toHaveValue("Dear Ada");
   });
+
+  it("keeps a prefilled value over the token default until the fields it refers to change", async () => {
+    mockApi({
+      "Afreact.getForm": () => [
+        {
+          name: "afformTest",
+          title: "Test",
+          type: "form",
+          layout: form([
+            field("first_name"),
+            field("nick_name", { afform_default: "Dear [Individual1.0.first_name]" }),
+          ]),
+          strings: [],
+        },
+      ],
+      "Afform.prefill": () => [
+        { name: "Individual1", values: [{ fields: { first_name: "Ada", nick_name: "Stored" } }] },
+      ],
+    });
+    renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />);
+    const nick = await screen.findByRole("textbox", { name: "nick_name" });
+    expect(nick).toHaveValue("Stored");
+    await userEvent.type(box("first_name"), "m");
+    expect(nick).toHaveValue("Dear Adam");
+  });
 });
