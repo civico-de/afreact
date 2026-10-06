@@ -92,7 +92,7 @@ async function create(page: Page) {
   }
 }
 
-/** C moved under A after A1, then B1 moved before A. */
+/** C moved under A after A1, then B1 moved to the first place under Root. */
 const MOVED = [
   [null, "Root", 99],
   ["A", "A1", 1],
@@ -167,6 +167,30 @@ test("react: items move under another parent and among siblings by keyboard", as
     ["Root", "B"],
   ]);
   await expect.poll(() => stored(page)).toEqual(MOVED);
+
+  // Down from A with its branch, among the same siblings: after B, taking B's weight.
+  await expect(handle(page, "A")).toHaveAttribute("aria-disabled", "false");
+  await pickUp(page, "A");
+  await expect(item(page, "A1")).toHaveCount(0);
+  await page.keyboard.press("ArrowDown");
+  await expect(announced(page)).toHaveText("A moved after B.");
+  await page.keyboard.press("Space");
+  await expect.poll(() => shown(page)).toEqual([
+    [null, "Root"],
+    ["Root", "B1"],
+    ["Root", "B"],
+    ["Root", "A"],
+    ["A", "A1"],
+    ["A", "C"],
+  ]);
+  await expect.poll(() => stored(page)).toEqual([
+    [null, "Root", 99],
+    ["A", "A1", 1],
+    ["A", "C", 2],
+    ["Root", "B1", 1],
+    ["Root", "B", 2],
+    ["Root", "A", 3],
+  ]);
 });
 
 for (const renderer of ["react", "angular"] as const) {

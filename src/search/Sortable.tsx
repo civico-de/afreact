@@ -164,9 +164,15 @@ interface TreeDndProps {
   children: ReactNode;
 }
 
+/** A slot's id starts with treeSlot's FIRST, which the entry chunk holds. */
+const isSlot = (id: UniqueIdentifier) => typeof id === "string" && id.startsWith("first:");
+
+/** The last keyboard step's target: the context's `over` lags a render behind quick key presses. */
+let stepped: { active: UniqueIdentifier; target: UniqueIdentifier } | null = null;
+
 /** A slot takes no space; as a target it is a band around the edge between two lines. */
-const SLOT_ABOVE = 4;
-const SLOT_BELOW = 10;
+const SLOT_ABOVE = 6;
+const SLOT_BELOW = 8;
 
 /** An item's own line, without the branch under it, as a drop target and when dragged. */
 function lineRect(element: HTMLElement) {
@@ -179,21 +185,31 @@ function lineRect(element: HTMLElement) {
     (child) => child.tagName.toLowerCase() !== "crm-search-display-tree-branch",
   );
   if (!parts.length) return getClientRect(element);
+  // Where the item would be without the transform that moves it while dragged.
+  const moved = element.getBoundingClientRect();
+  const still = getClientRect(element, { ignoreTransform: true });
+  const dx = still.left - moved.left;
+  const dy = still.top - moved.top;
   const rects = parts.map((part) => part.getBoundingClientRect());
-  const top = Math.min(...rects.map((rect) => rect.top));
-  const left = Math.min(...rects.map((rect) => rect.left));
-  const bottom = Math.max(...rects.map((rect) => rect.bottom));
-  const right = Math.max(...rects.map((rect) => rect.right));
+  const top = Math.min(...rects.map((rect) => rect.top)) + dy;
+  const left = Math.min(...rects.map((rect) => rect.left)) + dx;
+  const bottom = Math.max(...rects.map((rect) => rect.bottom)) + dy;
+  const right = Math.max(...rects.map((rect) => rect.right)) + dx;
   return { top, left, bottom, right, width: right - left, height: bottom - top };
 }
 
-/** The target on the pointer's line, or the dragged line's middle; a slot wins where lines overlap. */
+/** The target on the pointer's line, or the one a keyboard step chose; a slot wins where lines overlap. */
 const treeCollision: CollisionDetection = ({
+  active,
   collisionRect,
   droppableRects,
   droppableContainers,
   pointerCoordinates,
 }) => {
+  if (!pointerCoordinates && stepped?.active === active.id) {
+    const container = droppableContainers.find((each) => each.id === stepped?.target);
+    if (container) return [{ id: container.id, data: { droppableContainer: container, value: 0 } }];
+  }
   const y = pointerCoordinates?.y ?? collisionRect.top + collisionRect.height / 2;
   let best: { id: UniqueIdentifier; container: DroppableContainer; rank: number } | undefined;
   for (const container of droppableContainers) {
@@ -206,11 +222,6 @@ const treeCollision: CollisionDetection = ({
   return best ? [{ id: best.id, data: { droppableContainer: best.container, value: best.rank } }] : [];
 };
 
-/** A slot's id starts with treeDrag's FIRST; the entry chunk is not imported from here. */
-const isSlot = (id: UniqueIdentifier) => typeof id === "string" && id.startsWith("first:");
-
-/** The last keyboard step's target: the context's `over` lags a render behind quick key presses. */
-let stepped: { active: UniqueIdentifier; target: UniqueIdentifier } | null = null;
 
 /** Up and down step through the targets in document order, skipping the dragged item's own line. */
 const treeKeyboard: KeyboardCoordinateGetter = (event, { context }) => {
@@ -241,7 +252,7 @@ export function TreeDnd({ nameOf, placeOf, disabled, onMove, children }: TreeDnd
     useSensor(KeyboardSensor, { coordinateGetter: treeKeyboard }),
   );
   const refused = (active: UniqueIdentifier) =>
-    ts("%1 cannot move there: an item cannot go under itself.", { 1: nameOf(active) });
+    ts("%1 cannot move there.", { 1: nameOf(active) });
   const announcements: Announcements = {
     onDragStart: ({ active }) => ts("Picked up %1.", { 1: nameOf(active.id) }),
     onDragOver: ({ active, over }) => {
@@ -269,7 +280,7 @@ export function TreeDnd({ nameOf, placeOf, disabled, onMove, children }: TreeDnd
         announcements,
         screenReaderInstructions: {
           draggable: ts(
-            "To pick up an item, press Space or Enter. Move it with the arrow keys, then press Space or Enter to drop it, or Escape to cancel.",
+            "To pick up an item, press Space or Enter. Move it with the up and down arrow keys, then press Space or Enter to drop it, or Escape to cancel.",
           ),
         },
         container: document.body,

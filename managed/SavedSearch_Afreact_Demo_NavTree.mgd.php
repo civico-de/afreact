@@ -71,7 +71,8 @@ return [
         'saved_search_id.name' => 'Afreact_Demo_Nav_Tree',
         'type' => 'tree',
         'settings' => [
-          'limit' => 50,
+          // The whole menu: a page limit would leave parents out and change the tree.
+          'limit' => 0,
           'parent_field' => 'parent_id',
           'draggable' => 'weight',
           'sort' => [['weight', 'ASC']],

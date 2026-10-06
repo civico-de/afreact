@@ -173,17 +173,22 @@ describe("AfreactSearch drag to reorder", () => {
       columns: [{ val: `Name ${String(key)}`, edit: true }, { val: key }],
       data: { id: key, weight: key, label: `Name ${String(key)}` },
     });
+    // The server keeps the renamed cell; the page asks it again after the failed move.
+    const renamed = { ...editable(2), columns: [{ val: "Renamed", edit: true }, { val: 2 }] };
+    let second = editable(2);
     mockApi({
       "SearchDisplay.run": () =>
-        Object.assign([editable(1), editable(2), editable(3)], {
+        Object.assign([editable(1), second, editable(3)], {
           editable: { label: editInfo({ value_key: "label" }) },
         }),
-      "SearchDisplay.inlineEdit": (params) =>
-        params.return === "draggableWeight"
-          ? new Promise((_, reject) => {
-              fail = reject;
-            })
-          : [{ ...editable(2), columns: [{ val: "Renamed", edit: true }, { val: 2 }] }],
+      "SearchDisplay.inlineEdit": (params) => {
+        if (params.return === "draggableWeight")
+          return new Promise((_, reject) => {
+            fail = reject;
+          });
+        second = renamed;
+        return [renamed];
+      },
     });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await screen.findByRole("button", { name: "Move Name 1" });

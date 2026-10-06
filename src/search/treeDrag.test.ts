@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { firstUnder, treeMove } from "./treeDrag";
+import { treeMove } from "./treeDrag";
+import { firstUnder } from "./treeSlot";
 import type { Row } from "./types";
 
 const item = (key: number, weight: number, parent_id: number | null = null): Row => ({
@@ -65,6 +66,17 @@ describe("treeMove", () => {
     expect(move(1, 2)).toBeNull();
     expect(move(1, firstUnder(4))).toBeNull();
     expect(move(1, firstUnder(1))).toBeNull();
+  });
+
+  it("takes an item whose parent is not on the page as one at the top", () => {
+    // 8 (5) under 42, which a filter or the page limit left out: a sibling of 1, 5 and 6.
+    const rows = [...tree, item(8, 5, 42)];
+    const onto = treeMove(rows, 5, 8, "weight", "parent_id");
+    expect(keys(onto?.rows ?? [])).toEqual([1, 2, 3, 4, 6, 7, 8, 5]);
+    expect(onto?.values).toEqual({ weight: 5, parent_id: null });
+    const away = treeMove(rows, 8, 1, "weight", "parent_id");
+    expect(keys(away?.rows ?? [])).toEqual([1, 8, 2, 3, 4, 5, 6, 7]);
+    expect(away?.values).toEqual({ weight: 11, parent_id: null });
   });
 
   it("names a row that is not on the page", () => {

@@ -47,8 +47,7 @@ async function keyboardMove(name: string, steps: number) {
 
 let rects: MockInstance;
 beforeEach(() => {
-  // jsdom lays nothing out; every list item gets a 40 px line in document order, each slot the edge
-  // above the line that follows it.
+  // jsdom lays nothing out; every list item, slots included, gets a 40 px row in document order.
   rects = vi
     .spyOn(HTMLElement.prototype, "getBoundingClientRect")
     .mockImplementation(function (this: HTMLElement) {
@@ -75,7 +74,7 @@ describe("tree display drag to reorder", () => {
     expect(document.querySelectorAll("li.afreact-tree-slot")).toHaveLength(6);
   });
 
-  it("moves an item after another one by keyboard and saves weight and parent", async () => {
+  it("steps up by keyboard to the first place and saves weight and parent", async () => {
     const calls = serve(() => ({ 3: 10, 1: 20 }));
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} type="tree" />);
     await screen.findByRole("button", { name: "Move Item 3" });
@@ -109,7 +108,8 @@ describe("tree display drag to reorder", () => {
       ["draggableWeight", 3, { weight: 10, parent_id: null }],
     ]);
     await waitFor(() => {
-      expect(screen.getByText("Item 3").closest("li")?.textContent).toContain("10");
+      const cells = screen.getByText("Item 3").closest("li")?.querySelectorAll(":scope > div");
+      expect(cells?.[1]?.textContent?.trim()).toBe("10");
     });
   });
 
@@ -117,7 +117,7 @@ describe("tree display drag to reorder", () => {
     const calls = serve(() => ({ 3: 1 }));
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} type="tree" />);
     await screen.findByRole("button", { name: "Move Item 3" });
-    // Down: over Item 3's own slot is gone while it drags; over Item 4, then its slot.
+    // Item 3's own slot is not rendered while it drags: Down goes to Item 4, then to its slot.
     await keyboardMove("Item 3", 2);
     await waitFor(() => {
       expect(shown()).toEqual([
@@ -151,6 +151,34 @@ describe("tree display drag to reorder", () => {
     expect(screen.getByText("Item 2")).toBeInTheDocument();
     expect(shown()[0]).toEqual(["1", null]);
     expect(calls.filter(({ call }) => call === "SearchDisplay.inlineEdit")).toHaveLength(0);
+  });
+
+  it("refuses, without failing, a target whose line cannot be computed", async () => {
+    const calls = serve(() => ({}), [...tree, { key: 9, columns: [{ val: "Item 9" }], data: { id: 9 } }]);
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} type="tree" />);
+    await screen.findByRole("button", { name: "Move Item 9" });
+    // Down from Item 5 over Item 9, which has no weight: refused, the drop names the defect.
+    await keyboardMove("Item 5", 1);
+    expect(announced()).toBe("Item 5 cannot move there.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Row 9 has no weight.");
+    expect(shown().map(([key]) => key)).toEqual(["1", "2", "3", "4", "5", "9"]);
+    expect(calls.filter(({ call }) => call === "SearchDisplay.inlineEdit")).toHaveLength(0);
+  });
+
+  it("drops an item after one whose parent is not on the page, both at the top", async () => {
+    const calls = serve(() => ({ 3: 5 }), [...tree, item(8, 5, 42)]);
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} type="tree" />);
+    await screen.findByRole("button", { name: "Move Item 8" });
+    // Down from Item 3: over Item 4, its slot, Item 5, its slot, Item 8.
+    await keyboardMove("Item 3", 5);
+    expect(announced()).toBe("Item 3 dropped after Item 8.");
+    await waitFor(() => {
+      expect(shown().map(([key]) => key)).toEqual(["1", "2", "4", "5", "8", "3"]);
+    });
+    const edits = calls.filter(({ call }) => call === "SearchDisplay.inlineEdit");
+    expect(edits.map(({ params }) => [params.rowKey, params.values])).toEqual([
+      [3, { weight: 5, parent_id: null }],
+    ]);
   });
 
   it("puts the item and its parent back when the save fails", async () => {

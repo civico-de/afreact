@@ -269,8 +269,8 @@ function observe(scope: string): Observed {
           [
             ":scope > .crm-search-display-list-container > *",
             ":scope > .crm-search-display-grid-container > *",
-            ":scope > ul.crm-search-display-tree-branch > li",
-            ":scope > crm-search-display-tree-branch > ul > li",
+            ":scope > ul.crm-search-display-tree-branch > li:not([aria-hidden])",
+            ":scope > crm-search-display-tree-branch > ul > li:not([aria-hidden])",
           ].join(", "),
         );
         return {

@@ -6,7 +6,8 @@ import { InlineEditContext, useInlineEditContext, type InlineEdit } from "./inli
 import { loadSortable, type Reorder } from "./Reorder";
 import { buildTree, fieldClass, sectionStarts, type TreeItem } from "./rows";
 import { rowName } from "./Tasks";
-import { FIRST, firstUnder, treeMove } from "./treeDrag";
+import { treeMove } from "./treeDrag";
+import { FIRST, firstUnder, isSlot } from "./treeSlot";
 import type { DisplaySettings, Link, Row, RunPage, SubsearchDisplay } from "./types";
 
 /** The text core shows when nothing is found, falling back on an empty one too; null for none. */
@@ -261,14 +262,13 @@ export function TreeView(props: ItemsProps) {
   };
 
   const rows = result?.rows ?? [];
-  const draggable = reorder?.weightField && settings.parent_field ? reorder : null;
-  const body = draggable ? (
+  const body = reorder?.weightField && settings.parent_field ? (
     <Suspense fallback={branch(tree, null, undefined)}>
       <DraggableTree
-        reorder={draggable}
+        reorder={reorder}
         rows={rows}
-        weightField={draggable.weightField ?? ""}
-        parentField={settings.parent_field ?? ""}
+        weightField={reorder.weightField}
+        parentField={settings.parent_field}
       >
         {(drag) => branch(tree, null, drag)}
       </DraggableTree>
@@ -313,10 +313,14 @@ function DraggableTree({ reorder, rows, weightField, parentField, children }: Dr
   const { TreeDnd, TreeItem: Item, TreeSlot, DragHandle } = use(loadSortable());
   const names = new Map(rows.map((row) => [String(row.key), rowName(row)]));
   const nameOf = (key: string | number) => names.get(String(key)) ?? String(key);
+  // Null where the drop is refused, a row lacks its weight or a target left the page meanwhile.
   const placeOf = (active: string | number, over: string | number) => {
-    const row = rows.find((each) => each.key === active);
-    if (!row || !treeMove(rows, row.key, over, weightField, parentField)) return null;
-    if (typeof over === "string" && over.startsWith(FIRST)) {
+    try {
+      if (!treeMove(rows, active, over, weightField, parentField)) return null;
+    } catch {
+      return null;
+    }
+    if (isSlot(over)) {
       const parent = over.slice(FIRST.length);
       return parent ? ts("first under %1", { 1: nameOf(parent) }) : ts("to the first place");
     }

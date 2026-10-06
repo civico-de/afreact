@@ -73,7 +73,7 @@ export function useReorder({ type, settings, runKey, runParams }: ReorderOptions
       const row = page.rows.find((each) => each.key === active) ?? { key: active, columns: [] };
       const text =
         type === "tree"
-          ? ts("%1 stays where it is: an item cannot go under itself.", { 1: rowName(row) })
+          ? ts("%1 cannot move there.", { 1: rowName(row) })
           : ts("%1 stays where it is: a row moves among its siblings only.", { 1: rowName(row) });
       window.CRM.alert(asHtml(text), ts("Not moved"), "info");
       return;
@@ -103,7 +103,7 @@ export function useReorder({ type, settings, runKey, runParams }: ReorderOptions
     setSaving(true);
     save(page, active, over, weightField)
       .catch((failure: unknown) => {
-        // Only the order and the parent go back; what the rows took meanwhile stays.
+        // The order and the parent go back at once; the server then says what it holds.
         const place = new Map(page.rows.map((row, index) => [row.key, index]));
         const at = (row: Row) => place.get(row.key) ?? page.rows.length;
         const parent = settings?.parent_field;
@@ -117,6 +117,8 @@ export function useReorder({ type, settings, runKey, runParams }: ReorderOptions
             ),
         }));
         setError(failure);
+        // The server may have written the move before the reload failed.
+        void client.invalidateQueries({ queryKey: runKey });
       })
       .finally(() => {
         setSaving(false);
@@ -136,7 +138,7 @@ export function useReorder({ type, settings, runKey, runParams }: ReorderOptions
 }
 
 let sortable: Promise<typeof SortableModule> | undefined;
-/** dnd-kit loads with the first draggable table on a page. */
+/** dnd-kit loads with the first draggable display on a page. */
 export const loadSortable = () => (sortable ??= import("./Sortable"));
 
 interface ReorderRowsProps {
