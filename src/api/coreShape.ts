@@ -34,9 +34,13 @@ type Unexplained<Hand, Seen, Ignored extends string> =
   | Exclude<UnknownKeys<Hand, Seen>, Ignored>
   | Exclude<Ignored, UnknownKeys<Hand, Seen>>;
 
-/** Not read in the browser: datepicker options for native date inputs, the ng-include path, unused option data. */
+/**
+ * Not read in the browser: datepicker options for native date inputs, the reference filter the
+ * server applies to the autocomplete, the ng-include path, unused option data.
+ */
 type FieldDefnIgnored =
   | "input_attrs.date"
+  | "input_attrs.filter"
   | "input_attrs.start_date_years"
   | "input_attrs.end_date_years"
   | "input_attrs.label"

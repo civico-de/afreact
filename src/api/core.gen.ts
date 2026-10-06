@@ -25,6 +25,20 @@ export type DirectiveAttribute =
   | "af-tabset remember-selection"
   | "af-tabset url-arg"
   | "afblock-contact-email actions"
+  | "crm-search-display-grid api-entity"
+  | "crm-search-display-grid display"
+  | "crm-search-display-grid display-name"
+  | "crm-search-display-grid filters"
+  | "crm-search-display-grid search"
+  | "crm-search-display-grid search-name"
+  | "crm-search-display-grid settings"
+  | "crm-search-display-list api-entity"
+  | "crm-search-display-list display"
+  | "crm-search-display-list display-name"
+  | "crm-search-display-list filters"
+  | "crm-search-display-list search"
+  | "crm-search-display-list search-name"
+  | "crm-search-display-list settings"
   | "crm-search-display-table api-entity"
   | "crm-search-display-table display"
   | "crm-search-display-table display-name"
@@ -68,17 +82,23 @@ export type FieldDefn = {
     control_field?: string;
     date?: boolean;
     end_date_years?: number;
+    filter?: {
+      contact_type: string;
+    };
     label?: string;
+    max?: number;
     maxlength?: number;
+    min?: number;
     multiple?: boolean;
-    placeholder?: string | null;
+    placeholder?: string;
+    quickAdd?: string[];
     rows?: number;
     size?: string;
     start_date_years?: number;
     step?: number;
     time?: boolean;
   };
-  input_type?: "ChainSelect" | "CheckBox" | "Date" | "Email" | "EntityRef" | "Hidden" | "Radio" | "Select" | "Text" | "TextArea" | "Toggle" | "Url";
+  input_type?: "ChainSelect" | "CheckBox" | "Date" | "Email" | "EntityRef" | "File" | "Hidden" | "Number" | "Radio" | "Range" | "RichTextEditor" | "Select" | "Text" | "TextArea" | "Toggle" | "Url";
   is_date?: number;
   label: boolean | string;
   name?: string;
@@ -97,6 +117,69 @@ export type FieldDefn = {
   search_range?: boolean;
   serialize?: number | null;
   template?: string;
+};
+
+export type GridRun = {
+  editable: Record<string, never>;
+  labels: never[];
+  rows: ({
+    columns: {
+      dataType: string;
+      label: string;
+      val: string;
+    }[];
+    data: Record<string, boolean | number | string>;
+    key: number;
+  })[];
+  toolbar: never[];
+};
+
+export type GridSettings = {
+  colno: string;
+  columns: {
+    break: boolean;
+    key: string;
+    label: string;
+    type: "field";
+  }[];
+  limit: number;
+  pager: boolean;
+  placeholder: number;
+  sort: string[][];
+};
+
+export type ListRun = {
+  editable: Record<string, never>;
+  labels: never[];
+  rows: ({
+    columns: {
+      cssClass?: string;
+      dataType: string;
+      label?: string;
+      val: string;
+    }[];
+    data: Record<string, boolean | number | string>;
+    key: number;
+  })[];
+  toolbar: never[];
+};
+
+export type ListSettings = {
+  columns: ({
+    break?: boolean;
+    cssRules?: ((boolean | string)[])[];
+    forceLabel?: boolean;
+    key: string;
+    label: string;
+    type: "field";
+  })[];
+  limit: number;
+  pager: {
+    show_count: boolean;
+  };
+  placeholder: number;
+  sort: string[][];
+  style: string;
 };
 
 export type TableRun = {
@@ -326,6 +409,7 @@ export type TableSettings = {
   tally?: {
     label: string;
   };
+  toggleColumns?: boolean;
   toolbar?: ({
     action?: string;
     autoOpen?: boolean;
@@ -369,6 +453,7 @@ export type TreeRun = {
       icons?: never[] | {
         left: string[];
       };
+      label?: string;
       links?: {
         icon: string;
         style: string;
@@ -395,12 +480,13 @@ export type TreeRun = {
 };
 
 export type TreeSettings = {
-  actions: boolean;
+  actions?: boolean;
   collapsible: string;
   columns: ({
     break?: boolean;
     cssRules?: ((boolean | string)[])[];
     editable?: boolean;
+    forceLabel?: boolean;
     icon?: string;
     icons?: ({
       field?: string;
@@ -409,6 +495,7 @@ export type TreeSettings = {
       side: string;
     })[];
     key?: string;
+    label?: string;
     links?: {
       action: string;
       condition?: never[];
@@ -427,13 +514,14 @@ export type TreeSettings = {
     text?: string;
     type: "field" | "menu";
   })[];
-  cssRules: string[][];
-  description: string;
-  draggable: string;
+  cssRules?: string[][];
+  description?: string;
+  draggable?: string;
+  limit?: number;
   parent_field: string;
   placeholder: number;
-  sort: never[];
-  toolbar: {
+  sort: string[][];
+  toolbar?: {
     action: string;
     condition: never[];
     entity: string;
