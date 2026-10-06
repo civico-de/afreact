@@ -258,6 +258,12 @@ it records while loading and runs each page once.
   compiling it takes about 220 ms more. `page` and `bundle` start both calls
   as soon as the elements mount and are 30–270 ms faster cold. Warm, `page`
   was ahead in two of three runs: `bundle` still waits for its module file.
+- **Chunks.** The bundle's static imports (the React vendor chunk and the
+  module runtime) are preloaded from the page head
+  (`Civi\Afreact\Assets::load`), so they arrive with `afreact.js` instead of
+  after it has run; lazy chunks (comboboxes, drag and drop, the compare page)
+  still load on demand. On localhost that saves about 10 ms, on a real network
+  one round trip.
 - **Critical path.** `Afform.prefill` and `SearchDisplay.run` run in parallel
   and take 200–400 ms each on the server. Both are unchanged core actions and
   cost the same under Angular.

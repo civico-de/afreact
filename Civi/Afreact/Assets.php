@@ -25,6 +25,7 @@ final class Assets {
     // Fixed file names: CiviCRM's resource cache code busts browser caches after flushes and upgrades.
     \Civi::resources()
       ->addModuleFile(E::LONG_NAME, 'dist/afreact.js')
+      ->addMarkup(self::preloads(), ['region' => 'html-header'])
       ->addStyleFile(E::LONG_NAME, 'dist/afreact.css')
       // The styles core's Angular modules bring for the markup the elements share with them.
       ->addStyleFile('civicrm', 'ang/crmUI.css')
@@ -46,6 +47,23 @@ final class Assets {
 
   /** The checkout settings, asked once per request: load() runs once per element on a page. */
   private static ?array $checkout = NULL;
+
+  /**
+   * Preload links for the chunks the bundle imports statically, so the browser fetches them with
+   * the page's head rather than once the module script at the end of the body has run.
+   */
+  private static function preloads(): string {
+    $entry = file_get_contents(E::path('dist/afreact.js'));
+    if ($entry === FALSE) {
+      throw new \CRM_Core_Exception('dist/afreact.js is missing; run npm run build.');
+    }
+    preg_match_all('~\bfrom\s*"\./(chunks/[^"]+)"~', $entry, $imports);
+    $links = '';
+    foreach (array_unique($imports[1]) as $chunk) {
+      $links .= '<link rel="modulepreload" href="' . htmlspecialchars(E::url("dist/$chunk")) . '">' . "\n";
+    }
+    return $links;
+  }
 
   /**
    * Hands the page what <afreact-form source="page|bundle"> needs for the given forms.

@@ -6,6 +6,7 @@ namespace Civi\Afreact;
 
 use Civi\Api4\Afreact;
 use Civi\Test\CiviEnvBuilder;
+use CRM_Afreact_ExtensionUtil as E;
 use Civi\Test\HeadlessInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -84,6 +85,21 @@ class AssetsHeadlessTest extends TestCase implements HeadlessInterface {
     finally {
       \Civi::settings()->set('defaultContactCountry', $country);
     }
+  }
+
+  public function testLoadPreloadsTheChunksTheBundleImports(): void {
+    Assets::load();
+    $markup = '';
+    foreach (\CRM_Core_Region::instance('html-header')->getAll() as $snippet) {
+      $markup .= $snippet['markup'] ?? '';
+    }
+    preg_match_all('~<link rel="modulepreload" href="([^"]+)">~', $markup, $links);
+    $chunks = array_map(static fn (string $url): string => basename($url), $links[1]);
+    $entry = (string) file_get_contents(E::path('dist/afreact.js'));
+    $this->assertStringContainsString('from"./chunks/' . $chunks[0] . '"', $entry);
+    $this->assertCount(substr_count($entry, 'from"./chunks/'), $chunks);
+    // Lazy chunks stay lazy.
+    $this->assertNotContains('AfreactCompare', array_map(static fn (string $c): string => explode('-', $c)[0], $chunks));
   }
 
   public function testUnknownSourceIsRejected(): void {
