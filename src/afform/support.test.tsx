@@ -326,7 +326,7 @@ describe("search forms", () => {
       "file upload outside a form (Parent)",
       "ng-click on <crm-search-display-table>",
       'total-count="count"',
-      "setting seeMore, setting pager.jump, drag to reorder in hierarchical tables (draggable)",
+      "setting seeMore, setting pager.jump",
       "include column ~/x.html",
       "display filters from options outside a placement",
     ]);

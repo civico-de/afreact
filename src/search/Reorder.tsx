@@ -38,7 +38,18 @@ export function useReorder({ settings, runKey, runParams }: ReorderOptions): Reo
   const weightField = settings ? dragField(settings) : null;
 
   const save = async (page: RunPage, active: Row["key"], over: Row["key"], field: string) => {
-    const moved = moveRow(page.rows, active, over, field);
+    const moved = moveRow(page.rows, active, over, field, !!settings?.hierarchical);
+    if (!moved) {
+      const row = page.rows.find((each) => each.key === active);
+      window.CRM.alert(
+        ts("%1 stays where it is: a row moves among its siblings only.", {
+          1: row ? rowName(row) : String(active),
+        }),
+        ts("Not moved"),
+        "info",
+      );
+      return;
+    }
     writePage(client, runKey, (current) => ({ ...current, rows: moved.rows }));
     const weights = await window.CRM.api4("SearchDisplay", "inlineEdit", {
       ...runParams,

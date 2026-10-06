@@ -135,7 +135,6 @@ describe("unsupportedFeatures", () => {
     expect(unsupportedFeatures(settings, page)).toEqual([
       "in-place editing of address_primary.geo_code_1 (Location)",
       "new row: address_primary.geo_code_1 (Location)",
-      "drag to reorder in hierarchical tables (draggable)",
     ]);
   });
 

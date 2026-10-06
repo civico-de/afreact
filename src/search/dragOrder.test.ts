@@ -9,12 +9,12 @@ const row = (key: number, weight?: number): Row => ({
 const keys = (rows: Row[]) => rows.map((each) => each.key);
 
 describe("dragField", () => {
-  it("names the weight field of a flat draggable table only", () => {
+  it("names the weight field of a draggable table", () => {
     expect(dragField({ columns: [], draggable: "weight" })).toBe("weight");
     expect(dragField({ columns: [], draggable: "" })).toBeNull();
     expect(dragField({ columns: [], draggable: false })).toBeNull();
     expect(dragField({ columns: [] })).toBeNull();
-    expect(dragField({ columns: [], draggable: "weight", hierarchical: true })).toBeNull();
+    expect(dragField({ columns: [], draggable: "weight", hierarchical: true })).toBe("weight");
   });
 });
 
@@ -23,15 +23,58 @@ describe("moveRow", () => {
 
   it("moves a row down to the place of the row it displaces and takes that row's weight", () => {
     const moved = moveRow(rows, 1, 3, "weight");
-    expect(keys(moved.rows)).toEqual([2, 3, 1, 4]);
-    expect(moved.weight).toBe(30);
+    expect(keys(moved?.rows ?? [])).toEqual([2, 3, 1, 4]);
+    expect(moved?.weight).toBe(30);
   });
 
   it("moves a row up the same way", () => {
     const moved = moveRow(rows, 4, 2, "weight");
-    expect(keys(moved.rows)).toEqual([1, 4, 2, 3]);
-    expect(moved.weight).toBe(20);
+    expect(keys(moved?.rows ?? [])).toEqual([1, 4, 2, 3]);
+    expect(moved?.weight).toBe(20);
     expect(keys(rows)).toEqual([1, 2, 3, 4]);
+  });
+
+  describe("in a hierarchical table", () => {
+    const nested = (key: number, weight: number, _depth: number, _descendents = 0): Row => ({
+      key,
+      columns: [{ val: `Name ${String(key)}` }, { val: weight }],
+      data: { weight, _depth, _descendents },
+    });
+    // 1 (10) > 2 (10), 3 (20) > 4 (10); 5 (20); 6 (30) > 7 (10)
+    const tree = [
+      nested(1, 10, 0, 3),
+      nested(2, 10, 1),
+      nested(3, 20, 1, 1),
+      nested(4, 10, 2),
+      nested(5, 20, 0),
+      nested(6, 30, 0, 1),
+      nested(7, 10, 1),
+    ];
+
+    it("moves a row with its sub-rows down past a sibling's, taking the sibling's weight", () => {
+      const moved = moveRow(tree, 1, 6, "weight", true);
+      expect(keys(moved?.rows ?? [])).toEqual([5, 6, 7, 1, 2, 3, 4]);
+      expect(moved?.weight).toBe(30);
+    });
+
+    it("moves a row with its sub-rows up before a sibling's", () => {
+      const moved = moveRow(tree, 6, 1, "weight", true);
+      expect(keys(moved?.rows ?? [])).toEqual([6, 7, 1, 2, 3, 4, 5]);
+      expect(moved?.weight).toBe(10);
+    });
+
+    it("moves sub-rows among their own siblings", () => {
+      const moved = moveRow(tree, 3, 2, "weight", true);
+      expect(keys(moved?.rows ?? [])).toEqual([1, 3, 4, 2, 5, 6, 7]);
+      expect(moved?.weight).toBe(10);
+    });
+
+    it("refuses a move under another parent or to another depth", () => {
+      expect(moveRow(tree, 2, 7, "weight", true)).toBeNull();
+      expect(moveRow(tree, 4, 2, "weight", true)).toBeNull();
+      expect(moveRow(tree, 5, 2, "weight", true)).toBeNull();
+      expect(keys(tree)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    });
   });
 
   it("refuses a row that is not on the page or a displaced row without a weight", () => {

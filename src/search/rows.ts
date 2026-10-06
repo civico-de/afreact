@@ -47,10 +47,15 @@ export function descendents(row: Row): number {
   return depth(row, "_descendents");
 }
 
+/** How deep a hierarchical row sits; 0 at the top. */
+export function rowDepth(row: Row): number {
+  return depth(row, "_depth");
+}
+
 /** getRowClass() of crmSearchDisplayTable: the hierarchy classes every cell of a row carries. */
 export function rowClass(row: Row, settings: DisplaySettings): string {
   if (!settings.hierarchical) return "";
-  const level = depth(row, "_depth");
+  const level = rowDepth(row);
   return [
     "crm-hierarchical-row",
     `crm-hierarchical-depth-${String(level)}`,
@@ -196,8 +201,6 @@ export function unsupportedFeatures(
   if (settings.editableRow && settings.editableRow.create)
     features.push(...unfillableColumns(page));
   if (settings.draggable && type === "tree") features.push("drag to reorder (draggable)");
-  else if (settings.draggable && settings.hierarchical)
-    features.push("drag to reorder in hierarchical tables (draggable)");
   return features;
 }
 

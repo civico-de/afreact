@@ -67,12 +67,12 @@ a setting render with React wherever core places them (see [Rendering forms with
   `SearchDisplay.inlineEdit`; a table with `editableRow.full` edits whole
   rows, one with `editableRow.create` adds new records in a row of inputs;
   the column picker hides columns and takes them from a saved filter set.
-  Bulk actions and task links run API batch, popup
-  and redirect tasks with their input fields, the spreadsheet download, the
-  update of chosen fields and the tag, relationship and mailing dialogs.
-  Rows of draggable tables move by pointer or keyboard. Other tasks that are
-  Angular dialogs, drag to reorder in hierarchical tables and include columns
-  show a note instead.
+  Bulk actions and task links run API batch, popup and redirect tasks with
+  their input fields, the spreadsheet download, the update of chosen fields
+  and the tag, relationship and mailing dialogs. Rows of draggable tables
+  move by pointer or keyboard, a hierarchical row with its sub-rows among its
+  siblings. Other tasks that are Angular dialogs and include columns show a
+  note instead.
 - **Types:** `src/api/entities.gen.ts` is generated from APIv4
   `getFields` (see [Development](#development)).
 - **Unsupported layout** is never dropped silently: the renderer shows a

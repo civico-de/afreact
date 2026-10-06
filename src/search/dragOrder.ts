@@ -1,23 +1,35 @@
+import { descendents, rowDepth } from "./rows";
 import type { Column, DisplaySettings, Row } from "./types";
 
-/**
- * The weight field rows are dragged by, or null. Hierarchical tables are left out: a row would
- * have to move with its sub-rows and stay under its parent.
- */
+/** The weight field rows are dragged by, or null. */
 export function dragField(settings: DisplaySettings): string | null {
-  return settings.draggable && !settings.hierarchical ? settings.draggable : null;
+  return settings.draggable ? settings.draggable : null;
+}
+
+/** The row at `index` with its sub-rows, which move with it. */
+const block = (rows: Row[], index: number) =>
+  rows.slice(index, index + 1 + descendents(rows[index] ?? { key: 0, columns: [] }));
+
+/** The index of the row's parent, or -1 at the top. */
+function parentOf(rows: Row[], index: number): number {
+  const level = rowDepth(rows[index] ?? { key: 0, columns: [] });
+  for (let at = index - 1; at >= 0; at--) if (rowDepth(rows[at]!) < level) return at;
+  return -1;
 }
 
 /**
  * `active` moved to the place of `over`, and the weight it takes: the weight of the row it
- * displaces, as updateDraggableWeights() in crmSearchDisplayTable sends it.
+ * displaces, as updateDraggableWeights() in crmSearchDisplayTable sends it. In a hierarchical
+ * table the row brings its sub-rows and moves among its siblings only, since the weight orders
+ * those; null when `over` is no sibling.
  */
 export function moveRow(
   rows: Row[],
   active: Row["key"],
   over: Row["key"],
   weightField: string,
-): { rows: Row[]; weight: unknown } {
+  hierarchical = false,
+): { rows: Row[]; weight: unknown } | null {
   const from = rows.findIndex((row) => row.key === active);
   const to = rows.findIndex((row) => row.key === over);
   const moved = rows[from];
@@ -26,9 +38,20 @@ export function moveRow(
     throw new Error(`Row ${String(active)} or ${String(over)} is not on this page.`);
   const weight = displaced.data?.[weightField];
   if (weight === undefined) throw new Error(`Row ${String(over)} has no ${weightField}.`);
-  const next = rows.filter((row) => row !== moved);
-  next.splice(to, 0, moved);
-  return { rows: next, weight };
+  if (!hierarchical) {
+    const next = rows.filter((row) => row !== moved);
+    next.splice(to, 0, moved);
+    return { rows: next, weight };
+  }
+  if (rowDepth(moved) !== rowDepth(displaced) || parentOf(rows, from) !== parentOf(rows, to))
+    return null;
+  const moving = block(rows, from);
+  const target = block(rows, to);
+  const rest = rows.filter((row) => !moving.includes(row));
+  // Down: after the displaced row's block; up: before it, as a flat move lands.
+  const at = rest.indexOf(displaced) + (to > from ? target.length : 0);
+  rest.splice(at, 0, ...moving);
+  return { rows: rest, weight };
 }
 
 /** The weights SearchDisplay.inlineEdit returns by row key, in the data and the weight column. */

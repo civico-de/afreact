@@ -227,6 +227,57 @@ describe("AfreactSearch drag to reorder", () => {
     expect(calls.filter(({ call }) => call === "SearchDisplay.inlineEdit")).toHaveLength(0);
   });
 
+  describe("in a hierarchical table", () => {
+    const nested = (key: number, weight: number, _depth: number, _descendents = 0): Row => ({
+      key,
+      columns: [{ val: `Name ${String(key)}` }, { val: weight }],
+      data: { id: key, weight, _depth, _descendents },
+    });
+    // 1 (10) > 2 (10); 3 (20); 4 (30) > 5 (10)
+    const tree = [
+      nested(1, 10, 0, 1),
+      nested(2, 10, 1),
+      nested(3, 20, 0),
+      nested(4, 30, 0, 1),
+      nested(5, 10, 1),
+    ];
+    const hierarchical: DisplaySettings = { ...settings, hierarchical: true };
+
+    it("moves a row with its sub-rows past a sibling, taking the sibling's weight", async () => {
+      const calls = serve(() => ({ 1: 20, 3: 10 }), tree);
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={hierarchical} />);
+      await screen.findByRole("button", { name: "Move Name 1" });
+      // Two steps down: over its own sub-row first, then over the sibling.
+      await keyboardMove("Name 1", 2);
+      await waitFor(() => {
+        expect(shownOrder()).toEqual(["3", "1", "2", "4", "5"]);
+      });
+      const edits = calls.filter(({ call }) => call === "SearchDisplay.inlineEdit");
+      expect(edits.map(({ params }) => [params.rowKey, params.values])).toEqual([
+        [1, { weight: 20 }],
+      ]);
+      await waitFor(() => {
+        expect(orderColumn()).toEqual(["10", "20", "10", "30", "10"]);
+      });
+    });
+
+    it("leaves a row dropped under another parent where it is, and says so", async () => {
+      const calls = serve(() => ({}), tree);
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={hierarchical} />);
+      await screen.findByRole("button", { name: "Move Name 2" });
+      await keyboardMove("Name 2", 3);
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "Name 2 stays where it is: a row moves among its siblings only.",
+          "Not moved",
+          "info",
+        );
+      });
+      expect(shownOrder()).toEqual(["1", "2", "3", "4", "5"]);
+      expect(calls.filter(({ call }) => call === "SearchDisplay.inlineEdit")).toHaveLength(0);
+    });
+  });
+
   it("keeps the selection column and the selection when rows move", async () => {
     serve(() => ({ 1: 2, 2: 1 }));
     renderWithQuery(
