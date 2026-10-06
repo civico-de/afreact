@@ -165,7 +165,34 @@ export function evaluateTaskExpression(expression: string, data: Record<string, 
 export type TaskRun =
   | { kind: "batch"; apiBatch: ApiBatch }
   | { kind: "popup" | "redirect"; target: TaskTarget }
+  | { kind: "download" }
   | { kind: "unsupported"; reason: string };
+
+/** The download task's dialog, which the renderer replaces with its own. */
+const DOWNLOAD_DIALOG = "~/crmSearchTasks/crmSearchTaskDownload.html";
+
+/** The spreadsheet formats SearchDisplay.download writes, labelled as crmSearchTaskDownload.html. */
+export const DOWNLOAD_FORMATS = ["csv", "xlsx", "ods", "pdf"] as const;
+export type DownloadFormat = (typeof DOWNLOAD_FORMATS)[number];
+
+/** crmSearchTaskDownload's request: the run's parameters without a page, filtered to the ids. */
+export function downloadParams(
+  runParams: Record<string, unknown>,
+  ids: Key[],
+  format: DownloadFormat,
+): Record<string, unknown> {
+  const { return: _return, limit: _limit, ...params } = runParams;
+  const filters = isRecord(params.filters) ? params.filters : {};
+  return { ...params, filters: { ...filters, id: ids }, format };
+}
+
+/** The file name in a Content-Disposition header, as crmSearchTaskDownload reads it. */
+export function dispositionFileName(header: string | null): string | null {
+  const utf8 = /filename\*=utf-8''([\w%\-.]+)(?:; ?|$)/i.exec(header ?? "");
+  if (utf8?.[1]) return decodeURIComponent(utf8[1]);
+  const ascii = /filename=(["']?)(.*?[^\\])\1(?:; ?|$)/.exec(header ?? "");
+  return ascii?.[2] || null;
+}
 
 /** The data doTask() hands to a task's expressions. */
 export function taskData(
@@ -208,6 +235,7 @@ export function taskRun(task: SearchTask): TaskRun {
   if (isRecord(task.redirect) && isString(task.redirect.path))
     return checkTarget("redirect", task.redirect, task);
   const template = task.uiDialog?.templateUrl;
+  if (template === DOWNLOAD_DIALOG) return { kind: "download" };
   if (template) return { kind: "unsupported", reason: `Angular dialog ${template}` };
   const batch = task.apiBatch;
   if (!isRecord(batch) || !isString(batch.action))

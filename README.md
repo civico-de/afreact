@@ -66,8 +66,8 @@ a setting render with React wherever core places them (see [Rendering forms with
   an editor by click, Enter, Space or F2 and save with
   `SearchDisplay.inlineEdit`; the column picker hides columns and takes them
   from a saved filter set. Bulk actions and task links run API batch, popup
-  and redirect tasks. Rows of draggable tables move by pointer or keyboard.
-  Tasks that are Angular dialogs, row editing (`editableRow`), drag to reorder
+  and redirect tasks and the spreadsheet download. Rows of draggable tables
+  move by pointer or keyboard. Other tasks that are Angular dialogs, row editing (`editableRow`), drag to reorder
   in hierarchical tables, include columns and the in-place editors for contact
   references, locations and multi-value text, number, date or Yes/No fields
   show a note instead.

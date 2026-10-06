@@ -65,6 +65,13 @@ const download: SearchTask = {
   number: ">= 0",
   uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskDownload.html" },
 };
+const tag: SearchTask = {
+  name: "tag",
+  title: "Tag - Add/Remove Tags",
+  icon: "fa-tags",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskTag.html" },
+};
 const label: SearchTask = {
   name: "contact.label",
   title: "Mailing labels - print",
@@ -488,26 +495,26 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("names the tasks it cannot run and keeps them in the menu, disabled", async () => {
-    const calls = serve({ tasks: [enable, download] });
+    const calls = serve({ tasks: [enable, tag] });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await screen.findByText("Name 1");
     await selectRows("Name 1");
     expect(
       await screen.findByText(
-        "Not supported by the React renderer: task download (Angular dialog ~/crmSearchTasks/crmSearchTaskDownload.html)",
+        "Not supported by the React renderer: task tag (Angular dialog ~/crmSearchTasks/crmSearchTaskTag.html)",
       ),
     ).toHaveAttribute("role", "note");
     await openActions();
-    const item = screen.getByRole("menuitem", { name: /Download/, hidden: true });
+    const item = screen.getByRole("menuitem", { name: /Tag/, hidden: true });
     expect(item).toHaveAttribute("aria-disabled", "true");
-    expect(item).toHaveAttribute("title", "Not supported by the React renderer: task download");
+    expect(item).toHaveAttribute("title", "Not supported by the React renderer: task tag");
     await userEvent.click(item);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(calls.map(({ call }) => call)).not.toContain("Contact.update");
   });
 
   it("names only the tasks a display offers among those it cannot run", async () => {
-    serve({ tasks: [enable, download] });
+    serve({ tasks: [enable, tag] });
     renderWithQuery(
       <AfreactSearch search="S" display="D" settings={{ ...settings, actions: ["enable"] }} />,
     );
@@ -607,8 +614,8 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("alerts for a row link to a task React cannot run", async () => {
-    const links = [{ task: "download", text: "Download" }];
-    serve({ rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })], tasks: [download] });
+    const links = [{ task: "tag", text: "Tag" }];
+    serve({ rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })], tasks: [tag] });
     renderWithQuery(
       <AfreactSearch
         search="S"
@@ -616,10 +623,10 @@ describe("AfreactSearch bulk actions", () => {
         settings={{ columns: [...columns, linksColumn(links)] }}
       />,
     );
-    await userEvent.click(await screen.findByRole("button", { name: "Download" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Tag" }));
     await waitFor(() => {
       expect(window.CRM.alert).toHaveBeenCalledWith(
-        "Not supported by the React renderer: task download (Angular dialog ~/crmSearchTasks/crmSearchTaskDownload.html)",
+        "Not supported by the React renderer: task tag (Angular dialog ~/crmSearchTasks/crmSearchTaskTag.html)",
         "Error",
         "error",
       );
@@ -675,5 +682,70 @@ describe("AfreactSearch bulk actions", () => {
     selectAll().focus();
     await userEvent.keyboard(" ");
     expect(selectAll()).toHaveAttribute("aria-checked", "true");
+  });
+
+  describe("download", () => {
+    function stubDownload(response: Partial<Response>) {
+      const fetchMock = vi.fn(() => Promise.resolve({ ok: true, ...response } as Response));
+      vi.stubGlobal("fetch", fetchMock);
+      const link = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+      vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: () => "blob:1", revokeObjectURL: () => {} }));
+      return { fetchMock, link };
+    }
+
+    it("downloads the selected rows in the chosen format and names the file from the answer", async () => {
+      const { fetchMock, link } = stubDownload({
+        headers: new Headers({ "Content-Disposition": 'attachment; filename="Contacts.xlsx"' }),
+        blob: () => Promise.resolve(new Blob(["x"])),
+      });
+      serve({ tasks: [enable, download] });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      await screen.findByText("Name 1");
+      await selectRows("Name 1", "Name 2");
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /Download/, hidden: true }));
+      const dialog = await screen.findByRole("dialog", { name: "Download Spreadsheet" });
+      expect(dialog).toHaveTextContent("Download 2 Contacts");
+      await userEvent.selectOptions(within(dialog).getByLabelText("Format"), "xlsx");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Download" }));
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "Contacts.xlsx has been downloaded to your computer.",
+          "Download Complete",
+          "success",
+        );
+      });
+      const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+      expect(url).toBe("/civicrm/ajax/api4/SearchDisplay/download");
+      const params = JSON.parse(new URLSearchParams(init.body as string).get("params") ?? "");
+      expect(params).toMatchObject({ savedSearch: "S", display: "D", format: "xlsx", filters: { id: [1, 2] } });
+      expect(params).not.toHaveProperty("return");
+      expect(params).not.toHaveProperty("limit");
+      expect(link).toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      // A download changes nothing, so the table keeps its rows and selection.
+      expect(checkbox("Name 1")).toBeChecked();
+    });
+
+    it("offers every row without a selection and reports a failed download", async () => {
+      stubDownload({
+        ok: false,
+        statusText: "Forbidden",
+        json: () => Promise.resolve({ error_message: "Not permitted" }),
+      });
+      serve({ tasks: [enable, download], count: 3 });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      await screen.findByText("Name 1");
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /Download/, hidden: true }));
+      const dialog = await screen.findByRole("dialog", { name: "Download Spreadsheet" });
+      expect(dialog).toHaveTextContent("Download 3 Contacts");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Download" }));
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith("Not permitted", "Error", "error");
+      });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(status()).toHaveTextContent("Not permitted");
+    });
   });
 });

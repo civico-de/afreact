@@ -1,8 +1,10 @@
 /**
- * Bulk actions on both renderers: select two rows, disable them, then delete two, and compare
- * the table and the records afterwards. The demo display lists groups the test creates.
+ * Bulk actions on both renderers: select two rows, download them, disable them, then delete
+ * two, and compare the table and the records afterwards. The demo display lists groups the
+ * test creates.
  */
 import { expect, test, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import { api, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
@@ -41,7 +43,7 @@ const LOAD = { timeout: 30_000 };
 const table = (page: Page) => page.locator(".afreact-render .crm-search-display table");
 const row = (page: Page, title: string) => table(page).locator("tbody tr", { hasText: title });
 
-async function runTask(page: Page, titles: string[], task: string) {
+async function runTask(page: Page, titles: string[], task: string, confirm = task) {
   for (const title of titles) await row(page, title).locator(".crm-search-ctrl-select-row").check();
   await expect(page.locator(".afreact-render")).toContainText(
     `${String(titles.length)} selected of`,
@@ -49,7 +51,7 @@ async function runTask(page: Page, titles: string[], task: string) {
   await page.locator(".afreact-render .crm-search-task-menu").click();
   await page.locator(".afreact-render .dropdown-menu a", { hasText: task }).click();
   // Disable and delete ask first; the confirm button carries the task's title.
-  await page.getByRole("button", { name: task }).click();
+  await page.getByRole("button", { name: confirm }).click();
 }
 
 for (const renderer of ["react", "angular"] as const) {
@@ -66,6 +68,19 @@ for (const renderer of ["react", "angular"] as const) {
     const [a = "", b = "", c = ""] = titles;
     await page.goto(render(renderer));
     await expect(row(page, c)).toBeVisible(LOAD);
+
+    const download = page.waitForEvent("download");
+    await runTask(page, [a, b], "Download Spreadsheet", "Download");
+    const file = await download;
+    expect(file.suggestedFilename()).toMatch(/\.csv$/);
+    const lines = (await readFile(await file.path(), "utf8")).trim().split("\n");
+    expect(lines).toHaveLength(3);
+    expect(lines.slice(1).join("\n")).toContain(a);
+    expect(lines.slice(1).join("\n")).toContain(b);
+    expect(lines.join("\n")).not.toContain(c);
+    await expect(page.locator(".afreact-render .crm-search-task-dialog, .ui-dialog")).toHaveCount(0, LOAD);
+    // A download leaves the selection as it is; the next task starts from none.
+    for (const title of [a, b]) await row(page, title).locator(".crm-search-ctrl-select-row").uncheck();
 
     await runTask(page, [a, b], "Disable Groups");
     await expect(row(page, a)).toContainText("No", LOAD);

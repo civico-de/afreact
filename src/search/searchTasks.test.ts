@@ -4,6 +4,8 @@ import {
   BATCH_SIZE,
   batchCall,
   batches,
+  dispositionFileName,
+  downloadParams,
   evaluateTaskExpression,
   inlineEditCall,
   parseTaskList,
@@ -38,6 +40,12 @@ const download: SearchTask = {
   title: "Download Spreadsheet",
   number: ">= 0",
   uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskDownload.html" },
+};
+const tag: SearchTask = {
+  name: "tag",
+  title: "Tag - Add/Remove Tags",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskTag.html" },
 };
 const merge: SearchTask = {
   name: "contact.merge",
@@ -130,10 +138,14 @@ describe("taskRun", () => {
     expect(taskRun(label)).toEqual({ kind: "redirect", target: merge.crmPopup });
   });
 
+  it("runs the download task itself", () => {
+    expect(taskRun(download)).toEqual({ kind: "download" });
+  });
+
   it("names why it cannot run Angular dialogs, input fields and the rest", () => {
-    expect(taskRun(download)).toEqual({
+    expect(taskRun(tag)).toEqual({
       kind: "unsupported",
-      reason: "Angular dialog ~/crmSearchTasks/crmSearchTaskDownload.html",
+      reason: "Angular dialog ~/crmSearchTasks/crmSearchTaskTag.html",
     });
     const fields = { ...disable, apiBatch: { action: "save", fields: [{ name: "contact_id" }] } };
     expect(taskRun(fields)).toEqual({ kind: "unsupported", reason: "input fields" });
@@ -167,9 +179,9 @@ describe("referencedTasks and unsupportedTaskNotes", () => {
   });
 
   it("notes only the referenced tasks the renderer cannot run", () => {
-    const tasks = [disable, download, merge];
+    const tasks = [disable, download, tag, merge];
     expect(unsupportedTaskNotes(tasks, "all")).toEqual([
-      "task download (Angular dialog ~/crmSearchTasks/crmSearchTaskDownload.html)",
+      "task tag (Angular dialog ~/crmSearchTasks/crmSearchTaskTag.html)",
     ]);
     expect(unsupportedTaskNotes(tasks, new Set(["disable"]))).toEqual([]);
   });
@@ -255,5 +267,29 @@ describe("batches", () => {
       { first: 500, last: 1000 },
       { first: 1000, last: 1001 },
     ]);
+  });
+});
+
+describe("downloadParams", () => {
+  it("drops the page and filters to the ids, as crmSearchTaskDownload does", () => {
+    const run = { savedSearch: "S", display: "D", return: "page:1", limit: 20, filters: { a: 1 } };
+    expect(downloadParams(run, [3, 4], "xlsx")).toEqual({
+      savedSearch: "S",
+      display: "D",
+      filters: { a: 1, id: [3, 4] },
+      format: "xlsx",
+    });
+    expect(downloadParams({ savedSearch: "S" }, [], "csv").filters).toEqual({ id: [] });
+  });
+});
+
+describe("dispositionFileName", () => {
+  it("prefers the UTF-8 name, then the quoted one, else nothing", () => {
+    expect(dispositionFileName("attachment; filename=\"Contacts.csv\"")).toBe("Contacts.csv");
+    expect(
+      dispositionFileName("attachment; filename=\"Kontakte.csv\"; filename*=utf-8''K%C3%B6pfe.csv"),
+    ).toBe("Köpfe.csv");
+    expect(dispositionFileName("inline")).toBeNull();
+    expect(dispositionFileName(null)).toBeNull();
   });
 });

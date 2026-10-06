@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { api4, errorMessage } from "../api/civi";
+import { fetchDownload, saveBlob } from "./download";
 import { Icon } from "./LinkContent";
 import { onLinkClick } from "./links";
 import { Menu } from "./Menu";
@@ -18,6 +19,8 @@ import {
   allows,
   batchCall,
   batches,
+  DOWNLOAD_FORMATS,
+  downloadParams,
   evaluateTaskExpression,
   inlineEditCall,
   parseTaskList,
@@ -26,6 +29,7 @@ import {
   taskRun,
   unsupportedTaskNotes,
   type ApiBatch,
+  type DownloadFormat,
   type Key,
   type SearchTask,
   type TaskList,
@@ -58,11 +62,11 @@ export interface RowSelect {
 
 interface Running {
   task: SearchTask;
-  apiBatch: ApiBatch;
   ids: Key[];
   isLink: boolean;
   returnTo: HTMLElement | null;
 }
+type RunningTask = Running & ({ kind: "batch"; apiBatch: ApiBatch } | { kind: "download" });
 
 const TASKS = "getSearchTasks";
 
@@ -105,7 +109,7 @@ export function useTasks(options: TasksOptions) {
   const selection = chosen.key === filtersKey ? chosen.selection : NO_SELECTION;
   const [loadingAll, setLoadingAll] = useState(false);
   const [message, setMessage] = useState("");
-  const [running, setRunning] = useState<Running | null>(null);
+  const [running, setRunning] = useState<RunningTask | null>(null);
   const [failure, setFailure] = useState<unknown>(null);
 
   const select = (next: Selection) => {
@@ -159,7 +163,11 @@ export function useTasks(options: TasksOptions) {
       return;
     }
     if (run.kind === "batch") {
-      setRunning({ task, apiBatch: run.apiBatch, ids, isLink, returnTo });
+      setRunning({ kind: "batch", task, apiBatch: run.apiBatch, ids, isLink, returnTo });
+      return;
+    }
+    if (run.kind === "download") {
+      setRunning({ kind: "download", task, ids, isLink, returnTo });
       return;
     }
     const data = taskData(task, ids, tasks, { search, display }, isLink);
@@ -334,19 +342,26 @@ export function useTasks(options: TasksOptions) {
   const referenced = referencedTasks(settings);
   const notes = tasks ? unsupportedTaskNotes(tasks, referenced) : [];
 
-  const dialog: ReactNode = running && entityInfo && (
-    <TaskDialog
-      running={running}
-      entity={entityInfo}
-      runParams={runParams}
-      onDone={(result) => {
-        setRunning(null);
-        if (result.ran) refreshAfterTask();
-        if (result.message) setMessage(result.message);
-        if (running.returnTo?.isConnected) running.returnTo.focus();
-      }}
-    />
-  );
+  const onDone = (result: { ran: boolean; message: string }) => {
+    setRunning(null);
+    if (result.ran) refreshAfterTask();
+    if (result.message) setMessage(result.message);
+    if (running?.returnTo?.isConnected) running.returnTo.focus();
+  };
+  const dialog: ReactNode =
+    running &&
+    entityInfo &&
+    (running.kind === "download" ? (
+      <DownloadDialog
+        running={running}
+        entity={entityInfo}
+        runParams={runParams}
+        rowCount={rowCount}
+        onDone={onDone}
+      />
+    ) : (
+      <TaskDialog running={running} entity={entityInfo} runParams={runParams} onDone={onDone} />
+    ));
 
   return {
     /** For the header count and the pager. */
@@ -387,7 +402,7 @@ export function rowName(row: Row): string {
 }
 
 interface TaskDialogProps {
-  running: Running;
+  running: Running & { apiBatch: ApiBatch };
   entity: TaskList["entityInfo"];
   runParams: Record<string, unknown>;
   /** `ran`: some batch may have changed data, so the table reloads. */
@@ -525,6 +540,136 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
             <Icon name={progress ? "fa-spin fa-spinner" : "fa-check"} /> {task.title}
           </button>
         )}
+      </div>
+    </dialog>
+  );
+}
+
+interface DownloadDialogProps {
+  running: Running;
+  entity: TaskList["entityInfo"];
+  runParams: Record<string, unknown>;
+  rowCount: number | null;
+  onDone: (result: { ran: boolean; message: string }) => void;
+}
+
+const FORMAT_LABELS: Record<DownloadFormat, () => string> = {
+  csv: () => ts("Generic Spreadsheet (.csv)"),
+  xlsx: () => ts("Microsoft Excel (.xlsx)"),
+  ods: () => ts("OpenDocument Spreadsheet (.ods)"),
+  pdf: () => ts("PDF Document (.pdf)"),
+};
+
+/**
+ * crmSearchTaskDownload.html: the format, then SearchDisplay.download of the selected rows or
+ * of every row, handed to the browser as a file. Nothing changes, so the table keeps its rows.
+ */
+function DownloadDialog({ running, entity, runParams, rowCount, onDone }: DownloadDialogProps) {
+  const { task, ids } = running;
+  const titleId = useId();
+  const formatId = useId();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [format, setFormat] = useState<DownloadFormat>("csv");
+  const [busy, setBusy] = useState(false);
+  const count = ids.length || rowCount || 0;
+  const entityTitle = count === 1 ? entity.title : entity.title_plural;
+
+  const download = async () => {
+    setBusy(true);
+    try {
+      const fallback = `${entity.title_plural}.${format}`;
+      const file = await fetchDownload(downloadParams(runParams, ids, format), fallback);
+      saveBlob(file.blob, file.fileName);
+      const text = ts("%1 has been downloaded to your computer.", { 1: file.fileName });
+      window.CRM.alert(text, ts("Download Complete"), "success");
+      finish(text);
+    } catch (error) {
+      const text = errorMessage(error);
+      window.CRM.alert(text, ts("Error"), "error");
+      finish(text);
+    }
+  };
+
+  const finish = (message: string) => {
+    setBusy(false);
+    dialog.current?.close();
+    onDone({ ran: false, message });
+  };
+
+  useEffect(() => {
+    if (!dialog.current?.open) dialog.current?.showModal();
+  });
+
+  return (
+    <dialog
+      ref={dialog}
+      className="crm-search-task-dialog afreact-dialog"
+      aria-labelledby={titleId}
+      onCancel={(event) => {
+        if (busy) event.preventDefault();
+      }}
+      onClose={() => {
+        if (!busy) onDone({ ran: false, message: "" });
+      }}
+    >
+      <h2 id={titleId} className="afreact-dialog-title">
+        {task.title}
+      </h2>
+      <div className="afreact-dialog-body">
+        <p>
+          <strong>{ts("Download %1 %2", { 1: count, 2: entityTitle })}</strong>
+        </p>
+        <div className="form-inline">
+          <label htmlFor={formatId}>{ts("Format")}</label>{" "}
+          <select
+            id={formatId}
+            className="form-control"
+            value={format}
+            disabled={busy}
+            onChange={(event) => {
+              const chosen = DOWNLOAD_FORMATS.find((name) => name === event.target.value);
+              if (chosen) setFormat(chosen);
+            }}
+          >
+            {DOWNLOAD_FORMATS.map((name) => (
+              <option key={name} value={name}>
+                {FORMAT_LABELS[name]()}
+              </option>
+            ))}
+          </select>
+        </div>
+        <hr />
+        {busy && (
+          <div className="crm-search-task-progress">
+            <h5>{ts("Downloading...")}</h5>
+            <div className="progress">
+              <div
+                className="progress-bar progress-bar-striped active"
+                role="progressbar"
+                aria-label={task.title}
+                style={{ width: "100%" }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="afreact-dialog-buttons">
+        <button
+          type="button"
+          className="btn btn-default"
+          disabled={busy}
+          onClick={() => dialog.current?.close()}
+        >
+          <Icon name="fa-times" /> {ts("Cancel")}
+        </button>
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={busy}
+          onClick={() => void download()}
+        >
+          <Icon name={busy ? "fa-spin fa-spinner" : "fa-download"} /> {ts("Download")}
+        </button>
       </div>
     </dialog>
   );
