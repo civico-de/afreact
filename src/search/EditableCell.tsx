@@ -125,10 +125,18 @@ function EditableValue(props: EditableValueProps) {
   );
 }
 
-/** The editors of a row, for the validity check before a full-row save. */
+/** The row's own editors (not those of a nested display), for the check before a row save. */
 function rowForms(element: HTMLElement | null): HTMLFormElement[] {
-  return Array.from(element?.closest("tr")?.querySelectorAll("form") ?? []);
+  const row = element?.closest("tr");
+  return Array.from(
+    row?.querySelectorAll<HTMLFormElement>(":scope > td > crm-search-display-editable > form") ??
+      [],
+  );
 }
+
+/** The row's Cancel button, which keeps Escape working while the clicked cell's input loads. */
+const rowCancel = (element: HTMLElement | null) =>
+  element?.closest("tr")?.querySelector<HTMLElement>(".crm-search-ctrl-column .btn-danger");
 
 /**
  * crmSearchDisplayEditable.html: the input crmSearchInput picks, with save and cancel buttons;
@@ -157,7 +165,7 @@ function CellEditor({
     const first = (selector: string) => form.current?.querySelector<HTMLElement>(selector);
     // Options still loading leave no input to focus; a button keeps Escape and blur working.
     const input = first("input:checked") ?? first("input, select:enabled, textarea");
-    (input ?? first("button"))?.focus();
+    (input ?? first("button") ?? rowCancel(form.current))?.focus();
   }, [focused]);
 
   const change = (next: unknown) => {

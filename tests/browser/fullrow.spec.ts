@@ -78,8 +78,9 @@ async function edit(page: Page, renderer: Renderer, id: number): Promise<Saved> 
 
   await cell(page, "gender_id:label").locator(".crm-editable-enabled").click();
   await expect(editors(page)).toHaveCount(2);
-  await cell(page, "job_title").locator("input").first().fill("Captain");
+  // The option first: core's list opens with the focus and closes when it moves on.
   await choose(page, renderer, "Male");
+  await cell(page, "job_title").locator("input").first().fill("Captain");
   await rowButtons(page).locator(".btn-success").click();
   await expect.poll(shown(page, "job_title"), LOAD).toBe("Captain");
   await expect.poll(shown(page, "gender_id:label"), LOAD).toBe("Male");

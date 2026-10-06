@@ -11,11 +11,16 @@ function setup({
   readOnly = false,
   nickName = "Pi",
   toggleColumns = false,
+  nickOptions = false,
+  handlers = {},
 }: {
   inlineEdit?: (params: Record<string, unknown>) => unknown;
   readOnly?: boolean;
   nickName?: string | null;
   toggleColumns?: boolean;
+  /** The nick column as an option list whose options load on opening. */
+  nickOptions?: boolean;
+  handlers?: Parameters<typeof mockApi>[0];
 } = {}) {
   const row = (title: unknown, nick: unknown, shown = String(title)): Row => ({
     key: 7,
@@ -38,7 +43,7 @@ function setup({
       Object.assign([row("Pilot", nickName)], {
         editable: {
           job_title: editInfo({ value_key: "job_title" }),
-          nick_name: editInfo({ value_key: "nick_name", nullable: false }),
+          nick_name: editInfo({ value_key: "nick_name", nullable: false, options: nickOptions }),
         },
       }),
     "SearchDisplay.inlineEdit":
@@ -47,6 +52,7 @@ function setup({
         const values = params.values as Record<string, unknown>;
         return [row(values.job_title, values.nick_name, "Saved")];
       }),
+    ...handlers,
   });
   renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
   const edits = () =>
@@ -177,6 +183,25 @@ describe("full-row editing", () => {
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByLabelText("Title, Ada")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit Title Pilot" })).toHaveFocus();
+  });
+
+  it("focuses the row's Cancel button while the clicked cell's options load", async () => {
+    let answer: (fields: unknown[]) => void = () => undefined;
+    setup({
+      nickOptions: true,
+      handlers: {
+        "Contact.getFields": () =>
+          new Promise((resolve) => {
+            answer = resolve;
+          }),
+      },
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Edit Nick Pi" }));
+    const cancel = within(control()).getByRole("button", { name: "Cancel" });
+    expect(cancel).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByLabelText("Title, Ada")).not.toBeInTheDocument();
+    answer([]);
   });
 
   it("shows no buttons on a row the server marks read-only", async () => {
