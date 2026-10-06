@@ -92,6 +92,10 @@ for (const renderer of ["react", "angular"] as const) {
       await page.goto(render(renderer));
       await tab(page, "privacy").locator("a").click();
       await page.getByRole("button", { name: "Save" }).click();
+      // Both alert the missing field on CiviCRM screens, so the click has been handled.
+      await expect(page.locator("#crm-notification-container")).toContainText(
+        "Please fill all required fields.",
+      );
       // Angular stays on the tab without feedback; React opens the field's tab and focuses it.
       if (renderer === "react") {
         await expect(tab(page, "name")).toHaveClass(/\bactive\b/);

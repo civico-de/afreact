@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
+import { jquerySelection } from "../../test/jquery";
 import { mockApi, renderWithQuery } from "../../test/render";
 import { AfreactForm } from "../AfreactForm";
 import type { PrefillItem } from "../model";
@@ -40,6 +41,7 @@ function renderForm(
   layout: LayoutNode[],
   submit: () => unknown = () => [{ token: "tok" }],
   prefill: PrefillItem[] = [],
+  handlers: Record<string, () => unknown> = {},
 ) {
   const calls = mockApi({
     "Afreact.getForm": () => [
@@ -47,6 +49,7 @@ function renderForm(
     ],
     "Afform.prefill": () => prefill,
     "Afform.submit": submit,
+    ...handlers,
   });
   renderWithQuery(<AfreactForm name="afformFiles" location={{ search: "", hash: "" }} />);
   return calls;
@@ -156,6 +159,96 @@ describe("File fields", () => {
     );
     expect(screen.queryByText("Thanks")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Image")).toBeEnabled();
+  });
+
+  it("sends the record the field belongs to when the upload starts, after a removed item", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(respond(200, { values: [] })));
+    vi.stubGlobal("fetch", fetchMock);
+    renderForm([
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+          { "#tag": "div", "af-fieldset": "Individual1", "af-repeat": "Add", "#children": [imageField] },
+          submitButton,
+        ],
+      },
+    ]);
+    await userEvent.click(await screen.findByRole("button", { name: "Add" }));
+    await userEvent.upload(screen.getAllByLabelText("Image")[1]!, png("second.png"));
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(sent(fetchMock)).toMatchObject({ params: { entityIndex: 0 }, file: "second.png" });
+  });
+
+  it("after a failed upload keeps the saved records and retries only the file", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(respond(500, { error_message: "Timeout" }))
+      .mockResolvedValueOnce(respond(200, { values: [stored] }));
+    vi.stubGlobal("fetch", fetchMock);
+    const dialog = vi.fn(() => popup);
+    const trigger = vi.fn(() => popup);
+    const popup = jquerySelection({ length: 1, data: () => "", trigger, dialog });
+    vi.mocked(window.CRM.$).mockReturnValue(popup);
+    const nick: LayoutNode = {
+      "#tag": "af-field",
+      name: "nick_name",
+      defn: { name: "nick_name", label: "Nick", input_type: "Text", data_type: "String" },
+    };
+    const calls = renderForm(form([nick, imageField]));
+    await userEvent.upload(await screen.findByLabelText("Image"), png());
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    const summary = await screen.findByRole("alert");
+    expect(summary).toHaveTextContent("The form is saved, except for these files.");
+    expect(summary).toHaveTextContent("ada.png could not be uploaded: Timeout");
+    expect(summary).toHaveFocus();
+    expect(screen.getByRole("textbox", { name: "Nick" })).toBeDisabled();
+    expect(screen.getByLabelText("Image")).toBeEnabled();
+    expect(trigger).not.toHaveBeenCalledWith("crmFormSuccess", expect.anything());
+    expect(dialog).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(await screen.findByRole("link", { name: "ada.png" })).toBeInTheDocument();
+    expect(calls.filter(({ call }) => call === "Afform.submit")).toHaveLength(1);
+    expect(sent(fetchMock, 1)).toMatchObject({ params: { token: "tok" }, file: "ada.png" });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(trigger).toHaveBeenCalledWith("crmFormSuccess", expect.anything());
+    expect(dialog).toHaveBeenCalledWith("close");
+  });
+
+  it("uploads a chosen file into the draft, without a token, and counts it as a change", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(respond(200, { values: [stored] })));
+    vi.stubGlobal("fetch", fetchMock);
+    const draftButton: LayoutNode = {
+      "#tag": "button",
+      "ng-click": "afform.submitDraft()",
+      "#children": [{ "#text": "Save Draft" }],
+    };
+    const calls = renderForm(form([imageField, draftButton]), undefined, [], {
+      "Afform.submitDraft": () => [{}],
+    });
+    const draft = await screen.findByRole("button", { name: "Save Draft" });
+    expect(draft).toBeDisabled();
+    await userEvent.upload(screen.getByLabelText("Image"), png());
+    expect(draft).toBeEnabled();
+    await userEvent.click(draft);
+
+    expect(await screen.findByRole("link", { name: "ada.png" })).toBeInTheDocument();
+    expect(calls.map(({ call }) => call)).toContain("Afform.submitDraft");
+    const { params } = sent(fetchMock);
+    expect(params).toEqual({
+      name: "afformFiles",
+      modelName: "Individual1",
+      fieldName: "image",
+      joinEntity: null,
+      entityIndex: 0,
+      joinIndex: null,
+    });
   });
 
   it("fails loudly when the submit returns no token for a chosen file", async () => {

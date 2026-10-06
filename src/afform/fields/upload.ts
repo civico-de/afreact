@@ -21,7 +21,8 @@ export interface UploadTarget {
 
 export interface PendingUpload {
   file: File;
-  target: UploadTarget;
+  /** Read when the upload starts: removing an earlier repeat item moves the field's record. */
+  target: () => UploadTarget;
   /** Shows the stored file in the field. */
   onUploaded: (file: FileInfo) => void;
 }
@@ -29,16 +30,28 @@ export interface PendingUpload {
 /** The files chosen in a form's File fields, by field instance; uploaded after Afform.submit. */
 export type Uploads = Map<string, PendingUpload>;
 
-export const UploadsContext = createContext<Uploads | null>(null);
+export interface UploadsState {
+  pending: Uploads;
+  /** The fields whose upload failed after the records were saved; only these stay editable. */
+  retry: ReadonlySet<string> | null;
+  /** A file was chosen or removed, a change no draft holds yet. */
+  changed: () => void;
+}
+
+export const UploadsContext = createContext<UploadsState | null>(null);
 
 export function isFileInfo(value: unknown): value is FileInfo {
   return typeof value === "object" && value !== null && "id" in value;
 }
 
-/** afForm's file uploader: a multipart POST of `params` and `file` (angular-file-upload). */
-async function uploadFile(formName: string, token: string, upload: PendingUpload) {
+/**
+ * afForm's file uploader: a multipart POST of `params` and `file` (angular-file-upload).
+ * Without a token the file goes into the user's draft (SubmitFile::updateDraft).
+ */
+async function uploadFile(formName: string, token: string | null, upload: PendingUpload) {
   const body = new FormData();
-  body.append("params", JSON.stringify({ token, name: formName, ...upload.target }));
+  const params = { ...(token !== null && { token }), name: formName, ...upload.target() };
+  body.append("params", JSON.stringify(params));
   body.append("file", upload.file, upload.file.name);
   const headers: Record<string, string> = { "X-Requested-With": "XMLHttpRequest" };
   // A form opened from a page token authenticates its requests with it (PageTokenCredential).
@@ -59,17 +72,16 @@ async function uploadFile(formName: string, token: string, upload: PendingUpload
 }
 
 /**
- * Uploads the chosen files one after another, as afForm's uploader does after submit, and
- * returns a message for each that failed; `onStart` names the file being uploaded.
+ * Uploads the chosen files one after another, as afForm's uploader does after submit or
+ * submitDraft, and returns a message for each that failed; `onStart` names the current file.
  */
 export async function uploadAll(
   formName: string,
-  token: unknown,
+  token: string | null,
   uploads: Uploads,
   onStart: (fileName: string | null) => void,
 ): Promise<string[]> {
   if (!uploads.size) return [];
-  if (typeof token !== "string") throw new Error("Afform.submit returned no token for the files.");
   const failed: string[] = [];
   for (const [key, upload] of [...uploads]) {
     onStart(upload.file.name);

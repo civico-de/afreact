@@ -1,5 +1,6 @@
 import { convertValue, isMultiple } from "../search/filters";
 import { asText, checkConditions, parseConditions } from "./conditions";
+import { rangeValue } from "./fields/Range";
 import {
   ensurePrimary,
   ensureRepeatItems,
@@ -137,6 +138,10 @@ export function initialiseNodes(
         const name = String(node.name);
         if (defn && value !== undefined && getValue(next, scope, name) === undefined)
           next = setValue(next, scope, name, defaultValue(defn, value));
+        // A slider always holds a value, so an untouched one is not a change.
+        const current = getValue(next, scope, name);
+        if (defn?.input_type === "Range" && typeof current !== "number")
+          next = setValue(next, scope, name, rangeValue(defn, current));
       } else {
         walk(node["#children"] ?? [], scope);
       }

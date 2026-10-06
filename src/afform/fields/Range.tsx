@@ -11,6 +11,19 @@ interface RangeProps {
 }
 
 /**
+ * The value ngModel's range input holds: a stored number, else the position the browser shows,
+ * the middle of min and max (defaults 0 and 100) on the nearest step, the higher one on a tie.
+ */
+export function rangeValue(defn: FieldDefn, value: unknown): number {
+  const stored = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
+  if (typeof stored === "number" && !Number.isNaN(stored)) return stored;
+  const { min = 0, max = 100, step = 1 } = defn.input_attrs ?? {};
+  if (max < min) return min;
+  const middle = min + Math.round((max - min) / 2 / step) * step;
+  return middle > max ? middle - step : middle;
+}
+
+/**
  * fields/Range.html: a slider over the field's options, with the chosen option's label beside
  * it; the server sets min, max and step from the option ids (AfformMetadataInjector).
  */
@@ -21,7 +34,7 @@ export function Range({ id, defn, value, onChange, disabled, describedBy }: Rang
   const shown = typeof value === "number" || typeof value === "string" ? String(value) : "";
   const label = options.find((option) => String(option.id) === shown)?.label;
 
-  // As ngModel's range input: an unset slider submits the position the browser shows.
+  // A search filter, which nothing initialises, filters by the position the browser shows.
   useEffect(() => {
     if (typeof value !== "number" && input.current) onChange(Number(input.current.value));
   }, [value, onChange]);

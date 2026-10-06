@@ -267,6 +267,49 @@ describe("af-tabset", () => {
     });
   });
 
+  it("shows the tab of a prefilled value shorter than its minlength before focusing it", async () => {
+    const layout: LayoutNode[] = [
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+          {
+            "#tag": "af-tabset",
+            "#children": ["Name", "More"].map((title) => ({
+              "#tag": "af-tab",
+              title,
+              "#children": [
+                {
+                  "#tag": "div",
+                  "af-fieldset": "Individual1",
+                  "#children": [
+                    title === "Name"
+                      ? field("first_name", { label: "First" })
+                      : field("nick_name", { label: "Nick", input_attrs: { minlength: 3 } }),
+                  ],
+                },
+              ],
+            })),
+          },
+          { "#tag": "button", "ng-click": "afform.submit()", "#children": [{ "#text": "Save" }] },
+        ],
+      },
+    ];
+    const submit = vi.fn(() => []);
+    mockApi({
+      "Afreact.getForm": () => [{ name: "afTabs", title: "Tabs", type: "form", layout, strings: [] }],
+      "Afform.prefill": () => [{ name: "Individual1", values: [{ fields: { nick_name: "Al" } }] }],
+      "Afform.submit": submit,
+    });
+    renderWithQuery(<AfreactForm name="afTabs" location={{ search: "", hash: "" }} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
+    expect(tab("More")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("textbox", { name: "Nick" })).toHaveFocus();
+    expect(screen.getByRole("alert")).toHaveTextContent("Nick must be at least 3 characters.");
+    expect(submit).not.toHaveBeenCalled();
+  });
+
   it("names unnamed tabs tab0, tab1 … as afTab does on a page with one tab set", async () => {
     const store = memoryStore("#?t=tab1");
     renderTabs({

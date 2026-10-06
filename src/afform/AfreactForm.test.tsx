@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { jquerySelection } from "../test/jquery";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
-import { AfreactForm, formExpressions } from "./AfreactForm";
+import { AfreactForm, formExpressions, redirectUrl } from "./AfreactForm";
 import type { FieldDefn, LayoutNode } from "./types";
 
 const field = (
@@ -577,6 +577,16 @@ describe("AfreactForm", () => {
     );
     expect(await screen.findByRole("separator")).toHaveClass("wide");
     expect(container.querySelector("p br")).not.toBeNull();
+  });
+});
+
+describe("redirectUrl", () => {
+  it("keeps every path on this site, as afForm's postProcess prefixes protocol and host", () => {
+    const origin = `${window.location.protocol}//${window.location.host}`;
+    expect(redirectUrl("//elsewhere.example/x")).toBe(`${origin}//elsewhere.example/x`);
+    expect(redirectUrl("/thanks")).toBe(`${origin}/thanks`);
+    expect(redirectUrl("https://example.org/done")).toBe("https://example.org/done");
+    expect(redirectUrl("civicrm/done")).toBe(window.CRM.url("civicrm/done"));
   });
 });
 

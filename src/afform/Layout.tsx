@@ -65,6 +65,8 @@ export interface FormState {
   data: FormData;
   update: (change: (data: FormData) => FormData) => void;
   disabled: boolean;
+  /** Also enabled while the saved form only retries its failed uploads. */
+  submitDisabled: boolean;
   joinOffsets: WeakMap<ElementNode, number>;
   entities: Record<string, EntityDeclaration>;
   formName: string;
@@ -690,7 +692,7 @@ function FormButton({ node, disabled, onClick, shown }: FormButtonProps) {
 }
 
 function SubmitButton({ node }: { node: ElementNode }) {
-  return <FormButton node={node} disabled={useForm().disabled} />;
+  return <FormButton node={node} disabled={useForm().submitDisabled} />;
 }
 
 /** afForm's draft buttons: enabled while the form holds changes no draft has saved. */

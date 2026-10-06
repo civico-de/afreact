@@ -1,8 +1,18 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { vi } from "vitest";
+import { mockApi, renderWithQuery } from "../../test/render";
+import { AfreactForm } from "../AfreactForm";
 import { Field } from "../Field";
-import type { FieldDefn } from "../types";
+import type { FieldDefn, LayoutNode } from "../types";
+import { rangeValue } from "./Range";
+
+const button = (ngClick: string, text: string): LayoutNode => ({
+  "#tag": "button",
+  "ng-click": ngClick,
+  "#children": [{ "#text": text }],
+});
 
 // As AfformMetadataInjector sends it: min, max and step from the option ids.
 const rating: FieldDefn = {
@@ -77,6 +87,59 @@ describe("Range fields", () => {
     expect(slider).toHaveAttribute("step", "1");
     expect(slider).not.toHaveAttribute("aria-valuetext");
     expect(container.querySelector(".crm-af-field-label span")).toHaveTextContent("3");
+  });
+
+  it("starts a form with the middle option, so an untouched form holds no change", async () => {
+    const calls = mockApi({
+      "Afreact.getForm": () => [
+        {
+          name: "afformRange",
+          title: "Range",
+          type: "form",
+          strings: [],
+          layout: [
+            {
+              "#tag": "af-form",
+              ctrl: "afform",
+              "#children": [
+                { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+                {
+                  "#tag": "div",
+                  "af-fieldset": "Individual1",
+                  "#children": [{ "#tag": "af-field", name: "rating", defn: rating }],
+                },
+                button("afform.submit()", "Save"),
+                button("afform.submitDraft()", "Save Draft"),
+              ],
+            },
+          ],
+        },
+      ],
+      "Afform.prefill": () => [],
+      "Afform.submit": () => [{}],
+    });
+    renderWithQuery(<AfreactForm name="afformRange" location={{ search: "", hash: "" }} />);
+    expect(await screen.findByRole("slider")).toHaveAttribute("aria-valuetext", "Fair");
+    expect(screen.getByRole("button", { name: "Save Draft" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(calls.find(({ call }) => call === "Afform.submit")?.params.values).toEqual({
+        Individual1: [{ fields: { rating: 4 }, joins: {} }],
+      });
+    });
+  });
+
+  it("takes the browser's default position: the middle of the bounds on the nearest step", () => {
+    const at = (input_attrs: FieldDefn["input_attrs"], value: unknown = null) =>
+      rangeValue({ ...rating, input_attrs }, value);
+    expect(at({})).toBe(50);
+    expect(at({ min: 1, max: 4 })).toBe(3);
+    expect(at({ min: 0, max: 5, step: 2 })).toBe(2);
+    expect(at({ min: 0, max: 2, step: 2 })).toBe(2);
+    expect(at({ min: 0, max: 3, step: 2 })).toBe(2);
+    expect(at({ min: 5, max: 1 })).toBe(5);
+    expect(at({}, "6")).toBe(6);
+    expect(at({}, 0)).toBe(0);
   });
 
   it("is disabled with the form", () => {

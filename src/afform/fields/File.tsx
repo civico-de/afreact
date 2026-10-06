@@ -30,24 +30,24 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
   const input = useRef<HTMLInputElement>(null);
   const [replaced, setReplaced] = useState(false);
   const stored = isFileInfo(value) && value.id ? value : null;
-  const latest = useRef(onChange);
+  const latest = useRef({ onChange, env });
   useEffect(() => {
-    latest.current = onChange;
+    latest.current = { onChange, env };
   });
 
   // A field that leaves the form (af-if) takes its file along.
+  const pending = uploads?.pending;
   useEffect(
     () => () => {
-      uploads?.delete(key);
+      pending?.delete(key);
     },
-    [uploads, key],
+    [pending, key],
   );
   useEffect(() => {
     if (replaced && !stored) input.current?.focus();
   }, [replaced, stored]);
 
-  const entityIndex = env.entityIndex;
-  if (!uploads || entityIndex === undefined)
+  if (!uploads || env.entityIndex === undefined)
     return <Unsupported what={fileOutsideFormNote(defn)} />;
   if (stored) {
     const icon = (
@@ -95,25 +95,25 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
       type="file"
       name={defn.name}
       required={defn.required === true}
-      disabled={disabled}
+      disabled={disabled && !uploads.retry?.has(key)}
       aria-describedby={describedBy}
       onChange={(event) => {
         const file = event.target.files?.[0];
+        uploads.changed();
         if (!file) {
-          uploads.delete(key);
+          uploads.pending.delete(key);
           return;
         }
-        uploads.set(key, {
+        uploads.pending.set(key, {
           file,
-          target: {
-            modelName: env.modelName,
-            fieldName: env.fieldName,
-            joinEntity: env.joinEntity ?? null,
-            entityIndex,
-            joinIndex: env.joinIndex ?? null,
+          target: () => {
+            const { modelName, fieldName, joinEntity, entityIndex, joinIndex } = latest.current.env;
+            if (entityIndex === undefined) throw new Error(fileOutsideFormNote(defn));
+            const join = joinEntity ?? null;
+            return { modelName, fieldName, joinEntity: join, entityIndex, joinIndex: joinIndex ?? null };
           },
           onUploaded: (stored) => {
-            latest.current(stored);
+            latest.current.onChange(stored);
           },
         });
       }}

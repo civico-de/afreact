@@ -309,6 +309,41 @@ describe("drafts", () => {
     expect(await screen.findByRole("button", { name: "Draft Saved" })).toBeInTheDocument();
   });
 
+  it("saved in the background report a failure without the focus, and wait for a change", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    window.CRM.config = { cid: 7 };
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const calls = renderForm(
+      {
+        "Afform.submitDraft": () => {
+          throw apiError("Drafts are not allowed.");
+        },
+      },
+      { autosave: true },
+    );
+    await user.type(await firstName(), "!");
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Drafts are not allowed.");
+    expect(window.CRM.alert).toHaveBeenCalledWith(
+      "Drafts are not allowed.",
+      "Please resolve these issues",
+      "warning",
+    );
+    expect(await firstName()).toHaveFocus();
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
+    expect(called(calls, "Afform.submitDraft")).toHaveLength(1);
+
+    await user.type(await firstName(), "?");
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    await waitFor(() => expect(called(calls, "Afform.submitDraft")).toHaveLength(2));
+  });
+
   it("wait for the user to save them without a known user or token", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });

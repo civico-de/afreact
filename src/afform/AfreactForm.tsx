@@ -4,7 +4,7 @@ import { api4, errorMessage, isApiError } from "../api/civi";
 import { RouteOptionsContext } from "../search/displayFilters";
 import type { ExpressionContext } from "./expressions";
 import { DisplayCountContext } from "../url/UrlState";
-import { uploadAll, UploadsContext, type Uploads } from "./fields/upload";
+import { uploadAll, UploadsContext, type Uploads, type UploadsState } from "./fields/upload";
 import { FormContext, Nodes, type DraftStatus, type FormState } from "./Layout";
 import {
   applyPrefill,
@@ -26,6 +26,27 @@ interface SubmitResponse {
   message?: string;
   /** Authorises the file uploads for the saved records (Afform.submitFile). */
   token?: string;
+}
+
+interface SubmitRequest {
+  values: FormData;
+  /** The response of a submit whose uploads failed: the retry only uploads. */
+  saved?: SubmitResponse[];
+}
+
+interface DraftRequest {
+  values: FormData;
+  /** The form's data and file choices when the save started. */
+  snapshot: string;
+  /** Saved by autosave rather than a button. */
+  background: boolean;
+}
+
+/** afForm's postProcess(): a redirect path, also one starting with "//", stays on this site. */
+export function redirectUrl(redirect: string): string {
+  if (redirect.startsWith("civicrm/")) return window.CRM.url(redirect);
+  if (!redirect.startsWith("/")) return redirect;
+  return `${window.location.protocol}//${window.location.host}${redirect}`;
 }
 
 interface AfreactFormProps {
@@ -222,20 +243,32 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
   };
   const [uploads] = useState<Uploads>(() => new Map());
   const [uploading, setUploading] = useState<string | null>(null);
+  /** Counts the files chosen or removed, which change the form without changing its data. */
+  const [fileChanges, setFileChanges] = useState(0);
   const save = useMutation({
-    mutationFn: async (values: FormData) => {
-      const response = await withStatus(
-        { error: ts("Not Saved") },
-        api4<SubmitResponse>("Afform", "submit", { name, args, values }),
-      );
+    mutationFn: async ({ values, saved }: SubmitRequest) => {
+      const response =
+        saved ??
+        (await withStatus(
+          { error: ts("Not Saved") },
+          api4<SubmitResponse>("Afform", "submit", { name, args, values }),
+        ));
+      const token = response[0]?.token;
+      if (uploads.size && typeof token !== "string")
+        throw new Error("Afform.submit returned no token for the files.");
       // afForm uploads the chosen files once the records exist, then finishes the submit.
-      const failed = await uploadAll(name, response[0]?.token, uploads, setUploading);
-      return { values, response, failed };
+      const failed = await uploadAll(name, token ?? null, uploads, setUploading);
+      return { values, response, failed, retry: new Set(uploads.keys()) };
     },
     onSuccess: ({ values, response, failed }) => {
-      // A failed upload keeps the form with its error, instead of a confirmation or redirect.
-      const { redirect, message } = failed.length ? {} : (response[0] ?? {});
-      if (failed.length) setFailure({ message: failed.join("\n"), focus: true });
+      // The records exist: a failed upload leaves only the files to retry, without an announcement.
+      if (failed.length) {
+        const retry = ts("The form is saved, except for these files. Save again to upload them.");
+        setFailure({ message: [retry, ...failed].join("\n"), focus: true });
+        return;
+      }
+      setFailure(null);
+      const { redirect, message } = response[0] ?? {};
       if (host.current) {
         const detail = {
           afform: { name, title: form.title },
@@ -244,12 +277,9 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
         };
         announceSaved(host.current, detail, !redirect && !message);
       }
-      if (redirect)
-        window.location.href = redirect.startsWith("civicrm/")
-          ? window.CRM.url(redirect)
-          : redirect;
+      if (redirect) window.location.href = redirectUrl(redirect);
     },
-    onError: (error, values) => {
+    onError: (error, { values }) => {
       announceFailure(error);
       if (host.current)
         window.CRM.$(host.current).trigger("crmFormError", {
@@ -259,23 +289,46 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
         });
     },
   });
-  const [draftSaved, setDraftSaved] = useState(() => JSON.stringify(initial));
+  const snapshot = useMemo(() => JSON.stringify([data, fileChanges]), [data, fileChanges]);
+  const [draftSaved, setDraftSaved] = useState(() => JSON.stringify([initial, 0]));
+  /** The form as a draft failed to save it; autosave waits for a further change. */
+  const [draftFailed, setDraftFailed] = useState<string | null>(null);
   const draft = useMutation({
-    mutationFn: async (values: FormData) => {
+    mutationFn: async ({ values }: DraftRequest) => {
       await withStatus(
         { start: ts("Saving Draft"), success: ts("Draft Saved"), error: ts("Not Saved") },
         api4("Afform", "submitDraft", { name, args, values }),
       );
-      return JSON.stringify(values);
+      // afForm uploads the chosen files into the saved draft, without a token.
+      const failed = await uploadAll(name, null, uploads, setUploading);
+      if (failed.length) throw new Error(failed.join("\n"));
     },
-    onSuccess: setDraftSaved,
-    onError: announceFailure,
+    onSuccess: (_, { snapshot: saved }) => {
+      setDraftSaved(saved);
+    },
+    // As afForm's handleError(), a background save only alerts and leaves the focus alone.
+    onError: (error, { snapshot: failed, background }) => {
+      alertFailure(error);
+      setFailure({ message: errorMessage(error), focus: !background });
+      setDraftFailed(failed);
+    },
   });
   const reset = useMutation({
     mutationFn: () => prefillForm(name, form, args),
     onSuccess: onReset,
   });
   const saved = save.data?.failed.length ? undefined : save.data?.response[0];
+  const retry = save.data?.failed.length ? save.data : undefined;
+  const uploadsState = useMemo<UploadsState>(
+    () => ({
+      pending: uploads,
+      retry: retry?.retry ?? null,
+      changed: () => {
+        setFileChanges((count) => count + 1);
+      },
+    }),
+    [uploads, retry],
+  );
   const offsets = useMemo(() => joinOffsets(form.layout), [form]);
   const entities = useMemo(() => entityDeclarations(form.layout), [form]);
   // A redirect keeps the form busy until the browser leaves the page.
@@ -285,7 +338,7 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
   const displays = useMemo(() => countDisplays(form.layout), [form]);
   const [itemKeys] = useState(() => new Map<string, number[]>());
   const [labels, setLabels] = useState<string[]>([]);
-  const changed = useMemo(() => JSON.stringify(data), [data]) !== draftSaved;
+  const changed = snapshot !== draftSaved;
   const draftStatus: DraftStatus = draft.isPending
     ? "saving"
     : changed
@@ -297,7 +350,8 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
   const state: FormState = {
     data,
     update: setData,
-    disabled: busy || closed !== null || reset.isPending,
+    disabled: busy || closed !== null || reset.isPending || !!retry,
+    submitDisabled: busy || closed !== null || reset.isPending,
     joinOffsets: offsets,
     entities,
     formName: name,
@@ -311,7 +365,7 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
       draft: {
         status: draftStatus,
         save: () => {
-          draft.mutate(data);
+          draft.mutate({ values: data, snapshot, background: false });
         },
       },
     }),
@@ -327,14 +381,14 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
     (!!window.CRM.config?.cid || new URLSearchParams(window.location.search).has("_aff"));
   const submitted = save.isPending || save.isSuccess;
   useEffect(() => {
-    if (!autosave || draftStatus !== "unsaved" || submitted) return;
+    if (!autosave || draftStatus !== "unsaved" || submitted || snapshot === draftFailed) return;
     const timer = setTimeout(() => {
-      saveDraft(data);
+      saveDraft({ values: data, snapshot, background: true });
     }, AUTOSAVE_MS);
     return () => {
       clearTimeout(timer);
     };
-  }, [autosave, draftStatus, submitted, data, saveDraft]);
+  }, [autosave, draftStatus, submitted, snapshot, draftFailed, data, saveDraft]);
 
   // afForm.disableForm() tells why the form cannot be submitted.
   useEffect(() => {
@@ -364,12 +418,14 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
       // As afForm: on CiviCRM screens a notification too, elsewhere only the browser's own.
       if (document.getElementById("crm-notification-container"))
         window.CRM.alert(asHtml(message), ts("Form Error"));
+      // Only the browser's own checks fire `invalid`, which shows the control's tab.
+      if (first.validity.valid) first.dispatchEvent(new Event("invalid", { cancelable: true }));
       first.focus();
       first.reportValidity();
       return;
     }
     setFailure(null);
-    save.mutate(data);
+    save.mutate({ values: data, saved: retry?.response });
   }
 
   if (saved?.message) {
@@ -438,7 +494,7 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
                 submit();
               }}
             >
-              <UploadsContext.Provider value={uploads}>
+              <UploadsContext.Provider value={uploadsState}>
                 {createElement(
                   "af-form",
                   closed === null ? null : { className: "disabled" },

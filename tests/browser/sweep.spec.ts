@@ -251,17 +251,35 @@ function observe(scope: string): Observed {
     .filter((display) => !display.parentElement?.closest(".crm-search-display"))
     .map((display): Display => {
       const table = display.querySelector(":scope > table");
+      // Core up to 6.19 puts a space before the comma of linked lists (comparison.md,
+      // "A space before the comma in linked lists"); React writes the fixed markup.
+      const cell = (el: Element) => text(el).replace(/\s+,/g, ",");
+      if (!table) {
+        // List, grid and tree items are rows, their columns cells. Angular's tree items carry no
+        // id (comparison.md, "Tree items"), so items are compared by position.
+        const items = display.querySelectorAll(
+          [
+            ":scope > .crm-search-display-list-container > *",
+            ":scope > .crm-search-display-grid-container > *",
+            ":scope > ul.crm-search-display-tree-branch > li",
+            ":scope > crm-search-display-tree-branch > ul > li",
+          ].join(", "),
+        );
+        return {
+          headers: [],
+          rows: [...items].map((item) => ({
+            id: null,
+            cells: [...item.querySelectorAll(":scope > div[class*='crm-search-col-type-']")].map(
+              cell,
+            ),
+          })),
+        };
+      }
       return {
-        headers: [...(table?.querySelectorAll(":scope > thead > tr:first-child > th") ?? [])].map(
-          text,
-        ),
-        rows: [...(table?.querySelectorAll(":scope > tbody > tr") ?? [])].map((tr) => ({
+        headers: [...table.querySelectorAll(":scope > thead > tr:first-child > th")].map(text),
+        rows: [...table.querySelectorAll(":scope > tbody > tr")].map((tr) => ({
           id: tr.getAttribute("data-entity-id"),
-          // Core up to 6.19 puts a space before the comma of linked lists (comparison.md,
-          // "A space before the comma in linked lists"); React writes the fixed markup.
-          cells: [...tr.querySelectorAll(":scope > td")].map((td) =>
-            text(td).replace(/\s+,/g, ","),
-          ),
+          cells: [...tr.querySelectorAll(":scope > td")].map(cell),
         })),
       };
     });

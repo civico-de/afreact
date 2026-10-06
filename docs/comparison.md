@@ -68,8 +68,7 @@ that no longer excuses anything fails the test.
 | File fields | upload progress in a CRM.status popup; the Replace link has no `href` and no role | progress in the form's status line, errors in its alert; Replace is a focusable button named after the file, and moves focus to the new file input |
 | Search ranges (`search_range`) | two inputs after the field's label | the same pair as a group named by the label, the inputs named "… from" and "… to"; a select range sends its bounds as typed option ids (`2`) where select2 sends strings (`"2"`) |
 | Form closed for submissions | "Sorry" alert; only the submit button is disabled, the fields stay editable | the same alert, the reason above the form, and every control disabled |
-| Errors from `Afform.submit` and `submitDraft` | an alert only | the same alert, plus a summary above the form that takes focus and lists each message |
-| Confirmation message | replaces the form; the focus is lost with the button | replaces the form and takes the focus |
+| Errors from `Afform.submit` and `submitDraft` | an alert only | the same alert, plus a summary above the form that lists each message and takes focus, except after an autosave || Confirmation message | replaces the form; the focus is lost with the button | replaces the form and takes the focus |
 | Reset button | `resetForm()` tells the fields to reset (`afFormReset`) and prefills again | the form loads afresh, so repeats, conditions and draft state start over too |
 | Grid displays | boxes in plain `<div>`s | the same boxes with `role="list"` and `role="listitem"`, named by the display label where the display is loaded by name (a form's layout carries no label), as list displays are |
 | Tree items | `<li>` without `data-entity-id` | `<li data-entity-id>`, as list items have it, so focus can return to the row after a reload |
@@ -548,12 +547,17 @@ and replaces the column object "to trigger an Angular view refresh", but the
 cell is repeated `track by $index` and keeps its text, so a moved row shows
 its old weight until the next reload. Measured on CiviCRM 6.18 with the
 drag-to-reorder browser spec. The React renderer shows the returned weights.
+
 **A failed upload still completes the submit.** afForm's uploader calls
 `postProcess()` from `onCompleteAll`, which also runs when an upload failed,
-so the form shows its confirmation message or redirects while the file is
-missing; only the CRM.status popup reports the error (`afForm.component.js`,
-`master` as of 2026-10-05; read from the code, not run). The React renderer
-keeps the form with the error in its alert and neither confirms nor redirects.
+so the form announces `crmFormSuccess`, closes its popup, shows its
+confirmation message or redirects while the file is missing; only the
+CRM.status popup reports the error (`afForm.component.js`, `master` as of
+2026-10-05; read from the code, not run). The React renderer counts the
+records as saved but announces nothing: it lists the failed files in its
+alert, disables every field except their file inputs, and Save uploads only
+those again with the same token, without a second `Afform.submit`. Once they
+are uploaded the form finishes as after any submit.
 
 **Replacing a join's file never clears it.** The Replace link sets the stored
 file's `id` to null and keeps `file_name`. For a join record,
@@ -567,7 +571,15 @@ field on the entity and on a join record.
 afJoin && repeatIndex || null`, so record 0 sends null. Saving the record
 casts it to 0, but uploading into a draft stores the file under an empty key
 (`SubmitFile::updateDraft()`, `master` as of 2026-10-05; read from the code,
-not run). The React renderer sends the record's index.
+not run). The React renderer uploads a file chosen before Save Draft into the
+draft after `submitDraft`, as afForm does, and sends the record's index.
+
+**A draft's file on a new join record is lost on submit.**
+`AbstractProcessor::preprocessSubmittedValues()` drops a join's stored file
+and gives a join record without an id an empty placeholder, so a file uploaded
+into the draft for a record the submit creates is not saved, and no upload
+follows because the file is no longer pending (`master` as of 2026-10-06;
+read from the code, not run). Both renderers share it.
 
 **A range slider is never disabled.** `fields/Range.html` has no
 `ng-disabled`, so `af-disabled` and a saving form leave the slider movable

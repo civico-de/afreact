@@ -289,7 +289,9 @@ describe("Field", () => {
     };
     for (const input_type of INPUT_TYPES) {
       const { unmount } = renderWithQuery(
-        <UploadsContext.Provider value={new Map()}>
+        <UploadsContext.Provider
+          value={{ pending: new Map(), retry: null, changed: () => undefined }}
+        >
           <FieldEnvContext.Provider value={env}>
             <Harness defn={{ input_type, options, fk_entity: "Contact" }} onValue={() => undefined} />
           </FieldEnvContext.Provider>
