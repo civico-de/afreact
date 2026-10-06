@@ -294,6 +294,21 @@ describe("AfreactSearch drag to reorder", () => {
       ]);
     });
 
+    it("lands before an earlier sibling on a drop on its sub-row", async () => {
+      const calls = serve(() => ({ 1: 20, 3: 10 }), tree);
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={hierarchical} />);
+      await screen.findByRole("button", { name: "Move Name 3" });
+      await keyboardMove("Name 3", -1);
+      await waitFor(() => {
+        expect(shownOrder()).toEqual(["3", "1", "2", "4", "5"]);
+      });
+      expect(announced()).toBe("Name 3 dropped at position 1 of 5.");
+      const edits = calls.filter(({ call }) => call === "SearchDisplay.inlineEdit");
+      expect(edits.map(({ params }) => [params.rowKey, params.values])).toEqual([
+        [3, { weight: 10 }],
+      ]);
+    });
+
     it("leaves a row dropped under another parent where it is, and says so", async () => {
       const calls = serve(() => ({}), tree);
       renderWithQuery(<AfreactSearch search="S" display="D" settings={hierarchical} />);

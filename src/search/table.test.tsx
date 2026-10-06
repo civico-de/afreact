@@ -166,6 +166,35 @@ describe("AfreactSearch table features", () => {
     expect(screen.queryByText("Name 3")).not.toBeInTheDocument();
   });
 
+  it("keeps the rows opened by hand open through a reload", async () => {
+    const tree = () => [
+      row(1, { data: { _depth: 0, _descendents: 1 } }),
+      row(2, { data: { _depth: 1, _descendents: 0 } }),
+      row(3, { data: { _depth: 0, _descendents: 1 } }),
+      row(4, { data: { _depth: 1, _descendents: 0 } }),
+    ];
+    const calls = runs(tree);
+    renderWithQuery(
+      <AfreactSearch
+        search="S"
+        display="D"
+        settings={{ columns, hierarchical: true, collapsible: "closed" }}
+      />,
+    );
+    await screen.findByText("Name 1");
+    await userEvent.click(screen.getAllByRole("button", { name: /Show sub-rows/ })[0]!);
+    expect(screen.getByText("Name 2")).toBeInTheDocument();
+    const before = calls.length;
+    screen
+      .getAllByRole("link", { name: "View" })[0]
+      ?.dispatchEvent(new Event("crmPopupFormSuccess", { bubbles: true }));
+    await waitFor(() => {
+      expect(calls.length).toBeGreaterThan(before);
+    });
+    expect(await screen.findByText("Name 2")).toBeInTheDocument();
+    expect(screen.queryByText("Name 4")).not.toBeInTheDocument();
+  });
+
   it("reloads rows, count and totals when a popup form of the display succeeds", async () => {
     let version = 1;
     const calls = runs(

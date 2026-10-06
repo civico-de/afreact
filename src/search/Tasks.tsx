@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { api4, errorMessage } from "../api/civi";
+import { asHtml } from "../html";
 import { fetchDownload, saveBlob } from "./download";
 import { Input } from "./EditableCell";
 import { editorFor } from "./inlineEdit";
@@ -555,7 +556,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
       const text = [message(apiBatch.errorMsg, ids.length), errorMessage(error)]
         .filter(Boolean)
         .join(" ");
-      window.CRM.alert(text, ts("Error"), "error");
+      window.CRM.alert(asHtml(text), ts("Error"), "error");
       finish({ ran, message: text });
     }
   };
@@ -707,11 +708,11 @@ function DownloadDialog({ running, entity, runParams, rowCount, onDone }: Downlo
       const file = await fetchDownload(downloadParams(runParams, ids, format), fallback);
       saveBlob(file.blob, file.fileName);
       const text = ts("%1 has been downloaded to your computer.", { 1: file.fileName });
-      window.CRM.alert(text, ts("Download Complete"), "success");
+      window.CRM.alert(asHtml(text), ts("Download Complete"), "success");
       finish(text);
     } catch (error) {
       const text = errorMessage(error);
-      window.CRM.alert(text, ts("Error"), "error");
+      window.CRM.alert(asHtml(text), ts("Error"), "error");
       finish(text);
     }
   };
