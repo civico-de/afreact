@@ -26,6 +26,8 @@ export interface ApiBatch {
   confirmMsg?: string;
   runMsg?: string;
   successMsg?: string;
+  /** The success alert's title; the task's "… Complete" when unset. */
+  successTitle?: string;
   errorMsg?: string;
 }
 
@@ -47,6 +49,8 @@ export interface SearchTask {
   crmPopup?: TaskTarget;
   redirect?: TaskTarget;
   uiDialog?: { templateUrl?: string };
+  /** Values the update task starts with, set by hook_civicrm_searchKitTasks. */
+  values?: Record<string, unknown> | unknown[];
 }
 
 export interface TaskList {
@@ -233,11 +237,18 @@ export function updateBatch(values: Record<string, unknown>): ApiBatch {
     params: { values },
     runMsg: "Updating %1 %2...",
     successMsg: "Successfully updated %1 %2.",
+    successTitle: "Saved",
     errorMsg: "An error occurred while attempting to update %1 %2.",
   };
 }
 
-/** The spreadsheet formats SearchDisplay.download writes, labelled as crmSearchTaskDownload.html. */
+/** searchTaskFieldsTrait: the clauses a hook preset for the update task; a list presets none. */
+export function presetValues(task: SearchTask): [string, unknown][] {
+  const values = task.values;
+  return values && !Array.isArray(values) ? Object.entries(values) : [];
+}
+
+/** The spreadsheet formats SearchDisplay.download writes, labelled as in crmSearchTaskDownload. */
 export const DOWNLOAD_FORMATS = ["csv", "xlsx", "ods", "pdf"] as const;
 export type DownloadFormat = (typeof DOWNLOAD_FORMATS)[number];
 

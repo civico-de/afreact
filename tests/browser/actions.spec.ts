@@ -63,6 +63,7 @@ async function runTask(page: Page, titles: string[], task: string, confirm = tas
 async function pickUpdateField(page: Page, renderer: Renderer, label: string) {
   if (renderer === "react") {
     await page.getByRole("combobox", { name: "Add Value" }).selectOption({ label });
+    await page.getByRole("dialog").getByRole("button", { name: "Add" }).click();
     return;
   }
   // The picker is disabled until the fields have loaded.

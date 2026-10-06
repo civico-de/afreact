@@ -360,7 +360,8 @@ export function useTasks(options: TasksOptions) {
         entity={entityInfo}
         ids={running.ids}
         onSave={(values) => {
-          setRunning({ ...running, kind: "batch", apiBatch: updateBatch(values) });
+          // Core's update dialog runs Entity.update even from a row link, never inlineEdit.
+          setRunning({ ...running, kind: "batch", apiBatch: updateBatch(values), isLink: false });
         }}
         onCancel={() => onDone({ ran: false, message: "" })}
       />
@@ -468,8 +469,11 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
         window.CRM.status(text);
       } else {
         text = message(apiBatch.successMsg, fetched);
-        if (text) window.CRM.alert(text, ts("%1 Complete", { 1: task.title }), "success");
-        else text = ts("%1 Complete", { 1: task.title });
+        const title = apiBatch.successTitle
+          ? ts(apiBatch.successTitle)
+          : ts("%1 Complete", { 1: task.title });
+        if (text) window.CRM.alert(text, title, "success");
+        else text = title;
       }
       finish({ ran, message: text });
     } catch (error) {
@@ -584,13 +588,16 @@ function DownloadDialog({ running, entity, runParams, rowCount, onDone }: Downlo
   const dialog = useRef<HTMLDialogElement>(null);
   const [format, setFormat] = useState<DownloadFormat>("csv");
   const [busy, setBusy] = useState(false);
+  const done = useRef(false);
   const count = ids.length || rowCount || 0;
   const entityTitle = count === 1 ? entity.title : entity.title_plural;
 
   const download = async () => {
     setBusy(true);
+    // The buttons go disabled, so the focus moves to the title rather than off the dialog.
+    dialog.current?.querySelector<HTMLElement>("h2")?.focus();
     try {
-      const fallback = `${entity.title_plural}.${format}`;
+      const fallback = `${entityTitle}.${format}`;
       const file = await fetchDownload(downloadParams(runParams, ids, format), fallback);
       saveBlob(file.blob, file.fileName);
       const text = ts("%1 has been downloaded to your computer.", { 1: file.fileName });
@@ -604,7 +611,7 @@ function DownloadDialog({ running, entity, runParams, rowCount, onDone }: Downlo
   };
 
   const finish = (message: string) => {
-    setBusy(false);
+    done.current = true;
     dialog.current?.close();
     onDone({ ran: false, message });
   };
@@ -622,10 +629,10 @@ function DownloadDialog({ running, entity, runParams, rowCount, onDone }: Downlo
         if (busy) event.preventDefault();
       }}
       onClose={() => {
-        if (!busy) onDone({ ran: false, message: "" });
+        if (!done.current) onDone({ ran: false, message: "" });
       }}
     >
-      <h2 id={titleId} className="afreact-dialog-title">
+      <h2 id={titleId} className="afreact-dialog-title" tabIndex={-1}>
         {task.title}
       </h2>
       <div className="afreact-dialog-body">
@@ -652,19 +659,21 @@ function DownloadDialog({ running, entity, runParams, rowCount, onDone }: Downlo
           </select>
         </div>
         <hr />
-        {busy && (
-          <div className="crm-search-task-progress">
-            <h5>{ts("Downloading...")}</h5>
-            <div className="progress">
-              <div
-                className="progress-bar progress-bar-striped active"
-                role="progressbar"
-                aria-label={task.title}
-                style={{ width: "100%" }}
-              />
+        <div role="status">
+          {busy && (
+            <div className="crm-search-task-progress">
+              <h5>{ts("Downloading...")}</h5>
+              <div className="progress">
+                <div
+                  className="progress-bar progress-bar-striped active"
+                  role="progressbar"
+                  aria-label={task.title}
+                  style={{ width: "100%" }}
+                />
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       <div className="afreact-dialog-buttons">
         <button

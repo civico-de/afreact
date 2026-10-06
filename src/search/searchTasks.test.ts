@@ -6,6 +6,7 @@ import {
   batches,
   dispositionFileName,
   downloadParams,
+  presetValues,
   evaluateTaskExpression,
   initialUpdateValue,
   inlineEditCall,
@@ -325,6 +326,7 @@ describe("update task", () => {
     expect(updateBatch({ job_title: "Pilot" })).toEqual({
       action: "update",
       params: { values: { job_title: "Pilot" } },
+      successTitle: "Saved",
       runMsg: "Updating %1 %2...",
       successMsg: "Successfully updated %1 %2.",
       errorMsg: "An error occurred while attempting to update %1 %2.",
@@ -334,5 +336,13 @@ describe("update task", () => {
       "update",
       { values: { job_title: "Pilot" }, where: [["id", "IN", [1, 2]]] },
     ]);
+  });
+
+  it("starts from the values a hook preset on the task, ignoring a list", () => {
+    const task = { name: "update", title: "Update", number: "> 0" };
+    expect(presetValues(task)).toEqual([]);
+    const preset = { ...task, values: { is_deceased: true } };
+    expect(presetValues(preset)).toEqual([["is_deceased", true]]);
+    expect(presetValues({ ...task, values: [1] })).toEqual([]);
   });
 });

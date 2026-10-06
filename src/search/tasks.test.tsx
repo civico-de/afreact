@@ -735,7 +735,7 @@ describe("AfreactSearch bulk actions", () => {
     });
 
     it("offers every row without a selection and reports a failed download", async () => {
-      stubDownload({
+      const { fetchMock } = stubDownload({
         ok: false,
         statusText: "Forbidden",
         json: () => Promise.resolve({ error_message: "Not permitted" }),
@@ -751,8 +751,47 @@ describe("AfreactSearch bulk actions", () => {
       await waitFor(() => {
         expect(window.CRM.alert).toHaveBeenCalledWith("Not permitted", "Error", "error");
       });
+      // An empty id filter stands for every row, as in crmSearchTaskDownload.
+      const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+      const params = JSON.parse(new URLSearchParams(init.body as string).get("params") ?? "");
+      expect(params.filters).toEqual({ id: [] });
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(status()).toHaveTextContent("Not permitted");
+    });
+
+    it("keeps the dialog open while the file loads and closes it once, when done", async () => {
+      let answer = (response: Partial<Response>) => {
+        void response;
+      };
+      const fetchMock = vi.fn(
+        () => new Promise<Response>((resolve) => (answer = (r) => resolve({ ok: true, ...r } as Response))),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+      vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+      vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: () => "blob:1", revokeObjectURL: () => {} }));
+      serve({ tasks: [enable, download], count: 3 });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      await screen.findByText("Name 1");
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /Download/, hidden: true }));
+      const dialog = await screen.findByRole("dialog", { name: "Download Spreadsheet" });
+      await userEvent.click(within(dialog).getByRole("button", { name: "Download" }));
+      expect(within(dialog).getByRole("button", { name: "Cancel" })).toBeDisabled();
+      expect(within(dialog).getByRole("heading", { name: "Download Spreadsheet" })).toHaveFocus();
+      expect(within(dialog).getByRole("status")).toHaveTextContent("Downloading");
+      await userEvent.keyboard("{Escape}");
+      expect(dialog).toBeInTheDocument();
+      answer({ headers: new Headers(), blob: () => Promise.resolve(new Blob(["x"])) });
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "Contacts.csv has been downloaded to your computer.",
+          "Download Complete",
+          "success",
+        );
+      });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(status()).toHaveTextContent("Contacts.csv has been downloaded");
+      expect(window.CRM.alert).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -772,7 +811,15 @@ describe("AfreactSearch bulk actions", () => {
         ],
       },
       { name: "employer_id", label: "Employer", input_type: "EntityRef", data_type: "Integer", fk_entity: "Contact" },
+      { name: "is_deleted", label: "Deleted", input_type: "CheckBox", data_type: "Boolean" },
+      { name: "sort_name", label: "Sort Name", input_type: "Text", data_type: "String" },
     ];
+
+    /** Picks a field in the "Add Value" select and confirms it with the button beside it. */
+    async function addField(dialog: HTMLElement, name: string) {
+      await userEvent.selectOptions(within(dialog).getByRole("combobox", { name: "Add Value" }), name);
+      await userEvent.click(within(dialog).getByRole("button", { name: "Add" }));
+    }
 
     it("updates the selected rows with the chosen fields and values", async () => {
       const calls = serve({
@@ -797,23 +844,31 @@ describe("AfreactSearch bulk actions", () => {
         "title",
         "Not supported by the React renderer: EntityRef",
       );
-      await userEvent.selectOptions(add, "job_title");
+      const addButton = within(dialog).getByRole("button", { name: "Add" });
+      expect(addButton).toBeDisabled();
+      await addField(dialog, "job_title");
       await userEvent.type(within(dialog).getByRole("textbox", { name: "Job Title" }), "Pilot");
-      await userEvent.selectOptions(add, "is_deceased");
+      await addField(dialog, "is_deceased");
       expect(within(dialog).getByRole("radio", { name: "Yes" })).toBeChecked();
       await userEvent.click(within(dialog).getByRole("radio", { name: "No" }));
-      await userEvent.selectOptions(add, "gender_id");
+      await addField(dialog, "gender_id");
       expect(within(dialog).getByRole("combobox", { name: "Gender" })).toHaveValue("1");
       // A field already chosen cannot be added twice.
       expect(within(add).getByRole("option", { name: "Job Title" })).toBeDisabled();
-      // Emptying a clause's field drops the clause.
-      await userEvent.selectOptions(within(dialog).getAllByRole("combobox", { name: "Field" })[2]!, "");
+      // Changing a clause's field keeps the focus on its select; emptying it drops the clause.
+      const fieldSelects = () => within(dialog).getAllByRole("combobox", { name: "Field" });
+      await userEvent.selectOptions(fieldSelects()[0]!, "is_deleted");
+      expect(fieldSelects()[0]).toHaveFocus();
+      expect(fieldSelects()[0]).toHaveValue("is_deleted");
+      await userEvent.selectOptions(fieldSelects()[0]!, "job_title");
+      await userEvent.type(within(dialog).getByRole("textbox", { name: "Job Title" }), "Pilot");
+      await userEvent.selectOptions(fieldSelects()[2]!, "");
       expect(within(dialog).queryByRole("combobox", { name: "Gender" })).not.toBeInTheDocument();
       await userEvent.click(save);
       await waitFor(() => {
         expect(window.CRM.alert).toHaveBeenCalledWith(
           "Successfully updated 2 Contacts.",
-          "Update Contacts Complete",
+          "Saved",
           "success",
         );
       });
@@ -826,6 +881,64 @@ describe("AfreactSearch bulk actions", () => {
         expect(pageRuns(calls)).toHaveLength(2);
       });
       expect(checkbox("Name 1")).not.toBeChecked();
+    });
+
+    it("starts with the values a hook preset and runs a row link as a plain update", async () => {
+      const links = [{ task: "update", text: "Retire" }];
+      const preset: SearchTask = { ...update, values: { is_deceased: true } };
+      const calls = serve({
+        rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })],
+        tasks: [preset],
+        handlers: { "Contact.getFields": () => fields, "Contact.update": () => done(1) },
+      });
+      renderWithQuery(
+        <AfreactSearch
+          search="S"
+          display="D"
+          settings={{ columns: [...columns, linksColumn(links)] }}
+        />,
+      );
+      await userEvent.click(await screen.findByRole("button", { name: "Retire" }));
+      const dialog = await screen.findByRole("dialog", { name: "Update Contacts" });
+      expect(dialog).toHaveTextContent("Update the 1 selected Contact with the following values:");
+      expect(await within(dialog).findByRole("radio", { name: "Yes" })).toBeChecked();
+      await userEvent.click(within(dialog).getByRole("button", { name: "Update Contact" }));
+      await waitFor(() => {
+        expect(named(calls, "Contact.update")).toHaveLength(1);
+      });
+      expect(named(calls, "Contact.update")[0]?.params).toEqual({
+        values: { is_deceased: true },
+        where: [["id", "IN", [1]]],
+      });
+      expect(named(calls, "SearchDisplay.inlineEdit")).toHaveLength(0);
+    });
+
+    it("holds a field that must not be empty until it has a value", async () => {
+      const calls = serve({
+        tasks: [enable, update],
+        handlers: { "Contact.getFields": () => fields, "Contact.update": () => done(1) },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      await screen.findByText("Name 1");
+      await selectRows("Name 1");
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /Update Contacts/, hidden: true }));
+      const dialog = await screen.findByRole("dialog", { name: "Update Contacts" });
+      await waitFor(() => {
+        expect(within(dialog).getByRole("combobox", { name: "Add Value" })).toBeEnabled();
+      });
+      await addField(dialog, "sort_name");
+      const input = within(dialog).getByRole("textbox", { name: "Sort Name" });
+      expect(input).toBeRequired();
+      await userEvent.click(within(dialog).getByRole("button", { name: "Update Contact" }));
+      expect(input).toBeInvalid();
+      expect(dialog).toBeInTheDocument();
+      expect(named(calls, "Contact.update")).toHaveLength(0);
+      await userEvent.type(input, "Pilot");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Update Contact" }));
+      await waitFor(() => {
+        expect(named(calls, "Contact.update")).toHaveLength(1);
+      });
     });
 
     it("cancels without a call and shows a failed field list", async () => {

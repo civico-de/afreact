@@ -145,8 +145,9 @@ kept across sorting and paging, cleared by new filters and after a task.
 |---|---|---|
 | Confirmation dialog | jQuery UI dialog through `dialogService` | native modal `<dialog>`: focus moves in and back to the menu button, Escape cancels before the run starts |
 | Progress bar | moves forward every second while a batch runs | moves per finished batch |
-| Update dialog | select2 pickers for the field to add and for each clause's field; `crm-search-input` for the value, unlabelled; fields of every writable type | native selects; the value input of the in-place editors, labelled by the field; fields whose input the in-place editor lacks (EntityRef, multi-value) stay in the list, disabled, with the reason as their title; the batch then runs in the task dialog |
-| Download dialog | format select; a progress bar grows by 10 % each second whatever the server does; the dialog's close button is hidden while it runs | the same format select; a full striped bar while the file loads; Escape and Cancel are off while it runs |
+| Update dialog | select2 pickers add a clause as soon as a field is picked, and pick each clause's field; `crm-search-input` for the value, unlabelled; fields of every writable type; the success alert is titled "Saved" | a native select plus an Add button; the value input of the in-place editors, labelled by the field; fields whose input the in-place editor lacks (EntityRef, multi-value) stay in the list, disabled, with the reason as their title; values a hook presets in `task.values` start the dialog; the batch then runs in the task dialog with the same title |
+| Update from a row link | `SearchDisplay.inlineEdit` for other tasks, but the update dialog's batch always runs `Entity.update` on the row's id | the same |
+| Download dialog | format select; a progress bar grows by 10 % each second whatever the server does; the dialog's close button is hidden while it runs | the same format select; a full striped bar in a status region while the file loads, the title takes the focus; Escape and both buttons are off while it runs |
 | Delete task without `confirmMsg` (changed by a hook) | runs at once | asks with core's delete question |
 | After a row link updates its row | reloads that row (`refreshAfterEditing`) | reloads the table |
 | Select-all control | icon buttons | the same buttons with `role="checkbox"` and `aria-checked` (`mixed` for some) |
@@ -729,6 +730,15 @@ with `is_primary` off.
 Boolean field's value into `val === 'true'`, so an emptied select (`""` or
 `undefined`) stores `false` (read from the code on `master` as of 2026-10-06,
 not run). The React renderer stores `null`.
+
+**The download dialog never ends a failed download.** `crmSearchTaskDownload`
+posts the file request without a rejection handler, so a server error leaves
+the bar at 90 % and the dialog open, with its title-bar close button hidden
+(read from the code on `master` as of 2026-10-06, not run). Its Cancel and
+Download buttons are disabled by `$ctrl.run`, which that controller never
+sets, so a second click starts a second download. The React renderer shows the
+server's error and closes the dialog, and disables the buttons while the file
+loads.
 
 **A URL field is never disabled.** `fields/Url.html` has no `ng-disabled`, so
 `af-disabled`, a saving form and a read-only autofill field leave URL inputs

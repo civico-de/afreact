@@ -6,6 +6,7 @@ import { editorFor } from "./inlineEdit";
 import { Icon } from "./LinkContent";
 import {
   initialUpdateValue,
+  presetValues,
   updateFieldsCall,
   type EntityInfo,
   type Key,
@@ -46,6 +47,13 @@ function editableInfo(entity: string, field: UpdateField): EditableInfo {
 
 const NO_ROW: Row = { key: "", columns: [] };
 
+/** A clause keeps its key while its field changes, so its select keeps the focus. */
+interface Clause {
+  key: number;
+  name: string;
+  value: unknown;
+}
+
 /**
  * crmSearchTaskUpdate.html: the fields to set on the selected records and their values. Fields
  * whose input the renderer lacks stay in the list, disabled, with the reason as their title.
@@ -54,14 +62,18 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
   const titleId = useId();
   const addId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
-  const [values, setValues] = useState<[string, unknown][]>([]);
+  const [clauses, setClauses] = useState<Clause[]>(() =>
+    presetValues(task).map(([name, value], key) => ({ key, name, value })),
+  );
+  const [chosen, setChosen] = useState("");
+  const nextKey = useRef(clauses.length);
   const [callEntity, action, params] = updateFieldsCall(entity.name);
   const fields = useQuery({
     queryKey: ["updateFields", entity.name],
     queryFn: () => api4<UpdateField>(callEntity, action, params),
   });
   const entityTitle = ids.length === 1 ? entity.title : entity.title_plural;
-  const inUse = (name: string) => values.some(([used]) => used === name);
+  const inUse = (name: string) => clauses.some((clause) => clause.name === name);
   const fieldByName = (name: string) => fields.data?.find((field) => field.name === name);
   const editor = (field: UpdateField) => editorFor(editableInfo(entity.name, field));
   const fieldTitle = (field: UpdateField) => {
@@ -71,21 +83,25 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
       : (field.description ?? undefined);
   };
 
-  const addField = (name: string) => {
-    const field = fieldByName(name);
-    if (!field || inUse(name)) return;
-    setValues([...values, [name, initialUpdateValue(field)]]);
+  const addField = () => {
+    const field = fieldByName(chosen);
+    if (!field || inUse(chosen)) return;
+    const clause = { key: nextKey.current++, name: chosen, value: initialUpdateValue(field) };
+    setClauses([...clauses, clause]);
+    setChosen("");
   };
-  const setField = (index: number, name: string) => {
+  const setField = (key: number, name: string) => {
     const field = fieldByName(name);
-    setValues(
+    setClauses(
       name === "" || !field
-        ? values.filter((_, at) => at !== index)
-        : values.map((clause, at) => (at === index ? [name, initialUpdateValue(field)] : clause)),
+        ? clauses.filter((clause) => clause.key !== key)
+        : clauses.map((clause) =>
+            clause.key === key ? { ...clause, name, value: initialUpdateValue(field) } : clause,
+          ),
     );
   };
-  const setValue = (index: number, value: unknown) => {
-    setValues(values.map(([name, old], at) => [name, at === index ? value : old]));
+  const setValue = (key: number, value: unknown) => {
+    setClauses(clauses.map((clause) => (clause.key === key ? { ...clause, value } : clause)));
   };
 
   useEffect(() => {
@@ -118,7 +134,7 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
         className="afreact-dialog-body"
         onSubmit={(event) => {
           event.preventDefault();
-          if (values.length) onSave(Object.fromEntries(values));
+          if (clauses.length) onSave(Object.fromEntries(clauses.map((c) => [c.name, c.value])));
         }}
       >
         <p>
@@ -134,20 +150,20 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
             {errorMessage(fields.error)}
           </p>
         )}
-        {values.map(([name, value], index) => {
+        {clauses.map(({ key, name, value }) => {
           const field = fieldByName(name);
           if (!field) return null;
           const info = editableInfo(entity.name, field);
-          const chosen = editor(field);
-          const labelId = `${addId}-${String(index)}`;
+          const input = editor(field);
+          const labelId = `${addId}-${String(key)}`;
           return (
-            <div key={name} className="form-inline afreact-update-clause">
+            <div key={key} className="form-inline afreact-update-clause">
               <select
                 className="form-control crm-auto-width"
                 aria-label={ts("Field")}
                 value={name}
                 onChange={(event) => {
-                  setField(index, event.target.value);
+                  setField(key, event.target.value);
                 }}
               >
                 <option value="">{ts("Field")}</option>
@@ -156,10 +172,10 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
               <label id={labelId} htmlFor={`${labelId}-input`} className="sr-only">
                 {field.label}
               </label>
-              {"kind" in chosen && (
+              {"kind" in input && (
                 <Input
-                  kind={chosen.kind}
-                  multiple={chosen.multiple}
+                  kind={input.kind}
+                  multiple={input.multiple}
                   info={info}
                   row={NO_ROW}
                   value={value}
@@ -172,7 +188,7 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
                     "aria-describedby": undefined,
                   }}
                   onChange={(next) => {
-                    setValue(index, next);
+                    setValue(key, next);
                   }}
                 />
               )}
@@ -190,21 +206,24 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
             className={`form-control${fields.data ? "" : " loading"}`}
             aria-label={ts("Add Value")}
             disabled={!fields.data}
-            value=""
+            value={chosen}
             onChange={(event) => {
-              addField(event.target.value);
+              setChosen(event.target.value);
             }}
           >
             <option value="">{ts("Add Value")}</option>
             {options()}
-          </select>
+          </select>{" "}
+          <button type="button" className="btn btn-default" disabled={!chosen} onClick={addField}>
+            <Icon name="fa-plus" /> {ts("Add")}
+          </button>
         </div>
         <hr />
         <div className="afreact-dialog-buttons">
           <button type="button" className="btn btn-default" onClick={() => dialog.current?.close()}>
             <Icon name="fa-times" /> {ts("Cancel")}
           </button>
-          <button type="submit" className="btn btn-primary" disabled={!values.length}>
+          <button type="submit" className="btn btn-primary" disabled={!clauses.length}>
             <Icon name="fa-check" /> {ts("Update %1", { 1: entityTitle })}
           </button>
         </div>
