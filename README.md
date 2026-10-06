@@ -10,7 +10,6 @@ SearchKit table, list, grid and tree displays and a form with live rules
 (conditions, required and disabled rules, token defaults, `ts()` / `crmUrl()`
 expressions), and measures them against the Angular runtime. Forms listed in
 a setting render with React wherever core places them (see [Rendering forms with React](#rendering-forms-with-react)).
-[docs/plan.md](docs/plan.md) tracks what else Afform uses.
 
 ## How it works
 
@@ -152,7 +151,7 @@ queue the listed form's Angular module on pages that place it; its directive
 is never rendered. Unsupported parts of a listed form show the visible "Not
 supported" note. The dashboard screen itself, with its columns and drag and
 drop, and every unlisted dashlet stay core's (see
-[docs/plan.md](docs/plan.md), package 8).
+[docs/architecture.md](docs/architecture.md), "Dashlets").
 
 The **support report** (`civicrm/admin/afreact`) lists every form but blocks,
 which core only places inside other forms, with what React cannot show yet.
@@ -186,8 +185,8 @@ is SearchKit's 600 ms debounce before the Angular table's first request.
 `npm run video` records both pages side by side (see [Demo video](#demo-video)).
 
 [docs/comparison.md](docs/comparison.md) holds the parity gaps, the measured
-load numbers and what they mean; [docs/plan.md](docs/plan.md) the plan for
-rendering every Afform with React.
+load numbers and what they mean; [docs/architecture.md](docs/architecture.md)
+how the renderer is built: state, the first search, libraries, dashlets.
 
 ## Development
 

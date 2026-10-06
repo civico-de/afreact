@@ -243,8 +243,8 @@ it records while loading and runs each page once.
 - **Ready time.** Most of React's lead is SearchKit's 600 ms debounce: every
   Angular display starts its first search through the filter watcher, which
   waits for filter values to settle. The React table has no filters yet and
-  starts at once; see the plan's first open decision for what keeping that
-  lead takes.
+  starts at once because its initial filter values are computed before it
+  (architecture.md, "The first search").
 - **Prefill.** A form counts as ready with its first input. Both renderers show
   the inputs before `Afform.prefill` returns (Angular under its blocking
   overlay); before 2026-10-06 the React form showed its inputs only once the
@@ -306,6 +306,17 @@ deleted placed form stays in the list and the contact summary fails with a
 Present on upstream `master` as of 2026-10-02; fix proposed in
 [civicrm-core#37197](https://github.com/civicrm/civicrm-core/pull/37197)
 (`_afform_clear()` also clears the `metadata` cache).
+
+**The row count of the first search survives a filter typed right after
+it.** `runSearch()` in `searchDisplayBaseTrait` asks for the count in a
+second request once the rows are in. A filter change meanwhile nulls
+`rowCount` and schedules the next run 600 ms later; the count of the first
+run then lands in between, its guard (`requestId < _runCount`) sees no newer
+run yet, and the next run keeps the stale count because `rowCount` is set.
+A table filtered from 30 rows to 4 shows "30 results" and three pages for
+the four rows until the next filter change. Present on 6.18 and `master` as
+of 2026-10-06. React asks for the count with the rows, keyed by the same
+filters, so a count never outlives its filters; the tour video shows both.
 
 **Checkout field labels name nothing.** The templates under
 `ang/afCheckout/checkoutFields/` write `<label>` without `for` beside inputs
@@ -690,8 +701,8 @@ columns and adds them from "Available Dashlets" only by drag and drop
 which has no keyboard path; an available dashlet has no other way onto the
 dashboard. Present on 6.18 and `master` as of 2026-10-05. afreact renders
 listed Afform dashlets inside core's dashboard and leaves its layout alone,
-so the gap remains until the dashboard screen itself moves to React (plan,
-package 8).
+so the gap remains until the dashboard screen itself moves to React
+(architecture.md, "Dashlets").
 
 **Month dates in a format other than `yy-mm`.** For a date format without a
 day, `crm.datepicker.js` stores the displayed text plus `-01`, so a custom
