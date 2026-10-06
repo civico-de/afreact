@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from "react";
+import { useId, useState, type InputHTMLAttributes, type ReactNode } from "react";
 import { onButtonKey } from "../keys";
 import { ChainSelect } from "./fields/ChainSelect";
 import { DisplayOnly } from "./fields/DisplayOnly";
@@ -94,6 +94,18 @@ export function toLocalDateTime(value: unknown): string {
 }
 export function fromLocalDateTime(value: string): string | null {
   return value ? `${value.replace("T", " ")}:00` : null;
+}
+
+/** crm.datepicker.js: "yy" is a year input, any other format without a day a month picker. */
+function dateFormatKind(format: boolean | string | undefined): "year" | "month" | "date" {
+  if (format === "yy") return "year";
+  return typeof format === "string" && !format.toLowerCase().includes("d") ? "month" : "date";
+}
+
+/** The year ("1990") or month ("1990-05") of a stored "1990-05-17", or "" for anything else. */
+function datePrefix(value: unknown, length: 4 | 7): string {
+  const match = typeof value === "string" ? /^\d{4}-\d{2}/.exec(value) : null;
+  return match ? match[0].slice(0, length) : "";
 }
 
 /** A list is a multi-value field shown as text; anything else but a scalar is a caller bug. */
@@ -241,10 +253,25 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
           </>
         );
       }
-      case "Date":
+      case "Date": {
+        const kind = attrs.time ? "date" : dateFormatKind(attrs.date);
         return (
           <span className="crm-form-date-wrapper">
-            {attrs.time ? (
+            {kind === "year" && (
+              <YearInput common={common} style={style} value={value} onChange={onChange} />
+            )}
+            {kind === "month" && (
+              <input
+                {...common}
+                type="month"
+                className="form-control crm-form-text crm-form-date"
+                value={datePrefix(value, 7)}
+                onChange={(event) => {
+                  onChange(event.target.value ? `${event.target.value}-01` : null);
+                }}
+              />
+            )}
+            {kind === "date" && attrs.time && (
               <input
                 {...common}
                 type="datetime-local"
@@ -254,7 +281,8 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                   onChange(fromLocalDateTime(event.target.value));
                 }}
               />
-            ) : (
+            )}
+            {kind === "date" && !attrs.time && (
               <input
                 {...common}
                 type="date"
@@ -276,6 +304,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
             )}
           </span>
         );
+      }
       case "Select": {
         const options = fieldOptions(defn);
         // Without a label, the placeholder or else Select.html's title names the select.
@@ -429,6 +458,41 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
         </p>
       )}
     </>
+  );
+}
+
+/**
+ * crm.datepicker.js's number input for the "yy" format: shows the year, stores January 1st. The
+ * typed text stays while it is no full year, which stores no date.
+ */
+function YearInput({
+  common,
+  style,
+  value,
+  onChange,
+}: {
+  common: InputHTMLAttributes<HTMLInputElement>;
+  style: string | undefined;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const [draft, setDraft] = useState(() => datePrefix(value, 4));
+  const stored = (text: string) => (/^\d{4}$/.test(text) ? `${text}-01-01` : null);
+  return (
+    <input
+      {...common}
+      type="number"
+      className={`form-control crm-form-number ${style ?? ""}`.trim()}
+      min={1000}
+      max={4000}
+      value={stored(draft) === (value ?? null) ? draft : datePrefix(value, 4)}
+      onChange={(event) => {
+        const text = event.target.value;
+        setDraft(text);
+        const next = stored(text);
+        if (next !== (value ?? null)) onChange(next);
+      }}
+    />
   );
 }
 

@@ -45,7 +45,7 @@ that no longer excuses anything fails the test.
 | Area | Angular | React |
 |---|---|---|
 | Select fields | select2, with option colours, icons and descriptions | native `<select>`, sized like select2, with its warning border on a required select emptied by the user (core up to 6.19 also warns on an untouched one); options show their label only; a select without a label is named by its placeholder, else by Select.html's title |
-| Date fields | jQuery UI datepicker, site input format; the calendar offers the years from `start_date_years` back to `end_date_years` ahead (100 each by default) | native `<input type="date">` or `datetime-local`, wider than the datepicker to fit its format and calendar icon, without a limit on the years, so a stored date outside them stays as it is. Both offer the clear link only on a field that is not required |
+| Date fields | jQuery UI datepicker, site input format, a number input for the year-only format `yy`; the calendar offers the years from `start_date_years` back to `end_date_years` ahead (100 each by default) | native `<input type="date">` or `datetime-local`, wider than the datepicker to fit its format and calendar icon, without a limit on the years, so a stored date outside them stays as it is; a number input for `yy` and `<input type="month">` for formats without a day (`yy-mm`, `M yy`), which Safari and Firefox show as a text field. Both offer the clear link only on a field that is not required |
 | Character count of a text area with `maxlength` | "n / max" below the field, not tied to it | the same count, which describes the text area (`aria-describedby`): a screen reader reads it with the field, not on each keystroke |
 | Search filter text shorter than `minlength` | the value is dropped from the filter while typing, so the table shows unfiltered rows | filters by what was typed |
 | Clear links | `<a>` without `href`, not reachable by keyboard | same link with `role="button"`, focusable, Enter and Space |
@@ -557,6 +557,12 @@ dashboard. Present on 6.18 and `master` as of 2026-10-05. afreact renders
 listed Afform dashlets inside core's dashboard and leaves its layout alone,
 so the gap remains until the dashboard screen itself moves to React (plan,
 package 8).
+
+**Month dates in a format other than `yy-mm`.** For a date format without a
+day, `crm.datepicker.js` stores the displayed text plus `-01`, so a custom
+field with the format `M yy` saves `Mar 2001-01` instead of `2001-03-01` (read
+from the code, not run). The React renderer stores `2001-03-01` for every
+format without a day.
 
 **Theme contrast below WCAG AA.** Riverlea (stream Minetta) links on the
 shaded rows of a striped table reach 4.2:1 (`#2c789b` on `#ededed`), and in

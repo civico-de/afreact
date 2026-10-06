@@ -37,6 +37,8 @@ export interface FieldDefn {
     /** Search ranges: the placeholder of the high input. */
     placeholder2?: string;
     time?: boolean;
+    /** A custom field's date format, e.g. "yy" (year only) or "M yy" (month only). */
+    date?: boolean | string;
     min?: number;
     max?: number;
     step?: number;

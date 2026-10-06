@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { vi } from "vitest";
@@ -278,6 +278,37 @@ describe("Field", () => {
     expect(input).toHaveValue("2026-09-29T14:30");
     await userEvent.clear(input);
     expect(values).toEqual([null]);
+  });
+
+  it("shows the year of a year-only date and stores January 1st", async () => {
+    const values = setup({ input_type: "Date", input_attrs: { date: "yy" } }, "1990-05-17");
+    const input = screen.getByRole("spinbutton", { name: "Field" });
+    expect(input).toHaveValue(1990);
+    expect(input).toHaveAttribute("min", "1000");
+    await userEvent.clear(input);
+    await userEvent.type(input, "2001");
+    expect(values).toEqual([null, "2001-01-01"]);
+    expect(input).toHaveValue(2001);
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(values.at(-1)).toBeNull();
+    expect(input).toHaveValue(null);
+  });
+
+  it.each(["yy-mm", "M yy"])("stores the 1st of the month for format %s", async (date) => {
+    const values = setup({ input_type: "Date", input_attrs: { date } }, "1990-05-17");
+    const input = screen.getByLabelText("Field");
+    expect(input).toHaveAttribute("type", "month");
+    expect(input).toHaveValue("1990-05");
+    fireEvent.change(input, { target: { value: "2001-03" } });
+    expect(values).toEqual(["2001-03-01"]);
+    expect(input).toHaveValue("2001-03");
+  });
+
+  it("keeps a full date input for a format with a day", () => {
+    setup({ input_type: "Date", input_attrs: { date: "dd.mm.yy" } }, "1990-05-17");
+    const input = screen.getByLabelText("Field");
+    expect(input).toHaveAttribute("type", "date");
+    expect(input).toHaveValue("1990-05-17");
   });
 
   it("sends dates and numbers in API form", async () => {

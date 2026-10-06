@@ -39,7 +39,6 @@ type Unexplained<Hand, Seen, Ignored extends string> =
  * server applies to the autocomplete, the ng-include path, unused option data.
  */
 type FieldDefnIgnored =
-  | "input_attrs.date"
   | "input_attrs.filter"
   | "input_attrs.start_date_years"
   | "input_attrs.end_date_years"
