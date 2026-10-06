@@ -237,6 +237,24 @@ describe("in-place editing", () => {
     expect(second).toHaveFocus();
   });
 
+  it("leaves a failed editor closed when the new row opened meanwhile", async () => {
+    let fail: (error: unknown) => void = () => undefined;
+    setup({ value_key: "job_title" }, "Pilot", {
+      settings: { editableRow: { create: true } },
+      inlineEdit: () =>
+        new Promise((_, reject) => {
+          fail = reject;
+        }),
+    });
+    await open();
+    await userEvent.type(field(), "s{Enter}");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    fail(apiError("Inline edit failed."));
+    expect(await screen.findByText("Not saved: Inline edit failed.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Value, Ada")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: edit("Pilot") })).toBeInTheDocument();
+  });
+
   it("sends null for an emptied nullable field", async () => {
     const { edits } = setup({ value_key: "job_title" }, "Pilot");
     await open();

@@ -1,5 +1,5 @@
 import { useQueryClient, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import { createContext, useContext, useId, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import { api4, errorMessage } from "../api/civi";
 import type { Column, EditableInfo, Row, RunPage } from "./types";
 
@@ -201,6 +201,11 @@ export function useInlineEdit({
   const errorId = useId();
   const [editing, setEditing] = useState<Editing | null>(null);
   const [newRow, setNewRow] = useState<NewRow | null>(null);
+  // For the failure path, which decides after the save whether a new row opened meanwhile.
+  const newRowNow = useRef(newRow);
+  useEffect(() => {
+    newRowNow.current = newRow;
+  }, [newRow]);
   const [saving, setSaving] = useState<readonly SavingTarget[]>([]);
   const [focus, setFocus] = useState<CellTarget | null>(null);
   const [announcement, setAnnouncement] = useState("");
@@ -261,7 +266,7 @@ export function useInlineEdit({
         const shown = client.getQueryData<RunPage>(key);
         if (shown)
           setEditing((current) => {
-            if (current) return current;
+            if (current || newRowNow.current) return current;
             edited.current = { initial, values };
             return { ...target, page: shown, error: message };
           });
