@@ -72,6 +72,9 @@ that no longer excuses anything fails the test.
 | Repeat buttons (`af-repeat`) | add button labelled by the attribute's value, icon only when it is empty; remove button icon only | the same visible content; an icon-only button carries a screen-reader name, "Add" or "Remove" (see upstream bugs) |
 | Form closed for submissions | "Sorry" alert; only the submit button is disabled, the fields stay editable | the same alert, the reason above the form, and every control disabled |
 | Errors from `Afform.submit` and `submitDraft` | an alert only | the same alert, plus a summary above the form that lists each message and takes focus, except after an autosave |
+| Invalid input on submit | an alert only (the browser shows its own hint on the field); while a typed value breaks `min`, `max` or `step`, ngModel holds `undefined`, which conditions and tokens see | the same alert plus a summary above the form; the typed value stays in the data until it is valid |
+| `crmFormSuccess` and `crmFormError` | triggered on the `af-form` element | triggered on the renderer's wrapper element, so a listener bound to `af-form` itself hears nothing; `document` or an ancestor hears both |
+| `afFormPreSubmit` | broadcast to Angular widgets such as a captcha before the submit | not sent; such widgets are Angular directives, which the renderer reports as unsupported |
 | Confirmation message | replaces the form; the focus is lost with the button | replaces the form and takes the focus |
 | Reset button | `resetForm()` tells the fields to reset (`afFormReset`) and prefills again | the form loads afresh, so repeats, conditions and draft state start over too |
 | Grid displays | boxes in plain `<div>`s | the same boxes with `role="list"` and `role="listitem"`, named by the display label where the display is loaded by name (a form's layout carries no label), as list displays are |
