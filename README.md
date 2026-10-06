@@ -269,6 +269,18 @@ and paging the table. The contact is deleted afterwards. Both recordings end
 up side by side in `video/angular-vs-react.mp4`, and the label in each
 half shows when that page was ready. The suite does not run it.
 
+```sh
+CIVICRM_BASE_URL=http://localhost:8080 npm run video:tour
+```
+
+`tests/browser/tour.video.ts` records a longer tour: a bulk action, editing
+in place, the column picker, drag to reorder, collapsible rows, tabs, list,
+grid and tree displays, range filters, several of core's own search pages
+and a form with a slider and a rich text editor. Each scene has a fixed
+slot, so both halves of `video/tour-angular-vs-react.mp4` show the same
+scene at the same time; the label names the scene and how long the page
+took. The tour creates its groups, options and contact and removes them.
+
 ## Layout
 
 | Path | Content |
