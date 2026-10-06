@@ -109,8 +109,8 @@ export function ChainSelect({
     id,
     ref: element,
     className: "form-control",
-    // ChainSelect.html leaves a select without options enabled, showing why it is empty.
-    disabled,
+    // afField disables the select while its options load and when none came back.
+    disabled: disabled || (chained && (loaded.isFetching || (settled && !options.length))),
     required: defn.required === true,
     "aria-describedby": describedBy,
     "aria-busy": chained && loaded.isFetching,

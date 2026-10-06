@@ -94,7 +94,8 @@ describe("ChainSelect", () => {
 
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Country" }), "Iceland");
     await screen.findByRole("option", { name: "None Found" });
-    expect(select).toBeEnabled();
+    // afField disables a select whose lookup returned nothing.
+    expect(select).toBeDisabled();
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     await waitFor(() => {
       expect(submitted(calls)).toEqual({

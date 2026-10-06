@@ -88,9 +88,8 @@ describe("replaceTokens", () => {
     expect(replaceTokens("[Individual1.0.x]", { Individual1: [{ fields: { x: {} } }] })).toBe(
       "[object Object]",
     );
-    expect(replaceTokens("[Individual1.0.x]", { Individual1: [{ fields: { x: null } }] })).toBe(
-      "null",
-    );
+    // afForm writes "null" here; an emptied field adds nothing to a default.
+    expect(replaceTokens("[Individual1.0.x]", { Individual1: [{ fields: { x: null } }] })).toBe("");
     expect(hasTokens("[Individual1.0.first_name]")).toBe(true);
     expect(hasTokens("[user_contact_id]")).toBe(false);
     expect(hasTokens(5)).toBe(false);

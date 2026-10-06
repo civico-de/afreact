@@ -54,7 +54,7 @@ that no longer excuses anything fails the test.
 | Reference fields (EntityRef) | select2 over `<Entity>.autocomplete` | ARIA combobox in select2's multi-select markup for single and multiple fields; the search loads with the first such field on a page. A single field shows the chosen label in its input, with a clear link |
 | Quick-add links on reference fields (`input_attrs.quickAdd`) | in the dropdown while the input is too short or nothing matches, out of the keyboard's reach; a popup that saves no record changes nothing | below the field while it is enabled, reachable by Tab; a popup that saves no record shows an error |
 | Stored ids the autocomplete cannot find | dropped from view, kept in the model | kept, with a visible "No record found" message |
-| Chained selects (ChainSelect) | select2 | native `<select>`, options from `Afform.getOptions` as in Angular |
+| Chained selects (ChainSelect) | select2, disabled while the options load and when none came back; a required one without options blocks the submit for good | native `<select>`, options from `Afform.getOptions` as in Angular, disabled the same way; the browser skips a disabled select, so the server reports the missing value instead |
 | In-place editors | select2, datepicker and select2 tags; text inputs at least as wide as the cell was | native `<select>`, `<input type="date">` and `datetime-local`, a colour picker beside a text input; inputs at their own width |
 | Leaving an in-place editor | the editor stays open until Enter, Escape or a button | a valid change saves, an unchanged editor closes; switching windows leaves it open |
 | Emptying an in-place text | saves `""` | saves `null` where the field can be emptied |
@@ -433,10 +433,11 @@ not run). The React renderer keeps the HTML but only plain elements and
 attributes, and React blocks `javascript:` URLs.
 
 **An emptied field shows "null" in a token.** afForm's `getTokenValues()`
-treats only `undefined` as empty, so a token for a field set to `null` (a
-cleared date or select) reads "null" in labels and content blocks (read from
-the code on `master` as of 2026-10-06, not run). The React renderer shows
-nothing.
+and `replaceTokens()` treat only `undefined` as empty, so a token for a field
+set to `null` (a cleared select or number; a cleared date is `""`) reads
+"null" in labels, content blocks and calculated defaults (read from the code
+on `master` as of 2026-10-06, not run). The React renderer shows nothing and
+leaves the default's text without it.
 
 **Search labels stay in the page title.** A search display adds the labels of
 its filters to the title of a search page (`searchDisplayBaseTrait`, afCore's
@@ -677,11 +678,13 @@ a checkbox list or multi-select emptied again (`[]`) and an emptied range
 React renderer takes unset, `""`, `[]` and `{}` as empty and `false` and `0`
 as answers.
 
-**`BETWEEN` conditions decide nothing.** FormBuilder's condition editor
-offers `BETWEEN` and `NOT BETWEEN` (`afGuiCondition.component.js`), but
-`compareConditions()` has no case for them, so the clause is skipped (read
-from the code, not run). The React renderer checks the value against both
-bounds, inclusive.
+**`BETWEEN` conditions decide nothing before 6.20.** FormBuilder's condition
+editor offers `BETWEEN` and `NOT BETWEEN` (`afGuiCondition.component.js`), but
+`compareConditions()` had no case for them, so the clause was skipped; `master`
+checks both bounds since
+[`b5f0168f9c`](https://github.com/civicrm/civicrm-core/commit/b5f0168f9c)
+(2026-08-17; read from the code, not run). The React renderer checks the
+value against both bounds, inclusive, on every version.
 
 **A copied repeat item is the same record.** `af-copy` appends
 `angular.copy()` of the last item (`afRepeat.directive.js` `copyItem()`; read
@@ -689,3 +692,13 @@ from the code, not run), including a loaded record's `id` and its
 `is_primary`, so the copy and the original submit under one ID and two join
 records are primary. The React renderer copies the values without `id` and
 with `is_primary` off.
+
+**Clearing a Yes/No select stores "No".** afField's `getSetSelect()` turns a
+Boolean field's value into `val === 'true'`, so an emptied select (`""` or
+`undefined`) stores `false` (read from the code on `master` as of 2026-10-06,
+not run). The React renderer stores `null`.
+
+**A URL field is never disabled.** `fields/Url.html` has no `ng-disabled`, so
+`af-disabled`, a saving form and a read-only autofill field leave URL inputs
+editable (read from the code, not run). The React renderer disables them like
+every other input.

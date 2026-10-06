@@ -54,12 +54,12 @@ export function hasTokens(value: unknown): value is string {
   return typeof value === "string" && new RegExp(TOKEN.source).test(value);
 }
 
-/** afForm's replaceTokens(): each token becomes the referenced field's value as replaceAll() writes it, or "" when unset. */
+/** afForm's replaceTokens(): each token becomes the referenced field's value, "" while unset. */
 export function replaceTokens(value: string, data: FormData): string {
   return value.replace(TOKEN, (token) => {
     const [entity = "", index = "", ...field] = token.slice(1, -1).split(".");
     const current = data[entity]?.[Number(index)]?.fields[field.join(".")];
-    return current === undefined ? "" : asText(current);
+    return current === undefined || current === null ? "" : asText(current);
   });
 }
 

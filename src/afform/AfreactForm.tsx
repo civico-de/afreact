@@ -143,9 +143,16 @@ function labelText(control: Control): string {
   return label.textContent.trim();
 }
 
+/** A required autocomplete without a value: its input is marked invalid, not empty. */
+function missingChoice(control: Control): boolean {
+  return control.validity.customError && control.validationMessage === ts("Please select a value.");
+}
+
 /** afForm's message for the first invalid input: a missing value, a too short text, or else. */
 function invalidMessage(control: Control): string {
-  if (control.validity.valueMissing) return ts("Please fill all required fields.");
+  if (control.validity.valueMissing || missingChoice(control)) {
+    return ts("Please fill all required fields.");
+  }
   const minLength = shortOf(control);
   if (minLength) {
     const label = labelText(control);

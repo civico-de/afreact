@@ -665,6 +665,23 @@ describe("live rules", () => {
   });
 });
 
+describe("a required reference field", () => {
+  it("is reported as a missing value, as afForm reads ng-invalid-required", async () => {
+    renderForm(
+      form([
+        field("employer_id", {
+          input_type: "EntityRef",
+          data_type: "Integer",
+          fk_entity: "Contact",
+          required: true,
+        }),
+      ]),
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Submit" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Please fill all required fields.");
+  });
+});
+
 describe("extra fields", () => {
   const extra = (name: string, defn: Partial<FieldDefn> = {}): LayoutNode => ({
     "#tag": "af-field",
