@@ -16,7 +16,9 @@ final class LayoutHtml extends \CRM_Afform_ArrayHtml {
    * @param array<string, string> $strings
    *   The form's translated strings (Angular's module strings).
    */
-  public function __construct(private readonly array $strings) {
+  public function __construct(
+    private readonly array $strings,
+  ) {
     parent::__construct();
   }
 
@@ -37,7 +39,7 @@ final class LayoutHtml extends \CRM_Afform_ArrayHtml {
     }
     $first = substr($js, 0, 1);
     $last = substr($js, -1);
-    if (($first === '{' && $last === '}') || ($first === '[' && $last === ']')) {
+    if ($first === '{' && $last === '}' || $first === '[' && $last === ']') {
       return array_map(fn (string $item): mixed => $this->decodeJs($item), \CRM_Utils_JS::getRawProps($js));
     }
     return \CRM_Utils_JS::decode($js);

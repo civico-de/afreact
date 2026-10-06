@@ -80,15 +80,19 @@ for (const renderer of ["react", "angular"] as const) {
         .setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: PNG });
 
       // Core offers the link in the select2 list, React beside the field (comparison.md).
-      if (renderer === "angular") await field(page, "employer_id").locator(".select2-choice").click();
-      const links = renderer === "angular" ? page.locator(".select2-drop-active") : field(page, "employer_id");
+      if (renderer === "angular")
+        await field(page, "employer_id").locator(".select2-choice").click();
+      const links =
+        renderer === "angular" ? page.locator(".select2-drop-active") : field(page, "employer_id");
       await links.getByRole("link", { name: "New Organization" }).click();
       const dialog = page.locator(".ui-dialog");
       await dialog.locator('af-field[name="organization_name"] input').fill(organization);
       await dialog.getByRole("button", { name: /Save|Submit/ }).click();
       await expect(dialog).toBeHidden();
       if (renderer === "angular")
-        await expect(field(page, "employer_id").locator(".select2-chosen")).toHaveText(organization);
+        await expect(field(page, "employer_id").locator(".select2-chosen")).toHaveText(
+          organization,
+        );
       else await expect(field(page, "employer_id").getByRole("combobox")).toHaveValue(organization);
 
       await page.getByRole("button", { name: "Save" }).click();

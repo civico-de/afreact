@@ -61,7 +61,10 @@ final class RenderPage {
       Assets::load();
       // The page knows its one form: its layout travels with it instead of a round trip.
       Assets::layouts('page', [$name]);
-      return Chrome::page(self::single('react', '<afreact-form name="' . Chrome::escape($name) . '" source="page"' . $optionsAttribute . '></afreact-form>'));
+      return Chrome::page(self::single(
+        'react',
+        '<afreact-form name="' . Chrome::escape($name) . '" source="page"' . $optionsAttribute . '></afreact-form>',
+      ));
     }
     $module = Afforms::field($form, 'module_name');
     $directive = Afforms::field($form, 'directive_name');

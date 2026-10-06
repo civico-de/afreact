@@ -176,7 +176,12 @@ describe("File fields", () => {
         ctrl: "afform",
         "#children": [
           { "#tag": "af-entity", type: "Contact", name: "Individual1" },
-          { "#tag": "div", "af-fieldset": "Individual1", "af-repeat": "Add", "#children": [imageField] },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "af-repeat": "Add",
+            "#children": [imageField],
+          },
           submitButton,
         ],
       },

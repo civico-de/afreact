@@ -235,7 +235,9 @@ describe("AfreactForm", () => {
       await userEvent.clear(name);
       await userEvent.type(name, "ab ");
       await save();
-      expect(screen.getByRole("alert")).toHaveTextContent("First Name must be at least 3 characters.");
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "First Name must be at least 3 characters.",
+      );
       expect(calls.map(({ call }) => call)).not.toContain("Afform.submit");
     });
 

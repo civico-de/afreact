@@ -61,7 +61,10 @@ async function made(page: Page, renderer: Renderer, mailingId: number): Promise<
   });
   const [include] = await api<{ entity_id: number }>(page, "MailingGroup", "get", {
     select: ["entity_id"],
-    where: [["mailing_id", "=", mailingId], ["group_type", "=", "Include"]],
+    where: [
+      ["mailing_id", "=", mailingId],
+      ["group_type", "=", "Include"],
+    ],
   });
   if (!mailing || !include) throw new Error(`Mailing ${String(mailingId)} has no include group`);
   groups.push(include.entity_id);
@@ -72,7 +75,10 @@ async function made(page: Page, renderer: Renderer, mailingId: number): Promise<
   if (!group) throw new Error(`Group ${String(include.entity_id)} is gone`);
   const members = await api<{ contact_id: number }>(page, "GroupContact", "get", {
     select: ["contact_id"],
-    where: [["group_id", "=", include.entity_id], ["status", "=", "Added"]],
+    where: [
+      ["group_id", "=", include.entity_id],
+      ["status", "=", "Added"],
+    ],
   });
   return {
     name: mailing.name,

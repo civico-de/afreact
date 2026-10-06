@@ -6,8 +6,8 @@ namespace Civi\Afreact;
 
 use Civi\Api4\Afreact;
 use Civi\Test\CiviEnvBuilder;
-use CRM_Afreact_ExtensionUtil as E;
 use Civi\Test\HeadlessInterface;
+use CRM_Afreact_ExtensionUtil as E;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -99,7 +99,10 @@ class AssetsHeadlessTest extends TestCase implements HeadlessInterface {
     $this->assertStringContainsString('from"./chunks/' . $chunks[0] . '"', $entry);
     $this->assertCount(substr_count($entry, 'from"./chunks/'), $chunks);
     // Lazy chunks stay lazy.
-    $this->assertNotContains('AfreactCompare', array_map(static fn (string $c): string => explode('-', $c)[0], $chunks));
+    $this->assertNotContains('AfreactCompare', array_map(
+      static fn (string $c): string => explode('-', $c)[0],
+      $chunks,
+    ));
   }
 
   public function testUnknownSourceIsRejected(): void {

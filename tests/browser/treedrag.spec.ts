@@ -38,9 +38,13 @@ async function pickUp(page: Page, label: string) {
 async function shown(page: Page) {
   return items(page).evaluateAll((all) =>
     all.map((li) => {
-      const label = li.querySelector(':scope > [class*="crm-search-col"] span')?.textContent?.trim();
+      const label = li
+        .querySelector(':scope > [class*="crm-search-col"] span')
+        ?.textContent?.trim();
       const parent = li.parentElement?.closest("li");
-      const above = parent?.querySelector(':scope > [class*="crm-search-col"] span')?.textContent?.trim();
+      const above = parent
+        ?.querySelector(':scope > [class*="crm-search-col"] span')
+        ?.textContent?.trim();
       return [above ?? null, label ?? ""];
     }),
   );
@@ -87,8 +91,19 @@ async function create(page: Page) {
     ["B", 2, true],
     ["C", 3, false],
   ] as const) {
-    const parent = await entry({ name: `${NAME}_${letter}`, label: letter, weight, parent_id: root });
-    if (child) await entry({ name: `${NAME}_${letter}1`, label: `${letter}1`, weight: 1, parent_id: parent });
+    const parent = await entry({
+      name: `${NAME}_${letter}`,
+      label: letter,
+      weight,
+      parent_id: root,
+    });
+    if (child)
+      await entry({
+        name: `${NAME}_${letter}1`,
+        label: `${letter}1`,
+        weight: 1,
+        parent_id: parent,
+      });
   }
 }
 
@@ -125,20 +140,29 @@ test("react: items move under another parent and among siblings by keyboard", as
 
   // Up from C: the first place under B1, after B1, under B, after B, under A1, after A1.
   await pickUp(page, "C");
-  for (const place of ["first under B1", "after B1", "first under B", "after B", "first under A1", "after A1"]) {
+  for (const place of [
+    "first under B1",
+    "after B1",
+    "first under B",
+    "after B",
+    "first under A1",
+    "after A1",
+  ]) {
     await page.keyboard.press("ArrowUp");
     await expect(announced(page)).toHaveText(`C moved ${place}.`);
   }
   await page.keyboard.press("Space");
   await expect(announced(page)).toHaveText("C dropped after A1.");
-  await expect.poll(() => shown(page)).toEqual([
-    [null, "Root"],
-    ["Root", "A"],
-    ["A", "A1"],
-    ["A", "C"],
-    ["Root", "B"],
-    ["B", "B1"],
-  ]);
+  await expect
+    .poll(() => shown(page))
+    .toEqual([
+      [null, "Root"],
+      ["Root", "A"],
+      ["A", "A1"],
+      ["A", "C"],
+      ["Root", "B"],
+      ["B", "B1"],
+    ]);
 
   // Up from B1: under B, after B, under C, after C, under A1, after A1, under A, after A, under Root.
   await expect(handle(page, "B1")).toHaveAttribute("aria-disabled", "false");
@@ -158,14 +182,16 @@ test("react: items move under another parent and among siblings by keyboard", as
     await expect(announced(page)).toHaveText(`B1 moved ${place}.`);
   }
   await page.keyboard.press("Space");
-  await expect.poll(() => shown(page)).toEqual([
-    [null, "Root"],
-    ["Root", "B1"],
-    ["Root", "A"],
-    ["A", "A1"],
-    ["A", "C"],
-    ["Root", "B"],
-  ]);
+  await expect
+    .poll(() => shown(page))
+    .toEqual([
+      [null, "Root"],
+      ["Root", "B1"],
+      ["Root", "A"],
+      ["A", "A1"],
+      ["A", "C"],
+      ["Root", "B"],
+    ]);
   await expect.poll(() => stored(page)).toEqual(MOVED);
 
   // Down from A with its branch, among the same siblings: after B, taking B's weight.
@@ -175,22 +201,26 @@ test("react: items move under another parent and among siblings by keyboard", as
   await page.keyboard.press("ArrowDown");
   await expect(announced(page)).toHaveText("A moved after B.");
   await page.keyboard.press("Space");
-  await expect.poll(() => shown(page)).toEqual([
-    [null, "Root"],
-    ["Root", "B1"],
-    ["Root", "B"],
-    ["Root", "A"],
-    ["A", "A1"],
-    ["A", "C"],
-  ]);
-  await expect.poll(() => stored(page)).toEqual([
-    [null, "Root", 99],
-    ["A", "A1", 1],
-    ["A", "C", 2],
-    ["Root", "B1", 1],
-    ["Root", "B", 2],
-    ["Root", "A", 3],
-  ]);
+  await expect
+    .poll(() => shown(page))
+    .toEqual([
+      [null, "Root"],
+      ["Root", "B1"],
+      ["Root", "B"],
+      ["Root", "A"],
+      ["A", "A1"],
+      ["A", "C"],
+    ]);
+  await expect
+    .poll(() => stored(page))
+    .toEqual([
+      [null, "Root", 99],
+      ["A", "A1", 1],
+      ["A", "C", 2],
+      ["Root", "B1", 1],
+      ["Root", "B", 2],
+      ["Root", "A", 3],
+    ]);
 });
 
 for (const renderer of ["react", "angular"] as const) {
@@ -209,13 +239,15 @@ for (const renderer of ["react", "angular"] as const) {
     await page.mouse.move(x, to.y + to.height * 0.25, { steps: 12 });
     await page.mouse.move(x, to.y + to.height * 0.6, { steps: 6 });
     await page.mouse.up();
-    await expect.poll(() => stored(page)).toEqual([
-      [null, "Root", 99],
-      ["A", "A1", 1],
-      ["A", "C", 2],
-      ["B", "B1", 1],
-      ["Root", "A", 1],
-      ["Root", "B", 2],
-    ]);
+    await expect
+      .poll(() => stored(page))
+      .toEqual([
+        [null, "Root", 99],
+        ["A", "A1", 1],
+        ["A", "C", 2],
+        ["B", "B1", 1],
+        ["Root", "A", 1],
+        ["Root", "B", 2],
+      ]);
   });
 }

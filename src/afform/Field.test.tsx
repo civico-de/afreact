@@ -262,7 +262,10 @@ describe("Field", () => {
   });
 
   it("counts the characters of a text area with a maximum and describes the field by the count", async () => {
-    setup({ input_type: "TextArea", input_attrs: { maxlength: 10 }, help_post: "Short" }, "abcdefg");
+    setup(
+      { input_type: "TextArea", input_attrs: { maxlength: 10 }, help_post: "Short" },
+      "abcdefg",
+    );
     const area = screen.getByRole("textbox", { name: "Field" });
     expect(area).toHaveAccessibleDescription("Short 7 / 10");
     const count = screen.getByText("7 / 10");
@@ -458,7 +461,10 @@ describe("Field", () => {
           value={{ pending: new Map(), retry: null, changed: () => undefined }}
         >
           <FieldEnvContext.Provider value={env}>
-            <Harness defn={{ input_type, options, fk_entity: "Contact" }} onValue={() => undefined} />
+            <Harness
+              defn={{ input_type, options, fk_entity: "Contact" }}
+              onValue={() => undefined}
+            />
           </FieldEnvContext.Provider>
         </UploadsContext.Provider>,
       );

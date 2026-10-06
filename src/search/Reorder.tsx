@@ -113,7 +113,9 @@ export function useReorder({ type, settings, runKey, runParams }: ReorderOptions
           rows: [...current.rows]
             .sort((a, b) => at(a) - at(b))
             .map((row) =>
-              parent && row.key === active ? { ...row, data: { ...row.data, [parent]: before } } : row,
+              parent && row.key === active
+                ? { ...row, data: { ...row.data, [parent]: before } }
+                : row,
             ),
         }));
         setError(failure);

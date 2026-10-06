@@ -105,7 +105,11 @@ async function prefillForm(
   if (!isForm(form)) return { initial, closed: null, prefilled: true };
   try {
     const prefill = await api4<PrefillItem>("Afform", "prefill", { name, args, fillMode: "form" });
-    return { initial: prefilledData(form, initial, prefill, params), closed: null, prefilled: true };
+    return {
+      initial: prefilledData(form, initial, prefill, params),
+      closed: null,
+      prefilled: true,
+    };
   } catch (error) {
     return { initial, closed: errorMessage(error), prefilled: true };
   }
@@ -517,14 +521,14 @@ function LoadedForm(props: LoadedFormProps) {
     : !prefilled
       ? ts("Loading…")
       : busy
-      ? ts("Saving…")
-      : draftStatus === "saving"
-        ? ts("Saving Draft")
-        : save.isSuccess
-          ? ts("Saved")
-          : draftStatus === "saved"
-            ? ts("Draft Saved")
-            : "";
+        ? ts("Saving…")
+        : draftStatus === "saving"
+          ? ts("Saving Draft")
+          : save.isSuccess
+            ? ts("Saved")
+            : draftStatus === "saved"
+              ? ts("Draft Saved")
+              : "";
   // afCore marks every form element afform-directive; theme rules anchor dropdowns and toolbars on it.
   return (
     <div className="afreact-form afform-directive" aria-busy={busy || !prefilled} ref={host}>

@@ -109,7 +109,8 @@ for (const { name, item, counted } of FORMS)
     // Core asks for the pager's count after the rows.
     const settled = async (renderer: Renderer) => {
       await loaded(page, name, renderer, item);
-      if (counted) await expect(display(page).locator(".crm-search-display-pager label")).toBeVisible();
+      if (counted)
+        await expect(display(page).locator(".crm-search-display-pager label")).toBeVisible();
       return observe(page);
     };
     const angular = await settled("angular");

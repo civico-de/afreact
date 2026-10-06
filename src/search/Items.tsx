@@ -262,20 +262,21 @@ export function TreeView(props: ItemsProps) {
   };
 
   const rows = result?.rows ?? [];
-  const body = reorder?.weightField && settings.parent_field ? (
-    <Suspense fallback={branch(tree, null, undefined)}>
-      <DraggableTree
-        reorder={reorder}
-        rows={rows}
-        weightField={reorder.weightField}
-        parentField={settings.parent_field}
-      >
-        {(drag) => branch(tree, null, drag)}
-      </DraggableTree>
-    </Suspense>
-  ) : (
-    branch(tree, null, undefined)
-  );
+  const body =
+    reorder?.weightField && settings.parent_field ? (
+      <Suspense fallback={branch(tree, null, undefined)}>
+        <DraggableTree
+          reorder={reorder}
+          rows={rows}
+          weightField={reorder.weightField}
+          parentField={settings.parent_field}
+        >
+          {(drag) => branch(tree, null, drag)}
+        </DraggableTree>
+      </Suspense>
+    ) : (
+      branch(tree, null, undefined)
+    );
 
   return (
     <>
@@ -334,7 +335,12 @@ function DraggableTree({ reorder, rows, weightField, parentField, children }: Dr
     ),
     slot: (parent) => <TreeSlot id={firstUnder(parent)} disabled={reorder.saving} />,
     item: (item, className, content) => (
-      <Item key={String(item.row.key)} rowKey={item.row.key} className={className} disabled={reorder.saving}>
+      <Item
+        key={String(item.row.key)}
+        rowKey={item.row.key}
+        className={className}
+        disabled={reorder.saving}
+      >
         {content}
       </Item>
     ),

@@ -236,7 +236,9 @@ function Element({ node, children }: { node: ElementNode; children?: ReactNode }
       </>
     );
   const content = children ?? <Nodes nodes={node["#children"] ?? []} />;
-  const markup = String(node.class ?? "").split(/\s+/).includes("af-markup");
+  const markup = String(node.class ?? "")
+    .split(/\s+/)
+    .includes("af-markup");
   return createElement(
     node["#tag"],
     props,
@@ -377,7 +379,10 @@ function useItemKeys(id: string, count: number): [number[], (position: number) =
     itemKeys.set(id, keys);
   }
   const remove = (position: number) => {
-    itemKeys.set(id, keys.filter((_, index) => index !== position));
+    itemKeys.set(
+      id,
+      keys.filter((_, index) => index !== position),
+    );
   };
   return [keys, remove];
 }

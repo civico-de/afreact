@@ -591,10 +591,14 @@ describe("in-place editors", () => {
   });
 
   it("loads the row's options again on each opening", async () => {
-    const { calls } = setup({ value_key: "state_province_id", entity: "Address", options: true }, 5, {
-      shown: "Berlin",
-      handlers: { "Address.getFields": () => [{ options: [{ id: 5, label: "Berlin" }] }] },
-    });
+    const { calls } = setup(
+      { value_key: "state_province_id", entity: "Address", options: true },
+      5,
+      {
+        shown: "Berlin",
+        handlers: { "Address.getFields": () => [{ options: [{ id: 5, label: "Berlin" }] }] },
+      },
+    );
     for (const loads of [1, 2]) {
       await open();
       await waitFor(() => {

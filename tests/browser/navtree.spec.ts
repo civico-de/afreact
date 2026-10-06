@@ -14,7 +14,9 @@ const render = (renderer: Renderer) =>
 
 const rows = (page: Page) => page.locator(".afreact-render .crm-search-display table tbody tr");
 const row = (page: Page, label: string) =>
-  rows(page).filter({ has: page.locator('[data-field-name="label"]', { hasText: new RegExp(`^\\s*${label}\\s*$`) }) });
+  rows(page).filter({
+    has: page.locator('[data-field-name="label"]', { hasText: new RegExp(`^\\s*${label}\\s*$`) }),
+  });
 const handle = (page: Page, label: string) =>
   page.getByRole("button", { name: `Move ${label}`, exact: true });
 const announced = (page: Page) => page.locator('[id^="DndLiveRegion"]');
@@ -78,7 +80,12 @@ async function create(page: Page) {
       weight,
       parent_id: root,
     });
-    await entry({ name: `${NAME}_${letter}1`, label: `Tree ${letter}1`, weight: 1, parent_id: parent });
+    await entry({
+      name: `${NAME}_${letter}1`,
+      label: `Tree ${letter}1`,
+      weight: 1,
+      parent_id: parent,
+    });
   }
 }
 
@@ -99,7 +106,9 @@ test.afterAll(async ({ browser }) => {
 
 test.describe.configure({ mode: "serial" });
 
-test("react: a parent moves with its sub-row past its sibling, never under it", async ({ page }) => {
+test("react: a parent moves with its sub-row past its sibling, never under it", async ({
+  page,
+}) => {
   await create(page);
   await page.goto(render("react"));
   await expect(row(page, "Tree B1")).toBeVisible(LOAD);
@@ -180,10 +189,12 @@ for (const renderer of ["react", "angular"] as const) {
     await page.mouse.up();
     await expect.poll(() => stored(page)).toEqual(MOVED);
     // Core moves the parent alone (comparison.md); React brings the sub-row.
-    await expect.poll(() => shown(page)).toEqual(
-      renderer === "react"
-        ? ["Tree", "Tree B", "Tree B1", "Tree A", "Tree A1"]
-        : ["Tree", "Tree A1", "Tree B", "Tree A", "Tree B1"],
-    );
+    await expect
+      .poll(() => shown(page))
+      .toEqual(
+        renderer === "react"
+          ? ["Tree", "Tree B", "Tree B1", "Tree A", "Tree A1"]
+          : ["Tree", "Tree A1", "Tree B", "Tree A", "Tree B1"],
+      );
   });
 }

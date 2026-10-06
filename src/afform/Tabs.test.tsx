@@ -108,7 +108,9 @@ describe("af-tabset", () => {
     expect(panel.closest(".crm-tab-panel")).not.toBeNull();
     // Hidden panels stay in the document, out of the accessibility tree.
     expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
-    expect(screen.getByRole("textbox", { name: "Field Blocks title", hidden: true })).not.toBeVisible();
+    expect(
+      screen.getByRole("textbox", { name: "Field Blocks title", hidden: true }),
+    ).not.toBeVisible();
   });
 
   it("moves and selects with the arrow keys, Home and End, and selects on click", async () => {
@@ -353,7 +355,9 @@ describe("af-tabset", () => {
     ];
     const submit = vi.fn(() => []);
     mockApi({
-      "Afreact.getForm": () => [{ name: "afTabs", title: "Tabs", type: "form", layout, strings: [] }],
+      "Afreact.getForm": () => [
+        { name: "afTabs", title: "Tabs", type: "form", layout, strings: [] },
+      ],
       "Afform.prefill": () => [{ name: "Individual1", values: [{ fields: { nick_name: "Al" } }] }],
       "Afform.submit": submit,
     });

@@ -322,7 +322,6 @@ export function AfreactSearch({
   );
 }
 
-
 function Failure({ error }: { error: unknown }) {
   return (
     <div className="alert alert-danger" role="alert">

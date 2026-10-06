@@ -55,9 +55,7 @@ function mockEditor() {
 
 function renderEditor(value: unknown, disabled = false) {
   const onChange = vi.fn<(value: unknown) => void>();
-  const view = render(
-    <Field defn={defn} value={value} disabled={disabled} onChange={onChange} />,
-  );
+  const view = render(<Field defn={defn} value={value} disabled={disabled} onChange={onChange} />);
   const rerender = (next: unknown, nextDisabled = disabled) => {
     view.rerender(<Field defn={defn} value={next} disabled={nextDisabled} onChange={onChange} />);
   };

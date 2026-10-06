@@ -112,7 +112,13 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
             const { modelName, fieldName, joinEntity, entityIndex, joinIndex } = latest.current.env;
             if (entityIndex === undefined) throw new Error(fileOutsideFormNote(defn));
             const join = joinEntity ?? null;
-            return { modelName, fieldName, joinEntity: join, entityIndex, joinIndex: joinIndex ?? null };
+            return {
+              modelName,
+              fieldName,
+              joinEntity: join,
+              entityIndex,
+              joinIndex: joinIndex ?? null,
+            };
           },
           onUploaded: (stored) => {
             latest.current.onChange(stored);

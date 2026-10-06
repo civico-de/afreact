@@ -154,7 +154,10 @@ describe("tree display drag to reorder", () => {
   });
 
   it("refuses, without failing, a target whose line cannot be computed", async () => {
-    const calls = serve(() => ({}), [...tree, { key: 9, columns: [{ val: "Item 9" }], data: { id: 9 } }]);
+    const calls = serve(
+      () => ({}),
+      [...tree, { key: 9, columns: [{ val: "Item 9" }], data: { id: 9 } }],
+    );
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} type="tree" />);
     await screen.findByRole("button", { name: "Move Item 9" });
     // Down from Item 5 over Item 9, which has no weight: refused, the drop names the defect.

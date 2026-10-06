@@ -14,7 +14,10 @@ const ROW = ".crm-search-display table tbody tr";
 const PAGES: { form: string; ready: string; suffix?: string }[] = [
   { form: "afsearchAfreactDemoGroups", ready: ROW },
   // Unfiltered: the tour filters for a contact it creates itself.
-  { form: "afsearchAfreactDemoEditable", ready: 'tbody td[data-field-name="job_title"] .crm-editable-enabled' },
+  {
+    form: "afsearchAfreactDemoEditable",
+    ready: 'tbody td[data-field-name="job_title"] .crm-editable-enabled',
+  },
   { form: "afsearchAfreactDemoOrder", ready: ROW },
   { form: "afsearchAfreactDemoFeatures", ready: ROW },
   { form: "afsearchAfreactDemoContactTypes", ready: ROW },
@@ -76,7 +79,9 @@ function table(cold: Runs, warm: Runs): string {
   ].join("\n");
 }
 
-test("measures cold and warm loads of every tour page on both renderers", async ({ browser }, testInfo) => {
+test("measures cold and warm loads of every tour page on both renderers", async ({
+  browser,
+}, testInfo) => {
   test.setTimeout(ROUNDS * PAGES.length * 30_000);
   const cold = runs();
   const warm = runs();

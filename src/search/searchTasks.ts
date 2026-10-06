@@ -352,7 +352,13 @@ export function tagCalls(entity: string): { tags: ApiCall; tagsets: ApiCall } {
         where: [
           ["is_tagset", "=", false],
           usedFor,
-          ["OR", [["parent_id", "IS NULL"], ["parent_id.is_tagset", "=", false]]],
+          [
+            "OR",
+            [
+              ["parent_id", "IS NULL"],
+              ["parent_id.is_tagset", "=", false],
+            ],
+          ],
         ],
         orderBy: { label: "ASC" },
       },
@@ -402,7 +408,12 @@ export function tagBatch(action: "save" | "delete", entity: string, tagIds: numb
             records: tagIds.map((tag_id) => ({ tag_id })),
             match: ["entity_id", "tag_id", "entity_table"],
           }
-        : { where: [["entity_table:name", "=", table], ["tag_id", "IN", tagIds]] },
+        : {
+            where: [
+              ["entity_table:name", "=", table],
+              ["tag_id", "IN", tagIds],
+            ],
+          },
     runMsg: action === "save" ? "Adding tags..." : "Removing tags...",
     successTitle: "Saved",
     summary,
@@ -436,7 +447,10 @@ export function relationshipFieldsCall(typeId: string): ApiCall {
         ["readonly", "=", false],
         [
           "OR",
-          [["type", "=", "Custom"], ["name", "IN", ["description", "start_date", "end_date"]]],
+          [
+            ["type", "=", "Custom"],
+            ["name", "IN", ["description", "start_date", "end_date"]],
+          ],
         ],
       ],
     },

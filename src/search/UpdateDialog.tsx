@@ -143,71 +143,73 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
           </p>
         )}
         <div ref={list}>
-        {clauses.map(({ key, name, value }) => {
-          const field = fieldByName(name);
-          const labelId = `${addId}-${String(key)}`;
-          const select = (
-            <select
-              className="form-control crm-auto-width"
-              aria-label={ts("Field")}
-              value={name}
-              onChange={(event) => {
-                setField(key, event.target.value);
-              }}
-            >
-              <option value="">{ts("Field")}</option>
-              {!field && <option value={name}>{name}</option>}
-              {options(name)}
-            </select>
-          );
-          // A preset on a field getFields leaves out keeps its value; the clause can be removed.
-          if (!field)
+          {clauses.map(({ key, name, value }) => {
+            const field = fieldByName(name);
+            const labelId = `${addId}-${String(key)}`;
+            const select = (
+              <select
+                className="form-control crm-auto-width"
+                aria-label={ts("Field")}
+                value={name}
+                onChange={(event) => {
+                  setField(key, event.target.value);
+                }}
+              >
+                <option value="">{ts("Field")}</option>
+                {!field && <option value={name}>{name}</option>}
+                {options(name)}
+              </select>
+            );
+            // A preset on a field getFields leaves out keeps its value; the clause can be removed.
+            if (!field)
+              return (
+                <div key={key} data-key={key} className="form-inline afreact-update-clause">
+                  {select}
+                </div>
+              );
+            const info = fieldEditableInfo(entity.name, field);
+            const input = editor(field);
             return (
               <div key={key} data-key={key} className="form-inline afreact-update-clause">
-                {select}
+                {select}{" "}
+                <label id={labelId} htmlFor={`${labelId}-input`} className="sr-only">
+                  {field.label}
+                </label>
+                {"kind" in input && (
+                  <Input
+                    kind={input.kind}
+                    multiple={input.multiple}
+                    info={info}
+                    row={NO_ROW}
+                    value={value}
+                    nullable={info.nullable}
+                    labelId={labelId}
+                    common={{
+                      id: `${labelId}-input`,
+                      required: !info.nullable || !!field.required,
+                      "aria-invalid": undefined,
+                      "aria-describedby": undefined,
+                    }}
+                    onChange={(next) => {
+                      setValue(key, next);
+                    }}
+                  />
+                )}
+                {"unsupported" in input && (
+                  <span className="afreact-unsupported" role="note">
+                    {ts("Not supported by the React renderer: %1", { 1: input.unsupported })}
+                  </span>
+                )}
+                {info.serialize && (
+                  <div className="description">
+                    {ts(
+                      "Note: updating a multi-valued field replaces all existing values for this field",
+                    )}
+                  </div>
+                )}
               </div>
             );
-          const info = fieldEditableInfo(entity.name, field);
-          const input = editor(field);
-          return (
-            <div key={key} data-key={key} className="form-inline afreact-update-clause">
-              {select}{" "}
-              <label id={labelId} htmlFor={`${labelId}-input`} className="sr-only">
-                {field.label}
-              </label>
-              {"kind" in input && (
-                <Input
-                  kind={input.kind}
-                  multiple={input.multiple}
-                  info={info}
-                  row={NO_ROW}
-                  value={value}
-                  nullable={info.nullable}
-                  labelId={labelId}
-                  common={{
-                    id: `${labelId}-input`,
-                    required: !info.nullable || !!field.required,
-                    "aria-invalid": undefined,
-                    "aria-describedby": undefined,
-                  }}
-                  onChange={(next) => {
-                    setValue(key, next);
-                  }}
-                />
-              )}
-              {"unsupported" in input && (
-                <span className="afreact-unsupported" role="note">
-                  {ts("Not supported by the React renderer: %1", { 1: input.unsupported })}
-                </span>
-              )}
-              {info.serialize && (
-                <div className="description">
-                  {ts("Note: updating a multi-valued field replaces all existing values for this field")}
-                </div>
-              )}
-            </div>
-          );
-        })}
+          })}
         </div>
         <div className="form-inline">
           <select

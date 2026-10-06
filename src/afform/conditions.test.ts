@@ -85,7 +85,9 @@ describe("checkConditions", () => {
   });
 
   it("takes an emptied list or range as empty, and false or 0 as an answer", () => {
-    const answers = (value: unknown): FormData => ({ Individual1: [{ fields: { answer: value } }] });
+    const answers = (value: unknown): FormData => ({
+      Individual1: [{ fields: { answer: value } }],
+    });
     const answer = "Individual1[0][fields][answer]";
     for (const empty of [undefined, null, "", [], {}]) {
       expect(checkConditions([[answer, "IS EMPTY"]], answers(empty))).toBe(true);

@@ -171,7 +171,10 @@ describe("taskRun", () => {
 
   it("runs the download, update, tag, relationship and mailing tasks itself", () => {
     expect(taskRun(download)).toEqual({ kind: "download" });
-    const update = { ...tag, uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskUpdate.html" } };
+    const update = {
+      ...tag,
+      uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskUpdate.html" },
+    };
     expect(taskRun(update)).toEqual({ kind: "update" });
     expect(taskRun(tag)).toEqual({ kind: "tag" });
     expect(taskRun(relationship)).toEqual({ kind: "relationship" });
@@ -328,7 +331,7 @@ describe("downloadParams", () => {
 
 describe("dispositionFileName", () => {
   it("prefers the UTF-8 name, then the quoted one, else nothing", () => {
-    expect(dispositionFileName("attachment; filename=\"Contacts.csv\"")).toBe("Contacts.csv");
+    expect(dispositionFileName('attachment; filename="Contacts.csv"')).toBe("Contacts.csv");
     expect(
       dispositionFileName("attachment; filename=\"Kontakte.csv\"; filename*=utf-8''K%C3%B6pfe.csv"),
     ).toBe("Köpfe.csv");
@@ -471,7 +474,10 @@ describe("relationship task", () => {
         ["readonly", "=", false],
         [
           "OR",
-          [["type", "=", "Custom"], ["name", "IN", ["description", "start_date", "end_date"]]],
+          [
+            ["type", "=", "Custom"],
+            ["name", "IN", ["description", "start_date", "end_date"]],
+          ],
         ],
       ],
     });

@@ -6,7 +6,11 @@ import { AfreactForm } from "../AfreactForm";
 import type { FieldDefn, LayoutNode } from "../types";
 import type { CheckoutSettings } from "./CheckoutBlock";
 
-const field = (name: string, defn: Partial<FieldDefn>, extra: Partial<LayoutNode> = {}): LayoutNode => ({
+const field = (
+  name: string,
+  defn: Partial<FieldDefn>,
+  extra: Partial<LayoutNode> = {},
+): LayoutNode => ({
   "#tag": "af-field",
   name,
   defn: { name, label: name, input_type: "Text", data_type: "String", ...defn },
@@ -42,7 +46,16 @@ const settings: CheckoutSettings = {
           ],
         },
         { name: "credit_card_exp_date", title: "Expiration Date", htmlType: "expiryDate" },
-        { name: "billing_country_id-5", title: "Country", htmlType: "select", options: [{ id: "", label: "- select -" }, { id: "1228", label: "United States" }, { id: "1039", label: "Canada" }] },
+        {
+          name: "billing_country_id-5",
+          title: "Country",
+          htmlType: "select",
+          options: [
+            { id: "", label: "- select -" },
+            { id: "1228", label: "United States" },
+            { id: "1039", label: "Canada" },
+          ],
+        },
         { name: "billing_state_province_id-5", title: "State", htmlType: "chainSelect" },
         { name: "save_card", title: "Save card", htmlType: "checkBox" },
       ],
@@ -111,7 +124,15 @@ describe("CheckoutBlock", () => {
     window.CRM.vars = { afreact: { afCheckout: settings } };
     vi.mocked(window.CRM.status).mockReturnValue({ resolve: vi.fn(), reject: vi.fn() });
     const calls = renderForm(
-      [option, block(), { "#tag": "button", "ng-click": "afform.submitDraft()", "#children": [{ "#text": "Save Draft" }] }],
+      [
+        option,
+        block(),
+        {
+          "#tag": "button",
+          "ng-click": "afform.submitDraft()",
+          "#children": [{ "#text": "Save Draft" }],
+        },
+      ],
       undefined,
       { checkout_option: "card", checkout_params: { credit_card_number: "4111" } },
     );
@@ -129,7 +150,10 @@ describe("CheckoutBlock", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Contribution1: [
-          { fields: { checkout_option: "card", checkout_params: { credit_card_number: "5500" } }, joins: {} },
+          {
+            fields: { checkout_option: "card", checkout_params: { credit_card_number: "5500" } },
+            joins: {},
+          },
         ],
       });
     });
@@ -141,9 +165,15 @@ describe("CheckoutBlock", () => {
     const number = await screen.findByRole("textbox", { name: "Card Number" });
     await userEvent.type(number, "4111");
     await userEvent.clear(number);
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Country" }), "United States");
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "Country" }),
+      "United States",
+    );
     const state = screen.getByRole("combobox", { name: "State" });
-    await userEvent.selectOptions(state, await within(state).findByRole("option", { name: "California" }));
+    await userEvent.selectOptions(
+      state,
+      await within(state).findByRole("option", { name: "California" }),
+    );
     expect(state).toHaveValue("1004");
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Country" }), "Canada");
     expect(state).toHaveValue("");
@@ -160,7 +190,11 @@ describe("CheckoutBlock", () => {
           {
             fields: {
               checkout_option: "card",
-              checkout_params: { credit_card_number: "4111", expiry_month: "12", "billing_country_id-5": "1039" },
+              checkout_params: {
+                credit_card_number: "4111",
+                expiry_month: "12",
+                "billing_country_id-5": "1039",
+              },
             },
             joins: {},
           },
@@ -181,9 +215,18 @@ describe("CheckoutBlock", () => {
                   name: "billing_country_id-5",
                   title: "Country",
                   htmlType: "select",
-                  options: [{ id: "", label: "- select -" }, { id: "1039", label: "Canada" }, { id: "1101", label: "Iceland" }],
+                  options: [
+                    { id: "", label: "- select -" },
+                    { id: "1039", label: "Canada" },
+                    { id: "1101", label: "Iceland" },
+                  ],
                 },
-                "billing_state_province_id-5": { name: "billing_state_province_id-5", title: "State", htmlType: "chainSelect", is_required: true },
+                "billing_state_province_id-5": {
+                  name: "billing_state_province_id-5",
+                  title: "State",
+                  htmlType: "chainSelect",
+                  is_required: true,
+                },
               },
             },
           },
@@ -203,7 +246,13 @@ describe("CheckoutBlock", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Contribution1: [
-          { fields: { checkout_option: "card", checkout_params: { "billing_country_id-5": "1101" } }, joins: {} },
+          {
+            fields: {
+              checkout_option: "card",
+              checkout_params: { "billing_country_id-5": "1101" },
+            },
+            joins: {},
+          },
         ],
       });
     });
@@ -229,16 +278,27 @@ describe("CheckoutBlock", () => {
     expect(number).toBeRequired();
     expect(number.closest(".af-checkout-field_credit_card_number")).toHaveClass("form-group");
     await userEvent.type(number, "4111");
-    await userEvent.selectOptions(within(group).getByRole("combobox", { name: "Card Type" }), "Visa");
+    await userEvent.selectOptions(
+      within(group).getByRole("combobox", { name: "Card Type" }),
+      "Visa",
+    );
     await userEvent.type(within(group).getByRole("textbox", { name: "Expiration month" }), "12");
     await userEvent.type(within(group).getByRole("textbox", { name: "Expiration year" }), "29");
     await userEvent.click(within(group).getByRole("checkbox", { name: "Save card" }));
 
     const state = within(group).getByRole("combobox", { name: "State" });
-    expect(within(state).getByRole("option", { name: "- select country first -" })).toBeInTheDocument();
+    expect(
+      within(state).getByRole("option", { name: "- select country first -" }),
+    ).toBeInTheDocument();
     expect(calls.filter(({ call }) => call === "StateProvince.get")).toEqual([]);
-    await userEvent.selectOptions(within(group).getByRole("combobox", { name: "Country" }), "United States");
-    await userEvent.selectOptions(state, await within(state).findByRole("option", { name: "New York" }));
+    await userEvent.selectOptions(
+      within(group).getByRole("combobox", { name: "Country" }),
+      "United States",
+    );
+    await userEvent.selectOptions(
+      state,
+      await within(state).findByRole("option", { name: "New York" }),
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     await waitFor(() => {

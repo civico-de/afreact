@@ -387,10 +387,15 @@ const CLOSED_ALERTS = [
  * Angular only disables the submit button (docs/comparison.md); that difference is expected.
  */
 function differences(react: Observed, angular: Observed, closed: boolean): string[] {
-  const alerts = closed ? react.alerts.filter((alert) => !CLOSED_ALERTS.includes(alert)) : react.alerts;
+  const alerts = closed
+    ? react.alerts.filter((alert) => !CLOSED_ALERTS.includes(alert))
+    : react.alerts;
   const byName = new Map(angular.fields.map((field) => [field.name, field.disabled]));
   const fields = closed
-    ? react.fields.map((field) => ({ ...field, disabled: byName.get(field.name) ?? field.disabled }))
+    ? react.fields.map((field) => ({
+        ...field,
+        disabled: byName.get(field.name) ?? field.disabled,
+      }))
     : react.fields;
   return [
     ...listed("texts", react.texts, angular.texts),

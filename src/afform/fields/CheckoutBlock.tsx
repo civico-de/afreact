@@ -127,7 +127,17 @@ interface TrimmedInputProps {
  * A text input as ngModel keeps it: the value trimmed, and dropped while required and empty.
  * The raw text stays in the control so a typed space survives.
  */
-function TrimmedInput({ id, name, label, placeholder, pattern, model, required, disabled, onChange }: TrimmedInputProps) {
+function TrimmedInput({
+  id,
+  name,
+  label,
+  placeholder,
+  pattern,
+  model,
+  required,
+  disabled,
+  onChange,
+}: TrimmedInputProps) {
   const [shown, setShown] = useState(model);
   if (shown.trim() !== model) setShown(model);
   return (
@@ -331,7 +341,8 @@ export function CheckoutBlock({
     <div role="group" aria-labelledby={labelId} aria-describedby={describedBy}>
       {settings.testMode && (
         <div className="alert alert-warning" role="status">
-          <i className="crm-i fa-cogs" role="img" aria-hidden="true" /> {ts("Checkout is in Test Mode.")}
+          <i className="crm-i fa-cogs" role="img" aria-hidden="true" />{" "}
+          {ts("Checkout is in Test Mode.")}
         </div>
       )}
       {option?.description && <span>{option.description}</span>}
@@ -339,7 +350,10 @@ export function CheckoutBlock({
         <Unsupported what={`checkout template ${option.template} (${option.label ?? key})`} />
       )}
       {Object.values(option?.fields ?? {}).map((field) => (
-        <div key={field.name} className={`form-group af-checkout-field af-checkout-field_${field.name}`}>
+        <div
+          key={field.name}
+          className={`form-group af-checkout-field af-checkout-field_${field.name}`}
+        >
           <CheckoutInput
             id={`${baseId}-${field.name}`}
             field={field}

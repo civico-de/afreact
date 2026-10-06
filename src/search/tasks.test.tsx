@@ -433,7 +433,13 @@ describe("AfreactSearch bulk actions", () => {
         runMsg: "Adding soft credits...",
         idField: "contribution_id",
         fields: [
-          { name: "amount", label: "Amount", input_type: "Number", data_type: "Float", required: true },
+          {
+            name: "amount",
+            label: "Amount",
+            input_type: "Number",
+            data_type: "Float",
+            required: true,
+          },
           {
             name: "contact_id",
             label: "Contact",
@@ -809,7 +815,10 @@ describe("AfreactSearch bulk actions", () => {
       const fetchMock = vi.fn(() => Promise.resolve({ ok: true, ...response } as Response));
       vi.stubGlobal("fetch", fetchMock);
       const link = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
-      vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: () => "blob:1", revokeObjectURL: () => {} }));
+      vi.stubGlobal(
+        "URL",
+        Object.assign(URL, { createObjectURL: () => "blob:1", revokeObjectURL: () => {} }),
+      );
       return { fetchMock, link };
     }
 
@@ -838,7 +847,12 @@ describe("AfreactSearch bulk actions", () => {
       const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
       expect(url).toBe("/civicrm/ajax/api4/SearchDisplay/download");
       const params = JSON.parse(new URLSearchParams(init.body as string).get("params") ?? "");
-      expect(params).toMatchObject({ savedSearch: "S", display: "D", format: "xlsx", filters: { id: [1, 2] } });
+      expect(params).toMatchObject({
+        savedSearch: "S",
+        display: "D",
+        format: "xlsx",
+        filters: { id: [1, 2] },
+      });
       expect(params).not.toHaveProperty("return");
       expect(params).not.toHaveProperty("limit");
       expect(link).toHaveBeenCalled();
@@ -877,11 +891,17 @@ describe("AfreactSearch bulk actions", () => {
         void response;
       };
       const fetchMock = vi.fn(
-        () => new Promise<Response>((resolve) => (answer = (r) => resolve({ ok: true, ...r } as Response))),
+        () =>
+          new Promise<Response>(
+            (resolve) => (answer = (r) => resolve({ ok: true, ...r } as Response)),
+          ),
       );
       vi.stubGlobal("fetch", fetchMock);
       vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
-      vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: () => "blob:1", revokeObjectURL: () => {} }));
+      vi.stubGlobal(
+        "URL",
+        Object.assign(URL, { createObjectURL: () => "blob:1", revokeObjectURL: () => {} }),
+      );
       serve({ tasks: [enable, download], count: 3 });
       renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
       await screen.findByText("Name 1");
@@ -910,7 +930,13 @@ describe("AfreactSearch bulk actions", () => {
 
   describe("update", () => {
     const fields = [
-      { name: "job_title", label: "Job Title", input_type: "Text", data_type: "String", nullable: true },
+      {
+        name: "job_title",
+        label: "Job Title",
+        input_type: "Text",
+        data_type: "String",
+        nullable: true,
+      },
       { name: "is_deceased", label: "Deceased", input_type: "CheckBox", data_type: "Boolean" },
       {
         name: "gender_id",
@@ -923,7 +949,13 @@ describe("AfreactSearch bulk actions", () => {
           { id: 2, label: "Male" },
         ],
       },
-      { name: "employer_id", label: "Employer", input_type: "EntityRef", data_type: "Integer", fk_entity: "Contact" },
+      {
+        name: "employer_id",
+        label: "Employer",
+        input_type: "EntityRef",
+        data_type: "Integer",
+        fk_entity: "Contact",
+      },
       { name: "geo", label: "Where", input_type: "Location", data_type: "String" },
       { name: "is_deleted", label: "Deleted", input_type: "CheckBox", data_type: "Boolean" },
       { name: "sort_name", label: "Sort Name", input_type: "Text", data_type: "String" },
@@ -931,7 +963,10 @@ describe("AfreactSearch bulk actions", () => {
 
     /** Picks a field in the "Add Value" select and confirms it with the button beside it. */
     async function addField(dialog: HTMLElement, name: string) {
-      await userEvent.selectOptions(within(dialog).getByRole("combobox", { name: "Add Value" }), name);
+      await userEvent.selectOptions(
+        within(dialog).getByRole("combobox", { name: "Add Value" }),
+        name,
+      );
       await userEvent.click(within(dialog).getByRole("button", { name: "Add" }));
     }
 
@@ -941,14 +976,17 @@ describe("AfreactSearch bulk actions", () => {
         handlers: {
           "Contact.getFields": () => fields,
           "Contact.update": () => done(2),
-          "Contact.autocomplete": () => Object.assign([{ id: 2, label: "Bob" }], { countMatched: 1 }),
+          "Contact.autocomplete": () =>
+            Object.assign([{ id: 2, label: "Bob" }], { countMatched: 1 }),
         },
       });
       renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
       await screen.findByText("Name 1");
       await selectRows("Name 1", "Name 2");
       await openActions();
-      await userEvent.click(screen.getByRole("menuitem", { name: /Update Contacts/, hidden: true }));
+      await userEvent.click(
+        screen.getByRole("menuitem", { name: /Update Contacts/, hidden: true }),
+      );
       const dialog = await screen.findByRole("dialog", { name: "Update Contacts" });
       expect(dialog).toHaveTextContent("Update the 2 selected Contacts with the following values:");
       const save = within(dialog).getByRole("button", { name: "Update Contacts" });
@@ -1067,7 +1105,9 @@ describe("AfreactSearch bulk actions", () => {
       await screen.findByText("Name 1");
       await selectRows("Name 1");
       await openActions();
-      await userEvent.click(screen.getByRole("menuitem", { name: /Update Contacts/, hidden: true }));
+      await userEvent.click(
+        screen.getByRole("menuitem", { name: /Update Contacts/, hidden: true }),
+      );
       const dialog = await screen.findByRole("dialog", { name: "Update Contacts" });
       await waitFor(() => {
         expect(within(dialog).getByRole("combobox", { name: "Add Value" })).toBeEnabled();
@@ -1098,7 +1138,9 @@ describe("AfreactSearch bulk actions", () => {
       await screen.findByText("Name 1");
       await selectRows("Name 1");
       await openActions();
-      await userEvent.click(screen.getByRole("menuitem", { name: /Update Contacts/, hidden: true }));
+      await userEvent.click(
+        screen.getByRole("menuitem", { name: /Update Contacts/, hidden: true }),
+      );
       const dialog = await screen.findByRole("dialog", { name: "Update Contacts" });
       expect(await within(dialog).findByRole("alert")).toHaveTextContent("No such entity");
       await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));

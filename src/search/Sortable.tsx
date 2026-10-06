@@ -219,9 +219,10 @@ const treeCollision: CollisionDetection = ({
     const rank = away * 2 + (isSlot(container.id) ? 0 : 1);
     if (!best || rank < best.rank) best = { id: container.id, container, rank };
   }
-  return best ? [{ id: best.id, data: { droppableContainer: best.container, value: best.rank } }] : [];
+  return best
+    ? [{ id: best.id, data: { droppableContainer: best.container, value: best.rank } }]
+    : [];
 };
-
 
 /** Up and down step through the targets in document order, skipping the dragged item's own line. */
 const treeKeyboard: KeyboardCoordinateGetter = (event, { context }) => {
@@ -235,7 +236,9 @@ const treeKeyboard: KeyboardCoordinateGetter = (event, { context }) => {
       const node = container.node.current;
       return node && droppableRects.has(container.id) ? [{ id: container.id, node }] : [];
     })
-    .sort((a, b) => (a.node.compareDocumentPosition(b.node) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+    .sort((a, b) =>
+      a.node.compareDocumentPosition(b.node) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
+    );
   let at = targets.findIndex((container) => container.id === from) + direction;
   if (targets[at]?.id === active.id) at += direction;
   const target = targets[at];
@@ -251,8 +254,7 @@ export function TreeDnd({ nameOf, placeOf, disabled, onMove, children }: TreeDnd
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: treeKeyboard }),
   );
-  const refused = (active: UniqueIdentifier) =>
-    ts("%1 cannot move there.", { 1: nameOf(active) });
+  const refused = (active: UniqueIdentifier) => ts("%1 cannot move there.", { 1: nameOf(active) });
   const announcements: Announcements = {
     onDragStart: ({ active }) => ts("Picked up %1.", { 1: nameOf(active.id) }),
     onDragOver: ({ active, over }) => {
@@ -321,7 +323,9 @@ export function TreeItem({ rowKey, className, disabled, children }: TreeItemProp
         drop.setNodeRef(node);
       }}
       data-entity-id={rowKey}
-      className={[className, isDragging ? "afreact-dragging" : ""].filter(Boolean).join(" ") || undefined}
+      className={
+        [className, isDragging ? "afreact-dragging" : ""].filter(Boolean).join(" ") || undefined
+      }
       data-over={drop.isOver || undefined}
       style={{
         transform: transform
@@ -338,6 +342,11 @@ export function TreeItem({ rowKey, className, disabled, children }: TreeItemProp
 export function TreeSlot({ id, disabled }: { id: string; disabled: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id, disabled });
   return (
-    <li ref={setNodeRef} aria-hidden="true" className="afreact-tree-slot" data-over={isOver || undefined} />
+    <li
+      ref={setNodeRef}
+      aria-hidden="true"
+      className="afreact-tree-slot"
+      data-over={isOver || undefined}
+    />
   );
 }

@@ -54,7 +54,8 @@ export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: 
       env.fieldName,
       missing,
     ],
-    queryFn: entity !== null && missing.length
+    queryFn:
+      entity !== null && missing.length
         ? () => resolveIds(entity, autocompleteParams(env), missing)
         : skipToken,
   });

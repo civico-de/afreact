@@ -68,7 +68,8 @@ export function evaluateExpression(expression: string, context: ExpressionContex
   if (name !== "ts") return context.url(text, params);
   if (params === undefined) return context.translate(text);
   const plural = params.plural;
-  const form = typeof plural === "string" && "count" in params && params.count !== 1 ? plural : text;
+  const form =
+    typeof plural === "string" && "count" in params && params.count !== 1 ? plural : text;
   return substitute(context.translate(form), params);
 }
 

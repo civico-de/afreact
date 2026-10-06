@@ -1,11 +1,4 @@
-import {
-  createContext,
-  createElement,
-  Fragment,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from "react";
+import { createContext, createElement, Fragment, useContext, useMemo, type ReactNode } from "react";
 import { asText } from "./conditions";
 import { TOKEN } from "./structure";
 import type { FormData } from "./types";

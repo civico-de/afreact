@@ -44,7 +44,11 @@ declare global {
       /** Opens a form in a popup (js/crm.ajax.js); `post` sends data on its first load. */
       loadForm: (url: string, options?: { post?: unknown }) => JQueryObject;
       /** A notification on CiviCRM screens, a dialog elsewhere; `text` is HTML (js/Common.js). */
-      alert: (text: string, title?: string, type?: "alert" | "success" | "info" | "error" | "warning") => unknown;
+      alert: (
+        text: string,
+        title?: string,
+        type?: "alert" | "success" | "info" | "error" | "warning",
+      ) => unknown;
       /** The status box in the corner (js/Common.js): a text, or a box the caller settles. */
       status: (options: string | { start?: string; success?: string; error?: string }) => StatusBox;
       utils: {

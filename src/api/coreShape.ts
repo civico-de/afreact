@@ -73,7 +73,4 @@ export const tableSettings: Record<
   Unexplained<DisplaySettings, Core.TableSettings, TableSettingsServer>,
   never
 > = {};
-export const tableRun: Record<
-  Unexplained<RunPage, Core.TableRun, TableRunIgnored>,
-  never
-> = {};
+export const tableRun: Record<Unexplained<RunPage, Core.TableRun, TableRunIgnored>, never> = {};

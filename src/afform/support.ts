@@ -109,9 +109,7 @@ const SEARCH_ATTRIBUTES = new Set([
   "search",
   "display",
 ]);
-const PASSTHROUGH = new Set(
-  "id href title role target type style lang dir".split(" "),
-);
+const PASSTHROUGH = new Set("id href title role target type style lang dir".split(" "));
 
 export type NodeKind =
   | "conditional"
@@ -206,7 +204,9 @@ export function conditionNote(name: string, attribute: string): string {
 }
 
 export function missingFieldNote(name: string): string {
-  return name ? `field ${name} without entity or metadata` : "af-field without a name or definition";
+  return name
+    ? `field ${name} without entity or metadata`
+    : "af-field without a name or definition";
 }
 
 /** A draft or reset button outside af-form, where afForm does not handle it. */

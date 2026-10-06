@@ -21,7 +21,8 @@ const shown = (page: Page, field: string) => async () =>
     return (copy.textContent ?? "").replace(/\s+/g, " ").trim();
   });
 const editors = (page: Page) => page.locator(".afreact-render crm-search-display-editable");
-const rowButtons = (page: Page) => page.locator(".afreact-render td.crm-search-ctrl-column .btn-group");
+const rowButtons = (page: Page) =>
+  page.locator(".afreact-render td.crm-search-ctrl-column .btn-group");
 
 interface Saved {
   job_title: string;
@@ -44,7 +45,12 @@ async function open(page: Page, renderer: Renderer): Promise<number> {
   const lastName = `Row${RUN}${renderer}`;
   await page.goto("/civicrm/afreact/compare");
   const [created] = await api<{ id: number }>(page, "Individual", "create", {
-    values: { first_name: "Aa", last_name: lastName, job_title: "Pilot", "gender_id:name": "Female" },
+    values: {
+      first_name: "Aa",
+      last_name: lastName,
+      job_title: "Pilot",
+      "gender_id:name": "Female",
+    },
   });
   if (!created) throw new Error("Individual.create returned no contact");
   contacts.push(created.id);

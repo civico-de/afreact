@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { Input, listOpen } from "./EditableCell";
 import { editorFor, type InlineEdit } from "./inlineEdit";
 import type { DisplaySettings, EditableInfo } from "./types";

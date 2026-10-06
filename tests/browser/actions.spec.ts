@@ -96,10 +96,14 @@ for (const renderer of ["react", "angular"] as const) {
     expect(lines.slice(1).join("\n")).toContain(a);
     expect(lines.slice(1).join("\n")).toContain(b);
     expect(lines.join("\n")).not.toContain(c);
-    await expect(page.locator(".afreact-render .crm-search-task-dialog, .ui-dialog")).toHaveCount(0, LOAD);
+    await expect(page.locator(".afreact-render .crm-search-task-dialog, .ui-dialog")).toHaveCount(
+      0,
+      LOAD,
+    );
     // A download leaves the selection as it is.
     await expect(table(page).locator(".crm-search-ctrl-select-row:checked")).toHaveCount(2);
-    for (const title of [a, b]) await row(page, title).locator(".crm-search-ctrl-select-row").uncheck();
+    for (const title of [a, b])
+      await row(page, title).locator(".crm-search-ctrl-select-row").uncheck();
 
     await openTask(page, [a, b], "Update Groups");
     await pickUpdateField(page, renderer, "Group Description");

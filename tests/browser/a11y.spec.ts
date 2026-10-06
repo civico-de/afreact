@@ -108,7 +108,8 @@ const PAIRS: Pair[] = [
     scope: ".afreact-render",
     ready: tableReady,
     open: {
-      target: ".afreact-render tbody tr:nth-child(1) td[data-field-name=job_title] .crm-editable-enabled",
+      target:
+        ".afreact-render tbody tr:nth-child(1) td[data-field-name=job_title] .crm-editable-enabled",
       ready: `document.querySelectorAll(".afreact-render crm-search-display-editable").length === 2`,
       click: true,
     },

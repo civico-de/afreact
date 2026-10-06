@@ -171,7 +171,12 @@ describe("list display", () => {
   it("ignores the table's bulk actions and totals, as core's list template does", async () => {
     const { calls } = show(
       "list",
-      { actions: true, tally: { footer: true }, toggleColumns: true, editableRow: { create: true } },
+      {
+        actions: true,
+        tally: { footer: true },
+        toggleColumns: true,
+        editableRow: { create: true },
+      },
       () => [row(1)],
     );
     await screen.findByText("Item 1");
@@ -262,7 +267,10 @@ describe("tree display", () => {
   const settings = { parent_field: "parent_id", collapsible: "closed" };
 
   const toggleOf = (key: number) =>
-    screen.getByText(`Item ${String(key)}`).closest("li")?.querySelector("button");
+    screen
+      .getByText(`Item ${String(key)}`)
+      .closest("li")
+      ?.querySelector("button");
 
   it("nests each row under its parent and keeps rows whose parent is missing", async () => {
     show("tree", { parent_field: "parent_id" }, tree);

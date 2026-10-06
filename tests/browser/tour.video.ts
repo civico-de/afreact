@@ -263,7 +263,12 @@ async function createData(page: Page) {
     })),
   });
   await api(page, "Individual", "create", {
-    values: { first_name: "Paula", last_name: LAST_NAME, job_title: "Pilot", source: "Afreact tour" },
+    values: {
+      first_name: "Paula",
+      last_name: LAST_NAME,
+      job_title: "Pilot",
+      source: "Afreact tour",
+    },
   });
 }
 

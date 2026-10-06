@@ -22,13 +22,19 @@ function renderSearch(fields: LayoutNode[], hash = "") {
           "#tag": "crm-search-display-table",
           "search-name": "Contacts",
           "display-name": "Table",
-          settings: { columns: [{ type: "field", key: "id", label: "ID" }], limit: 5, pager: false },
+          settings: {
+            columns: [{ type: "field", key: "id", label: "ID" }],
+            limit: 5,
+            pager: false,
+          },
         },
       ],
     },
   ];
   const calls = mockApi({
-    "Afreact.getForm": () => [{ name: "afsearchTest", title: "T", type: "search", layout, strings: [] }],
+    "Afreact.getForm": () => [
+      { name: "afsearchTest", title: "T", type: "search", layout, strings: [] },
+    ],
     "SearchDisplay.run": () => [{ key: 1, columns: [{ val: "Row" }] }],
   });
   const store = memoryStore(hash);
@@ -133,7 +139,10 @@ describe("search ranges", () => {
     await screen.findByRole("cell", { name: "Row" });
     const high = screen.getByRole("combobox", { name: "Priority to" });
     expect(within(high).getAllByRole("option")[0]).toHaveTextContent("Select");
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Priority from" }), "Medium");
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "Priority from" }),
+      "Medium",
+    );
     await userEvent.selectOptions(high, "High");
     await lastRun({ priority: { ">=": 2, "<=": 3 } });
     await userEvent.selectOptions(high, "Select");

@@ -151,10 +151,11 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
         'name' => 'afformAfreactTestHost',
         'type' => 'form',
         'title' => 'Host',
-        'layout' => '<af-form ctrl="afform"><af-entity type="Individual" name="Individual1" />'
-        . '<fieldset af-fieldset="Individual1"><af-field name="first_name" '
-        . 'defn="{help_pre: ts(\'Defn probe\'), input_attrs: {placeholder: ts(\'It\\\'s me\')}, '
-        . 'label: \'ts(x)\'}" /></fieldset></af-form>',
+        'layout' =>
+          '<af-form ctrl="afform"><af-entity type="Individual" name="Individual1" />'
+            . '<fieldset af-fieldset="Individual1"><af-field name="first_name" '
+            . 'defn="{help_pre: ts(\'Defn probe\'), input_attrs: {placeholder: ts(\'It\\\'s me\')}, '
+            . 'label: \'ts(x)\'}" /></fieldset></af-form>',
       ])
       ->execute();
     WordReplacement::create(checkPermissions: FALSE)

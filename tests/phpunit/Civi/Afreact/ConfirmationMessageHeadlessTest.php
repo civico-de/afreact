@@ -127,7 +127,10 @@ class ConfirmationMessageHeadlessTest extends TestCase implements HeadlessInterf
   }
 
   public function testARedirectAnotherListenerSetIsLeftAsItIs(): void {
-    $this->saveForm(['confirmation_type' => 'redirect_to_url', 'redirect' => 'civicrm/home?x=[Individual1.0.last_name]']);
+    $this->saveForm([
+      'confirmation_type' => 'redirect_to_url',
+      'redirect' => 'civicrm/home?x=[Individual1.0.last_name]',
+    ]);
     $set = static function (AfformSubmitEvent $event): void {
       $event->getApiRequest()->setResponseItem('redirect', 'https://pay.example.org/?a=1&b=2');
     };

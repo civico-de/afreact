@@ -232,8 +232,7 @@ function editableInfos(value: unknown): Record<string, EditableInfo> {
 
 /** CRM.api4 copies the run result's properties (toolbar, subsearch, labels) onto the row list. */
 export function runPage(result: Row[]): RunPage {
-  const property = (name: string): unknown =>
-    Object.getOwnPropertyDescriptor(result, name)?.value;
+  const property = (name: string): unknown => Object.getOwnPropertyDescriptor(result, name)?.value;
   const toolbar = property("toolbar");
   const subsearch = property("subsearch");
   const labels = property("labels");

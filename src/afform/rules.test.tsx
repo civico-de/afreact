@@ -745,7 +745,13 @@ describe("values from the route", () => {
   it("come from the hash; the page's query string fills nothing", async () => {
     mockApi({
       "Afreact.getForm": () => [
-        { name: "afformTest", title: "Test", type: "form", layout: form([field("id")]), strings: [] },
+        {
+          name: "afformTest",
+          title: "Test",
+          type: "form",
+          layout: form([field("id")]),
+          strings: [],
+        },
       ],
       "Afform.prefill": () => [],
     });
@@ -773,7 +779,11 @@ describe("values from the route", () => {
     renderForm(
       form([
         field("first_name"),
-        { "#tag": "div", "af-if": when("first_name", "=", '"x"'), "#children": [field("nick_name")] },
+        {
+          "#tag": "div",
+          "af-if": when("first_name", "=", '"x"'),
+          "#children": [field("nick_name")],
+        },
         {
           "#tag": "div",
           "af-join": "Email",

@@ -61,7 +61,9 @@ export function TableView(props: TableViewProps) {
                 scope="col"
                 className={headerClass(column, !!sortKey)}
                 title={
-                  sortKey ? ts("Click to sort results (shift-click to sort by multiple).") : undefined
+                  sortKey
+                    ? ts("Click to sort results (shift-click to sort by multiple).")
+                    : undefined
                 }
                 aria-sort={
                   primary ? (direction === "DESC" ? "descending" : "ascending") : undefined
