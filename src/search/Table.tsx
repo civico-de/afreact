@@ -5,7 +5,7 @@ import { InlineEditContext, type InlineEdit } from "./inlineEdit";
 import { noResultsText, ServerError } from "./Items";
 import { NewRow } from "./NewRow";
 import { ReorderRows, type Reorder } from "./Reorder";
-import { editsCells, hasControlColumn, headerClass, isSortable, unlabelledHeader } from "./rows";
+import { hasControlColumn, headerClass, isSortable, unlabelledHeader } from "./rows";
 import type { RowSelect } from "./Tasks";
 import type { DisplaySettings, Link, Row, RunPage } from "./types";
 import type { Sort } from "./urlKeys";
@@ -121,7 +121,7 @@ export function TableView(props: TableViewProps) {
           </tr>
         )}
         {result && (
-          <InlineEditContext value={editsCells(settings) ? props.inlineEdit : null}>
+          <InlineEditContext value={props.inlineEdit}>
             <ReorderRows reorder={props.reorder} rows={result.rows}>
               {(drag) => (
                 <BodyRows

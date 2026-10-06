@@ -3,7 +3,7 @@ import { errorMessage } from "../api/civi";
 import { Cell, cellText } from "./Cell";
 import { EditableCell } from "./EditableCell";
 import { InlineEditContext, useInlineEditContext, type InlineEdit } from "./inlineEdit";
-import { buildTree, editsCells, fieldClass, sectionStarts, type TreeItem } from "./rows";
+import { buildTree, fieldClass, sectionStarts, type TreeItem } from "./rows";
 import type { DisplaySettings, Link, Row, RunPage, SubsearchDisplay } from "./types";
 
 /** The text core shows when nothing is found, falling back on an empty one too; null for none. */
@@ -143,7 +143,7 @@ export function ItemList({ type, ...props }: ItemsProps & { type: "list" | "grid
       ]);
   return (
     <>
-      <InlineEditContext value={editsCells(settings) ? props.inlineEdit : null}>
+      <InlineEditContext value={props.inlineEdit}>
         {createElement(
           container,
           {
@@ -244,7 +244,7 @@ export function TreeView(props: ItemsProps) {
         </ul>
       ) : (
         result && (
-          <InlineEditContext value={editsCells(settings) ? props.inlineEdit : null}>
+          <InlineEditContext value={props.inlineEdit}>
             {branch(tree, true)}
           </InlineEditContext>
         )

@@ -76,10 +76,7 @@ export function cellClass(
     .join(" ");
 }
 
-/**
- * The control column before the data columns (hasExtraFirstColumn). Core also shows it for row
- * editing, which the React renderer reports as unsupported instead.
- */
+/** The control column before the data columns (hasExtraFirstColumn). */
 export function hasControlColumn(settings: DisplaySettings): boolean {
   return (
     !!settings.actions ||
@@ -179,11 +176,6 @@ function isSet(value: unknown): boolean {
   return true;
 }
 
-/** Cells edit one at a time, unless full-row mode edits whole rows (not rendered yet). */
-export function editsCells(settings: DisplaySettings): boolean {
-  return !(settings.editableRow && settings.editableRow.full);
-}
-
 /**
  * Display features the React renderer cannot show yet, each named with its setting. Editors
  * are known only from a loaded page.
@@ -200,9 +192,7 @@ export function unsupportedFeatures(
   if (typeof settings.pager === "object")
     for (const [key, value] of Object.entries(settings.pager))
       if (!PAGER_OPTIONS.has(key) && isSet(value)) features.push(`setting pager.${key}`);
-  if (settings.editableRow && settings.editableRow.full)
-    features.push("full-row editing (editableRow.full)");
-  if (editsCells(settings)) features.push(...unsupportedEditors(page));
+  features.push(...unsupportedEditors(page));
   if (settings.editableRow && settings.editableRow.create)
     features.push(...unfillableColumns(page));
   if (settings.draggable && type === "tree") features.push("drag to reorder (draggable)");

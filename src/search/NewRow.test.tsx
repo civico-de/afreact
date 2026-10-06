@@ -242,6 +242,6 @@ describe("editableRow.create", () => {
     setup({ settings: { editableRow: { full: true } } });
     await screen.findByText("One");
     expect(screen.queryByRole("button", { name: "Add Option" })).not.toBeInTheDocument();
-    expect(screen.getByRole("note")).toHaveTextContent("full-row editing (editableRow.full)");
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 });

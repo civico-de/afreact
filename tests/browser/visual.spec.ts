@@ -79,12 +79,17 @@ async function measure(page: Page, url: string): Promise<Measured[]> {
   return page.evaluate(
     ({ parts, styles }) => {
       const origin = document.querySelector(".afreact-demo")!.getBoundingClientRect();
-      // Screen-reader-only labels differ between the renderers without being seen.
+      // Screen-reader-only labels differ between the renderers without being seen, and a closed
+      // popover menu is in React's markup but not in Angular's.
       const visibleText = (element: HTMLElement) => {
-        const copy = element.cloneNode(true);
-        if (!(copy instanceof HTMLElement)) throw new Error("A cloned element is no element");
-        for (const hidden of copy.querySelectorAll(".sr-only")) hidden.remove();
-        return (copy.textContent ?? "").replace(/\s+/g, " ").trim();
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        const parts: string[] = [];
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const parent = node.parentElement;
+          if (!parent || parent.closest(".sr-only") || !parent.getClientRects().length) continue;
+          parts.push(node.textContent ?? "");
+        }
+        return parts.join("").replace(/\s+/g, " ").trim();
       };
       return parts.flatMap(({ name, selector, text }) =>
         [...document.querySelectorAll<HTMLElement>(selector)]

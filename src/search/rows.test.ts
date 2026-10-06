@@ -181,12 +181,12 @@ describe("unsupportedFeatures", () => {
     expect(unsupportedFeatures(settings)).toEqual(["setting seeMore", "setting pager.jump"]);
   });
 
-  it("leaves cell editors to full-row editing", () => {
+  it("names the editors a full-row display lacks like a cell-by-cell one", () => {
     const page = runPage(
-      Object.assign([], { editable: { e: editInfo({ value_key: "e", fk_entity: "Contact" }) } }),
+      Object.assign([], { editable: { e: editInfo({ value_key: "e", input_type: "Location" }) } }),
     );
     const settings = { columns: [field], editableRow: { full: true } };
-    expect(unsupportedFeatures(settings, page)).toEqual(["full-row editing (editableRow.full)"]);
+    expect(unsupportedFeatures(settings, page)).toEqual(["in-place editing of e (Location)"]);
   });
 
   it("drops in-place editing when row editing switches it off", () => {

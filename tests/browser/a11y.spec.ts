@@ -13,6 +13,7 @@ const rules = render("afformAfreactDemoRules");
 const features = render("afsearchAfreactDemoFeatures");
 const types = render("afsearchAfreactDemoContactTypes");
 const editable = render("afsearchAfreactDemoEditable");
+const editableRow = render("afsearchAfreactDemoEditableRow");
 const groups = (renderer: string) => `${render("afsearchManageGroups")(renderer)}#?title=a`;
 // Rows, count and totals are in.
 const tableReady = `!!document.querySelector(".afreact-render tbody tr[data-entity-id]") && !document.querySelector(".afreact-render .crm-search-loading-placeholder")`;
@@ -31,6 +32,8 @@ interface Opener {
   target: string;
   /** A page expression that holds once what the target opens has rendered and loaded. */
   ready: string;
+  /** Opened with a click instead, where core answers no key (in-place editors). */
+  click?: true;
 }
 
 const PAIRS: Pair[] = [
@@ -96,6 +99,18 @@ const PAIRS: Pair[] = [
     ready: tableReady,
   },
   {
+    name: "table editing a whole row",
+    react: editableRow("react"),
+    angular: editableRow("angular"),
+    scope: ".afreact-render",
+    ready: tableReady,
+    open: {
+      target: ".afreact-render tbody tr:nth-child(1) td[data-field-name=job_title] .crm-editable-enabled",
+      ready: `document.querySelectorAll(".afreact-render crm-search-display-editable").length === 2`,
+      click: true,
+    },
+  },
+  {
     name: "filtered search",
     react: groups("react"),
     angular: groups("angular"),
@@ -124,8 +139,11 @@ async function findings(
   await page.waitForFunction(pair.ready);
   await page.waitForLoadState("networkidle");
   if (pair.open) {
-    await page.locator(pair.open.target).focus();
-    await page.keyboard.press("Enter");
+    if (pair.open.click) await page.locator(pair.open.target).click();
+    else {
+      await page.locator(pair.open.target).focus();
+      await page.keyboard.press("Enter");
+    }
     await page.waitForFunction(pair.open.ready);
   }
   return axeFindings(page, pair.scope);

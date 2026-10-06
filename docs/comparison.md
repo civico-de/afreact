@@ -60,6 +60,7 @@ that no longer excuses anything fails the test.
 | In-place editor for a multi-value text, number or date field (no options) | select2 tags split at commas; a date picker adding one day at a time, no day twice | chips with an input: Enter or a comma adds a text or number, Backspace on an empty input removes the last, what is typed when the editor leaves is kept; a date input adding one day at a time, no day twice; a multi-value Yes/No field is two checkboxes as in core |
 | In-place reference editor (fk_entity, `id`) | `crm-autocomplete` on the foreign entity with `fieldName: <entity>.<field>`, quick-add and quick-edit links in the dropdown; Enter and Escape close an open list before they reach the editor | the same combobox as a form's EntityRef, with the same `fieldName`; a single value shows its label and a clear link, a multi-value one its chips; no quick-add or quick-edit links (their popup would leave the editor); Enter and Escape in an open list stay with it |
 | New row (`editableRow.create`) | an "Add" button in the control column opens a row of inputs; every input is marked required but saved anyway; Enter anywhere saves; `cancelEditing()` runs before the call, so a failed save loses the typed values; a new record outside the filters reloads the displays; an empty `createLabel` leaves an icon-only button | the same row; only fields that allow no null are required and checked before the call; Enter in the row saves, Escape returns the focus to the button; a failed save keeps the row with the error; the same reload; "Add" as the fallback label; editable columns whose editor React lacks are named in the note, and a required one among them withholds the row |
+| Full-row editing (`editableRow.full`) | a click on an editable cell opens every editable cell of the row; Save and Cancel in the control column; Enter saves the row (a document-level key handler of the last cell that opened), Escape cancels; the row's values are sent whether or not they changed, so saving an untouched row still writes the record | the same cells, buttons and keys, Enter and Escape handled in the row; the values of every editable cell go in one `inlineEdit` call, an unchanged row closes without a call; a failed save keeps the row open with its values and the error under the buttons; non-editable cells of the row are not marked as editing |
 | Leaving an in-place editor | the editor stays open until Enter, Escape or a button | a valid change saves, an unchanged editor closes; switching windows leaves it open |
 | Emptying an in-place text | saves `""` | saves `null` where the field can be emptied |
 | Totals after an in-place edit | kept (see upstream bugs) | asked again |
@@ -117,12 +118,12 @@ instead of being dropped:
   `page-nav-submit-text` and `selected-tab` (6.20)
 - FormBuilder's own widgets (`af-admin-list-menu`) and the message template
   editor's `crm-monaco`: both need the Angular application they belong to
-- table features: full-row editing (`editableRow.full`), drag to reorder in
-  hierarchical tables, include columns
+- table features: drag to reorder in hierarchical tables, include columns
 - drag to reorder and re-parent in tree displays (`draggable`); the tree
   itself renders, with the note
-- in-place editors for locations and multi-value colours; their cells stay
-  read-only
+- an in-place editor for a multi-value colour field, should one exist; the
+  renderer also turns a Location input away, though core defines that type
+  only for the `Address.proximity` search filter, which is never editable
 - bulk actions whose task is an Angular dialog (open a case, and extensions'
   own; download, update, tag, relationship and mailing have their own
   dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
@@ -149,7 +150,7 @@ kept across sorting and paging, cleared by new filters and after a task.
 |---|---|---|
 | Confirmation dialog | jQuery UI dialog through `dialogService` | native modal `<dialog>`: focus moves in and back to the menu button, Escape cancels before the run starts |
 | Progress bar | moves forward every second while a batch runs | moves per finished batch |
-| Update dialog | select2 pickers add a clause as soon as a field is picked, and pick each clause's field; `crm-search-input` for the value, unlabelled; fields of every writable type; the success alert is titled "Saved" | a native select plus an Add button; the value input of the in-place editors, labelled by the field; fields whose input the in-place editor lacks (Location) stay in the list, disabled, with the reason as their title; values a hook presets in `task.values` start the dialog; the batch then runs in the task dialog with the same title |
+| Update dialog | select2 pickers add a clause as soon as a field is picked, and pick each clause's field; `crm-search-input` for the value, unlabelled; fields of every writable type; the success alert is titled "Saved" | a native select plus an Add button; the value input of the in-place editors, labelled by the field; a field whose input the in-place editor lacks would stay in the list, disabled, with the reason as its title; values a hook presets in `task.values` start the dialog; the batch then runs in the task dialog with the same title |
 | Task input fields (`apiBatch.fields`) | `crm-search-input` per field, started from its default, serialized, Boolean or first option; the task button waits for a valid form | the in-place editors' inputs with the same start values, native validation; a task with a field those editors lack stays disabled with the note |
 | Changing a clause's field in the update dialog | keeps the value typed for the previous field | starts the new field's value afresh, as when added |
 | Update from a row link | a row link's single-row update runs `SearchDisplay.inlineEdit`; the update dialog's batch always runs `Entity.update` on the row's id | the same |

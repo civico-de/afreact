@@ -264,7 +264,7 @@ describe("in-place editing", () => {
     });
   });
 
-  it("leaves rows the server marks read-only and full-row editing alone", async () => {
+  it("leaves rows the server marks read-only alone", async () => {
     setup({ value_key: "job_title" }, "Pilot", { cell: { edit: false } });
     expect(await screen.findByRole("cell", { name: "Pilot" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Edit/ })).not.toBeInTheDocument();
@@ -284,12 +284,6 @@ describe("in-place editing", () => {
       "x, y",
     );
     expect(named([{ val: null }, {}, {}, { val: "self" }])).toBe("ID 9");
-  });
-
-  it("shows no editor in full-row mode", async () => {
-    setup({ value_key: "job_title" }, "Pilot", { settings: { editableRow: { full: true } } });
-    expect(await screen.findByRole("cell", { name: "Pilot" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Edit/ })).not.toBeInTheDocument();
   });
 
   it("edits a contact reference through an autocomplete on its entity", async () => {

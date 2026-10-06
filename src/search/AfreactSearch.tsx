@@ -188,6 +188,8 @@ export function AfreactSearch({
   });
   const inlineEdit = useInlineEdit({
     page: rows.data,
+    columns: settings?.columns ?? [],
+    full: !!settings?.editableRow && !!settings.editableRow.full,
     rowsKey,
     tallyKey,
     countKey,

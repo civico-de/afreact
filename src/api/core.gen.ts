@@ -387,8 +387,9 @@ export type TableSettings = {
   description?: string | null;
   draggable?: string;
   editableRow?: {
-    create: boolean;
-    createLabel: string;
+    create?: boolean;
+    createLabel?: string;
+    full?: boolean;
   };
   headerCount?: boolean;
   hierarchical?: boolean;

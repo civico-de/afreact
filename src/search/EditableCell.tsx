@@ -104,7 +104,7 @@ function EditableValue(props: EditableValueProps) {
   if (edit.isSaving(target)) return <span className="crm-search-loading-placeholder" />;
   if (edit.isEditing(target)) return <CellEditor {...props} />;
   const start = () => {
-    edit.start(target);
+    edit.start(row, colIndex);
   };
   return (
     <span
@@ -125,7 +125,15 @@ function EditableValue(props: EditableValueProps) {
   );
 }
 
-/** crmSearchDisplayEditable.html: the input crmSearchInput picks, with save and cancel buttons. */
+/** The editors of a row, for the validity check before a full-row save. */
+function rowForms(element: HTMLElement | null): HTMLFormElement[] {
+  return Array.from(element?.closest("tr")?.querySelectorAll("form") ?? []);
+}
+
+/**
+ * crmSearchDisplayEditable.html: the input crmSearchInput picks, with save and cancel buttons;
+ * in full-row mode the row's buttons in the control column take their place.
+ */
 function CellEditor({
   edit,
   row,
@@ -139,25 +147,32 @@ function CellEditor({
 }: EditableValueProps) {
   const initial = initialValue(row, info);
   const failed = edit.editing?.error;
-  const [value, setValue] = useState(() => (failed ? edit.editing?.value : initial));
+  const [value, setValue] = useState(() => edit.value(colKey));
   const form = useRef<HTMLFormElement>(null);
   const closed = useRef(false);
   const id = useId();
+  const focused = !edit.full || edit.editing?.colIndex === colIndex;
   useEffect(() => {
+    if (!focused) return;
     const first = (selector: string) => form.current?.querySelector<HTMLElement>(selector);
     // Options still loading leave no input to focus; a button keeps Escape and blur working.
     const input = first("input:checked") ?? first("input, select:enabled, textarea");
     (input ?? first("button"))?.focus();
-  }, []);
+  }, [focused]);
 
+  const change = (next: unknown) => {
+    setValue(next);
+    edit.setValue(colKey, next);
+  };
   const finish = (save: boolean) => {
     closed.current = true;
-    if (save) edit.save(row, colIndex, colKey, value);
+    if (save) edit.save(row);
     else edit.cancel();
   };
   const commit = () => {
-    if (!isChanged(value, initial)) finish(false);
-    else if (form.current?.reportValidity() !== false) finish(true);
+    const forms = edit.full ? rowForms(form.current) : [form.current];
+    if (!edit.full && !isChanged(value, initial)) finish(false);
+    else if (forms.every((other) => other?.reportValidity() !== false)) finish(true);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
     const target = event.target;
@@ -175,10 +190,11 @@ function CellEditor({
       commit();
     }
   };
-  // Leaving the editor saves a valid change; switching windows leaves it open.
+  // Leaving a single editor saves a valid change; switching windows leaves it open.
   const onBlur = (event: FocusEvent<HTMLFormElement>) => {
     const next = event.relatedTarget;
-    if (closed.current || (next instanceof Node && form.current?.contains(next))) return;
+    if (edit.full || closed.current || (next instanceof Node && form.current?.contains(next)))
+      return;
     if (!document.hasFocus()) return;
     if (!isChanged(value, initial)) finish(false);
     else if (form.current?.checkValidity()) finish(true);
@@ -186,7 +202,7 @@ function CellEditor({
 
   const nullable = isNullable(row, info);
   const inputId = `${id}-input`;
-  const errorId = `${id}-error`;
+  const errorId = edit.full ? edit.errorId : `${id}-error`;
   const common = {
     id: inputId,
     required: !nullable,
@@ -216,39 +232,76 @@ function CellEditor({
             nullable={nullable}
             labelId={`${id}-label`}
             common={common}
-            focusWhenLoaded
-            onChange={setValue}
+            focusWhenLoaded={focused}
+            onChange={change}
           />
         </div>
       </div>
-      {failed && (
+      {failed && !edit.full && (
         <p id={errorId} className="alert alert-danger">
           {failed}
         </p>
       )}
-      <div className="form-inline crm-search-display-editable-buttons">
+      {!edit.full && (
+        <div className="form-inline crm-search-display-editable-buttons">
+          <button
+            type="submit"
+            className="btn btn-xs btn-success"
+            onMouseDown={keepFocus}
+            onClick={commit}
+          >
+            <span className="sr-only">{ts("Save")}</span>
+            <i className="crm-i fa-check" role="img" aria-hidden="true" />
+          </button>{" "}
+          <button
+            type="button"
+            className="btn btn-xs btn-danger"
+            onMouseDown={keepFocus}
+            onClick={() => {
+              finish(false);
+            }}
+          >
+            <span className="sr-only">{ts("Cancel")}</span>
+            <i className="crm-i fa-times" role="img" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+    </form>,
+  );
+}
+
+/**
+ * crmSearchDisplayTableBody.html: the row's save and cancel buttons in the control column while
+ * full-row mode edits it, with what a failed save answered.
+ */
+export function RowEditButtons({ edit, row }: { edit: InlineEdit | null; row: Row }) {
+  const group = useRef<HTMLDivElement>(null);
+  if (!edit?.full || edit.editing?.rowKey !== row.key) return null;
+  const failed = edit.editing.error;
+  return (
+    <>
+      <div ref={group} className="btn-group">
         <button
-          type="submit"
-          className="btn btn-xs btn-success"
-          onMouseDown={keepFocus}
-          onClick={commit}
+          type="button"
+          className="btn btn-sm btn-success"
+          onClick={() => {
+            if (rowForms(group.current).every((form) => form.reportValidity())) edit.save(row);
+          }}
         >
           <span className="sr-only">{ts("Save")}</span>
           <i className="crm-i fa-check" role="img" aria-hidden="true" />
-        </button>{" "}
-        <button
-          type="button"
-          className="btn btn-xs btn-danger"
-          onMouseDown={keepFocus}
-          onClick={() => {
-            finish(false);
-          }}
-        >
+        </button>
+        <button type="button" className="btn btn-sm btn-danger" onClick={edit.cancel}>
           <span className="sr-only">{ts("Cancel")}</span>
           <i className="crm-i fa-times" role="img" aria-hidden="true" />
         </button>
       </div>
-    </form>,
+      {failed && (
+        <p id={edit.errorId} className="alert alert-danger">
+          {failed}
+        </p>
+      )}
+    </>
   );
 }
 

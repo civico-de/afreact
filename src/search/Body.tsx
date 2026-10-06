@@ -1,7 +1,7 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { Cell, cellText } from "./Cell";
 import { dragField } from "./dragOrder";
-import { EditableCell, editingClass } from "./EditableCell";
+import { EditableCell, editingClass, RowEditButtons } from "./EditableCell";
 import { useInlineEditContext } from "./inlineEdit";
 import type { RowDrag } from "./Reorder";
 import {
@@ -82,12 +82,14 @@ export function BodyRows({
                 }}
               />
             )}
+            <RowEditButtons edit={edit} row={row} />
           </td>
         )}
         {row.columns.map((cell, index) => {
           if (hiddenColumns.has(index)) return null;
           const column = settings.columns[index];
-          const editing = editingClass(edit, { rowKey: row.key, colIndex: index });
+          const target = { rowKey: row.key, colIndex: index };
+          const editing = cell?.edit ? editingClass(edit, target) : "";
           return (
             <td
               key={index}
@@ -216,7 +218,9 @@ export function ControlHeader({
       ? settings.tally.label
       : dragField(settings)
         ? ts("Drag to reposition")
-        : "";
+        : settings.editableRow
+          ? ts("Row editing")
+          : "";
   return (
     <th>
       {dragIcon}

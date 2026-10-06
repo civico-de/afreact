@@ -1,7 +1,7 @@
 import { useQueryClient, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useId, useRef, useState } from "react";
 import { api4, errorMessage } from "../api/civi";
-import type { EditableInfo, Row, RunPage } from "./types";
+import type { Column, EditableInfo, Row, RunPage } from "./types";
 
 /**
  * In-place editing of table cells (searchDisplayEditableTrait, crmSearchDisplayEditable): the
@@ -107,13 +107,24 @@ export interface CellTarget {
 interface Editing extends CellTarget {
   /** The page the editor opened on; a new run closes it, as onPostRun's cancelEditing(). */
   page: RunPage;
-  /** What a failed save left in the editor, with the error. */
-  value?: unknown;
+  /** What a failed save answered; its values stay in the editors. */
   error?: string;
+}
+
+/** The cells a save keeps busy: one, or every cell of the row. */
+interface SavingTarget {
+  rowKey: Row["key"];
+  colIndex: number | null;
 }
 
 const same = (a: CellTarget | null, b: CellTarget) =>
   !!a && a.rowKey === b.rowKey && a.colIndex === b.colIndex;
+
+/** editValues: the values under edit by column key, with what they started from. */
+interface RowValues {
+  initial: Record<string, unknown>;
+  values: Record<string, unknown>;
+}
 
 /** The row of inputs editableRow.create adds below the table (crmSearchDisplayTableCreateNew). */
 export interface NewRow {
@@ -126,7 +137,11 @@ export interface NewRow {
 
 export interface InlineEdit {
   editable: Record<string, EditableInfo>;
-  /** The cell whose editor is open, if any. */
+  /** editableRow.full: every editable cell of the row opens, and saves, together. */
+  full: boolean;
+  /** The id of the row's error message in full-row mode, for the inputs to point at. */
+  errorId: string;
+  /** The cell whose editor opened, if any; in full-row mode the rest of its row is open too. */
   editing: Editing | null;
   /** The new row under edit, if any; it and a cell editor exclude each other. */
   newRow: NewRow | null;
@@ -138,9 +153,13 @@ export interface InlineEdit {
   isSaving: (target: CellTarget) => boolean;
   /** Whether a closed editor should give focus back to this cell; true once. */
   takeFocus: (target: CellTarget) => boolean;
-  start: (target: CellTarget) => void;
+  start: (row: Row, colIndex: number) => void;
   cancel: () => void;
-  save: (row: Row, colIndex: number, colKey: string, value: unknown) => void;
+  /** The value an open editor shows for its column, and the one it changes. */
+  value: (colKey: string) => unknown;
+  setValue: (colKey: string, value: unknown) => void;
+  /** Saves the open editors' values, or only closes them when none changed. */
+  save: (row: Row) => void;
   /** For the live region: the outcome of the last save. */
   announcement: string;
 }
@@ -153,6 +172,8 @@ export function useInlineEditContext(): InlineEdit | null {
 
 interface UseInlineEditOptions {
   page: RunPage | undefined;
+  columns: Column[];
+  full: boolean;
   /** The query of the shown page, whose cache entry the saved row is written into. */
   rowsKey: QueryKey;
   tallyKey: QueryKey;
@@ -165,6 +186,8 @@ interface UseInlineEditOptions {
 
 export function useInlineEdit({
   page,
+  columns,
+  full,
   rowsKey,
   tallyKey,
   countKey,
@@ -172,11 +195,14 @@ export function useInlineEdit({
   reloadAll,
 }: UseInlineEditOptions): InlineEdit {
   const client = useQueryClient();
+  const errorId = useId();
   const [editing, setEditing] = useState<Editing | null>(null);
   const [newRow, setNewRow] = useState<NewRow | null>(null);
-  const [saving, setSaving] = useState<readonly CellTarget[]>([]);
+  const [saving, setSaving] = useState<readonly SavingTarget[]>([]);
   const [focus, setFocus] = useState<CellTarget | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  // Typing changes the values without a render of the table; the editors keep their own state.
+  const edited = useRef<RowValues>({ initial: {}, values: {} });
   const open = editing && page && runOf(editing.page) === runOf(page) ? editing : null;
   const creating = newRow && page && runOf(newRow.page) === runOf(page) ? newRow : null;
   const close = (target: CellTarget | null) => {
@@ -184,21 +210,28 @@ export function useInlineEdit({
     setFocus(target);
   };
 
-  const save = (row: Row, colIndex: number, colKey: string, value: unknown) => {
-    const target = { rowKey: row.key, colIndex };
+  const save = (row: Row) => {
+    if (!open) return;
+    const target = { rowKey: row.key, colIndex: open.colIndex };
+    const { initial, values } = edited.current;
+    if (!isChanged(values, initial)) {
+      close(target);
+      return;
+    }
+    const busy = { rowKey: row.key, colIndex: full ? null : open.colIndex };
     const key = rowsKey;
     setEditing(null);
-    setSaving((current) => [...current, target]);
+    setSaving((current) => [...current, busy]);
     setAnnouncement(ts("Saving…"));
     const done = () => {
-      setSaving((current) => current.filter((other) => !same(other, target)));
+      setSaving((current) => current.filter((other) => other !== busy));
     };
-    // getApiParams(null) plus the row and its new value, as saveEditing() sends them.
+    // getApiParams(null) plus the row and its new values, as saveEditing() sends them.
     api4<Row>("SearchDisplay", "inlineEdit", {
       ...params,
       return: null,
       rowKey: row.key,
-      values: { [colKey]: value },
+      values: { ...values },
     }).then(
       (result) => {
         done();
@@ -221,10 +254,14 @@ export function useInlineEdit({
         done();
         const message = errorMessage(error);
         setAnnouncement(ts("Not saved: %1", { 1: message }));
-        // The editor opens again unless another one opened meanwhile.
+        // The editor opens again, with its values, unless another one opened meanwhile.
         const shown = client.getQueryData<RunPage>(key);
         if (shown)
-          setEditing((current) => current ?? { ...target, page: shown, value, error: message });
+          setEditing((current) => {
+            if (current) return current;
+            edited.current = { initial, values };
+            return { ...target, page: shown, error: message };
+          });
       },
     );
   };
@@ -257,8 +294,11 @@ export function useInlineEdit({
     }
   };
 
+  const editable = page?.editable ?? {};
   return {
-    editable: page?.editable ?? {},
+    editable,
+    full,
+    errorId,
     editing: open,
     newRow: creating,
     startCreating: () => {
@@ -268,19 +308,38 @@ export function useInlineEdit({
       setNewRow(null);
     },
     saveNew,
-    isEditing: (target) => same(open, target),
-    isSaving: (target) => saving.some((other) => same(other, target)),
+    isEditing: (target) => (full ? open?.rowKey === target.rowKey : same(open, target)),
+    isSaving: (target) =>
+      saving.some(
+        (other) =>
+          other.rowKey === target.rowKey &&
+          (other.colIndex === null || other.colIndex === target.colIndex),
+      ),
     takeFocus: (target) => {
       if (!same(focus, target)) return false;
       setFocus(null);
       return true;
     },
-    // One editor at a time, as startEditing().
-    start: (target) => {
-      if (page && !open && !creating) setEditing({ ...target, page });
+    // One editor at a time, as startEditing(); the values start from the row's own, without
+    // the columns whose editor the table lacks.
+    start: (row, colIndex) => {
+      if (!page || open || creating) return;
+      const initial: Record<string, unknown> = {};
+      for (const [index, cell] of row.columns.entries()) {
+        const key = columns[index]?.key;
+        const info = key && cell?.edit && (full || index === colIndex) ? editable[key] : undefined;
+        if (key && info && !("unsupported" in editorFor(info)))
+          initial[key] = initialValue(row, info);
+      }
+      edited.current = { initial, values: { ...initial } };
+      setEditing({ rowKey: row.key, colIndex, page });
     },
     cancel: () => {
       close(open);
+    },
+    value: (colKey) => edited.current.values[colKey],
+    setValue: (colKey, value) => {
+      edited.current.values[colKey] = value;
     },
     save,
     announcement,
