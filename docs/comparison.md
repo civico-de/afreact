@@ -200,6 +200,43 @@ Byte counts are encoded sizes as the Resource Timing API reports them, which
 includes responses served from the HTTP cache. The server needs 85–120 ms
 (median time to first byte) for the demo page with every source.
 
+### Every page of the tour
+
+`tests/browser/pages.spec.ts` loads each page of the tour video on the render
+route (`civicrm/afreact/render`, React with the layout in the page) the same
+way: cold in a fresh context and warm in a shared one, the renderer order
+alternating, `debug_enabled` off. A table counts as ready with its first body
+row, a list, grid or tree with its first item, a form with its first input (the
+rich-text editor's frame for the fields form). Measured 2026-10-06 on the
+civikitchen dev stack (CiviCRM 6.18.1, localhost, headless Chromium), medians
+of 5 rounds in ms:
+
+| page | Angular cold | React cold | Angular warm | React warm |
+|---|---|---|---|---|
+| afsearchAfreactDemoGroups | 805 | 208 | 820 | 199 |
+| afsearchAfreactDemoEditable | 1055 | 423 | 1057 | 417 |
+| afsearchAfreactDemoOrder | 802 | 211 | 810 | 195 |
+| afsearchAfreactDemoFeatures | 822 | 229 | 829 | 205 |
+| afsearchAfreactDemoContactTypes | 822 | 213 | 844 | 204 |
+| afformAfreactDemoTabs | 237 | 220 | 229 | 201 |
+| afsearchAfreactDemoList | 997 | 378 | 1005 | 352 |
+| afsearchAfreactDemoGrid | 992 | 363 | 974 | 373 |
+| afsearchAfreactDemoTree | 805 | 202 | 809 | 201 |
+| afsearchAfreactDemoRanges | 820 | 226 | 820 | 215 |
+| afsearchAdministerMembershipTypes | 822 | 218 | 825 | 192 |
+| afsearchCiviCRMQueues | 817 | 204 | 819 | 191 |
+| afsearchSettingsDatePreferences | 822 | 214 | 807 | 203 |
+| afsearchPrintPagePDFFormats | 821 | 206 | 815 | 203 |
+| afsearchSiteEmailAddresses | 820 | 211 | 822 | 199 |
+| afformAfreactDemoFields | 505 | 495 | 486 | 453 |
+
+Every search display is 600 ms ahead on React, which is SearchKit's filter
+debounce (next section); the editable, list and grid pages take 150–250 ms
+longer on both renderers alike. The two forms come out within
+40 ms of each other: both wait for `Afform.prefill`, and the fields form for
+CKEditor. The tour video shows larger and noisier numbers than these because
+it records while loading and runs each page once.
+
 ### Reading the numbers
 
 - **Ready time.** Most of React's lead is SearchKit's 600 ms debounce: every
