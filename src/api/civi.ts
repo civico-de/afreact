@@ -47,7 +47,11 @@ declare global {
       alert: (text: string, title?: string, type?: "alert" | "success" | "info" | "error" | "warning") => unknown;
       /** The status box in the corner (js/Common.js): a text, or a box the caller settles. */
       status: (options: string | { start?: string; success?: string; error?: string }) => StatusBox;
-      utils: { colorContrast: (color: string) => string };
+      utils: {
+        colorContrast: (color: string) => string;
+        /** A date in the site's input format, with the time when `time` is true (js/Common.js). */
+        formatDate: (input: unknown, format: string | null, time: boolean) => string;
+      };
       /** Page variables from Civi::resources()->addVars(), by extension. */
       vars?: { afreact?: AfreactVars };
       /** localStorage under a "CRM" prefix, with an in-memory fallback (js/Common.js). */

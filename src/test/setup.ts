@@ -16,7 +16,10 @@ window.CRM = {
   loadForm: vi.fn(() => events(new EventTarget())),
   status: vi.fn(() => ({ resolve: vi.fn(), reject: vi.fn() })),
   alert: vi.fn(),
-  utils: { colorContrast: () => "white" },
+  utils: {
+    colorContrast: () => "white",
+    formatDate: (input, _format, time) => `${String(input)} as ${time ? "date and time" : "date"}`,
+  },
 };
 installPopover();
 installDialog();

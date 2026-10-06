@@ -56,6 +56,8 @@ export interface FieldDefn {
   input_style?: string | null;
   help_pre?: string | null;
   help_post?: string | null;
+  /** DisplayOnly: how to show the value of a rich text, file or URL field. */
+  display_format?: "html" | "file" | "url";
   serialize?: number | null;
   afform_default?: unknown;
   /** Search filters: the operator a value is sent with, e.g. {title: {CONTAINS: "x"}}. */

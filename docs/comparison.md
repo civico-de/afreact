@@ -74,6 +74,8 @@ that no longer excuses anything fails the test.
 | Confirmation message | replaces the form; the focus is lost with the button | replaces the form and takes the focus |
 | Reset button | `resetForm()` tells the fields to reset (`afFormReset`) and prefills again | the form loads afresh, so repeats, conditions and draft state start over too |
 | Grid displays | boxes in plain `<div>`s | the same boxes with `role="list"` and `role="listitem"`, named by the display label where the display is loaded by name (a form's layout carries no label), as list displays are |
+| Field labels and help texts (`label`, `help_pre`, `help_post`) | set as HTML (`af-markup`), tokens such as `[Individual1.0.first_name]` show the field's value inside `af-form` | the same, with the HTML rebuilt from a list of plain elements and attributes: scripts, event handlers and inline styles are dropped, other unknown tags keep their text; a token updates while the user types, where Angular waits for the input's `change` |
+| Display-only fields (`DisplayOnly`) | option labels, dates in the site format, reference labels from `<Entity>.autocomplete`, rich text as HTML, URL and file links; a value matching no option, or not of the option's type (`"2"` for `2`), shows nothing, as does a date it cannot format | the same, with values compared as text and a value without option or a date that cannot be formatted shown as stored; rich text is filtered as labels are; a failed label lookup shows its error |
 | Tree items | `<li>` without `data-entity-id` | `<li data-entity-id>`, as list items have it, so focus can return to the row after a reload |
 
 ## Accessibility
@@ -417,6 +419,22 @@ unchanged data, marks a pristine draft as saved (`setupDraftWatcher`,
 button therefore reads "Draft Saved", disabled, as soon as the form has
 loaded. The React renderer keeps the button's own text, disabled, until the
 form holds a change no draft has saved.
+
+**Field labels and help texts are set as unfiltered HTML.** afField puts the
+label, `help_pre` and `help_post` into `af-markup`, which assigns them to
+`innerHTML` (`afMarkup.element.js`). Nothing purifies them on the way:
+`Afform.get` purifies only `confirmation_message`. Script in an `on…`
+attribute therefore runs for every visitor of the form. Only users who edit
+forms or custom fields can write these texts, so this is a hardening gap
+rather than an escalation (read from the code on `master` as of 2026-10-06,
+not run). The React renderer keeps the HTML but only plain elements and
+attributes, and React blocks `javascript:` URLs.
+
+**An emptied field shows "null" in a token.** afForm's `getTokenValues()`
+treats only `undefined` as empty, so a token for a field set to `null` (a
+cleared date or select) reads "null" in labels and content blocks (read from
+the code on `master` as of 2026-10-06, not run). The React renderer shows
+nothing.
 
 **Search labels stay in the page title.** A search display adds the labels of
 its filters to the title of a search page (`searchDisplayBaseTrait`, afCore's

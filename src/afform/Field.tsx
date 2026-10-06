@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from "react";
 import { onButtonKey } from "../keys";
 import { ChainSelect } from "./fields/ChainSelect";
+import { DisplayOnly } from "./fields/DisplayOnly";
 import { EntityRef } from "./fields/EntityRef";
 import { Toggle } from "./fields/Toggle";
 import { FileField } from "./fields/File";
@@ -9,6 +10,7 @@ import { Range } from "./fields/Range";
 import { RichTextEditor } from "./fields/RichTextEditor";
 import { RANGE_TYPES, SearchRange } from "./fields/SearchRange";
 import type { FieldDefn, FieldOption } from "./types";
+import { Markup } from "./Markup";
 import { Unsupported } from "./Unsupported";
 
 /**
@@ -363,7 +365,12 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
           </label>
         );
       case "DisplayOnly":
-        return <output id={id}>{textValue(value)}</output>;
+        return (
+          <DisplayOnly
+            {...{ id, defn, value }}
+            options={defn.options || defn.data_type === "Boolean" ? fieldOptions(defn) : null}
+          />
+        );
       case "EntityRef":
         return <EntityRef {...{ id, defn, value, onChange, disabled, describedBy }} />;
       case "ChainSelect":
@@ -399,11 +406,15 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
           id={labelsGroup ? labelId : undefined}
           htmlFor={grouped ? undefined : id}
         >
-          {label}
+          <Markup html={label} />
           {required && <Marker />}
         </label>
       )}
-      {defn.help_pre && <p className="crm-af-field-help-pre">{defn.help_pre}</p>}
+      {defn.help_pre && (
+        <p className="crm-af-field-help-pre">
+          <Markup html={defn.help_pre} />
+        </p>
+      )}
       {operator ? (
         <div className="input-group">
           {operator}
@@ -414,7 +425,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
       )}
       {defn.help_post && (
         <p id={helpId} className="crm-af-field-help-post">
-          {defn.help_post}
+          <Markup html={defn.help_post} />
         </p>
       )}
     </>

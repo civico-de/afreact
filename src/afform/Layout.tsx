@@ -14,6 +14,7 @@ import { checkConditions, parseConditions } from "./conditions";
 import { interpolate, type ExpressionContext } from "./expressions";
 import { ClearButton, Field, fieldClasses } from "./Field";
 import { loadSelected } from "./fields/autofill";
+import { TokenContext, withTokens } from "./Markup";
 import { FieldEnvContext, type FieldEnv } from "./fields/env";
 import {
   addRepeatItem,
@@ -95,6 +96,8 @@ const ItemPathContext = createContext("");
  * as on afIfDestroy; a nested af-if renders what it showed then.
  */
 const HiddenContext = createContext<FormData | null>(null);
+/** Inside an element of class af-markup, whose text afForm hands to afMarkup for tokens. */
+const MarkupBlockContext = createContext(false);
 
 function useForm(): FormState {
   const form = useContext(FormContext);
@@ -118,7 +121,7 @@ const KIND_VIEWS: Record<NodeKind, (props: { node: ElementNode }) => ReactNode> 
   entity: () => null,
   field: FieldNode,
   block: Children,
-  form: Children,
+  form: FormNode,
   submit: SubmitButton,
   draft: DraftButton,
   reset: ResetButton,
@@ -141,6 +144,16 @@ const KIND_VIEWS: Record<NodeKind, (props: { node: ElementNode }) => ReactNode> 
   ),
   element: Element,
 };
+
+/** af-form: tokens in its markup show the form's data. */
+function FormNode({ node }: { node: ElementNode }) {
+  const { data } = useForm();
+  return (
+    <TokenContext.Provider value={data}>
+      <Children node={node} />
+    </TokenContext.Provider>
+  );
+}
 
 function TabsetNode({ node }: { node: ElementNode }) {
   const { formName, expressions } = useForm();
@@ -171,10 +184,12 @@ function Rendered({ node }: { node: ElementNode }): ReactNode {
 
 function Text({ text }: { text: string }) {
   const form = useForm();
-  if (!text.includes("{{")) return text;
+  const markup = useContext(MarkupBlockContext);
+  const shown = (value: string) => (markup ? withTokens(value) : value);
+  if (!text.includes("{{")) return shown(text);
   const result = interpolate(text, form.expressions);
   return "text" in result ? (
-    result.text
+    shown(result.text)
   ) : (
     <Unsupported what={expressionNote([result.unsupported])} />
   );
@@ -205,12 +220,14 @@ function Element({ node, children }: { node: ElementNode; children?: ReactNode }
         {createElement(node["#tag"], props)}
       </>
     );
+  const content = children ?? <Nodes nodes={node["#children"] ?? []} />;
+  const markup = String(node.class ?? "").split(/\s+/).includes("af-markup");
   return createElement(
     node["#tag"],
     props,
     note,
     heading,
-    children ?? <Nodes nodes={node["#children"] ?? []} />,
+    markup ? <MarkupBlockContext.Provider value>{content}</MarkupBlockContext.Provider> : content,
   );
 }
 

@@ -46,7 +46,7 @@ export function repeatMinimum(node: ElementNode): number {
 }
 
 /** afForm's identifyTokens(): [Entity.index.field] references in a default. */
-const TOKEN = /\[[a-zA-Z0-9_]+\.[0-9]+\.[^\]]+\]/g;
+export const TOKEN = /\[[a-zA-Z0-9_]+\.[0-9]+\.[^\]]+\]/g;
 
 export function hasTokens(value: unknown): value is string {
   return typeof value === "string" && new RegExp(TOKEN.source).test(value);
