@@ -14,6 +14,7 @@ const features = render("afsearchAfreactDemoFeatures");
 const types = render("afsearchAfreactDemoContactTypes");
 const editable = render("afsearchAfreactDemoEditable");
 const editableRow = render("afsearchAfreactDemoEditableRow");
+const navTree = render("afsearchAfreactDemoNavTree");
 const groups = (renderer: string) => `${render("afsearchManageGroups")(renderer)}#?title=a`;
 // Rows, count and totals are in.
 const tableReady = `!!document.querySelector(".afreact-render tbody tr[data-entity-id]") && !document.querySelector(".afreact-render .crm-search-loading-placeholder")`;
@@ -109,6 +110,13 @@ const PAIRS: Pair[] = [
       ready: `document.querySelectorAll(".afreact-render crm-search-display-editable").length === 2`,
       click: true,
     },
+  },
+  {
+    name: "hierarchical draggable table",
+    react: navTree("react"),
+    angular: navTree("angular"),
+    scope: ".afreact-render",
+    ready: tableReady,
   },
   {
     name: "filtered search",
