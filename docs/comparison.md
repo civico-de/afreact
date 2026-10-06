@@ -314,8 +314,9 @@ second request once the rows are in. A filter change meanwhile nulls
 run then lands in between, its guard (`requestId < _runCount`) sees no newer
 run yet, and the next run keeps the stale count because `rowCount` is set.
 A table filtered from 30 rows to 4 shows "30 results" and three pages for
-the four rows until the next filter change. Present on 6.18 and `master` as
-of 2026-10-06. React asks for the count with the rows, keyed by the same
+the four rows until the next filter change. The guard came with dev/core#5965
+(6.6) for the same symptom and covers only a count that lands after the
+next run has started. Present on 6.18 and `master` as of 2026-10-06. React asks for the count with the rows, keyed by the same
 filters, so a count never outlives its filters; the tour video shows both.
 
 **Checkout field labels name nothing.** The templates under
