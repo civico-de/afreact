@@ -19,7 +19,8 @@ const entryImportedByNoChunk: Plugin = {
 // The entry and its stylesheet keep fixed names, which CiviCRM loads with its cache
 // code (?r=…); lazy chunks carry a content hash instead.
 export default defineConfig({
-  plugins: [react(), entryImportedByNoChunk],
+  // React Compiler (the oxc port) memoizes components and hooks at build time.
+  plugins: [react({ compiler: { logDiagnostics: true } }), entryImportedByNoChunk],
   // Chunks resolve against the entry's URL under ext/afreact/dist/.
   base: "./",
   build: {
