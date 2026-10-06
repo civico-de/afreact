@@ -1,7 +1,8 @@
 /**
- * In-place editing and the column picker on both renderers: a text cell saved with Enter and an
- * option list saved with the Save button must store the same values, and the picker must hide
- * and show the same columns. Each renderer edits its own contact, found by last name.
+ * In-place editing and the column picker on both renderers: a text cell saved with Enter, an
+ * option list saved with the Save button and a contact reference picked from the autocomplete
+ * must store the same values, and the picker must hide and show the same columns. Each renderer
+ * edits its own contact, found by last name.
  */
 import { expect, test, type Page } from "@playwright/test";
 import { api, AUTH, type Renderer } from "./harness";
@@ -24,9 +25,24 @@ const editor = (page: Page) => page.locator(".afreact-render crm-search-display-
 interface Saved {
   job_title: string;
   "gender_id:name": string;
+  employer_id: number | null;
 }
 
 const contacts: number[] = [];
+let employer = 0;
+
+test.beforeAll(async ({ browser }) => {
+  const context = await browser.newContext({ storageState: AUTH });
+  const page = await context.newPage();
+  await page.goto("/civicrm/afreact/compare");
+  const [created] = await api<{ id: number }>(page, "Organization", "create", {
+    values: { organization_name: `Employer ${RUN}` },
+  });
+  if (!created) throw new Error("Organization.create returned no contact");
+  employer = created.id;
+  contacts.push(employer);
+  await context.close();
+});
 
 test.afterAll(async ({ browser }) => {
   if (!contacts.length) return;
@@ -79,12 +95,31 @@ async function edit(page: Page, renderer: Renderer, id: number): Promise<Saved> 
   await editor(page).locator(".crm-search-display-editable-buttons .btn-success").click();
   await expect.poll(shown(page, "gender_id:label"), LOAD).toBe("Male");
 
+  await cell(page, "employer_id.display_name").locator(".crm-editable-enabled").click();
+  // Core's select2 types into the dropdown's own input; React's combobox into the cell's.
+  const search =
+    renderer === "react"
+      ? editor(page).getByRole("combobox")
+      : page.locator("#select2-drop .select2-input");
+  await search.fill(`Employer ${RUN}`);
+  const option =
+    renderer === "react"
+      ? editor(page).getByRole("option", { name: `Employer ${RUN}` })
+      : page.locator("#select2-drop .select2-result", { hasText: `Employer ${RUN}` });
+  await option.click();
+  await editor(page).locator(".crm-search-display-editable-buttons .btn-success").click();
+  await expect.poll(shown(page, "employer_id.display_name"), LOAD).toBe(`Employer ${RUN}`);
+
   const [saved] = await api<Saved>(page, "Individual", "get", {
-    select: ["job_title", "gender_id:name"],
+    select: ["job_title", "gender_id:name", "employer_id"],
     where: [["id", "=", id]],
   });
   if (!saved) throw new Error(`Individual ${String(id)} is gone`);
-  return { job_title: saved.job_title, "gender_id:name": saved["gender_id:name"] };
+  return {
+    job_title: saved.job_title,
+    "gender_id:name": saved["gender_id:name"],
+    employer_id: saved.employer_id,
+  };
 }
 
 const headers = (page: Page) =>
@@ -111,7 +146,11 @@ test("both renderers save an in-place edit alike", async ({ page }) => {
   for (const renderer of ["react", "angular"] as const)
     saved[renderer] = await edit(page, renderer, await open(page, renderer));
   expect(saved.react).toEqual(saved.angular);
-  expect(saved.react).toEqual({ job_title: "Captain", "gender_id:name": "Male" });
+  expect(saved.react).toEqual({
+    job_title: "Captain",
+    "gender_id:name": "Male",
+    employer_id: employer,
+  });
 });
 
 test("both renderers pick columns alike", async ({ page }) => {
@@ -122,10 +161,10 @@ test("both renderers pick columns alike", async ({ page }) => {
   }
   expect(seen.react).toEqual(seen.angular);
   expect(seen.react).toEqual([
-    ["Name", "Job title", "Gender"],
-    ["Name", "Gender"],
+    ["Name", "Job title", "Gender", "Employer"],
+    ["Name", "Gender", "Employer"],
     [],
-    ["Name", "Job title", "Gender"],
+    ["Name", "Job title", "Gender", "Employer"],
   ]);
 });
 

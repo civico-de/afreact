@@ -3,7 +3,7 @@ import { useContext } from "react";
 import { errorMessage } from "../../api/civi";
 import { Markup, plainUrl } from "../Markup";
 import type { FieldDefn, FieldOption } from "../types";
-import { resolveIds, searchedEntity, valueIds } from "./autocomplete";
+import { autocompleteParams, resolveIds, searchedEntity, valueIds } from "./autocomplete";
 import { FieldEnvContext, type FieldEnv } from "./env";
 import { isFileInfo } from "./upload";
 
@@ -74,7 +74,7 @@ function References(props: ShownProps & { env: FieldEnv; entity: string }) {
       env.fieldName,
       ids,
     ],
-    queryFn: () => resolveIds(entity, env, ids),
+    queryFn: () => resolveIds(entity, autocompleteParams(env), ids),
   });
   if (resolved.isError) return <Shown {...props} text="" error={errorMessage(resolved.error)} />;
   if (!resolved.data) return <Shown {...props} text={ts("Loading...")} />;

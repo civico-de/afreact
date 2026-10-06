@@ -870,6 +870,7 @@ describe("AfreactSearch bulk actions", () => {
         ],
       },
       { name: "employer_id", label: "Employer", input_type: "EntityRef", data_type: "Integer", fk_entity: "Contact" },
+      { name: "geo", label: "Where", input_type: "Location", data_type: "String" },
       { name: "is_deleted", label: "Deleted", input_type: "CheckBox", data_type: "Boolean" },
       { name: "sort_name", label: "Sort Name", input_type: "Text", data_type: "String" },
     ];
@@ -883,7 +884,11 @@ describe("AfreactSearch bulk actions", () => {
     it("updates the selected rows with the chosen fields and values", async () => {
       const calls = serve({
         tasks: [enable, update],
-        handlers: { "Contact.getFields": () => fields, "Contact.update": () => done(2) },
+        handlers: {
+          "Contact.getFields": () => fields,
+          "Contact.update": () => done(2),
+          "Contact.autocomplete": () => Object.assign([{ id: 2, label: "Bob" }], { countMatched: 1 }),
+        },
       });
       renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
       await screen.findByText("Name 1");
@@ -898,10 +903,10 @@ describe("AfreactSearch bulk actions", () => {
       await waitFor(() => {
         expect(add).toBeEnabled();
       });
-      expect(within(add).getByRole("option", { name: "Employer" })).toBeDisabled();
-      expect(within(add).getByRole("option", { name: "Employer" })).toHaveAttribute(
+      expect(within(add).getByRole("option", { name: "Where" })).toBeDisabled();
+      expect(within(add).getByRole("option", { name: "Where" })).toHaveAttribute(
         "title",
-        "Not supported by the React renderer: EntityRef",
+        "Not supported by the React renderer: Location",
       );
       const addButton = within(dialog).getByRole("button", { name: "Add" });
       expect(addButton).toBeDisabled();
@@ -928,6 +933,21 @@ describe("AfreactSearch bulk actions", () => {
       await userEvent.type(within(dialog).getByRole("textbox", { name: "Job Title" }), "Pilot");
       await userEvent.selectOptions(fieldSelects()[2]!, "");
       expect(within(dialog).queryByRole("combobox", { name: "Gender" })).not.toBeInTheDocument();
+      // A contact reference searches its entity, named to the server by the field.
+      await addField(dialog, "employer_id");
+      const employer = await within(dialog).findByRole("combobox", { name: "Employer" });
+      await userEvent.type(employer, "Bo");
+      await userEvent.click(await screen.findByRole("option", { name: "Bob" }));
+      expect(employer).toHaveValue("Bob");
+      expect(named(calls, "Contact.autocomplete").map(({ params }) => params)).toEqual([
+        {
+          input: "Bo",
+          searchField: null,
+          exclude: null,
+          quickEdit: false,
+          fieldName: "Contact.employer_id",
+        },
+      ]);
       await userEvent.click(save);
       await waitFor(() => {
         expect(window.CRM.alert).toHaveBeenCalledWith(
@@ -937,7 +957,10 @@ describe("AfreactSearch bulk actions", () => {
         );
       });
       expect(named(calls, "Contact.update").map(({ params }) => params)).toEqual([
-        { values: { job_title: "Pilot", is_deceased: false }, where: [["id", "IN", [1, 2]]] },
+        {
+          values: { job_title: "Pilot", is_deceased: false, employer_id: 2 },
+          where: [["id", "IN", [1, 2]]],
+        },
       ]);
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       // The rows changed, so the table reloads and the selection clears.

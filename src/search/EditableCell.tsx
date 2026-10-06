@@ -11,6 +11,7 @@ import {
 } from "react";
 import { api4, errorMessage } from "../api/civi";
 import { cellText } from "./Cell";
+import { EntityRefInput } from "./EntityRefInput";
 import {
   editorFor,
   initialValue,
@@ -158,13 +159,16 @@ function CellEditor({
     else if (form.current?.reportValidity() !== false) finish(true);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
-    if (event.key === "Escape") {
+    const target = event.target;
+    // An open autocomplete list takes Escape and Enter for itself, as select2's does.
+    const listOpen = target instanceof Element && target.getAttribute("aria-expanded") === "true";
+    if (event.key === "Escape" && !listOpen) {
       event.preventDefault();
       finish(false);
     }
-    const target = event.target;
     if (
       event.key === "Enter" &&
+      !event.defaultPrevented &&
       !(target instanceof HTMLTextAreaElement || target instanceof HTMLButtonElement)
     ) {
       event.preventDefault();
@@ -377,6 +381,8 @@ export function Input(props: InputProps) {
       return <BooleanInput {...props} />;
     case "select":
       return props.info.options === true ? <LoadedSelect {...props} /> : <Select {...props} />;
+    case "entityref":
+      return <EntityRefInput {...props} />;
   }
 }
 

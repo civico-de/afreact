@@ -197,6 +197,9 @@ export type TableRun = {
       control_field?: string;
       date?: boolean;
       end_date_years?: number;
+      filter?: {
+        contact_type: string;
+      };
       label?: string;
       multiple?: boolean;
       rows?: number;

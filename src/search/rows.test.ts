@@ -128,13 +128,13 @@ describe("unsupportedFeatures", () => {
         toolbar: [{ task: "enable" }],
         editable: {
           name: editInfo({ value_key: "name" }),
-          "employer_id.display_name": editInfo({ value_key: "employer_id", fk_entity: "Contact" }),
+          "address_primary.geo_code_1": editInfo({ value_key: "geo", input_type: "Location" }),
         },
       }),
     );
     expect(unsupportedFeatures(settings, page)).toEqual([
-      "in-place editing of employer_id.display_name (EntityRef)",
-      "new row: employer_id.display_name (EntityRef)",
+      "in-place editing of address_primary.geo_code_1 (Location)",
+      "new row: address_primary.geo_code_1 (Location)",
       "drag to reorder in hierarchical tables (draggable)",
     ]);
   });

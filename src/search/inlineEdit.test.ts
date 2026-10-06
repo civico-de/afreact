@@ -35,13 +35,20 @@ describe("editorFor", () => {
     expect(kind({ value_key: "e", input_type: "Email" })).toMatchObject({ kind: "email" });
     expect(kind({ value_key: "n", input_type: "TextArea" })).toMatchObject({ kind: "textarea" });
     expect(kind({ value_key: "x", input_type: null })).toMatchObject({ kind: "text" });
+    expect(kind({ value_key: "e", fk_entity: "Contact" })).toEqual({
+      kind: "entityref",
+      multiple: false,
+    });
+    expect(kind({ value_key: "id", data_type: "Integer" })).toMatchObject({ kind: "entityref" });
+    expect(kind({ value_key: "e", fk_entity: "Tag", serialize: true })).toEqual({
+      kind: "entityref",
+      multiple: true,
+    });
   });
 
   it("names the inputs the table cannot show", () => {
     const reason = (info: Parameters<typeof editInfo>[0]) => editorFor(editInfo(info));
     expect(reason({ value_key: "l", input_type: "Location" })).toEqual({ unsupported: "Location" });
-    expect(reason({ value_key: "e", fk_entity: "Contact" })).toEqual({ unsupported: "EntityRef" });
-    expect(reason({ value_key: "id", data_type: "Integer" })).toEqual({ unsupported: "EntityRef" });
     expect(reason({ value_key: "t", data_type: "Array" })).toEqual({
       unsupported: "multi-value text",
     });
@@ -57,12 +64,12 @@ describe("unsupportedEditors", () => {
       Object.assign([], {
         editable: {
           job_title: editInfo({ value_key: "job_title" }),
-          "employer_id.sort_name": editInfo({ value_key: "employer_id", fk_entity: "Contact" }),
+          "address_primary.geo_code_1": editInfo({ value_key: "geo", input_type: "Location" }),
         },
       }),
     );
     expect(unsupportedEditors(page)).toEqual([
-      "in-place editing of employer_id.sort_name (EntityRef)",
+      "in-place editing of address_primary.geo_code_1 (Location)",
     ]);
     expect(unsupportedEditors(undefined)).toEqual([]);
   });

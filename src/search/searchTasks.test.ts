@@ -153,11 +153,11 @@ describe("taskRun", () => {
       kind: "unsupported",
       reason: "Angular dialog ~/crmSearchTasks/crmSearchTaskTag.html",
     });
-    const contact = { name: "contact_id", label: "Contact", input_type: "EntityRef", data_type: "Integer" };
-    const soft = { ...disable, apiBatch: { action: "save", fields: [{ ...contact, fk_entity: "Contact" }] } };
-    expect(taskRun(soft)).toEqual({
+    const where = { name: "geo", label: "Where", input_type: "Location", data_type: "String" };
+    const located = { ...disable, apiBatch: { action: "save", fields: [where] } };
+    expect(taskRun(located)).toEqual({
       kind: "unsupported",
-      reason: "input field contact_id (EntityRef)",
+      reason: "input field geo (Location)",
     });
     const note = { name: "note", label: "Note", input_type: "TextArea", data_type: "String" };
     const typed = { ...disable, apiBatch: { action: "save", fields: [note] } };

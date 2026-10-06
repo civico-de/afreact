@@ -292,11 +292,60 @@ describe("in-place editing", () => {
     expect(screen.queryByRole("button", { name: /Edit/ })).not.toBeInTheDocument();
   });
 
-  it("shows a contact reference read-only and names it as unsupported", async () => {
-    setup({ value_key: "employer_id", fk_entity: "Contact" }, 3, { shown: "Acme" });
-    expect(await screen.findByRole("cell", { name: "Acme" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Edit/ })).not.toBeInTheDocument();
-    expect(screen.getByText(/in-place editing of employer_id \(EntityRef\)/)).toBeInTheDocument();
+  it("edits a contact reference through an autocomplete on its entity", async () => {
+    const bob = { id: 2, label: "Bob" };
+    const { edits, calls } = setup({ value_key: "employer_id", fk_entity: "Contact" }, 3, {
+      shown: "Acme",
+      handlers: {
+        "Contact.autocomplete": ({ ids }) =>
+          Object.assign(ids ? [{ id: 3, label: "Acme" }] : [bob], { countMatched: 1 }),
+      },
+    });
+    await open();
+    const input = await screen.findByRole("combobox", { name: "Value, Ada" });
+    expect(input).toHaveFocus();
+    // The stored id resolves to its label through the same request as a form field's.
+    await waitFor(() => {
+      expect(input).toHaveValue("Acme");
+    });
+    await userEvent.type(input, "Bo");
+    await screen.findByRole("option", { name: "Bob" });
+    // Enter picks the highlighted record; a second Enter saves the cell.
+    await userEvent.keyboard("{Enter}");
+    expect(input).toHaveValue("Bob");
+    expect(edits()).toEqual([]);
+    await userEvent.keyboard("{Enter}");
+    await screen.findByRole("button", { name: edit("Saved") });
+    expect(edits()[0]?.values).toEqual({ employer_id: 2 });
+    const lookups = calls.filter(({ call }) => call === "Contact.autocomplete");
+    expect(lookups.map(({ params }) => params.fieldName)).toEqual([
+      "Contact.employer_id",
+      "Contact.employer_id",
+    ]);
+    expect(lookups[0]?.params.ids).toEqual([3]);
+  });
+
+  it("closes an open list on Escape before the editor, and clears a reference", async () => {
+    const { edits } = setup({ value_key: "employer_id", fk_entity: "Contact", nullable: true }, 3, {
+      shown: "Acme",
+      handlers: {
+        "Contact.autocomplete": ({ ids }) =>
+          Object.assign(ids ? [{ id: 3, label: "Acme" }] : [{ id: 2, label: "Bob" }], {
+            countMatched: 1,
+          }),
+      },
+    });
+    await open();
+    const input = await screen.findByRole("combobox", { name: "Value, Ada" });
+    await userEvent.type(input, "Bo");
+    await screen.findByRole("option", { name: "Bob" });
+    await userEvent.keyboard("{Escape}");
+    expect(input).toHaveAttribute("aria-expanded", "false");
+    expect(input).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByRole("button", { name: edit("Saved") });
+    expect(edits()[0]?.values).toEqual({ employer_id: null });
   });
 });
 

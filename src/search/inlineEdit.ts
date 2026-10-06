@@ -15,6 +15,7 @@ export type EditorKind =
   | "boolean"
   | "color"
   | "select"
+  | "entityref"
   | "integer"
   | "float"
   | "email"
@@ -33,7 +34,7 @@ export function editorFor(info: EditableInfo): Editor {
   if (info.data_type === "Boolean") return only("boolean", "Yes/No");
   if (info.input_type === "Color") return only("color", "colour");
   if (info.options) return { kind: "select", multiple };
-  if (info.fk_entity || info.value_key === "id") return { unsupported: "EntityRef" };
+  if (info.fk_entity || info.value_key === "id") return { kind: "entityref", multiple };
   if (info.data_type === "Integer") return only("integer", "number");
   if (info.data_type === "Float") return only("float", "number");
   if (info.input_type === "Email") return only("email", "text");

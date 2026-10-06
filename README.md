@@ -71,8 +71,8 @@ a setting render with React wherever core places them (see [Rendering forms with
   update of chosen fields. Rows of draggable tables
   move by pointer or keyboard. Other tasks that are Angular dialogs, full-row
   editing (`editableRow.full`), drag to reorder in hierarchical tables, include
-  columns and the in-place editors for contact references, locations and
-  multi-value text, number, date or Yes/No fields show a note instead.
+  columns and the in-place editors for locations and multi-value text, number,
+  date or Yes/No fields show a note instead.
 - **Types:** `src/api/entities.gen.ts` is generated from APIv4
   `getFields` (see [Development](#development)).
 - **Unsupported layout** is never dropped silently: the renderer shows a

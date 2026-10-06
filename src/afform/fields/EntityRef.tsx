@@ -5,6 +5,7 @@ import { ClearButton } from "../Field";
 import type { FieldDefn } from "../types";
 import { Unsupported } from "../Unsupported";
 import {
+  autocompleteParams,
   createdId,
   entityRefProblem,
   hasQuickAdd,
@@ -53,7 +54,9 @@ export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: 
       env.fieldName,
       missing,
     ],
-    queryFn: entity !== null && missing.length ? () => resolveIds(entity, env, missing) : skipToken,
+    queryFn: entity !== null && missing.length
+        ? () => resolveIds(entity, autocompleteParams(env), missing)
+        : skipToken,
   });
   const lookup = new Map(known);
   for (const item of resolved.data ?? []) lookup.set(String(item.id), item);
@@ -72,7 +75,7 @@ export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: 
   const load = async (input: string, context: SearchContext) => {
     if (entity === null) throw new Error(`${defn.name} has no entity to search`);
     try {
-      return await searchPage(entity, env, input, context);
+      return await searchPage(entity, autocompleteParams(env), input, context);
     } catch (error) {
       throw new Error(errorMessage(error), { cause: error });
     }

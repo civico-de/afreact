@@ -57,6 +57,7 @@ that no longer excuses anything fails the test.
 | Stored ids the autocomplete cannot find | dropped from view, kept in the model | kept, with a visible "No record found" message |
 | Chained selects (ChainSelect) | select2, disabled while the options load and when none came back (`master` also disables it while the control field is empty); a required one without options blocks the submit for good | native `<select>`, options from `Afform.getOptions` as in Angular, disabled the same way; the browser skips a disabled select, so the server reports the missing value instead |
 | In-place editors | select2, datepicker and select2 tags; text inputs at least as wide as the cell was | native `<select>`, `<input type="date">` and `datetime-local`, a colour picker beside a text input; inputs at their own width |
+| In-place reference editor (fk_entity, `id`) | `crm-autocomplete` on the foreign entity with `fieldName: <entity>.<field>`, quick-add and quick-edit links in the dropdown; Enter and Escape close an open list before they reach the editor | the same combobox as a form's EntityRef, with the same `fieldName`; a single value shows its label and a clear link, a multi-value one its chips; no quick-add or quick-edit links (their popup would leave the editor); Enter and Escape in an open list stay with it |
 | New row (`editableRow.create`) | an "Add" button in the control column opens a row of inputs; every input is marked required but saved anyway; Enter anywhere saves; `cancelEditing()` runs before the call, so a failed save loses the typed values; a new record outside the filters reloads the displays; an empty `createLabel` leaves an icon-only button | the same row; only fields that allow no null are required and checked before the call; Enter in the row saves, Escape returns the focus to the button; a failed save keeps the row with the error; the same reload; "Add" as the fallback label; editable columns whose editor React lacks are named in the note, and a required one among them withholds the row |
 | Leaving an in-place editor | the editor stays open until Enter, Escape or a button | a valid change saves, an unchanged editor closes; switching windows leaves it open |
 | Emptying an in-place text | saves `""` | saves `null` where the field can be emptied |
@@ -119,8 +120,8 @@ instead of being dropped:
   hierarchical tables, include columns
 - drag to reorder and re-parent in tree displays (`draggable`); the tree
   itself renders, with the note
-- in-place editors for contact references (EntityRef), locations, and
-  multi-value text, number, date or Yes/No fields; their cells stay read-only
+- in-place editors for locations and multi-value text, number, date or Yes/No
+  fields; their cells stay read-only
 - bulk actions whose task is an Angular dialog (tag, merge tags, add
   relationship, and extensions' own; download and update have their own
   dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
@@ -146,7 +147,7 @@ kept across sorting and paging, cleared by new filters and after a task.
 |---|---|---|
 | Confirmation dialog | jQuery UI dialog through `dialogService` | native modal `<dialog>`: focus moves in and back to the menu button, Escape cancels before the run starts |
 | Progress bar | moves forward every second while a batch runs | moves per finished batch |
-| Update dialog | select2 pickers add a clause as soon as a field is picked, and pick each clause's field; `crm-search-input` for the value, unlabelled; fields of every writable type; the success alert is titled "Saved" | a native select plus an Add button; the value input of the in-place editors, labelled by the field; fields whose input the in-place editor lacks (EntityRef, multi-value) stay in the list, disabled, with the reason as their title; values a hook presets in `task.values` start the dialog; the batch then runs in the task dialog with the same title |
+| Update dialog | select2 pickers add a clause as soon as a field is picked, and pick each clause's field; `crm-search-input` for the value, unlabelled; fields of every writable type; the success alert is titled "Saved" | a native select plus an Add button; the value input of the in-place editors, labelled by the field; fields whose input the in-place editor lacks (Location, multi-value) stay in the list, disabled, with the reason as their title; values a hook presets in `task.values` start the dialog; the batch then runs in the task dialog with the same title |
 | Task input fields (`apiBatch.fields`) | `crm-search-input` per field, started from its default, serialized, Boolean or first option; the task button waits for a valid form | the in-place editors' inputs with the same start values, native validation; a task with a field those editors lack stays disabled with the note |
 | Changing a clause's field in the update dialog | keeps the value typed for the previous field | starts the new field's value afresh, as when added |
 | Update from a row link | a row link's single-row update runs `SearchDisplay.inlineEdit`; the update dialog's batch always runs `Entity.update` on the row's id | the same |

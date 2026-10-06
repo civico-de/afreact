@@ -40,6 +40,8 @@ export interface ComboboxProps {
   load: (input: string, context: SearchContext) => Promise<SearchPage>;
   onSelect: (item: AutocompleteItem) => void;
   onRemove: (item: AutocompleteItem) => void;
+  /** Takes the focus on mount, for an editor whose first input it is. */
+  autoFocus?: boolean;
 }
 
 interface Results {
@@ -275,6 +277,7 @@ export function Combobox(props: ComboboxProps) {
               className: classes("select2-input", !hasValue && "select2-default"),
               placeholder: hasValue ? undefined : props.placeholder,
               disabled,
+              autoFocus: props.autoFocus,
               "aria-labelledby": undefined,
               "aria-describedby": props.describedBy,
               "aria-required": props.required,

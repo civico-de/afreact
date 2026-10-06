@@ -5,8 +5,8 @@ declare(strict_types = 1);
 use CRM_Afreact_ExtensionUtil as E;
 
 /**
- * Contacts with in-place editable columns (a text and an option list) and the column picker,
- * for the browser tests that compare in-place editing on both renderers.
+ * Contacts with in-place editable columns (a text, an option list and a contact reference) and
+ * the column picker, for the browser tests that compare in-place editing on both renderers.
  */
 return [
   [
@@ -22,7 +22,7 @@ return [
         'api_entity' => 'Individual',
         'api_params' => [
           'version' => 4,
-          'select' => ['id', 'sort_name', 'job_title', 'gender_id:label'],
+          'select' => ['id', 'sort_name', 'job_title', 'gender_id:label', 'employer_id.display_name'],
           'orderBy' => [],
           'where' => [['is_deleted', '=', FALSE]],
         ],
@@ -66,6 +66,13 @@ return [
               'type' => 'field',
               'key' => 'gender_id:label',
               'label' => E::ts('Gender'),
+              'sortable' => TRUE,
+              'editable' => TRUE,
+            ],
+            [
+              'type' => 'field',
+              'key' => 'employer_id.display_name',
+              'label' => E::ts('Employer'),
               'sortable' => TRUE,
               'editable' => TRUE,
             ],

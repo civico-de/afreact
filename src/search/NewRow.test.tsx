@@ -177,29 +177,26 @@ describe("editableRow.create", () => {
   });
 
   it("names a column it cannot fill", async () => {
-    const employer = (nullable: boolean) =>
-      editInfo({ value_key: "employer_id", entity: "OptionValue", fk_entity: "Contact", nullable });
-    setup({ editable: { "employer_id.display_name": employer(true) } });
+    const location = (nullable: boolean) =>
+      editInfo({ value_key: "geo", entity: "OptionValue", input_type: "Location", nullable });
+    setup({ editable: { "address.geo": location(true) } });
     await screen.findByText("One");
     expect(screen.getByRole("note")).toHaveTextContent(
-      "in-place editing of employer_id.display_name (EntityRef), " +
-        "new row: employer_id.display_name (EntityRef)",
+      "in-place editing of address.geo (Location), new row: address.geo (Location)",
     );
     expect(addButton()).toBeInTheDocument();
   });
 
   it("withholds the row when a column it cannot fill is required", async () => {
-    const employer = editInfo({
-      value_key: "employer_id",
+    const location = editInfo({
+      value_key: "geo",
       entity: "OptionValue",
-      fk_entity: "Contact",
+      input_type: "Location",
       nullable: false,
     });
-    setup({ editable: { "employer_id.display_name": employer } });
+    setup({ editable: { "address.geo": location } });
     await screen.findByText("One");
-    expect(screen.getByRole("note")).toHaveTextContent(
-      "new row: employer_id.display_name (EntityRef, required)",
-    );
+    expect(screen.getByRole("note")).toHaveTextContent("new row: address.geo (Location, required)");
     expect(screen.queryByRole("button", { name: "Add Option" })).not.toBeInTheDocument();
   });
 

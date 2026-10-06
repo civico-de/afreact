@@ -32,6 +32,9 @@ export interface SearchPage {
   context: SearchContext;
 }
 
+/** What names the field to `<Entity>.autocomplete`, which picks its saved search by it. */
+export type AutocompleteParams = Record<string, unknown>;
+
 /** afField's getAutocompleteParams(): the server finds the field's saved search and filters by these. */
 export function autocompleteParams(env: FieldEnv) {
   const join = env.joinEntity ? `+${env.joinEntity}` : "";
@@ -49,7 +52,7 @@ function stringList(value: unknown): string[] {
 /** One page of search results, as select2's ajax `data` and `results` callbacks build them. */
 export async function searchPage(
   entity: string,
-  env: FieldEnv,
+  params: AutocompleteParams,
   input: string,
   context: SearchContext,
 ): Promise<SearchPage> {
@@ -58,7 +61,7 @@ export async function searchPage(
     searchField: context.searchField,
     exclude: context.previousIds.length ? context.previousIds : null,
     quickEdit: false,
-    ...autocompleteParams(env),
+    ...params,
   });
   const searchField = "searchField" in result ? result.searchField : null;
   const next: SearchContext = {
@@ -78,13 +81,13 @@ export async function searchPage(
 /** The records behind a stored value, as select2's initSelection loads them. */
 export async function resolveIds(
   entity: string,
-  env: FieldEnv,
+  params: AutocompleteParams,
   ids: (string | number)[],
 ): Promise<AutocompleteItem[]> {
   return [
     ...(await api4<AutocompleteItem>(entity, "autocomplete", {
       quickEdit: false,
-      ...autocompleteParams(env),
+      ...params,
       ids,
     })),
   ];
