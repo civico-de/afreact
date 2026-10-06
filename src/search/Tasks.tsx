@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { api4, errorMessage } from "../api/civi";
 import { fetchDownload, saveBlob } from "./download";
+import { Input } from "./EditableCell";
+import { editorFor } from "./inlineEdit";
 import { Icon } from "./LinkContent";
 import { onLinkClick } from "./links";
 import { UpdateDialog } from "./UpdateDialog";
@@ -23,6 +25,8 @@ import {
   DOWNLOAD_FORMATS,
   downloadParams,
   evaluateTaskExpression,
+  fieldEditableInfo,
+  initialBatchValue,
   inlineEditCall,
   parseTaskList,
   referencedTasks,
@@ -72,6 +76,7 @@ type RunningTask = Running &
   ({ kind: "batch"; apiBatch: ApiBatch } | { kind: "download" } | { kind: "update" });
 
 const TASKS = "getSearchTasks";
+const NO_ROW: Row = { key: "", columns: [] };
 
 /**
  * Bulk actions of a table display (searchDisplayTasksTrait, crmSearchTasksMenu): the selection,
@@ -424,13 +429,21 @@ interface TaskDialogProps {
 }
 
 /**
- * crmSearchTaskApiBatch.html with crmSearchBatchRunner: the confirmation, then batches of
- * BATCH_SIZE ids with a progress bar, then core's success or error message.
+ * crmSearchTaskApiBatch.html with crmSearchBatchRunner: the confirmation and the task's input
+ * fields, then batches of BATCH_SIZE ids with a progress bar, then core's success or error message.
  */
 function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
-  const { task, apiBatch, ids, isLink } = running;
+  const { task, ids, isLink } = running;
   const titleId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
+  const fields = running.apiBatch.fields ?? [];
+  const [values, setValues] = useState<Record<string, unknown>>(() =>
+    Object.fromEntries(fields.map((field) => [field.name, initialBatchValue(field)])),
+  );
+  // The entered values join the batch's own, as crmSearchTaskApiBatch writes them into params.
+  const apiBatch = fields.length
+    ? { ...running.apiBatch, params: { ...running.apiBatch.params, values } }
+    : running.apiBatch;
   const [progress, setProgress] = useState<{ percent: number; first: number; last: number } | null>(
     null,
   );
@@ -491,10 +504,10 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
     onDone(result);
   };
 
-  // The dialog mounts once per task. Without a question to answer the run starts at once.
+  // The dialog mounts once per task. Without a question or field to fill the run starts at once.
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
-    if (!confirmMsg) void start();
+    if (!confirmMsg && !fields.length) void start();
   });
 
   return (
@@ -513,8 +526,45 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
       <h2 id={titleId} className="afreact-dialog-title">
         {task.title}
       </h2>
-      <div className="afreact-dialog-body">
+      <form
+        className="afreact-dialog-body"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void start();
+        }}
+      >
         <p>{confirmMsg && <strong>{message(confirmMsg, ids.length)}</strong>}</p>
+        {fields.map((field) => {
+          const info = fieldEditableInfo(apiBatch.entity ?? entity.name, field);
+          const editor = editorFor(info);
+          if ("unsupported" in editor) return null;
+          const labelId = `${titleId}-${field.name}`;
+          return (
+            <div key={field.name} className="form-inline">
+              <label id={labelId} htmlFor={`${labelId}-input`}>
+                {field.label}
+              </label>{" "}
+              <Input
+                kind={editor.kind}
+                multiple={editor.multiple}
+                info={info}
+                row={NO_ROW}
+                value={values[field.name]}
+                nullable={info.nullable}
+                labelId={labelId}
+                common={{
+                  id: `${labelId}-input`,
+                  required: !info.nullable || !!field.required,
+                  "aria-invalid": undefined,
+                  "aria-describedby": undefined,
+                }}
+                onChange={(next) => {
+                  setValues({ ...values, [field.name]: next });
+                }}
+              />
+            </div>
+          );
+        })}
         <hr />
         {progress && (
           <div className="crm-search-task-progress">
@@ -537,27 +587,22 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
             </p>
           </div>
         )}
-      </div>
-      <div className="afreact-dialog-buttons">
-        <button
-          type="button"
-          className="btn btn-default"
-          disabled={!!progress}
-          onClick={() => dialog.current?.close()}
-        >
-          <Icon name="fa-times" /> {ts("Cancel")}
-        </button>
-        {confirmMsg && (
+        <div className="afreact-dialog-buttons">
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-default"
             disabled={!!progress}
-            onClick={() => void start()}
+            onClick={() => dialog.current?.close()}
           >
-            <Icon name={progress ? "fa-spin fa-spinner" : "fa-check"} /> {task.title}
+            <Icon name="fa-times" /> {ts("Cancel")}
           </button>
-        )}
-      </div>
+          {(confirmMsg || fields.length > 0) && (
+            <button type="submit" className="btn btn-primary" disabled={!!progress}>
+              <Icon name={progress ? "fa-spin fa-spinner" : "fa-check"} /> {task.title}
+            </button>
+          )}
+        </div>
+      </form>
     </dialog>
   );
 }
@@ -611,6 +656,7 @@ function DownloadDialog({ running, entity, runParams, rowCount, onDone }: Downlo
   };
 
   const finish = (message: string) => {
+    if (done.current) return;
     done.current = true;
     dialog.current?.close();
     onDone({ ran: false, message });
@@ -629,7 +675,9 @@ function DownloadDialog({ running, entity, runParams, rowCount, onDone }: Downlo
         if (busy) event.preventDefault();
       }}
       onClose={() => {
+        // A forced close (a second Escape) ends the task; the pending fetch then changes nothing.
         if (!done.current) onDone({ ran: false, message: "" });
+        done.current = true;
       }}
     >
       <h2 id={titleId} className="afreact-dialog-title" tabIndex={-1}>

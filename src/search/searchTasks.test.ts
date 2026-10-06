@@ -153,8 +153,15 @@ describe("taskRun", () => {
       kind: "unsupported",
       reason: "Angular dialog ~/crmSearchTasks/crmSearchTaskTag.html",
     });
-    const fields = { ...disable, apiBatch: { action: "save", fields: [{ name: "contact_id" }] } };
-    expect(taskRun(fields)).toEqual({ kind: "unsupported", reason: "input fields" });
+    const contact = { name: "contact_id", label: "Contact", input_type: "EntityRef", data_type: "Integer" };
+    const soft = { ...disable, apiBatch: { action: "save", fields: [{ ...contact, fk_entity: "Contact" }] } };
+    expect(taskRun(soft)).toEqual({
+      kind: "unsupported",
+      reason: "input field contact_id (EntityRef)",
+    });
+    const note = { name: "note", label: "Note", input_type: "TextArea", data_type: "String" };
+    const typed = { ...disable, apiBatch: { action: "save", fields: [note] } };
+    expect(taskRun(typed)).toEqual({ kind: "batch", apiBatch: typed.apiBatch });
     expect(taskRun({ name: "x", title: "X", number: "> 0" })).toEqual({
       kind: "unsupported",
       reason: "no apiBatch, crmPopup or redirect",

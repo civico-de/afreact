@@ -122,10 +122,10 @@ instead of being dropped:
   multi-value text, number, date or Yes/No fields; their cells stay read-only
 - bulk actions whose task is an Angular dialog (tag, merge tags, add
   relationship, and extensions' own; download and update have their own
-  dialogs), takes input fields
-  (`apiBatch.fields`, e.g. soft credits), or uses an expression other than a
-  literal, an object literal, `ids[n]`, `ids.join(',')` and the task's data
-  names. They stay in the actions menu, disabled, with the note as their
+  dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
+  with a contact reference, as soft credits do), or uses an expression other
+  than a literal, an object literal, `ids[n]`, `ids.join(',')` and the task's
+  data names. They stay in the actions menu, disabled, with the note as their
   title; a row link to one alerts.
 - save-draft and reset buttons outside `af-form`, as on a search page
 
@@ -146,7 +146,10 @@ kept across sorting and paging, cleared by new filters and after a task.
 | Confirmation dialog | jQuery UI dialog through `dialogService` | native modal `<dialog>`: focus moves in and back to the menu button, Escape cancels before the run starts |
 | Progress bar | moves forward every second while a batch runs | moves per finished batch |
 | Update dialog | select2 pickers add a clause as soon as a field is picked, and pick each clause's field; `crm-search-input` for the value, unlabelled; fields of every writable type; the success alert is titled "Saved" | a native select plus an Add button; the value input of the in-place editors, labelled by the field; fields whose input the in-place editor lacks (EntityRef, multi-value) stay in the list, disabled, with the reason as their title; values a hook presets in `task.values` start the dialog; the batch then runs in the task dialog with the same title |
-| Update from a row link | `SearchDisplay.inlineEdit` for other tasks, but the update dialog's batch always runs `Entity.update` on the row's id | the same |
+| Task input fields (`apiBatch.fields`) | `crm-search-input` per field, started from its default, serialized, Boolean or first option; the task button waits for a valid form | the in-place editors' inputs with the same start values, native validation; a task with a field those editors lack stays disabled with the note |
+| Changing a clause's field in the update dialog | keeps the value typed for the previous field | starts the new field's value afresh, as when added |
+| Update from a row link | a row link's single-row update runs `SearchDisplay.inlineEdit`; the update dialog's batch always runs `Entity.update` on the row's id | the same |
+| Update dialog preset on a field `getFields` does not list | the clause shows an empty picker and its value is sent | the clause shows the field's name, can be removed, and its value is sent |
 | Download dialog | format select; a progress bar grows by 10 % each second whatever the server does; the dialog's close button is hidden while it runs | the same format select; a full striped bar in a status region while the file loads, the title takes the focus; Escape and both buttons are off while it runs |
 | Delete task without `confirmMsg` (changed by a hook) | runs at once | asks with core's delete question |
 | After a row link updates its row | reloads that row (`refreshAfterEditing`) | reloads the table |
@@ -736,9 +739,9 @@ posts the file request without a rejection handler, so a server error leaves
 the bar at 90 % and the dialog open, with its title-bar close button hidden
 (read from the code on `master` as of 2026-10-06, not run). Its Cancel and
 Download buttons are disabled by `$ctrl.run`, which that controller never
-sets, so a second click starts a second download. The React renderer shows the
-server's error and closes the dialog, and disables the buttons while the file
-loads.
+sets, so a second click starts a second download; Cancel and Escape still
+close the dialog. The React renderer shows the server's error and closes the
+dialog, and disables the buttons while the file loads.
 
 **A URL field is never disabled.** `fields/Url.html` has no `ng-disabled`, so
 `af-disabled`, a saving form and a read-only autofill field leave URL inputs

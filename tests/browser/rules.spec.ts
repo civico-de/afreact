@@ -123,13 +123,14 @@ test("a loaded record keeps its stored value over the token default on React", a
   });
   contacts.push(contact!.id);
   const nick: Record<Renderer, string> = { react: "", angular: "" };
-  for (const renderer of ["react", "angular"] as const) {
+  for (const renderer of ["angular", "react"] as const) {
     await page.goto(render(renderer, `#?Individual1=${String(contact!.id)}`));
     await expect(input(page, "first_name")).toHaveValue("Ada");
     await settled(page, renderer);
     nick[renderer] = await input(page, "nick_name").inputValue();
+    // A change to a referenced field calculates the default again on both.
+    await input(page, "first_name").fill("Grace");
+    await expect(input(page, "nick_name")).toHaveValue("Dear Grace");
   }
   expect(nick).toEqual({ react: "Stored", angular: "Dear Ada" });
-  await input(page, "first_name").fill("Grace");
-  await expect(input(page, "nick_name")).toHaveValue("Dear Grace");
 });

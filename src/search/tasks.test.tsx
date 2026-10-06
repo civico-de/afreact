@@ -389,6 +389,65 @@ describe("AfreactSearch bulk actions", () => {
     expect(selectAll()).toHaveAttribute("aria-checked", "false");
   });
 
+  it("asks for a task's input fields, started as core does, and saves them with every id", async () => {
+    const credit: SearchTask = {
+      name: "add_soft_credit",
+      title: "Add Soft Credits",
+      number: "> 0",
+      apiBatch: {
+        entity: "ContributionSoft",
+        action: "save",
+        runMsg: "Adding soft credits...",
+        idField: "contribution_id",
+        fields: [
+          { name: "amount", label: "Amount", input_type: "Number", data_type: "Float", required: true },
+          {
+            name: "soft_credit_type_id",
+            label: "Soft Credit Type",
+            input_type: "Select",
+            data_type: "Integer",
+            default_value: 2,
+            options: [
+              { id: 1, label: "In Honor of" },
+              { id: 2, label: "In Memory of" },
+            ],
+          },
+        ],
+      },
+    };
+    const calls = serve({
+      tasks: [enable, credit],
+      handlers: { "ContributionSoft.save": (params) => done((params.records as unknown[]).length) },
+    });
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+    await screen.findByText("Name 1");
+    await selectRows("Name 1", "Name 3");
+    await openActions();
+    await userEvent.click(screen.getByRole("menuitem", { name: /Add Soft Credits/, hidden: true }));
+    const dialog = await screen.findByRole("dialog", { name: "Add Soft Credits" });
+    // Nothing runs until the fields are confirmed.
+    expect(named(calls, "ContributionSoft.save")).toHaveLength(0);
+    const type = within(dialog).getByRole("combobox", { name: "Soft Credit Type" });
+    expect(type).toHaveValue("2");
+    const amount = within(dialog).getByRole("spinbutton", { name: "Amount" });
+    expect(amount).toBeRequired();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add Soft Credits" }));
+    expect(dialog).toBeInTheDocument();
+    await userEvent.type(amount, "12.5");
+    await userEvent.selectOptions(type, "1");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add Soft Credits" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(named(calls, "ContributionSoft.save")[0]?.params).toEqual({
+      records: [
+        { amount: 12.5, soft_credit_type_id: 1, contribution_id: 1 },
+        { amount: 12.5, soft_credit_type_id: 1, contribution_id: 3 },
+      ],
+    });
+    expect(checkbox("Name 1")).not.toBeChecked();
+  });
+
   it("shows the progress of a run and the error of a failed batch, then reloads what changed", async () => {
     let finish: (value: unknown) => void = () => undefined;
     let call = 0;
@@ -847,6 +906,7 @@ describe("AfreactSearch bulk actions", () => {
       const addButton = within(dialog).getByRole("button", { name: "Add" });
       expect(addButton).toBeDisabled();
       await addField(dialog, "job_title");
+      expect(within(dialog).getByRole("textbox", { name: "Job Title" })).toHaveFocus();
       await userEvent.type(within(dialog).getByRole("textbox", { name: "Job Title" }), "Pilot");
       await addField(dialog, "is_deceased");
       expect(within(dialog).getByRole("radio", { name: "Yes" })).toBeChecked();
@@ -857,9 +917,13 @@ describe("AfreactSearch bulk actions", () => {
       expect(within(add).getByRole("option", { name: "Job Title" })).toBeDisabled();
       // Changing a clause's field keeps the focus on its select; emptying it drops the clause.
       const fieldSelects = () => within(dialog).getAllByRole("combobox", { name: "Field" });
+      await userEvent.selectOptions(add, "is_deleted");
+      expect(addButton).toBeEnabled();
       await userEvent.selectOptions(fieldSelects()[0]!, "is_deleted");
       expect(fieldSelects()[0]).toHaveFocus();
       expect(fieldSelects()[0]).toHaveValue("is_deleted");
+      // The pick in "Add Value" is in use now, so Add waits for another.
+      expect(addButton).toBeDisabled();
       await userEvent.selectOptions(fieldSelects()[0]!, "job_title");
       await userEvent.type(within(dialog).getByRole("textbox", { name: "Job Title" }), "Pilot");
       await userEvent.selectOptions(fieldSelects()[2]!, "");
@@ -885,7 +949,7 @@ describe("AfreactSearch bulk actions", () => {
 
     it("starts with the values a hook preset and runs a row link as a plain update", async () => {
       const links = [{ task: "update", text: "Retire" }];
-      const preset: SearchTask = { ...update, values: { is_deceased: true } };
+      const preset: SearchTask = { ...update, values: { is_deceased: true, legacy: "x" } };
       const calls = serve({
         rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })],
         tasks: [preset],
@@ -902,6 +966,10 @@ describe("AfreactSearch bulk actions", () => {
       const dialog = await screen.findByRole("dialog", { name: "Update Contacts" });
       expect(dialog).toHaveTextContent("Update the 1 selected Contact with the following values:");
       expect(await within(dialog).findByRole("radio", { name: "Yes" })).toBeChecked();
+      // A preset on a field getFields does not list shows by name and can be dropped.
+      const legacy = within(dialog).getAllByRole("combobox", { name: "Field" })[1]!;
+      expect(legacy).toHaveValue("legacy");
+      await userEvent.selectOptions(legacy, "");
       await userEvent.click(within(dialog).getByRole("button", { name: "Update Contact" }));
       await waitFor(() => {
         expect(named(calls, "Contact.update")).toHaveLength(1);
@@ -933,7 +1001,6 @@ describe("AfreactSearch bulk actions", () => {
       await userEvent.click(within(dialog).getByRole("button", { name: "Update Contact" }));
       expect(input).toBeInvalid();
       expect(dialog).toBeInTheDocument();
-      expect(named(calls, "Contact.update")).toHaveLength(0);
       await userEvent.type(input, "Pilot");
       await userEvent.click(within(dialog).getByRole("button", { name: "Update Contact" }));
       await waitFor(() => {

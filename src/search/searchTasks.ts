@@ -1,6 +1,7 @@
 import { decodeJs, rawProps } from "../afform/bundle";
 import type { ApiResult } from "../api/civi";
-import type { DisplaySettings, EditOption, Row } from "./types";
+import { editorFor } from "./inlineEdit";
+import type { DisplaySettings, EditableInfo, EditOption, Row } from "./types";
 
 /**
  * SearchKit's bulk actions as SearchDisplay.getSearchTasks returns them, and how the renderer
@@ -22,7 +23,7 @@ export interface ApiBatch {
   params?: Record<string, unknown> | null;
   idField?: string;
   /** Values the user enters before the run (crm-search-input), e.g. a soft credit's contact. */
-  fields?: unknown[];
+  fields?: UpdateField[];
   confirmMsg?: string;
   runMsg?: string;
   successMsg?: string;
@@ -42,6 +43,8 @@ export interface TaskTarget {
 export interface SearchTask {
   name: string;
   title: string;
+  /** The search's entity, which GetSearchTasks writes on every task. */
+  entity?: string;
   icon?: string;
   /** How many selected rows the task takes, e.g. "> 0", "=== 2", ">= 0". */
   number: string;
@@ -77,8 +80,14 @@ function isEntityInfo(value: unknown): value is EntityInfo {
   );
 }
 
+const isField = (value: unknown) =>
+  isRecord(value) && isString(value.name) && isString(value.label) && isString(value.data_type);
+
 function isTask(value: unknown): value is SearchTask {
-  return isRecord(value) && isString(value.name) && isString(value.title) && isString(value.number);
+  if (!isRecord(value) || !isString(value.name) || !isString(value.title)) return false;
+  if (!isString(value.number)) return false;
+  const fields = isRecord(value.apiBatch) ? value.apiBatch.fields : undefined;
+  return fields === undefined || (Array.isArray(fields) && fields.every(isField));
 }
 
 /** getSearchTasks' answer: the tasks, and the entity the result object carries in `editable`. */
@@ -177,7 +186,7 @@ export type TaskRun =
 const DOWNLOAD_DIALOG = "~/crmSearchTasks/crmSearchTaskDownload.html";
 const UPDATE_DIALOG = "~/crmSearchTasks/crmSearchTaskUpdate.html";
 
-/** A field the update task may set, as searchTaskFieldsTrait selects it from getFields. */
+/** A field the update task may set, as searchTaskFieldsTrait and GetSearchTasks read getFields. */
 export interface UpdateField {
   name: string;
   label: string;
@@ -228,6 +237,45 @@ export function initialUpdateValue(field: UpdateField): unknown {
   if (field.default_value) return field.default_value;
   const options = field.options || [];
   return options.length ? options[0]?.id : "";
+}
+
+/** crmSearchTaskApiBatch's start values: a set default first, even an empty one. */
+export function initialBatchValue(field: UpdateField): unknown {
+  if ("default_value" in field) return field.default_value;
+  if (field.serialize || field.data_type === "Array") return [];
+  if (field.data_type === "Boolean") return true;
+  const options = field.options || [];
+  return options.length ? options[0]?.id : "";
+}
+
+/** What Input needs to know about a task's field, as the server describes an editable column. */
+export function fieldEditableInfo(entity: string, field: UpdateField): EditableInfo {
+  return {
+    entity,
+    input_type: field.input_type,
+    input_attrs: null,
+    data_type: field.data_type,
+    options: field.options || false,
+    serialize: !!field.serialize,
+    nullable: !!field.nullable,
+    fk_entity: field.fk_entity ?? null,
+    value_key: field.name,
+    value_path: field.name,
+    id_key: "id",
+    id_path: "id",
+    explicit_join: null,
+    control_field: null,
+    grouping_fields: [],
+  };
+}
+
+/** The first of a batch's input fields the in-place editors cannot show, or nothing. */
+export function unsupportedBatchField(task: SearchTask, batch: ApiBatch): string | undefined {
+  for (const field of batch.fields ?? []) {
+    const editor = editorFor(fieldEditableInfo(batch.entity ?? task.entity ?? "", field));
+    if ("unsupported" in editor) return `input field ${field.name} (${editor.unsupported})`;
+  }
+  return undefined;
 }
 
 /** crmSearchTaskUpdate's batch: one update of every id with the chosen values, core's messages. */
@@ -318,7 +366,8 @@ export function taskRun(task: SearchTask): TaskRun {
   const batch = task.apiBatch;
   if (!isRecord(batch) || !isString(batch.action))
     return { kind: "unsupported", reason: "no apiBatch, crmPopup or redirect" };
-  if (batch.fields?.length) return { kind: "unsupported", reason: "input fields" };
+  const field = unsupportedBatchField(task, batch);
+  if (field) return { kind: "unsupported", reason: field };
   return { kind: "batch", apiBatch: batch };
 }
 

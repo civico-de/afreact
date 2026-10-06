@@ -5,6 +5,7 @@ import { Input } from "./EditableCell";
 import { editorFor } from "./inlineEdit";
 import { Icon } from "./LinkContent";
 import {
+  fieldEditableInfo,
   initialUpdateValue,
   presetValues,
   updateFieldsCall,
@@ -13,7 +14,7 @@ import {
   type SearchTask,
   type UpdateField,
 } from "./searchTasks";
-import type { EditableInfo, Row } from "./types";
+import type { Row } from "./types";
 
 interface UpdateDialogProps {
   task: SearchTask;
@@ -22,27 +23,6 @@ interface UpdateDialogProps {
   /** The chosen values; the caller runs the batch. */
   onSave: (values: Record<string, unknown>) => void;
   onCancel: () => void;
-}
-
-/** What Input needs to know about a field, as the server describes an editable column. */
-function editableInfo(entity: string, field: UpdateField): EditableInfo {
-  return {
-    entity,
-    input_type: field.input_type,
-    input_attrs: null,
-    data_type: field.data_type,
-    options: field.options || false,
-    serialize: !!field.serialize,
-    nullable: !!field.nullable,
-    fk_entity: field.fk_entity ?? null,
-    value_key: field.name,
-    value_path: field.name,
-    id_key: "id",
-    id_path: "id",
-    explicit_join: null,
-    control_field: null,
-    grouping_fields: [],
-  };
 }
 
 const NO_ROW: Row = { key: "", columns: [] };
@@ -67,6 +47,8 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
   );
   const [chosen, setChosen] = useState("");
   const nextKey = useRef(clauses.length);
+  const list = useRef<HTMLDivElement>(null);
+  const [added, setAdded] = useState<number | null>(null);
   const [callEntity, action, params] = updateFieldsCall(entity.name);
   const fields = useQuery({
     queryKey: ["updateFields", entity.name],
@@ -75,7 +57,7 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
   const entityTitle = ids.length === 1 ? entity.title : entity.title_plural;
   const inUse = (name: string) => clauses.some((clause) => clause.name === name);
   const fieldByName = (name: string) => fields.data?.find((field) => field.name === name);
-  const editor = (field: UpdateField) => editorFor(editableInfo(entity.name, field));
+  const editor = (field: UpdateField) => editorFor(fieldEditableInfo(entity.name, field));
   const fieldTitle = (field: UpdateField) => {
     const chosen = editor(field);
     return "unsupported" in chosen
@@ -89,6 +71,7 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
     const clause = { key: nextKey.current++, name: chosen, value: initialUpdateValue(field) };
     setClauses([...clauses, clause]);
     setChosen("");
+    setAdded(clause.key);
   };
   const setField = (key: number, name: string) => {
     const field = fieldByName(name);
@@ -107,6 +90,15 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
   });
+
+  // The Add button goes disabled once used, so the focus moves on to the new clause's input.
+  useEffect(() => {
+    if (added === null) return;
+    const clause = list.current?.querySelector<HTMLElement>(`[data-key="${String(added)}"]`);
+    const input = clause?.querySelector<HTMLElement>(`[id="${addId}-${String(added)}-input"]`);
+    (input ?? clause?.querySelector("select"))?.focus();
+    setAdded(null);
+  }, [added]);
 
   const options = (current?: string) =>
     (fields.data ?? []).map((field) => (
@@ -150,25 +142,36 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
             {errorMessage(fields.error)}
           </p>
         )}
+        <div ref={list}>
         {clauses.map(({ key, name, value }) => {
           const field = fieldByName(name);
-          if (!field) return null;
-          const info = editableInfo(entity.name, field);
-          const input = editor(field);
           const labelId = `${addId}-${String(key)}`;
+          const select = (
+            <select
+              className="form-control crm-auto-width"
+              aria-label={ts("Field")}
+              value={name}
+              onChange={(event) => {
+                setField(key, event.target.value);
+              }}
+            >
+              <option value="">{ts("Field")}</option>
+              {!field && <option value={name}>{name}</option>}
+              {options(name)}
+            </select>
+          );
+          // A preset on a field getFields leaves out keeps its value; the clause can be removed.
+          if (!field)
+            return (
+              <div key={key} data-key={key} className="form-inline afreact-update-clause">
+                {select}
+              </div>
+            );
+          const info = fieldEditableInfo(entity.name, field);
+          const input = editor(field);
           return (
-            <div key={key} className="form-inline afreact-update-clause">
-              <select
-                className="form-control crm-auto-width"
-                aria-label={ts("Field")}
-                value={name}
-                onChange={(event) => {
-                  setField(key, event.target.value);
-                }}
-              >
-                <option value="">{ts("Field")}</option>
-                {options(name)}
-              </select>{" "}
+            <div key={key} data-key={key} className="form-inline afreact-update-clause">
+              {select}{" "}
               <label id={labelId} htmlFor={`${labelId}-input`} className="sr-only">
                 {field.label}
               </label>
@@ -183,7 +186,7 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
                   labelId={labelId}
                   common={{
                     id: `${labelId}-input`,
-                    required: !info.nullable,
+                    required: !info.nullable || !!field.required,
                     "aria-invalid": undefined,
                     "aria-describedby": undefined,
                   }}
@@ -191,6 +194,11 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
                     setValue(key, next);
                   }}
                 />
+              )}
+              {"unsupported" in input && (
+                <span className="afreact-unsupported" role="note">
+                  {ts("Not supported by the React renderer: %1", { 1: input.unsupported })}
+                </span>
               )}
               {info.serialize && (
                 <div className="description">
@@ -200,6 +208,7 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
             </div>
           );
         })}
+        </div>
         <div className="form-inline">
           <select
             id={addId}
@@ -214,7 +223,12 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
             <option value="">{ts("Add Value")}</option>
             {options()}
           </select>{" "}
-          <button type="button" className="btn btn-default" disabled={!chosen} onClick={addField}>
+          <button
+            type="button"
+            className="btn btn-default"
+            disabled={!chosen || inUse(chosen)}
+            onClick={addField}
+          >
             <Icon name="fa-plus" /> {ts("Add")}
           </button>
         </div>
