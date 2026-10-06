@@ -1,6 +1,7 @@
 /**
- * The Angular expressions Afform layouts put into text and attributes: `ts('…')` and
- * `crmUrl('…', {…})`, optionally one-time (`::`). Anything else is reported as unsupported.
+ * The Angular expressions Afform layouts put into text and attributes: `ts('…', {…})` and
+ * `crmUrl('…', {…})` with literal arguments, optionally one-time (`::`). Anything else is
+ * reported as unsupported.
  */
 
 export interface ExpressionContext {
@@ -13,7 +14,7 @@ const CALL = new RegExp(
   String.raw`^(?:::)?\s*(ts|crmUrl)\(\s*(${LITERAL})\s*(?:,\s*(\{[^}]*\})\s*)?\)$`,
 );
 const PAIR = new RegExp(
-  String.raw`^\s*(?:([A-Za-z_$][\w$]*)|(${LITERAL}))\s*:\s*(${LITERAL}|-?\d+(?:\.\d+)?)\s*$`,
+  String.raw`^\s*(?:([A-Za-z_$][\w$]*|\d+)|(${LITERAL}))\s*:\s*(${LITERAL}|-?\d+(?:\.\d+)?)\s*$`,
 );
 
 /** A JS string literal in single or double quotes. */
@@ -41,6 +42,15 @@ function objectLiteral(text: string): Record<string, string | number> {
   );
 }
 
+/** Core's ts(): the plural form past one, then %name replaced by the string and number values. */
+function substitute(text: string, params: Record<string, string | number>): string {
+  let result = text;
+  for (const [name, value] of Object.entries(params))
+    if (name !== "plural")
+      result = result.replaceAll(`%${name}`, String(value).replaceAll("%", "%-crmescaped-"));
+  return result.replaceAll("%-crmescaped-", "%");
+}
+
 /** One expression between {{ }}; null when it is not one of the supported calls. */
 export function evaluateExpression(expression: string, context: ExpressionContext): string | null {
   const match = CALL.exec(expression.trim());
@@ -55,8 +65,11 @@ export function evaluateExpression(expression: string, context: ExpressionContex
     if (error instanceof SyntaxError) return null;
     throw error;
   }
-  if (name === "ts") return params === undefined ? context.translate(text) : null;
-  return context.url(text, params);
+  if (name !== "ts") return context.url(text, params);
+  if (params === undefined) return context.translate(text);
+  const plural = params.plural;
+  const form = typeof plural === "string" && "count" in params && params.count !== 1 ? plural : text;
+  return substitute(context.translate(form), params);
 }
 
 export type Interpolation = { text: string } | { unsupported: string };

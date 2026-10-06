@@ -32,6 +32,15 @@ describe("evaluateExpression", () => {
     expect(evaluateExpression("crmUrl('civicrm/a', {})", context)).toBe("/civicrm/a");
   });
 
+  it("fills ts() parameters given as literals, with the plural form past one", () => {
+    expect(evaluateExpression("ts('%1 found', {1: 3})", context)).toBe("3 found");
+    expect(evaluateExpression("ts('Save', {'escape': 'js'})", context)).toBe("Speichern");
+    expect(evaluateExpression("ts('%1 of %2%', {1: '100%', 2: 5})", context)).toBe("100% of 5%");
+    const plural = "ts('%count item', {count: 2, plural: '%count items'})";
+    expect(evaluateExpression(plural, context)).toBe("2 items");
+    expect(evaluateExpression(plural.replace("count: 2", "count: 1"), context)).toBe("1 item");
+  });
+
   it("leaves every other expression unsupported", () => {
     expect(evaluateExpression("total", context)).toBeNull();
     expect(evaluateExpression("ts('%1 found', {1: n})", context)).toBeNull();

@@ -109,7 +109,7 @@ renderers.
 Each of these shows a visible "Not supported by the React renderer" note
 instead of being dropped:
 
-- Angular expressions other than `:: ts('…')` and `crmUrl(…)`
+- Angular expressions other than `:: ts('…', {…})` and `crmUrl(…)` with literal arguments
 - field types other than Text, Email, Url, Number, Hidden, TextArea, Date,
   Select, Radio, CheckBox, DisplayOnly, EntityRef, ChainSelect, Toggle,
   RichTextEditor, File, Range and Location
