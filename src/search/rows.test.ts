@@ -264,13 +264,10 @@ describe("display types", () => {
     });
   });
 
-  it("notes unknown settings for any type, and drag only where the type has it", () => {
+  it("notes unknown settings for any type", () => {
     const settings = { ...base, draggable: "weight", seeMore: 1 };
     expect(unsupportedFeatures(settings, undefined, "list")).toEqual(["setting seeMore"]);
-    expect(unsupportedFeatures(settings, undefined, "tree")).toEqual([
-      "setting seeMore",
-      "drag to reorder (draggable)",
-    ]);
+    expect(unsupportedFeatures(settings, undefined, "tree")).toEqual(["setting seeMore"]);
     expect(unsupportedFeatures({ ...base, colno: "3", style: "ol" })).toEqual([]);
   });
 

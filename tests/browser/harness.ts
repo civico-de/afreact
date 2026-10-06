@@ -178,6 +178,18 @@ export function ownFindings(react: string[], angular: string[]): string[] {
   });
 }
 
+/**
+ * dnd-kit's keyboard sensor listens for keys from a zero timer after the pick-up, and the browser
+ * runs a key event sent that instant before the timer. A timer queued after it fires after it.
+ */
+export const keysListened = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      }),
+  );
+
 export const pause = (ms: number) =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);

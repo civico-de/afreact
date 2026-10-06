@@ -184,7 +184,7 @@ describe("layoutProblems", () => {
         display("crm-search-display-list", { style: "ol", section_group_by: "kind" }),
         display("crm-search-display-tree", { parent_field: "parent_id", draggable: "weight" }),
       ]),
-    ).toEqual(["drag to reorder (draggable)"]);
+    ).toEqual([]);
   });
 
   it("matches the notes the rendered form shows", async () => {

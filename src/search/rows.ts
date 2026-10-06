@@ -200,7 +200,6 @@ export function unsupportedFeatures(
   features.push(...unsupportedEditors(page));
   if (settings.editableRow && settings.editableRow.create)
     features.push(...unfillableColumns(page));
-  if (settings.draggable && type === "tree") features.push("drag to reorder (draggable)");
   return features;
 }
 
@@ -258,7 +257,7 @@ export interface TreeItem {
   children: TreeItem[];
 }
 
-function keyText(value: unknown): string | null {
+export function keyText(value: unknown): string | null {
   return typeof value === "number" || typeof value === "string" ? String(value) : null;
 }
 

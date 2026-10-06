@@ -202,6 +202,7 @@ export function AfreactSearch({
     },
   });
   const reorder = useReorder({
+    type,
     settings,
     runKey: rowsKey,
     runParams: { ...params, ...columnParams, sort: activeSort, limit },
@@ -288,7 +289,7 @@ export function AfreactSearch({
         {inlineEdit.announcement}
       </p>
       {type === "tree" ? (
-        <TreeView {...view} />
+        <TreeView {...view} reorder={reorder} />
       ) : table ? (
         <TableView
           {...view}

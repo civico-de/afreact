@@ -4,8 +4,9 @@ import { dragField, moveRow, withWeights } from "./dragOrder";
 import { asHtml } from "../html";
 import type * as SortableModule from "./Sortable";
 import { rowName } from "./Tasks";
+import { treeMove } from "./treeDrag";
 import { writePage } from "./inlineEdit";
-import type { DisplaySettings, Row, RunPage } from "./types";
+import type { DisplaySettings, DisplayType, Row, RunPage } from "./types";
 
 /** What Body needs to render draggable rows. */
 export interface RowDrag {
@@ -14,6 +15,7 @@ export interface RowDrag {
 }
 
 interface ReorderOptions {
+  type: DisplayType;
   settings: DisplaySettings | undefined;
   /** The query of the page on screen. */
   runKey: QueryKey;
@@ -25,28 +27,54 @@ export interface Reorder {
   weightField: string | null;
   saving: boolean;
   error: unknown;
-  move: (active: Row["key"], over: Row["key"]) => void;
+  /** `over` is a row's key, or in a tree one of its FIRST targets. */
+  move: (active: Row["key"], over: string | number) => void;
   /** The position `active` would take among the rows shown after a drop on `over`, or null. */
   landing: (rows: Row[], shown: Row[], active: Row["key"], over: Row["key"]) => number | null;
 }
 
+interface Move {
+  rows: Row[];
+  values: Record<string, unknown>;
+}
+
+/** The rows after the drop and the values to save, or null where the drop is refused. */
+function plan(
+  type: DisplayType,
+  settings: DisplaySettings,
+  rows: Row[],
+  active: Row["key"],
+  over: string | number,
+  field: string,
+): Move | null {
+  if (type === "tree") {
+    if (!settings.parent_field) throw new Error("A draggable tree needs a parent_field.");
+    return treeMove(rows, active, over, field, settings.parent_field);
+  }
+  const moved = moveRow(rows, active, over, field, !!settings.hierarchical);
+  return moved && { rows: moved.rows, values: { [field]: moved.weight } };
+}
+
 /**
- * Drag to reorder (crmSearchDisplayTable's draggableOptions): the row moves at once, its new
- * weight is saved, and the page takes the weights the server returns, or its old order back.
+ * Drag to reorder (crmSearchDisplayTable's draggableOptions, the tree's updateDraggableWeights):
+ * the row moves at once, its weight and in a tree its parent are saved, and the page takes the
+ * weights the server returns, or its old order back.
  */
-export function useReorder({ settings, runKey, runParams }: ReorderOptions): Reorder {
+export function useReorder({ type, settings, runKey, runParams }: ReorderOptions): Reorder {
   const client = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const weightField = settings ? dragField(settings) : null;
 
-  const save = async (page: RunPage, active: Row["key"], over: Row["key"], field: string) => {
-    const moved = moveRow(page.rows, active, over, field, !!settings?.hierarchical);
+  const save = async (page: RunPage, active: Row["key"], over: string | number, field: string) => {
+    if (!settings) return;
+    const moved = plan(type, settings, page.rows, active, over, field);
     if (!moved) {
       const row = page.rows.find((each) => each.key === active) ?? { key: active, columns: [] };
-      const text = ts("%1 stays where it is: a row moves among its siblings only.", {
-        1: rowName(row),
-      });
+      const text =
+        type === "tree"
+          ? ts("%1 stays where it is: an item cannot go under itself.", { 1: rowName(row) })
+          : ts("%1 stays where it is: a row moves among its siblings only.", { 1: rowName(row) });
       window.CRM.alert(asHtml(text), ts("Not moved"), "info");
       return;
     }
@@ -56,7 +84,7 @@ export function useReorder({ settings, runKey, runParams }: ReorderOptions): Reo
       ...runParams,
       return: "draggableWeight",
       rowKey: active,
-      values: { [field]: moved.weight },
+      values: moved.values,
     });
     if (typeof weights !== "object" || weights === null)
       throw new Error("SearchDisplay.inlineEdit answered without weights.");
@@ -67,7 +95,7 @@ export function useReorder({ settings, runKey, runParams }: ReorderOptions): Reo
     window.CRM.status(ts("Saved"));
   };
 
-  const move = (active: Row["key"], over: Row["key"]) => {
+  const move = (active: Row["key"], over: string | number) => {
     const page = client.getQueryData<RunPage>(runKey);
     if (!page || !weightField) return;
     if (active === over) return;
@@ -75,12 +103,18 @@ export function useReorder({ settings, runKey, runParams }: ReorderOptions): Reo
     setSaving(true);
     save(page, active, over, weightField)
       .catch((failure: unknown) => {
-        // Only the order goes back; what the rows took meanwhile stays.
+        // Only the order and the parent go back; what the rows took meanwhile stays.
         const place = new Map(page.rows.map((row, index) => [row.key, index]));
         const at = (row: Row) => place.get(row.key) ?? page.rows.length;
+        const parent = settings?.parent_field;
+        const before = page.rows.find((row) => row.key === active)?.data?.[parent ?? ""];
         writePage(client, runKey, (current) => ({
           ...current,
-          rows: [...current.rows].sort((a, b) => at(a) - at(b)),
+          rows: [...current.rows]
+            .sort((a, b) => at(a) - at(b))
+            .map((row) =>
+              parent && row.key === active ? { ...row, data: { ...row.data, [parent]: before } } : row,
+            ),
         }));
         setError(failure);
       })
@@ -103,7 +137,7 @@ export function useReorder({ settings, runKey, runParams }: ReorderOptions): Reo
 
 let sortable: Promise<typeof SortableModule> | undefined;
 /** dnd-kit loads with the first draggable table on a page. */
-const loadSortable = () => (sortable ??= import("./Sortable"));
+export const loadSortable = () => (sortable ??= import("./Sortable"));
 
 interface ReorderRowsProps {
   reorder: Reorder;

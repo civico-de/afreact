@@ -66,6 +66,7 @@ that no longer excuses anything fails the test.
 | Totals after an in-place edit | kept (see upstream bugs) | asked again |
 | Drag to reorder | jQuery UI sortable, pointer only | dnd-kit: pointer, and keyboard (Space or Enter, arrow keys) with screen-reader announcements; dnd-kit loads with the first draggable table on a page |
 | Drag to reorder in a hierarchical table | the row moves alone in the flat list and takes the weight of the row it displaces, whatever its depth or parent; its sub-rows stay behind until the next search | the row moves with its sub-rows, among its siblings only, and takes the displaced sibling's weight, since weights order siblings (`SearchDisplay.inlineEdit` with `draggableWeight` could also take a new parent; React sends the weight only); a drop on a sibling's sub-row counts for that sibling, one under another parent or at another depth leaves the row where it was, announced and with a notice |
+| Drag to reorder in a tree display | jQuery UI sortable with connected branches: a pointer drop before or after an item in any branch, or into a branch's top padding, sends the weight of the item the drop displaces (the one after it in another branch, `1` in an empty one) and the new parent; the dragged item's branch is hidden meanwhile | dnd-kit: a drop on an item's line puts the dragged item after it among that item's siblings, a drop on the edge above a branch's first item (or below a leaf) puts it first in that branch; the weight sent is the target's plus one, or the next item's for a first place, with the new parent; by keyboard, the arrow keys step through the lines and first places in document order with announcements; an item cannot go under itself; a failed save puts the item back; the opened branches stay open, as above |
 | Collapsed rows across a reload | every run closes the sub-rows again (`collapsible: closed` is applied to each new row object) | the rows opened or closed stay so through a popup save, a filter, a sort or a page change, as in the tree display |
 | Toggle fields | checkbox drawn as a switch | the same checkbox with `role="switch"` |
 | Tab sets (`af-tabset`, `crm-ui-tab-set`) | tab list with clickable links | ARIA tabs pattern: `role="tab"` on the focusable element with `aria-selected` and `aria-controls`, one tab in the Tab order, arrow keys, Home and End |
@@ -121,8 +122,6 @@ instead of being dropped:
 - FormBuilder's own widgets (`af-admin-list-menu`) and the message template
   editor's `crm-monaco`: both need the Angular application they belong to
 - table features: include columns
-- drag to reorder and re-parent in tree displays (`draggable`); the tree
-  itself renders, with the note
 - an in-place editor for a multi-value colour field, should one exist; the
   renderer also turns a Location input away, though core defines that type
   only for the `Address.proximity` search filter, which is never editable

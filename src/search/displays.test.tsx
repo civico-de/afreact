@@ -319,11 +319,6 @@ describe("tree display", () => {
     expect(toggleOf(2)).toHaveFocus();
   });
 
-  it("names the drag handles it does not render", async () => {
-    show("tree", { ...settings, draggable: "weight" }, tree);
-    expect(await screen.findByRole("note")).toHaveTextContent("drag to reorder (draggable)");
-  });
-
   it("shows placeholders while loading and core's text when nothing is found", async () => {
     show("tree", { placeholder: 2 }, () => []);
     expect(document.querySelectorAll("li .crm-search-loading-placeholder")).toHaveLength(2);

@@ -468,7 +468,7 @@ export type TreeRun = {
         url?: string;
       }[];
       text?: string;
-      val?: string;
+      val?: number | string;
     })[];
     cssClass?: string;
     data: Record<string, boolean | number | string | null>;
@@ -485,7 +485,7 @@ export type TreeRun = {
 
 export type TreeSettings = {
   actions?: boolean;
-  collapsible: string;
+  collapsible?: string;
   columns: ({
     break?: boolean;
     cssRules?: ((boolean | string)[])[];
@@ -523,7 +523,7 @@ export type TreeSettings = {
   draggable?: string;
   limit?: number;
   parent_field: string;
-  placeholder: number;
+  placeholder?: number;
   sort: string[][];
   toolbar?: {
     action: string;

@@ -4,7 +4,7 @@
  * React moves the sub-row along and refuses a drop under another parent (comparison.md).
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, AUTH, keysListened, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const NAME = `afreact_tree_${RUN}`;
@@ -18,8 +18,10 @@ const row = (page: Page, label: string) =>
 const handle = (page: Page, label: string) =>
   page.getByRole("button", { name: `Move ${label}`, exact: true });
 const announced = (page: Page) => page.locator('[id^="DndLiveRegion"]');
-const measured = (page: Page, label: string) =>
-  expect(row(page, label)).toHaveAttribute("data-over");
+const measured = async (page: Page, label: string) => {
+  await expect(row(page, label)).toHaveAttribute("data-over");
+  await keysListened(page);
+};
 async function shown(page: Page) {
   const texts = await rows(page).locator('[data-field-name="label"]').allTextContents();
   return texts.map((text) => text.trim());

@@ -1,9 +1,12 @@
-import { createElement, useState, type MouseEvent } from "react";
+import { createElement, Suspense, use, useState, type MouseEvent, type ReactNode } from "react";
 import { errorMessage } from "../api/civi";
 import { Cell, cellText } from "./Cell";
 import { EditableCell } from "./EditableCell";
 import { InlineEditContext, useInlineEditContext, type InlineEdit } from "./inlineEdit";
+import { loadSortable, type Reorder } from "./Reorder";
 import { buildTree, fieldClass, sectionStarts, type TreeItem } from "./rows";
+import { rowName } from "./Tasks";
+import { FIRST, firstUnder, treeMove } from "./treeDrag";
 import type { DisplaySettings, Link, Row, RunPage, SubsearchDisplay } from "./types";
 
 /** The text core shows when nothing is found, falling back on an empty one too; null for none. */
@@ -36,6 +39,8 @@ interface ItemsProps {
   afform?: string;
   onLinkClick: OnLinkClick;
   inlineEdit: InlineEdit;
+  /** Drag to reorder, used by the tree. */
+  reorder?: Reorder;
 }
 
 interface ColumnsProps {
@@ -168,12 +173,25 @@ export function ItemList({ type, ...props }: ItemsProps & { type: "list" | "grid
   );
 }
 
+/** What a tree's drag needs from its lists and items. */
+interface TreeDrag {
+  root: (list: ReactNode) => ReactNode;
+  /** The first place of the branch under `parent`, null at the top. */
+  slot: (parent: Row["key"] | null) => ReactNode;
+  item: (
+    item: TreeItem,
+    className: string | undefined,
+    content: (dragging: boolean) => ReactNode,
+  ) => ReactNode;
+  handle: (item: TreeItem) => ReactNode;
+}
+
 /**
  * crmSearchDisplayTree.html: nested lists under disclosure buttons. Which branches are open
  * survives reloads, where core closes them again after every run.
  */
 export function TreeView(props: ItemsProps) {
-  const { settings, label, loading, result, error } = props;
+  const { settings, label, loading, result, error, reorder } = props;
   const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(new Map());
   const noResults = noResultsText(settings);
   const tree = result ? buildTree(result.rows, settings.parent_field) : [];
@@ -182,54 +200,81 @@ export function TreeView(props: ItemsProps) {
     item.children.length > 0 &&
     (toggled.get(String(item.row.key)) ?? settings.collapsible === "closed");
 
-  const branch = (items: TreeItem[], root: boolean) => (
-    <ul
-      className="crm-search-display-tree-branch"
-      // A leaf's empty branch only keeps core's spacing.
-      role={items.length ? undefined : "presentation"}
-      aria-label={root && label ? label : undefined}
-    >
-      {items.map((item) => {
-        const key = String(item.row.key);
-        const collapsed = isCollapsed(item);
-        const count = item.children.length;
-        return (
-          <li
-            key={key}
-            data-entity-id={item.row.key}
-            className={
-              [item.row.cssClass, collapsed ? "crm-search-display-tree-branch-collapsed" : ""]
-                .filter(Boolean)
-                .join(" ") || undefined
-            }
-          >
-            {settings.collapsible && (
-              <button
-                type="button"
-                className="btn btn-xs crm-search-display-tree-collapse-toggle"
-                style={count ? undefined : { visibility: "hidden" }}
-                aria-expanded={count ? !collapsed : undefined}
-                aria-label={ts("%1 sub-items", { 1: count })}
-                onClick={() => {
-                  setToggled(new Map(toggled).set(key, !collapsed));
-                }}
-              >
-                <i className="crm-i fa-caret-down" role="img" aria-hidden="true" />
-                <span className="crm-search-display-tree-branch-count">{count}</span>
-              </button>
-            )}
-            <ItemColumns
-              row={item.row}
-              settings={settings}
-              subsearch={result?.subsearch ?? {}}
-              afform={props.afform}
-              onLinkClick={props.onLinkClick}
-            />
-            {!collapsed && branch(item.children, false)}
-          </li>
-        );
-      })}
-    </ul>
+  const branch = (items: TreeItem[], parent: Row["key"] | null, drag: TreeDrag | undefined) => {
+    const list = (
+      <ul
+        className="crm-search-display-tree-branch"
+        // A leaf's empty branch only keeps core's spacing.
+        role={items.length ? undefined : "presentation"}
+        aria-label={parent === null && label ? label : undefined}
+      >
+        {drag?.slot(parent)}
+        {items.map((item) => {
+          const key = String(item.row.key);
+          const collapsed = isCollapsed(item);
+          const count = item.children.length;
+          const className =
+            [item.row.cssClass, collapsed ? "crm-search-display-tree-branch-collapsed" : ""]
+              .filter(Boolean)
+              .join(" ") || undefined;
+          const content = (dragging: boolean) => (
+            <>
+              {drag?.handle(item)}
+              {settings.collapsible && (
+                <button
+                  type="button"
+                  className="btn btn-xs crm-search-display-tree-collapse-toggle"
+                  style={count ? undefined : { visibility: "hidden" }}
+                  aria-expanded={count ? !collapsed : undefined}
+                  aria-label={ts("%1 sub-items", { 1: count })}
+                  onClick={() => {
+                    setToggled(new Map(toggled).set(key, !collapsed));
+                  }}
+                >
+                  <i className="crm-i fa-caret-down" role="img" aria-hidden="true" />
+                  <span className="crm-search-display-tree-branch-count">{count}</span>
+                </button>
+              )}
+              <ItemColumns
+                row={item.row}
+                settings={settings}
+                subsearch={result?.subsearch ?? {}}
+                afform={props.afform}
+                onLinkClick={props.onLinkClick}
+              />
+              {!collapsed && !dragging && branch(item.children, item.row.key, drag)}
+            </>
+          );
+          return drag ? (
+            drag.item(item, className, content)
+          ) : (
+            <li key={key} data-entity-id={item.row.key} className={className}>
+              {content(false)}
+            </li>
+          );
+        })}
+      </ul>
+    );
+    // Core's branch element: the theme wraps it onto its own line below the item's columns.
+    const wrapped = createElement("crm-search-display-tree-branch", null, list);
+    return drag && parent === null ? drag.root(wrapped) : wrapped;
+  };
+
+  const rows = result?.rows ?? [];
+  const draggable = reorder?.weightField && settings.parent_field ? reorder : null;
+  const body = draggable ? (
+    <Suspense fallback={branch(tree, null, undefined)}>
+      <DraggableTree
+        reorder={draggable}
+        rows={rows}
+        weightField={draggable.weightField ?? ""}
+        parentField={settings.parent_field ?? ""}
+      >
+        {(drag) => branch(tree, null, drag)}
+      </DraggableTree>
+    </Suspense>
+  ) : (
+    branch(tree, null, undefined)
   );
 
   return (
@@ -243,11 +288,7 @@ export function TreeView(props: ItemsProps) {
           ))}
         </ul>
       ) : (
-        result && (
-          <InlineEditContext value={props.inlineEdit}>
-            {branch(tree, true)}
-          </InlineEditContext>
-        )
+        result && <InlineEditContext value={props.inlineEdit}>{body}</InlineEditContext>
       )}
       {result?.rows.length === 0 && noResults !== null && (
         <div className="crm-search-display-list-no-results">
@@ -257,4 +298,43 @@ export function TreeView(props: ItemsProps) {
       {!loading && !!error && <ServerError error={error} />}
     </>
   );
+}
+
+interface DraggableTreeProps {
+  reorder: Reorder;
+  rows: Row[];
+  weightField: string;
+  parentField: string;
+  children: (drag: TreeDrag) => ReactNode;
+}
+
+/** The tree's drag and drop, loaded with dnd-kit; a slot at the top of each branch takes a first place. */
+function DraggableTree({ reorder, rows, weightField, parentField, children }: DraggableTreeProps) {
+  const { TreeDnd, TreeItem: Item, TreeSlot, DragHandle } = use(loadSortable());
+  const names = new Map(rows.map((row) => [String(row.key), rowName(row)]));
+  const nameOf = (key: string | number) => names.get(String(key)) ?? String(key);
+  const placeOf = (active: string | number, over: string | number) => {
+    const row = rows.find((each) => each.key === active);
+    if (!row || !treeMove(rows, row.key, over, weightField, parentField)) return null;
+    if (typeof over === "string" && over.startsWith(FIRST)) {
+      const parent = over.slice(FIRST.length);
+      return parent ? ts("first under %1", { 1: nameOf(parent) }) : ts("to the first place");
+    }
+    return ts("after %1", { 1: nameOf(over) });
+  };
+  const drag: TreeDrag = {
+    root: (list) => (
+      <TreeDnd nameOf={nameOf} placeOf={placeOf} disabled={reorder.saving} onMove={reorder.move}>
+        {list}
+      </TreeDnd>
+    ),
+    slot: (parent) => <TreeSlot id={firstUnder(parent)} disabled={reorder.saving} />,
+    item: (item, className, content) => (
+      <Item key={String(item.row.key)} rowKey={item.row.key} className={className} disabled={reorder.saving}>
+        {content}
+      </Item>
+    ),
+    handle: (item) => <DragHandle tree label={ts("Move %1", { 1: rowName(item.row) })} />,
+  };
+  return children(drag);
 }

@@ -3,7 +3,7 @@
  * table has no keyboard path) and by pointer on both renderers, checked in the stored weights.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, AUTH, keysListened, type Renderer } from "./harness";
 
 const GROUP = "afreact_demo_order";
 const LABELS = ["Order A", "Order B", "Order C"];
@@ -53,8 +53,10 @@ const row = (page: Page, label: string) => rows(page).filter({ hasText: label })
 // dnd-kit's live region at the end of the body.
 const announced = (page: Page) => page.locator('[id^="DndLiveRegion"]');
 /** The pick-up is announced before dnd-kit has measured the rows; arrow keys work only after. */
-const measured = (page: Page, label: string) =>
-  expect(row(page, label)).toHaveAttribute("data-over");
+const measured = async (page: Page, label: string) => {
+  await expect(row(page, label)).toHaveAttribute("data-over");
+  await keysListened(page);
+};
 async function shown(page: Page) {
   const texts = await rows(page).locator('[data-field-name="label"]').allTextContents();
   return texts.map((text) => text.trim());

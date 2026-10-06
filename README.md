@@ -70,8 +70,8 @@ a setting render with React wherever core places them (see [Rendering forms with
   Bulk actions and task links run API batch, popup and redirect tasks with
   their input fields, the spreadsheet download, the update of chosen fields
   and the tag, relationship and mailing dialogs. Rows of draggable tables
-  move by pointer or keyboard, a hierarchical row with its sub-rows among its
-  siblings. Other tasks that are Angular dialogs and include columns show a
+  and items of draggable trees move by pointer or keyboard, a hierarchical row
+  with its sub-rows among its siblings, a tree item also under another parent. Other tasks that are Angular dialogs and include columns show a
   note instead.
 - **Types:** `src/api/entities.gen.ts` is generated from APIv4
   `getFields` (see [Development](#development)).
@@ -242,6 +242,8 @@ CIVICRM_BASE_URL=http://localhost:8080 npm run test:e2e
 | `tests/browser/displays.spec.ts` | list, grid and tree displays on both renderers: equal items, columns, labels, classes, grid tracks and pager on the demo fixtures; tree branches opening alike, and on React their `aria-expanded` state and the keyboard path |
 | `tests/browser/editable.spec.ts` | in-place editing on both renderers: a text cell saved with Enter and an option list saved with the Save button store the same values; the column picker hides and shows the same columns; on React, opening by keyboard, focus back on Escape and a failed save that keeps the editor open |
 | `tests/browser/reorder.spec.ts` | drag to reorder on the demo options table: keyboard moves with announcements in React, pointer moves on both renderers, the stored weights and the order after a reload |
+| `tests/browser/navtree.spec.ts` | drag in the hierarchical demo table of navigation entries on both renderers: a row moved with its sub-rows among its siblings by keyboard and pointer, the stored weights, the refused drops with their announcements |
+| `tests/browser/treedrag.spec.ts` | drag in the demo tree of navigation entries: keyboard steps through every line and first place with announcements and store the weight and parent; a pointer drop after an item of another branch stores the same on both renderers |
 | `tests/browser/filters.spec.ts` | search filters on both renderers: the same filters and rows from the defaults, the URL, stored values and a saved filter set, with one page request and no excluded row shown on first load; typed filters and a reload; the first-row time of each renderer |
 | `tests/browser/dashboard.spec.ts` | on core's dashboard a listed Afform dashlet renders with React next to an unlisted one in Angular, without the listed form's Angular module; refresh and fullscreen render it again; unlisted, both are Angular |
 | `tests/browser/a11y.spec.ts` | axe in light and dark mode finds nothing on the React demo and rules forms, the demo tables (menu and subsearch open), the editable table with its column picker and a filtered search form that the Angular ones pass |
