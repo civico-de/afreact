@@ -360,7 +360,7 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
   const min = Number(node.min ?? 0);
   const max = Number(node.max ?? 0);
   const text = (attr: string) => (typeof node[attr] === "string" ? node[attr] : "");
-  const addLabel = text("af-repeat") || ts("Add");
+  const addLabel = text("af-repeat");
   const canAdd = !max || count < max;
   const children = node["#children"] ?? [];
   // A new item's fields and repeats initialise as afField and afRepeat do on render.
@@ -401,7 +401,9 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
             form.update((data) => initialiseLast(addRepeatItem(data, scope)));
           }}
         >
-          <i className={`crm-i ${text("add-icon") || "fa-plus"}`} aria-hidden="true" /> {addLabel}
+          <i className={`crm-i ${text("add-icon") || "fa-plus"}`} aria-hidden="true" />
+          {/* An empty af-repeat shows only the icon, which still needs a name. */}
+          {addLabel ? ` ${addLabel}` : <span className="sr-only">{ts("Add")}</span>}
         </button>
       )}
       {canAdd && text("af-copy") && count > 0 && (

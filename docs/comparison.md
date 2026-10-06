@@ -45,7 +45,8 @@ that no longer excuses anything fails the test.
 | Area | Angular | React |
 |---|---|---|
 | Select fields | select2, with option colours, icons and descriptions | native `<select>`, sized like select2, with its warning border on a required select emptied by the user (core up to 6.19 also warns on an untouched one); options show their label only; a select without a label is named by its placeholder, else by Select.html's title |
-| Date fields | jQuery UI datepicker, site input format | native `<input type="date">`, wider than the datepicker to fit its format and calendar icon |
+| Date fields | jQuery UI datepicker, site input format; the calendar offers the years from `start_date_years` back to `end_date_years` ahead (100 each by default) | native `<input type="date">` or `datetime-local`, wider than the datepicker to fit its format and calendar icon, without a limit on the years, so a stored date outside them stays as it is. Both offer the clear link only on a field that is not required |
+| Character count of a text area with `maxlength` | "n / max" below the field, not tied to it | the same count, which describes the text area (`aria-describedby`): a screen reader reads it with the field, not on each keystroke |
 | Search filter text shorter than `minlength` | the value is dropped from the filter while typing, so the table shows unfiltered rows | filters by what was typed |
 | Clear links | `<a>` without `href`, not reachable by keyboard | same link with `role="button"`, focusable, Enter and Space |
 | Admin block menus | gear menu per block for administrators | not rendered |
@@ -67,6 +68,7 @@ that no longer excuses anything fails the test.
 | Tab badge from `total-count="$parent.count"` | counted after 900 ms without the form's filter values | counted at once, also without the form's filter values |
 | File fields | upload progress in a CRM.status popup; the Replace link has no `href` and no role | progress in the form's status line, errors in its alert; Replace is a focusable button named after the file, and moves focus to the new file input |
 | Search ranges (`search_range`) | two inputs after the field's label | the same pair as a group named by the label, the inputs named "… from" and "… to"; a select range sends its bounds as typed option ids (`2`) where select2 sends strings (`"2"`) |
+| Repeat buttons (`af-repeat`) | add button labelled by the attribute's value, icon only when it is empty; remove button icon only | the same visible content; an icon-only button carries a screen-reader name, "Add" or "Remove" (see upstream bugs) |
 | Form closed for submissions | "Sorry" alert; only the submit button is disabled, the fields stay editable | the same alert, the reason above the form, and every control disabled |
 | Errors from `Afform.submit` and `submitDraft` | an alert only | the same alert, plus a summary above the form that lists each message and takes focus, except after an autosave |
 | Confirmation message | replaces the form; the focus is lost with the button | replaces the form and takes the focus |
@@ -305,6 +307,13 @@ panel with `ng-show`; the browser refuses to submit while a control in it is
 invalid and cannot point at it, so nothing visible happens. The React
 renderer selects that tab first, and the browser shows its message at the
 field.
+
+**Repeat buttons without a name.** `afRepeat.html` gives the remove button
+only its icon, and the add button only the `af-repeat` value, which may be
+empty; `crm-icon` hides the icon from assistive technology, so screen readers
+meet a button without a name (`master` as of 2026-10-05; read from the code,
+not run). The React renderer shows the same content and adds a screen-reader
+name, "Add" or "Remove".
 
 **A space before the comma in linked lists.** SearchKit's `colType/link.html`
 leaves whitespace between each linked value and its comma, so a multi-valued

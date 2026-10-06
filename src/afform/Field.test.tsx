@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
+import { vi } from "vitest";
 import { renderWithQuery } from "../test/render";
 import { Field, fieldClasses, INPUT_TYPES } from "./Field";
 import { FieldEnvContext } from "./fields/env";
@@ -181,6 +182,61 @@ describe("Field", () => {
     expect(values).toEqual([null]);
     expect(screen.getByLabelText("Field")).toHaveValue("");
     expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
+  });
+
+  it("counts the characters of a text area with a maximum and describes the field by the count", async () => {
+    setup({ input_type: "TextArea", input_attrs: { maxlength: 10 }, help_post: "Short" }, "abcdefg");
+    const area = screen.getByRole("textbox", { name: "Field" });
+    expect(area).toHaveAccessibleDescription("Short 7 / 10");
+    const count = screen.getByText("7 / 10");
+    expect(count).toHaveClass("af-character-count", "text-success");
+    expect(count).toHaveAttribute("title", "Max characters allowed: 10");
+    expect(count).not.toHaveAttribute("role");
+    expect(count).not.toHaveAttribute("aria-live");
+    await userEvent.type(area, "h");
+    expect(count).toHaveTextContent("8 / 10");
+    expect(count).toHaveClass("text-warning");
+    // As core, a class changes only above 70 % and above 90 %.
+    await userEvent.type(area, "i");
+    expect(count).toHaveClass("text-warning");
+    await userEvent.type(area, "j");
+    expect(count).toHaveClass("text-danger");
+    await userEvent.type(area, "kl");
+    expect(count).toHaveTextContent("10 / 10");
+  });
+
+  it("shows no count on a text area without a maximum", () => {
+    setup({ input_type: "TextArea" }, "abc");
+    expect(screen.queryByText(/\/ /)).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Field" })).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("requires each box of a required checkbox list until one is checked", async () => {
+    const values = setup({
+      input_type: "CheckBox",
+      required: true,
+      options: [
+        { id: "a", label: "A" },
+        { id: "b", label: "B" },
+      ],
+    });
+    const boxes = screen.getAllByRole("checkbox");
+    for (const box of boxes) expect(box).toBeRequired();
+    await userEvent.click(screen.getByRole("checkbox", { name: "B" }));
+    expect(values).toEqual([["b"]]);
+    for (const box of boxes) expect(box).not.toBeRequired();
+    await userEvent.click(screen.getByRole("checkbox", { name: "B" }));
+    for (const box of boxes) expect(box).toBeRequired();
+  });
+
+  it("offers no clearing for a required date or date and time", () => {
+    setup({ input_type: "Date", data_type: "Date", required: true }, "2026-09-29");
+    setup(
+      { input_type: "Date", data_type: "Timestamp", required: true, input_attrs: { time: true } },
+      "2026-09-29 10:00:00",
+    );
+    expect(screen.getAllByLabelText(/^Field/)).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Clear", hidden: true })).not.toBeInTheDocument();
   });
 
   it("toggles values in a checkbox list", async () => {

@@ -145,6 +145,21 @@ export function ClearButton({
   );
 }
 
+/** afCharacterCount.html: the length against the maximum, coloured from 70 % and 90 %. */
+function CharacterCount({ id, length, max }: { id: string; length: number; max: number }) {
+  const fraction = length / max;
+  const status = fraction > 0.9 ? "text-danger" : fraction > 0.7 ? "text-warning" : "text-success";
+  return (
+    <div
+      id={id}
+      className={`af-character-count ${status}`}
+      title={ts("Max characters allowed: %1", { 1: max })}
+    >
+      {length} / {max}
+    </div>
+  );
+}
+
 export function Field({ defn, value, onChange, disabled, operator }: FieldProps) {
   const id = useId();
   const helpId = `${id}-help`;
@@ -196,22 +211,34 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
       );
     }
     switch (defn.input_type) {
-      case "TextArea":
+      case "TextArea": {
+        const text = textValue(value);
+        const countId = `${id}-count`;
         return (
-          <textarea
-            {...common}
-            className={`crm-form-textarea ${style ?? ""}`.trim()}
-            rows={attrs.rows ?? 4}
-            cols={attrs.cols ?? 60}
-            maxLength={attrs.maxlength}
-            minLength={attrs.minlength}
-            value={textValue(value)}
-            onChange={(event) => {
-              const text = event.target.value;
-              onChange(text === "" ? emptied(required, false) : text);
-            }}
-          />
+          <>
+            <textarea
+              {...common}
+              // The count is read with the field, not announced on each keystroke.
+              aria-describedby={
+                [describedBy, attrs.maxlength && countId].filter(Boolean).join(" ") || undefined
+              }
+              className={`crm-form-textarea ${style ?? ""}`.trim()}
+              rows={attrs.rows ?? 4}
+              cols={attrs.cols ?? 60}
+              maxLength={attrs.maxlength}
+              minLength={attrs.minlength}
+              value={text}
+              onChange={(event) => {
+                const next = event.target.value;
+                onChange(next === "" ? emptied(required, false) : next);
+              }}
+            />
+            {!!attrs.maxlength && (
+              <CharacterCount id={countId} length={text.length} max={attrs.maxlength} />
+            )}
+          </>
         );
+      }
       case "Date":
         return (
           <span className="crm-form-date-wrapper">
@@ -236,12 +263,15 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                 }}
               />
             )}
-            <ClearButton
-              onClear={() => {
-                onChange(null);
-              }}
-              hidden={!value || disabled}
-            />
+            {/* crmDatepicker offers clearing only on a date that is not required. */}
+            {!required && (
+              <ClearButton
+                onClear={() => {
+                  onChange(null);
+                }}
+                hidden={!value || disabled}
+              />
+            )}
           </span>
         );
       case "Select": {
@@ -445,6 +475,8 @@ function RadioGroup({ defn, value, onChange, disabled, labelId, helpId }: GroupP
 function CheckboxList({ defn, value, onChange, disabled, labelId, helpId }: GroupProps) {
   const name = useId();
   const selected: unknown[] = Array.isArray(value) ? value : [];
+  // As CheckBox.html, each box is required while none is checked.
+  const required = defn.required === true && selected.length === 0;
   return (
     <ul
       className={`crm-checkbox-list ${defn.input_style ?? ""}`.trim()}
@@ -459,6 +491,7 @@ function CheckboxList({ defn, value, onChange, disabled, labelId, helpId }: Grou
               id={id}
               type="checkbox"
               disabled={disabled}
+              required={required}
               checked={selected.some((item) => String(item) === String(option.id))}
               onChange={(event) => {
                 onChange(

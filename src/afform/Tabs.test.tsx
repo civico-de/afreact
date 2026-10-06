@@ -267,6 +267,61 @@ describe("af-tabset", () => {
     });
   });
 
+  it("shows the tab of a required checkbox list with nothing checked", async () => {
+    const submit = vi.fn((_params: Record<string, unknown>) => []);
+    const layout: LayoutNode[] = [
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+          {
+            "#tag": "af-tabset",
+            "#children": [
+              { "#tag": "af-tab", title: "Name", "#children": [] },
+              {
+                "#tag": "af-tab",
+                title: "More",
+                "#children": [
+                  {
+                    "#tag": "div",
+                    "af-fieldset": "Individual1",
+                    "#children": [
+                      field("preferred_communication_method", {
+                        label: "Contact by",
+                        input_type: "CheckBox",
+                        required: true,
+                        options: [
+                          { id: "1", label: "Phone" },
+                          { id: "2", label: "Email" },
+                        ],
+                      }),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          { "#tag": "button", "ng-click": "afform.submit()", "#children": [{ "#text": "Save" }] },
+        ],
+      },
+    ];
+    renderTabs({ layout, type: "form", submit });
+    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
+    expect(tab("More")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("checkbox", { name: "Phone" })).toHaveFocus();
+    expect(screen.getByRole("alert")).toHaveTextContent("Please fill all required fields.");
+    expect(submit).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Email" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(submit).toHaveBeenCalledTimes(1);
+    });
+    expect(submit.mock.calls[0]?.[0]).toMatchObject({
+      values: { Individual1: [{ fields: { preferred_communication_method: ["2"] } }] },
+    });
+  });
+
   it("shows the tab of a prefilled value shorter than its minlength before focusing it", async () => {
     const layout: LayoutNode[] = [
       {

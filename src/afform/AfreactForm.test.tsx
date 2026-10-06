@@ -525,6 +525,15 @@ describe("AfreactForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Copy" }));
     const add = screen.getByRole("button", { name: "Add" });
     expect(add.querySelector(".crm-i")).toHaveClass("fa-user-plus");
+    // As afRepeat.html, an empty af-repeat shows only the icon; both buttons keep a name.
+    const visibleText = (button: HTMLElement) =>
+      [...button.childNodes]
+        .filter((node) => !(node instanceof HTMLElement && node.classList.contains("sr-only")))
+        .map((node) => node.textContent)
+        .join("")
+        .trim();
+    expect(visibleText(add)).toBe("");
+    expect(visibleText(screen.getAllByRole("button", { name: "Remove" })[0]!)).toBe("");
     await userEvent.click(add);
     expect(
       screen
