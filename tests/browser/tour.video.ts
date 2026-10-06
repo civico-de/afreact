@@ -1,7 +1,8 @@
 /**
  * Records a tour over tables, lists, tabs and forms on each renderer; npm run video:tour puts the
  * two side by side. Every scene has a fixed slot, so both halves show the same scene at the same
- * time and the faster page waits. The groups, options and contact it works on are its own.
+ * time and the faster page waits; a slot is its scene's longest run plus a few seconds to look.
+ * The groups, options and contact it works on are its own.
  */
 import { expect, test, type Page } from "@playwright/test";
 import { api, AUTH, label, pause, setDebug, type Renderer } from "./harness";
@@ -149,7 +150,7 @@ const SCENES: Scene[] = [
     title: "Bulk action and sorting",
     form: "afsearchAfreactDemoGroups",
     ready: TABLE,
-    seconds: 16,
+    seconds: 11,
     act: selectAndDisable,
   },
   {
@@ -157,61 +158,61 @@ const SCENES: Scene[] = [
     form: "afsearchAfreactDemoEditable",
     suffix: `#?last_name=${LAST_NAME}`,
     ready: 'tbody td[data-field-name="job_title"] .crm-editable-enabled',
-    seconds: 14,
+    seconds: 8,
     act: editAndPickColumns,
   },
   {
     title: "Drag to reorder",
     form: "afsearchAfreactDemoOrder",
     ready: ".crm-draggable",
-    seconds: 10,
+    seconds: 6,
     act: drag,
   },
   {
     title: "Every column type",
     form: "afsearchAfreactDemoFeatures",
     ready: TABLE,
-    seconds: 10,
+    seconds: 7,
     act: sort,
   },
   {
     title: "Collapsible rows",
     form: "afsearchAfreactDemoContactTypes",
     ready: TABLE,
-    seconds: 8,
+    seconds: 5,
     act: openSubRows,
   },
   {
     title: "Tabs, a switch and a table",
     form: "afformAfreactDemoTabs",
     ready: 'af-field[name="first_name"] input',
-    seconds: 16,
+    seconds: 10,
     act: switchTabs,
   },
   {
     title: "List",
     form: "afsearchAfreactDemoList",
     ready: ".crm-search-display-listitem",
-    seconds: 6,
+    seconds: 4,
   },
   {
     title: "Grid",
     form: "afsearchAfreactDemoGrid",
     ready: ".crm-search-display-griditem",
-    seconds: 6,
+    seconds: 4,
   },
   {
     title: "Tree",
     form: "afsearchAfreactDemoTree",
     ready: ".crm-search-display li",
-    seconds: 8,
+    seconds: 5,
     act: openBranch,
   },
   {
     title: "Range filters",
     form: "afsearchAfreactDemoRanges",
     ready: TABLE,
-    seconds: 10,
+    seconds: 5,
     act: fillRanges,
   },
   corePage("Membership types", "afsearchAdministerMembershipTypes"),
@@ -223,7 +224,7 @@ const SCENES: Scene[] = [
     title: "Slider and rich text",
     form: "afformAfreactDemoFields",
     ready: 'af-field[name="nick_name"] iframe',
-    seconds: 12,
+    seconds: 5,
     act: fillFields,
   },
 ];
