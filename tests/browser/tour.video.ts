@@ -136,7 +136,8 @@ const TABLE = ".crm-search-display table tbody tr";
 const corePage = (title: string, form: string): Scene => ({
   title,
   form,
-  ready: ".crm-search-display table",
+  // Angular's table shows no placeholder before its search starts, so an empty table is not ready.
+  ready: TABLE,
   seconds: 7,
   async act(page) {
     if (await view(page).locator("th.crm-sortable-col").count()) await sort(page);

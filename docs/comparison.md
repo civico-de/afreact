@@ -209,8 +209,12 @@ includes responses served from the HTTP cache. The server needs 85–120 ms
   lead takes.
 - **Prefill.** A form counts as ready with its first input. Both renderers show
   the inputs before `Afform.prefill` returns (Angular under its blocking
-  overlay); before 2026-10-06 the React form waited for the prefill, which
-  put it 200–400 ms behind Angular on forms without a display.
+  overlay); before 2026-10-06 the React form showed its inputs only once the
+  prefill had landed, one round trip later.
+- **Tables in the tour.** A table counts as ready with its first body row.
+  Angular renders an empty table before its search starts and swaps in
+  placeholders only then, so counting the table element itself as ready
+  put Angular 200–400 ms ahead on the admin pages that it is not.
 - **Layout source.** `api` adds one round trip before `Afform.prefill` and
   `SearchDisplay.run` can start. The layout is cached in core's Angular
   cache, so `getForm` costs about 60 ms, the same as an empty API request;
