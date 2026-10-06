@@ -52,6 +52,9 @@ const rows = (page: Page) => page.locator(".afreact-render .crm-search-display t
 const row = (page: Page, label: string) => rows(page).filter({ hasText: label });
 // dnd-kit's live region at the end of the body.
 const announced = (page: Page) => page.locator('[id^="DndLiveRegion"]');
+/** The pick-up is announced before dnd-kit has measured the rows; arrow keys work only after. */
+const measured = (page: Page, label: string) =>
+  expect(row(page, label)).toHaveAttribute("data-over");
 async function shown(page: Page) {
   const texts = await rows(page).locator('[data-field-name="label"]').allTextContents();
   return texts.map((text) => text.trim());
@@ -80,6 +83,7 @@ test("react: moves a row by keyboard and keeps the order after a reload", async 
   await handle.focus();
   await page.keyboard.press("Space");
   await expect(announced(page)).toHaveText("Picked up Order A, position 1 of 3.");
+  await measured(page, "Order A");
   await page.keyboard.press("ArrowDown");
   await expect(announced(page)).toHaveText("Order A moved to position 2 of 3.");
   await page.keyboard.press("Space");
@@ -96,6 +100,7 @@ test("react: moves a row by keyboard and keeps the order after a reload", async 
   await page.getByRole("button", { name: "Move Order A" }).focus();
   await page.keyboard.press("Space");
   await expect(announced(page)).toHaveText("Picked up Order A, position 2 of 3.");
+  await measured(page, "Order A");
   await page.keyboard.press("ArrowUp");
   await expect(announced(page)).toHaveText("Order A moved to position 1 of 3.");
   await page.keyboard.press("Space");

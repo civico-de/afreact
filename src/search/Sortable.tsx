@@ -89,12 +89,14 @@ const SortableHandle = createContext<ReturnType<typeof useSortable> | null>(null
 /** A table row that moves while dragged; its handle is a DragHandle inside it. */
 export function SortableRow({ rowKey, children }: { rowKey: Row["key"]; children: ReactNode }) {
   const sortable = useSortable({ id: rowKey, attributes: { roleDescription: ts("movable row") } });
-  const { setNodeRef, transform, transition, isDragging } = sortable;
+  const { setNodeRef, transform, transition, isDragging, isOver } = sortable;
   return (
     <tr
       ref={setNodeRef}
       data-entity-id={rowKey}
       className={isDragging ? "afreact-dragging" : undefined}
+      // Set once dnd-kit has measured the rows, which the arrow keys need; the target for styling.
+      data-over={isOver || undefined}
       style={{
         transform: transform ? `translateY(${String(transform.y)}px)` : undefined,
         transition,
