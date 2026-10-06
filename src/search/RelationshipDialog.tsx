@@ -7,7 +7,6 @@ import { editorFor } from "./inlineEdit";
 import { Icon } from "./LinkContent";
 import {
   fieldEditableInfo,
-  initialBatchValue,
   presetValues,
   relationshipFieldsCall,
   type RelationshipType,
@@ -45,12 +44,18 @@ const contactInfo = (type: RelationshipType) => ({
 export function RelationshipDialog({ task, onSave, onCancel }: RelationshipDialogProps) {
   const titleId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
-  const preset = Object.fromEntries(presetValues(task));
-  const [type, setType] = useState(
-    typeof preset.relationship_type === "string" ? preset.relationship_type : "",
+  // hook_civicrm_searchKitTasks may preset the type, the contact and field values.
+  const {
+    relationship_type: presetType,
+    contact_id: presetContact,
+    disableRelationshipSelect: lockType,
+    ...presetFields
+  } = Object.fromEntries(presetValues(task));
+  const [type, setType] = useState(typeof presetType === "string" ? presetType : "");
+  const [contactId, setContactId] = useState(
+    typeof presetContact === "number" ? presetContact : null,
   );
-  const [contactId, setContactId] = useState<number | null>(null);
-  const [values, setValues] = useState<Record<string, unknown>>({});
+  const [values, setValues] = useState<Record<string, unknown>>(presetFields);
   const types = task.relationshipTypes ?? [];
   const chosen = types.find((item) => item.id === type);
   const typeId = type.split("_")[0] ?? "";
@@ -59,7 +64,6 @@ export function RelationshipDialog({ task, onSave, onCancel }: RelationshipDialo
     queryFn: chosen ? () => api4<UpdateField>(...relationshipFieldsCall(typeId)) : skipToken,
   });
   const ready = !!chosen && contactId !== null && fields.isSuccess;
-  const lockType = preset.disableRelationshipSelect === true;
 
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
@@ -90,7 +94,7 @@ export function RelationshipDialog({ task, onSave, onCancel }: RelationshipDialo
             id={`${titleId}-type`}
             className="form-control"
             required
-            disabled={lockType}
+            disabled={lockType === true}
             value={type}
             onChange={(event) => {
               setType(event.target.value);
@@ -170,7 +174,7 @@ export function RelationshipDialog({ task, onSave, onCancel }: RelationshipDialo
                   multiple={input.multiple}
                   info={info}
                   row={NO_ROW}
-                  value={field.name in values ? values[field.name] : initialBatchValue(field)}
+                  value={values[field.name]}
                   nullable={info.nullable}
                   labelId={labelId}
                   common={{

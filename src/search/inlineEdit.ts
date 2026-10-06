@@ -26,20 +26,23 @@ export type Editor = { kind: EditorKind; multiple: boolean } | { unsupported: st
 
 export function editorFor(info: EditableInfo): Editor {
   const multiple = info.serialize || info.data_type === "Array";
-  const only = (kind: EditorKind, what: string): Editor =>
-    multiple ? { unsupported: `multi-value ${what}` } : { kind, multiple };
+  const one = (kind: EditorKind): Editor => ({ kind, multiple });
   if (info.input_type === "Location") return { unsupported: "Location" };
-  if (info.data_type === "Date") return only("date", "date");
-  if (info.data_type === "Timestamp") return only("datetime", "date");
-  if (info.data_type === "Boolean") return only("boolean", "Yes/No");
-  if (info.input_type === "Color") return only("color", "colour");
-  if (info.options) return { kind: "select", multiple };
-  if (info.fk_entity || info.value_key === "id") return { kind: "entityref", multiple };
-  if (info.data_type === "Integer") return only("integer", "number");
-  if (info.data_type === "Float") return only("float", "number");
-  if (info.input_type === "Email") return only("email", "text");
-  if (info.input_type === "TextArea") return only("textarea", "text");
-  return only("text", "text");
+  // A list of dates is picked day by day, as crm-multi-select-date does, even for timestamps.
+  if (info.data_type === "Date" || (multiple && info.data_type === "Timestamp")) return one("date");
+  if (info.data_type === "Timestamp") return one("datetime");
+  if (info.data_type === "Boolean") return one("boolean");
+  if (info.input_type === "Color")
+    return multiple ? { unsupported: "multi-value colour" } : one("color");
+  if (info.options) return one("select");
+  if (info.fk_entity || info.value_key === "id") return one("entityref");
+  if (info.data_type === "Integer") return one("integer");
+  if (info.data_type === "Float") return one("float");
+  // A list of texts is typed into one input, so e-mail and textarea inputs give way to it.
+  if (multiple) return one("text");
+  if (info.input_type === "Email") return one("email");
+  if (info.input_type === "TextArea") return one("textarea");
+  return one("text");
 }
 
 /** Editable columns of a page whose input the React table cannot show, for the table's note. */

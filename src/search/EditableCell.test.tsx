@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { editInfo } from "../test/editInfo";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
@@ -325,8 +325,8 @@ describe("in-place editing", () => {
     expect(lookups[0]?.params.ids).toEqual([3]);
   });
 
-  it("closes an open list on Escape before the editor, and clears a reference", async () => {
-    const { edits } = setup({ value_key: "employer_id", fk_entity: "Contact", nullable: true }, 3, {
+  const reference = () =>
+    setup({ value_key: "employer_id", fk_entity: "Contact", nullable: true }, 3, {
       shown: "Acme",
       handlers: {
         "Contact.autocomplete": ({ ids }) =>
@@ -335,6 +335,9 @@ describe("in-place editing", () => {
           }),
       },
     });
+
+  it("closes an open list on Escape before the editor, then the editor with a value", async () => {
+    const { edits } = reference();
     await open();
     const input = await screen.findByRole("combobox", { name: "Value, Ada" });
     await userEvent.type(input, "Bo");
@@ -342,6 +345,15 @@ describe("in-place editing", () => {
     await userEvent.keyboard("{Escape}");
     expect(input).toHaveAttribute("aria-expanded", "false");
     expect(input).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(await screen.findByRole("button", { name: edit("Acme") })).toHaveFocus();
+    expect(edits()).toHaveLength(0);
+  });
+
+  it("clears a reference, the focus back on the input", async () => {
+    const { edits } = reference();
+    await open();
+    const input = await screen.findByRole("combobox", { name: "Value, Ada" });
     await userEvent.click(screen.getByRole("button", { name: "Clear" }));
     expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
     expect(input).toHaveFocus();
@@ -473,6 +485,68 @@ describe("in-place editors", () => {
     await userEvent.selectOptions(field(), "B");
     await userEvent.keyboard("{Enter}");
     expect(edits()[0]?.values).toEqual({ m: ["a", "b"] });
+  });
+
+  it("edits a list of texts as chips: Enter or a comma adds, Backspace removes", async () => {
+    const { edits } = setup({ value_key: "fee_level", serialize: true }, ["Early"], {
+      shown: "Early",
+    });
+    await open();
+    expect(field()).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Remove Early" })).toBeInTheDocument();
+    await userEvent.keyboard("Late{Enter}");
+    expect(screen.getByRole("button", { name: "Remove Late" })).toBeInTheDocument();
+    expect(field()).toHaveValue("");
+    expect(edits()).toHaveLength(0);
+    await userEvent.keyboard("Member,{Backspace}");
+    expect(screen.queryByRole("button", { name: "Remove Member" })).toBeNull();
+    await userEvent.keyboard("{Backspace}");
+    expect(screen.queryByRole("button", { name: "Remove Late" })).toBeNull();
+    await userEvent.keyboard("Late");
+    await userEvent.click(screen.getByRole("button", { name: "Remove Early" }));
+    expect(field()).toHaveFocus();
+    await userEvent.keyboard("{Enter}{Enter}");
+    expect(edits()[0]?.values).toEqual({ fee_level: ["Late"] });
+  });
+
+  it("edits a list of numbers, turning away what is no number", async () => {
+    const { edits } = setup({ value_key: "n", data_type: "Integer", serialize: true }, [1], {
+      shown: "1",
+    });
+    await open();
+    await userEvent.keyboard("x{Enter}");
+    expect(field()).toHaveValue("x");
+    expect(edits()).toHaveLength(0);
+    await userEvent.clear(field());
+    await userEvent.keyboard("2,{Enter}");
+    expect(edits()[0]?.values).toEqual({ n: [1, 2] });
+  });
+
+  it("edits a list of dates one pick at a time, each day once", async () => {
+    const { edits } = setup(
+      { value_key: "d", data_type: "Date", serialize: true },
+      ["2026-01-02"],
+      { shown: "2026-01-02" },
+    );
+    await open();
+    expect(field()).toHaveAttribute("type", "date");
+    fireEvent.change(field(), { target: { value: "2026-01-02" } });
+    fireEvent.change(field(), { target: { value: "2026-03-04" } });
+    expect(screen.getAllByRole("button", { name: /^Remove/ })).toHaveLength(2);
+    await userEvent.keyboard("{Enter}");
+    expect(edits()[0]?.values).toEqual({ d: ["2026-01-02", "2026-03-04"] });
+  });
+
+  it("edits a list of Yes/No with checkboxes", async () => {
+    const { edits } = setup({ value_key: "b", data_type: "Boolean", serialize: true }, [true], {
+      shown: "Yes",
+    });
+    await open();
+    const group = screen.getByRole("group", { name: "Value, Ada" });
+    expect(within(group).getByRole("checkbox", { name: "Yes" })).toBeChecked();
+    await userEvent.click(within(group).getByRole("checkbox", { name: "No" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(edits()[0]?.values).toEqual({ b: [true, false] });
   });
 
   it("shows why options that depend on the row did not load", async () => {

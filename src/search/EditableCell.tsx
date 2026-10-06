@@ -12,6 +12,7 @@ import {
 import { api4, errorMessage } from "../api/civi";
 import { cellText } from "./Cell";
 import { EntityRefInput } from "./EntityRefInput";
+import { ListInput } from "./ListInput";
 import {
   editorFor,
   initialValue,
@@ -160,14 +161,14 @@ function CellEditor({
   };
   const onKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
     const target = event.target;
-    // An autocomplete takes Escape and Enter for its open list or typed text, as select2 does.
-    if (event.defaultPrevented) return;
-    if (event.key === "Escape") {
+    // An open autocomplete list takes Escape; an input that handled Enter keeps it (pick, chip).
+    if (event.key === "Escape" && !listOpen(target)) {
       event.preventDefault();
       finish(false);
     }
     if (
       event.key === "Enter" &&
+      !event.defaultPrevented &&
       !(target instanceof HTMLTextAreaElement || target instanceof HTMLButtonElement)
     ) {
       event.preventDefault();
@@ -251,6 +252,10 @@ function CellEditor({
   );
 }
 
+/** Whether the key went to a combobox input with its list open. */
+export const listOpen = (target: EventTarget | null) =>
+  target instanceof Element && target.getAttribute("aria-expanded") === "true";
+
 export interface InputProps {
   kind: EditorKind;
   multiple: boolean;
@@ -281,6 +286,11 @@ const fromLocalDateTime = (value: string) => (value ? `${value.replace("T", " ")
 /** The input crmSearchInput shows for a field: in a cell, and in the update task's dialog. */
 export function Input(props: InputProps) {
   const { kind, value, nullable, common, onChange } = props;
+  if (
+    props.multiple &&
+    (kind === "text" || kind === "integer" || kind === "float" || kind === "date")
+  )
+    return <ListInput {...props} kind={kind} />;
   // An emptied input clears the value where the record allows it; otherwise `required` holds.
   const typed = (next: string) => {
     onChange(next === "" && nullable ? null : next);
@@ -385,13 +395,33 @@ export function Input(props: InputProps) {
   }
 }
 
-/** boolean.html: Yes and No, without a way back to empty, as in core. */
-function BooleanInput({ value, labelId, common, onChange }: InputProps) {
+/** boolean.html: Yes and No, without a way back to empty, as in core; a list takes both. */
+function BooleanInput({ value, labelId, common, onChange, multiple }: InputProps) {
   const name = useId();
   const choices: [boolean, string][] = [
     [true, ts("Yes")],
     [false, ts("No")],
   ];
+  if (multiple) {
+    const chosen = Array.isArray(value) ? value.filter((v) => typeof v === "boolean") : [];
+    return (
+      <div className="form-group" role="group" aria-labelledby={labelId}>
+        {choices.map(([choice, text]) => (
+          <label key={text} className="checkbox-inline">
+            <input
+              type="checkbox"
+              checked={chosen.includes(choice)}
+              onChange={(event) => {
+                const rest = chosen.filter((v) => v !== choice);
+                onChange(event.target.checked ? [...rest, choice] : rest);
+              }}
+            />{" "}
+            {text}
+          </label>
+        ))}
+      </div>
+    );
+  }
   return (
     <div
       className="form-group"

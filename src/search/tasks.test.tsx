@@ -1217,6 +1217,7 @@ describe("AfreactSearch bulk actions", () => {
     const fields = [
       { name: "description", label: "Description", input_type: "Text", data_type: "String" },
       { name: "start_date", label: "Start Date", input_type: "Date", data_type: "Date" },
+      { name: "custom.Active", label: "Active", input_type: "Radio", data_type: "Boolean" },
     ];
 
     async function openRelationshipDialog(...names: string[]) {
@@ -1254,6 +1255,9 @@ describe("AfreactSearch bulk actions", () => {
       });
       const description = await within(dialog).findByRole("textbox", { name: "Description" });
       await userEvent.type(description, "Met at the fair");
+      // An untouched field shows nothing and sends nothing, as core's crm-search-input.
+      const active = within(dialog).getByRole("radiogroup", { name: "Active" });
+      expect(within(active).queryByRole("radio", { checked: true })).toBeNull();
       const contact = await within(dialog).findByRole("combobox", { name: /Contact/ });
       await userEvent.type(contact, "Bo");
       await userEvent.click(await screen.findByRole("option", { name: "Bob" }));
@@ -1285,6 +1289,46 @@ describe("AfreactSearch bulk actions", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       await waitFor(() => {
         expect(pageRuns(calls)).toHaveLength(2);
+      });
+    });
+
+    it("starts from the values a hook preset, the type locked", async () => {
+      const preset = {
+        ...relationship,
+        values: {
+          relationship_type: "4_a_b",
+          disableRelationshipSelect: true,
+          contact_id: 8,
+          description: "Preset",
+        },
+      };
+      const calls = serve({
+        tasks: [enable, preset],
+        handlers: {
+          "Relationship.getFields": () => fields,
+          "Relationship.save": () => Object.assign([{ id: 1 }], { countFetched: 1 }),
+          "Organization.autocomplete": () =>
+            Object.assign([{ id: 8, label: "Acme" }], { countMatched: 1 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openRelationshipDialog("Name 3");
+      const type = within(dialog).getByRole("combobox", { name: /Relationship Type/ });
+      expect(type).toHaveValue("4_a_b");
+      expect(type).toBeDisabled();
+      expect(await within(dialog).findByRole("textbox", { name: "Description" })).toHaveValue(
+        "Preset",
+      );
+      await expect(within(dialog).findByRole("combobox", { name: /Contact/ })).resolves.toHaveValue(
+        "Acme",
+      );
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(named(calls, "Relationship.save")).toHaveLength(1);
+      });
+      expect(named(calls, "Relationship.save")[0]?.params).toEqual({
+        defaults: { description: "Preset", relationship_type_id: "4", contact_id_b: 8 },
+        records: [{ contact_id_a: 3 }],
       });
     });
 
@@ -1397,6 +1441,8 @@ describe("AfreactSearch bulk actions", () => {
       await waitFor(() => {
         expect(location.assign).toHaveBeenCalledWith("/civicrm/a#/mailing/9");
       });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(pageRuns(calls)).toHaveLength(1);
       expect(named(calls, "Contact.get")[0]?.params).toMatchObject({
         where: expect.arrayContaining([["id", "IN", [1, 2]]]) as unknown,
       });
@@ -1428,6 +1474,34 @@ describe("AfreactSearch bulk actions", () => {
       expect(within(dialog).getByRole("button", { name: "Create Mailing" })).toBeDisabled();
       await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("holds Escape while the group is being created", async () => {
+      let resolve: (value: unknown) => void = () => undefined;
+      const calls = serve({
+        tasks: [enable, mailing],
+        handlers: {
+          "Mailing.getFields": () => [{ options: false }],
+          "Contact.get": () => Object.assign([], { count: 2 }),
+          "Group.create": () => new Promise((done) => (resolve = done)),
+          "GroupContact.save": () => done(2),
+        },
+      });
+      vi.stubGlobal("location", { assign: vi.fn() });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openMailingDialog("Name 1", "Name 2");
+      await within(dialog).findByText("All of the selected contacts have active email addresses.");
+      await userEvent.type(within(dialog).getByRole("textbox", { name: /Mailing Name/ }), "News");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Create Mailing" }));
+      expect(within(dialog).getByRole("status")).toHaveTextContent("Creating mailing...");
+      expect(within(dialog).getByRole("heading", { name: /CiviMail/ })).toHaveFocus();
+      await userEvent.keyboard("{Escape}");
+      expect(dialog).toBeInTheDocument();
+      resolve(group());
+      await waitFor(() => {
+        expect(named(calls, "GroupContact.save")).toHaveLength(1);
+      });
+      vi.unstubAllGlobals();
     });
 
     it("keeps the dialog with the error when the group cannot be created", async () => {

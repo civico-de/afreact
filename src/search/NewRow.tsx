@@ -5,7 +5,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import { Input } from "./EditableCell";
+import { Input, listOpen } from "./EditableCell";
 import { editorFor, type InlineEdit } from "./inlineEdit";
 import type { DisplaySettings, EditableInfo } from "./types";
 
@@ -72,13 +72,13 @@ export function NewRow({ settings, edit, hidden }: NewRowProps) {
     if (!invalid) finish(true);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    // An autocomplete takes Escape and Enter for its open list or typed text, as select2 does.
-    if (event.defaultPrevented) return;
-    if (event.key === "Escape") {
+    // An open autocomplete list takes Escape; an input that handled Enter keeps it (pick, chip).
+    if (event.key === "Escape" && !listOpen(event.target)) {
       event.preventDefault();
       finish(false);
     } else if (
       event.key === "Enter" &&
+      !event.defaultPrevented &&
       !(event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLButtonElement)
     ) {
       event.preventDefault();

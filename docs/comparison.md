@@ -57,6 +57,7 @@ that no longer excuses anything fails the test.
 | Stored ids the autocomplete cannot find | dropped from view, kept in the model | kept, with a visible "No record found" message |
 | Chained selects (ChainSelect) | select2, disabled while the options load and when none came back (`master` also disables it while the control field is empty); a required one without options blocks the submit for good | native `<select>`, options from `Afform.getOptions` as in Angular, disabled the same way; the browser skips a disabled select, so the server reports the missing value instead |
 | In-place editors | select2, datepicker and select2 tags; text inputs at least as wide as the cell was | native `<select>`, `<input type="date">` and `datetime-local`, a colour picker beside a text input; inputs at their own width |
+| In-place editor for a multi-value text, number or date field (no options) | select2 tags split at commas; a date picker adding one day at a time, no day twice | chips with an input: Enter or a comma adds a text or number, Backspace on an empty input removes the last, what is typed when the editor leaves is kept; a date input adding one day at a time, no day twice; a multi-value Yes/No field is two checkboxes as in core |
 | In-place reference editor (fk_entity, `id`) | `crm-autocomplete` on the foreign entity with `fieldName: <entity>.<field>`, quick-add and quick-edit links in the dropdown; Enter and Escape close an open list before they reach the editor | the same combobox as a form's EntityRef, with the same `fieldName`; a single value shows its label and a clear link, a multi-value one its chips; no quick-add or quick-edit links (their popup would leave the editor); Enter and Escape in an open list stay with it |
 | New row (`editableRow.create`) | an "Add" button in the control column opens a row of inputs; every input is marked required but saved anyway; Enter anywhere saves; `cancelEditing()` runs before the call, so a failed save loses the typed values; a new record outside the filters reloads the displays; an empty `createLabel` leaves an icon-only button | the same row; only fields that allow no null are required and checked before the call; Enter in the row saves, Escape returns the focus to the button; a failed save keeps the row with the error; the same reload; "Add" as the fallback label; editable columns whose editor React lacks are named in the note, and a required one among them withholds the row |
 | Leaving an in-place editor | the editor stays open until Enter, Escape or a button | a valid change saves, an unchanged editor closes; switching windows leaves it open |
@@ -120,8 +121,8 @@ instead of being dropped:
   hierarchical tables, include columns
 - drag to reorder and re-parent in tree displays (`draggable`); the tree
   itself renders, with the note
-- in-place editors for locations and multi-value text, number, date or Yes/No
-  fields; their cells stay read-only
+- in-place editors for locations and multi-value colours; their cells stay
+  read-only
 - bulk actions whose task is an Angular dialog (open a case, and extensions'
   own; download, update, tag, relationship and mailing have their own
   dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
@@ -148,7 +149,7 @@ kept across sorting and paging, cleared by new filters and after a task.
 |---|---|---|
 | Confirmation dialog | jQuery UI dialog through `dialogService` | native modal `<dialog>`: focus moves in and back to the menu button, Escape cancels before the run starts |
 | Progress bar | moves forward every second while a batch runs | moves per finished batch |
-| Update dialog | select2 pickers add a clause as soon as a field is picked, and pick each clause's field; `crm-search-input` for the value, unlabelled; fields of every writable type; the success alert is titled "Saved" | a native select plus an Add button; the value input of the in-place editors, labelled by the field; fields whose input the in-place editor lacks (Location, multi-value) stay in the list, disabled, with the reason as their title; values a hook presets in `task.values` start the dialog; the batch then runs in the task dialog with the same title |
+| Update dialog | select2 pickers add a clause as soon as a field is picked, and pick each clause's field; `crm-search-input` for the value, unlabelled; fields of every writable type; the success alert is titled "Saved" | a native select plus an Add button; the value input of the in-place editors, labelled by the field; fields whose input the in-place editor lacks (Location) stay in the list, disabled, with the reason as their title; values a hook presets in `task.values` start the dialog; the batch then runs in the task dialog with the same title |
 | Task input fields (`apiBatch.fields`) | `crm-search-input` per field, started from its default, serialized, Boolean or first option; the task button waits for a valid form | the in-place editors' inputs with the same start values, native validation; a task with a field those editors lack stays disabled with the note |
 | Changing a clause's field in the update dialog | keeps the value typed for the previous field | starts the new field's value afresh, as when added |
 | Update from a row link | a row link's single-row update runs `SearchDisplay.inlineEdit`; the update dialog's batch always runs `Entity.update` on the row's id | the same |
@@ -156,7 +157,7 @@ kept across sorting and paging, cleared by new filters and after a task.
 | Download dialog | format select; a progress bar grows by 10 % each second whatever the server does; the dialog's close button is hidden while it runs | the same format select; a full striped bar in a status region while the file loads, the title takes the focus; Escape and both buttons are off while it runs |
 | Tag dialog | add or remove; the plain tags in a select2 tree, each tagset's tags in an entityref search; the batch runs inside the dialog; looks tags up for the search's entity name (see upstream bugs) | the same choice; the tags in a native multi-select with the tree indented, each tagset's tags in a multi-select of their own; the batch then runs in the task dialog; looks tags up for "Contact" on any contact-type search; the result message counts as core's |
 | Relationship dialog | relationship type in a select2, the contact in a `crm-autocomplete` filtered by the type's contact sub-type, then the type's description, dates and custom fields as `crm-search-input`; the batch runs inside the dialog; a failed batch leaves the dialog on its progress bar (see upstream bugs) | the same choice in a native select, the same autocomplete and filter, the type's fields as the in-place editors' inputs (fields they lack are noted); the batch then runs in the task dialog; the result message counts added and existing relationships as core's; a failed batch alerts with the server's message |
-| Mailing dialog | name and type, a recipient check (`Contact.get` with an e-mail join) colouring an alert; "Create Mailing" makes a hidden group with the mailing and its include group chained, a second batch adds the contacts, then the browser opens the mailing; a failed step alerts core's message and closes | the same inputs and check; the group and mailing are made from the dialog, the contacts join in the task dialog's batch, then the browser opens the mailing; a failed group alerts core's and the server's message in the dialog, which stays open; a failed batch alerts both and closes |
+| Mailing dialog | name and type, a recipient check (`Contact.get` with an e-mail join) colouring an alert; "Create Mailing" makes a hidden group with the mailing and its include group chained, a second batch adds the contacts, then the browser opens the mailing; a failed step alerts core's message and closes | the same inputs and check; the group and mailing are made from the dialog, the contacts join in the task dialog's batch, then the browser opens the mailing; a failed group alerts core's and the server's message in the dialog, which stays open for another try (each try that got as far as the group leaves a hidden group behind); a failed batch alerts both and closes |
 | Delete task without `confirmMsg` (changed by a hook) | runs at once | asks with core's delete question; a delete the renderer's own dialog settled (the removal of tags) runs at once |
 | Actions menu longer than the space below its button | the page scrolls to the rest | the menu scrolls within the viewport, or opens above its button when that leaves more room |
 | After a row link updates its row | reloads that row (`refreshAfterEditing`) | reloads the table |
@@ -778,3 +779,11 @@ defines no `onError`, yet the template binds the batch runner's `error` to
 so a rejected `Relationship.save` shows nothing and the dialog stays on
 "Adding relationships..." (read from the code, not run). The React renderer
 alerts with the server's message and closes the dialog.
+
+**A preset relationship type breaks core's dialog.** `crmSearchTaskRelationship.js`
+calls `this.onChangeRelationship()` for a `relationship_type` a
+`hook_civicrm_searchKitTasks` preset in `task.values` before it assigns that
+function, so the dialog throws a TypeError and shows neither the contact
+field nor the type's fields (read from the code, not run). The React renderer
+starts from the preset type, contact and field values, with the type locked
+when `disableRelationshipSelect` is set.

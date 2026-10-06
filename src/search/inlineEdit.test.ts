@@ -46,14 +46,32 @@ describe("editorFor", () => {
     });
   });
 
+  it("lists multi-value fields in one input, dates day by day, Yes and No as checkboxes", () => {
+    const multi = (info: Parameters<typeof editInfo>[0]) => editorFor(editInfo(info));
+    expect(multi({ value_key: "t", data_type: "Array" })).toEqual({ kind: "text", multiple: true });
+    expect(multi({ value_key: "e", input_type: "Email", serialize: true })).toEqual({
+      kind: "text",
+      multiple: true,
+    });
+    expect(multi({ value_key: "n", data_type: "Integer", serialize: true })).toEqual({
+      kind: "integer",
+      multiple: true,
+    });
+    expect(multi({ value_key: "d", data_type: "Timestamp", serialize: true })).toEqual({
+      kind: "date",
+      multiple: true,
+    });
+    expect(multi({ value_key: "b", data_type: "Boolean", serialize: true })).toEqual({
+      kind: "boolean",
+      multiple: true,
+    });
+  });
+
   it("names the inputs the table cannot show", () => {
     const reason = (info: Parameters<typeof editInfo>[0]) => editorFor(editInfo(info));
     expect(reason({ value_key: "l", input_type: "Location" })).toEqual({ unsupported: "Location" });
-    expect(reason({ value_key: "t", data_type: "Array" })).toEqual({
-      unsupported: "multi-value text",
-    });
-    expect(reason({ value_key: "d", data_type: "Date", serialize: true })).toEqual({
-      unsupported: "multi-value date",
+    expect(reason({ value_key: "c", input_type: "Color", serialize: true })).toEqual({
+      unsupported: "multi-value colour",
     });
   });
 });

@@ -534,8 +534,11 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
         text = ts("Saved");
         window.CRM.status(text);
       } else if (apiBatch.successUrl) {
-        text = "";
+        // The page changes; nothing to refresh or announce here.
         window.location.assign(window.CRM.url(apiBatch.successUrl));
+        dialog.current?.close();
+        onDone({ ran: false, message: "" });
+        return;
       } else {
         text = apiBatch.summary
           ? apiBatch.summary({ fetched, matched, rows })

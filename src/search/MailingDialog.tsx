@@ -29,6 +29,7 @@ interface CreatedGroup {
 export function MailingDialog({ task, ids, onCreated, onCancel }: MailingDialogProps) {
   const titleId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
+  const title = useRef<HTMLHeadingElement>(null);
   const [name, setName] = useState("");
   const [templateType, setTemplateType] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -61,6 +62,7 @@ export function MailingDialog({ task, ids, onCreated, onCancel }: MailingDialogP
   const create = async () => {
     setCreating(true);
     setError(null);
+    title.current?.focus();
     try {
       const [group] = await api4<CreatedGroup>(
         ...mailingGroupCall({ name, template_type: chosenType }),
@@ -109,9 +111,12 @@ export function MailingDialog({ task, ids, onCreated, onCancel }: MailingDialogP
       ref={dialog}
       className="crm-search-task-dialog afreact-dialog"
       aria-labelledby={titleId}
+      onCancel={(event) => {
+        if (creating) event.preventDefault();
+      }}
       onClose={onCancel}
     >
-      <h2 id={titleId} className="afreact-dialog-title">
+      <h2 ref={title} id={titleId} className="afreact-dialog-title" tabIndex={-1}>
         {task.title}
       </h2>
       <form
@@ -167,7 +172,7 @@ export function MailingDialog({ task, ids, onCreated, onCancel }: MailingDialogP
               {errorMessage(failure)}
             </p>
           ))}
-        {!recipients.error && status}
+        <div aria-live="polite">{!recipients.error && status}</div>
         {creating && (
           <div className="crm-search-task-progress" role="status">
             <h5>{ts("Creating mailing...")}</h5>
