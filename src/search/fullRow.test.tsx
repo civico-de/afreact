@@ -9,7 +9,14 @@ import type { DisplaySettings, Row } from "./types";
 function setup({
   inlineEdit,
   readOnly = false,
-}: { inlineEdit?: (params: Record<string, unknown>) => unknown; readOnly?: boolean } = {}) {
+  nickName = "Pi",
+  toggleColumns = false,
+}: {
+  inlineEdit?: (params: Record<string, unknown>) => unknown;
+  readOnly?: boolean;
+  nickName?: string | null;
+  toggleColumns?: boolean;
+} = {}) {
   const row = (title: unknown, nick: unknown, shown = String(title)): Row => ({
     key: 7,
     columns: [{ val: "Ada" }, { val: shown, edit: !readOnly }, { val: nick, edit: !readOnly }],
@@ -23,11 +30,12 @@ function setup({
     ],
     limit: 10,
     pager: false,
+    toggleColumns,
     editableRow: { full: true },
   };
   const calls = mockApi({
     "SearchDisplay.run": () =>
-      Object.assign([row("Pilot", "Pi")], {
+      Object.assign([row("Pilot", nickName)], {
         editable: {
           job_title: editInfo({ value_key: "job_title" }),
           nick_name: editInfo({ value_key: "nick_name", nullable: false }),
@@ -131,6 +139,44 @@ describe("full-row editing", () => {
     expect(title()).toHaveAttribute("aria-describedby", error.id);
     expect(nick()).toHaveAttribute("aria-describedby", error.id);
     expect(screen.getAllByText("Nope")).toHaveLength(1);
+  });
+
+  it("lets an untouched empty required cell be, as the server leaves it alone", async () => {
+    const { edits } = setup({ nickName: null });
+    await openRow();
+    expect(nick()).not.toBeRequired();
+    await userEvent.type(title(), "s{Enter}");
+    expect(edits()).toMatchObject([{ values: { job_title: "Pilots", nick_name: null } }]);
+    await screen.findByRole("button", { name: "Edit Title Saved" });
+
+    // One the user emptied is held, as the server would skip it without a word.
+    await userEvent.click(screen.getByRole("button", { name: "Edit Title Saved" }));
+    await userEvent.type(nick(), "x");
+    await userEvent.clear(nick());
+    expect(nick()).toBeRequired();
+    await userEvent.keyboard("{Enter}");
+    expect(nick()).toBeInvalid();
+    expect(edits()).toHaveLength(1);
+  });
+
+  it("leaves a column the picker hides out of the row", async () => {
+    const { edits } = setup({ toggleColumns: true });
+    await screen.findByRole("button", { name: "Edit Title Pilot" });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Nick" }));
+    await openRow();
+    expect(screen.queryByLabelText("Nick, Ada")).not.toBeInTheDocument();
+    await userEvent.type(title(), "s{Enter}");
+    expect(edits()).toMatchObject([{ values: { job_title: "Pilots" } }]);
+    expect(edits()[0]?.values).not.toHaveProperty("nick_name");
+  });
+
+  it("cancels with Escape on the row's buttons too", async () => {
+    setup();
+    await openRow();
+    within(control()).getByRole("button", { name: "Cancel" }).focus();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByLabelText("Title, Ada")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit Title Pilot" })).toHaveFocus();
   });
 
   it("shows no buttons on a row the server marks read-only", async () => {

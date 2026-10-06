@@ -189,7 +189,9 @@ export function AfreactSearch({
   const inlineEdit = useInlineEdit({
     page: rows.data,
     columns: settings?.columns ?? [],
-    full: !!settings?.editableRow && !!settings.editableRow.full,
+    hidden,
+    // Only a table has the control column that holds the row's buttons.
+    full: type === "table" && !!settings?.editableRow && !!settings.editableRow.full,
     rowsKey,
     tallyKey,
     countKey,

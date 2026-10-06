@@ -203,9 +203,11 @@ function CellEditor({
   const nullable = isNullable(row, info);
   const inputId = `${id}-input`;
   const errorId = edit.full ? edit.errorId : `${id}-error`;
+  // The server leaves an empty value of a field that allows none alone (InlineEdit), so an
+  // untouched empty cell does not hold up the rest of its row.
   const common = {
     id: inputId,
-    required: !nullable,
+    required: !nullable && (!edit.full || isChanged(value, initial)),
     "aria-invalid": failed ? true : undefined,
     "aria-describedby": failed ? errorId : undefined,
   };
@@ -280,7 +282,15 @@ export function RowEditButtons({ edit, row }: { edit: InlineEdit | null; row: Ro
   const failed = edit.editing.error;
   return (
     <>
-      <div ref={group} className="btn-group">
+      <div
+        ref={group}
+        className="btn-group"
+        onKeyDown={(event) => {
+          if (event.key !== "Escape") return;
+          event.preventDefault();
+          edit.cancel();
+        }}
+      >
         <button
           type="button"
           className="btn btn-sm btn-success"

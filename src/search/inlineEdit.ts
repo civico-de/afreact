@@ -173,6 +173,8 @@ export function useInlineEditContext(): InlineEdit | null {
 interface UseInlineEditOptions {
   page: RunPage | undefined;
   columns: Column[];
+  /** Columns the column picker hides; their values stay out of a full-row save. */
+  hidden: ReadonlySet<number>;
   full: boolean;
   /** The query of the shown page, whose cache entry the saved row is written into. */
   rowsKey: QueryKey;
@@ -187,6 +189,7 @@ interface UseInlineEditOptions {
 export function useInlineEdit({
   page,
   columns,
+  hidden,
   full,
   rowsKey,
   tallyKey,
@@ -327,7 +330,8 @@ export function useInlineEdit({
       const initial: Record<string, unknown> = {};
       for (const [index, cell] of row.columns.entries()) {
         const key = columns[index]?.key;
-        const info = key && cell?.edit && (full || index === colIndex) ? editable[key] : undefined;
+        const shown = (full && !hidden.has(index)) || index === colIndex;
+        const info = key && cell?.edit && shown ? editable[key] : undefined;
         if (key && info && !("unsupported" in editorFor(info)))
           initial[key] = initialValue(row, info);
       }
