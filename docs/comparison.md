@@ -127,7 +127,7 @@ instead of being dropped:
 - bulk actions whose task is an Angular dialog (open a case, and extensions'
   own; download, update, tag, relationship and mailing have their own
   dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
-  with a contact reference, as soft credits do), or uses an expression other
+  with a Location or multi-value colour input), or uses an expression other
   than a literal, an object literal, `ids[n]`, `ids.join(',')` and the task's
   data names. They stay in the actions menu, disabled, with the note as their
   title; a row link to one alerts.

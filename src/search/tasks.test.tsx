@@ -435,6 +435,14 @@ describe("AfreactSearch bulk actions", () => {
         fields: [
           { name: "amount", label: "Amount", input_type: "Number", data_type: "Float", required: true },
           {
+            name: "contact_id",
+            label: "Contact",
+            input_type: "EntityRef",
+            data_type: "Integer",
+            fk_entity: "Contact",
+            required: true,
+          },
+          {
             name: "soft_credit_type_id",
             label: "Soft Credit Type",
             input_type: "Select",
@@ -450,7 +458,10 @@ describe("AfreactSearch bulk actions", () => {
     };
     const calls = serve({
       tasks: [enable, credit],
-      handlers: { "ContributionSoft.save": (params) => done((params.records as unknown[]).length) },
+      handlers: {
+        "ContributionSoft.save": (params) => done((params.records as unknown[]).length),
+        "Contact.autocomplete": () => Object.assign([{ id: 5, label: "Bob" }], { countMatched: 1 }),
+      },
     });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await screen.findByText("Name 1");
@@ -468,14 +479,22 @@ describe("AfreactSearch bulk actions", () => {
     expect(dialog).toBeInTheDocument();
     await userEvent.type(amount, "12.5");
     await userEvent.selectOptions(type, "1");
+    // A contact reference searches the field's own autocomplete, as crm-autocomplete does.
+    const contact = within(dialog).getByRole("combobox", { name: "Contact" });
+    await userEvent.type(contact, "Bo");
+    await userEvent.click(await screen.findByRole("option", { name: "Bob" }));
+    expect(named(calls, "Contact.autocomplete")[0]?.params).toMatchObject({
+      input: "Bo",
+      fieldName: "ContributionSoft.contact_id",
+    });
     await userEvent.click(within(dialog).getByRole("button", { name: "Add Soft Credits" }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
     expect(named(calls, "ContributionSoft.save")[0]?.params).toEqual({
       records: [
-        { amount: 12.5, soft_credit_type_id: 1, contribution_id: 1 },
-        { amount: 12.5, soft_credit_type_id: 1, contribution_id: 3 },
+        { amount: 12.5, contact_id: 5, soft_credit_type_id: 1, contribution_id: 1 },
+        { amount: 12.5, contact_id: 5, soft_credit_type_id: 1, contribution_id: 3 },
       ],
     });
     expect(checkbox("Name 1")).not.toBeChecked();
