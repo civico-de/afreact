@@ -122,9 +122,9 @@ instead of being dropped:
   itself renders, with the note
 - in-place editors for locations and multi-value text, number, date or Yes/No
   fields; their cells stay read-only
-- bulk actions whose task is an Angular dialog (schedule a mailing, open a
-  case, and extensions' own; download, update, tag and relationship have
-  their own dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
+- bulk actions whose task is an Angular dialog (open a case, and extensions'
+  own; download, update, tag, relationship and mailing have their own
+  dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
   with a contact reference, as soft credits do), or uses an expression other
   than a literal, an object literal, `ids[n]`, `ids.join(',')` and the task's
   data names. They stay in the actions menu, disabled, with the note as their
@@ -156,6 +156,7 @@ kept across sorting and paging, cleared by new filters and after a task.
 | Download dialog | format select; a progress bar grows by 10 % each second whatever the server does; the dialog's close button is hidden while it runs | the same format select; a full striped bar in a status region while the file loads, the title takes the focus; Escape and both buttons are off while it runs |
 | Tag dialog | add or remove; the plain tags in a select2 tree, each tagset's tags in an entityref search; the batch runs inside the dialog; looks tags up for the search's entity name (see upstream bugs) | the same choice; the tags in a native multi-select with the tree indented, each tagset's tags in a multi-select of their own; the batch then runs in the task dialog; looks tags up for "Contact" on any contact-type search; the result message counts as core's |
 | Relationship dialog | relationship type in a select2, the contact in a `crm-autocomplete` filtered by the type's contact sub-type, then the type's description, dates and custom fields as `crm-search-input`; the batch runs inside the dialog; a failed batch leaves the dialog on its progress bar (see upstream bugs) | the same choice in a native select, the same autocomplete and filter, the type's fields as the in-place editors' inputs (fields they lack are noted); the batch then runs in the task dialog; the result message counts added and existing relationships as core's; a failed batch alerts with the server's message |
+| Mailing dialog | name and type, a recipient check (`Contact.get` with an e-mail join) colouring an alert; "Create Mailing" makes a hidden group with the mailing and its include group chained, a second batch adds the contacts, then the browser opens the mailing; a failed step alerts core's message and closes | the same inputs and check; the group and mailing are made from the dialog, the contacts join in the task dialog's batch, then the browser opens the mailing; a failed group alerts core's and the server's message in the dialog, which stays open; a failed batch alerts both and closes |
 | Delete task without `confirmMsg` (changed by a hook) | runs at once | asks with core's delete question; a delete the renderer's own dialog settled (the removal of tags) runs at once |
 | Actions menu longer than the space below its button | the page scrolls to the rest | the menu scrolls within the viewport, or opens above its button when that leaves more room |
 | After a row link updates its row | reloads that row (`refreshAfterEditing`) | reloads the table |

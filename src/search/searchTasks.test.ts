@@ -12,6 +12,9 @@ import {
   inlineEditCall,
   parseTaskList,
   referencedTasks,
+  mailingBatch,
+  mailingCalls,
+  mailingGroupCall,
   relationshipBatch,
   relationshipFieldsCall,
   tagBatch,
@@ -68,6 +71,12 @@ const mailing: SearchTask = {
   title: "Email - schedule/send via CiviMail",
   number: "> 0",
   uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskMailing.html" },
+};
+const openCase: SearchTask = {
+  name: "contact.case",
+  title: "Case - Open",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/crmCaseSearchTasks/crmSearchTaskCase.html" },
 };
 const merge: SearchTask = {
   name: "contact.merge",
@@ -160,18 +169,19 @@ describe("taskRun", () => {
     expect(taskRun(label)).toEqual({ kind: "redirect", target: merge.crmPopup });
   });
 
-  it("runs the download, update, tag and relationship tasks itself", () => {
+  it("runs the download, update, tag, relationship and mailing tasks itself", () => {
     expect(taskRun(download)).toEqual({ kind: "download" });
     const update = { ...tag, uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskUpdate.html" } };
     expect(taskRun(update)).toEqual({ kind: "update" });
     expect(taskRun(tag)).toEqual({ kind: "tag" });
     expect(taskRun(relationship)).toEqual({ kind: "relationship" });
+    expect(taskRun(mailing)).toEqual({ kind: "mailing" });
   });
 
   it("names why it cannot run Angular dialogs, input fields and the rest", () => {
-    expect(taskRun(mailing)).toEqual({
+    expect(taskRun(openCase)).toEqual({
       kind: "unsupported",
-      reason: "Angular dialog ~/crmSearchTasks/crmSearchTaskMailing.html",
+      reason: "Angular dialog ~/crmCaseSearchTasks/crmSearchTaskCase.html",
     });
     const where = { name: "geo", label: "Where", input_type: "Location", data_type: "String" };
     const located = { ...disable, apiBatch: { action: "save", fields: [where] } };
@@ -212,9 +222,9 @@ describe("referencedTasks and unsupportedTaskNotes", () => {
   });
 
   it("notes only the referenced tasks the renderer cannot run", () => {
-    const tasks = [disable, download, tag, relationship, mailing, merge];
+    const tasks = [disable, download, tag, relationship, mailing, openCase, merge];
     expect(unsupportedTaskNotes(tasks, "all")).toEqual([
-      "task contact.mailing (Angular dialog ~/crmSearchTasks/crmSearchTaskMailing.html)",
+      "task contact.case (Angular dialog ~/crmCaseSearchTasks/crmSearchTaskCase.html)",
     ]);
     expect(unsupportedTaskNotes(tasks, new Set(["disable"]))).toEqual([]);
   });
@@ -494,5 +504,63 @@ describe("relationship task", () => {
     expect(summary?.(counts([{ id: 1 }, { id: 2, duplicate_id: 7 }]))).toBe(
       "1 relationship added. 1 relationship already exists.",
     );
+  });
+});
+
+describe("mailing task", () => {
+  it("looks up the mailing types and the contacts that can be mailed", () => {
+    const calls = mailingCalls([1, 2]);
+    expect(calls.templateTypes).toEqual([
+      "Mailing",
+      "getFields",
+      { loadOptions: ["id", "label", "description"], where: [["name", "=", "template_type"]] },
+    ]);
+    expect(calls.recipientCount[0]).toBe("Contact");
+    expect(calls.recipientCount[2]).toMatchObject({
+      select: ["row_count"],
+      where: [
+        ["id", "IN", [1, 2]],
+        ["do_not_email", "!=", true],
+        ["is_opt_out", "!=", true],
+        ["email.on_hold", "=", 0],
+      ],
+    });
+  });
+
+  it("creates the hidden group with the mailing and its include group chained", () => {
+    const [entity, action, params] = mailingGroupCall({ name: "News", template_type: "mosaico" });
+    expect(entity).toBe("Group");
+    expect(action).toBe("create");
+    expect(params.values).toMatchObject({ is_hidden: true, "group_type:name": ["Mailing List"] });
+    expect(params.chain).toEqual({
+      mailing: ["Mailing", "create", { values: { name: "News", template_type: "mosaico" } }, 0],
+      mailingGroup: [
+        "MailingGroup",
+        "create",
+        {
+          values: {
+            group_type: "Include",
+            "entity_table:name": "Group",
+            entity_id: "$id",
+            mailing_id: "$mailing.id",
+          },
+        },
+        0,
+      ],
+    });
+  });
+
+  it("adds the contacts to the group, then opens the mailing", () => {
+    const batch = mailingBatch(7, 9);
+    expect(batchCall(batch, contact, [1, 2])).toEqual([
+      "GroupContact",
+      "save",
+      { defaults: { group_id: 7 }, records: [{ contact_id: 1 }, { contact_id: 2 }] },
+    ]);
+    expect(batch).toMatchObject({
+      runMsg: "Adding contacts...",
+      successUrl: "civicrm/a#/mailing/9",
+      errorMsg: "An error occurred while attempting to create mailing.",
+    });
   });
 });

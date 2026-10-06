@@ -105,6 +105,13 @@ const mailing: SearchTask = {
   number: "> 0",
   uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskMailing.html" },
 };
+const openCase: SearchTask = {
+  name: "contact.case",
+  title: "Case - Open",
+  icon: "fa-folder-open",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/crmCaseSearchTasks/crmSearchTaskCase.html" },
+};
 const label: SearchTask = {
   name: "contact.label",
   title: "Mailing labels - print",
@@ -587,23 +594,20 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("names the tasks it cannot run and keeps them in the menu, disabled", async () => {
-    const calls = serve({ tasks: [enable, mailing] });
+    const calls = serve({ tasks: [enable, openCase] });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await screen.findByText("Name 1");
     await selectRows("Name 1");
     expect(
       await screen.findByText(
-        "Not supported by the React renderer: task contact.mailing " +
-          "(Angular dialog ~/crmSearchTasks/crmSearchTaskMailing.html)",
+        "Not supported by the React renderer: task contact.case " +
+          "(Angular dialog ~/crmCaseSearchTasks/crmSearchTaskCase.html)",
       ),
     ).toHaveAttribute("role", "note");
     await openActions();
-    const item = screen.getByRole("menuitem", { name: /CiviMail/, hidden: true });
+    const item = screen.getByRole("menuitem", { name: /Case - Open/, hidden: true });
     expect(item).toHaveAttribute("aria-disabled", "true");
-    expect(item).toHaveAttribute(
-      "title",
-      "Not supported by the React renderer: task contact.mailing",
-    );
+    expect(item).toHaveAttribute("title", "Not supported by the React renderer: task contact.case");
     await userEvent.click(item);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(calls.map(({ call }) => call)).not.toContain("Contact.update");
@@ -710,8 +714,8 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("alerts for a row link to a task React cannot run", async () => {
-    const links = [{ task: "contact.mailing", text: "Mail" }];
-    serve({ rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })], tasks: [mailing] });
+    const links = [{ task: "contact.case", text: "Case" }];
+    serve({ rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })], tasks: [openCase] });
     renderWithQuery(
       <AfreactSearch
         search="S"
@@ -719,11 +723,11 @@ describe("AfreactSearch bulk actions", () => {
         settings={{ columns: [...columns, linksColumn(links)] }}
       />,
     );
-    await userEvent.click(await screen.findByRole("button", { name: "Mail" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Case" }));
     await waitFor(() => {
       expect(window.CRM.alert).toHaveBeenCalledWith(
-        "Not supported by the React renderer: task contact.mailing " +
-          "(Angular dialog ~/crmSearchTasks/crmSearchTaskMailing.html)",
+        "Not supported by the React renderer: task contact.case " +
+          "(Angular dialog ~/crmCaseSearchTasks/crmSearchTaskCase.html)",
         "Error",
         "error",
       );
@@ -1345,6 +1349,108 @@ describe("AfreactSearch bulk actions", () => {
       await waitFor(() => {
         expect(pageRuns(calls)).toHaveLength(2);
       });
+    });
+  });
+
+  describe("mailing", () => {
+    const typeField = [
+      {
+        options: [
+          { id: "traditional", label: "Traditional", description: "The classic editor" },
+          { id: "mosaico", label: "Mosaico", description: null },
+        ],
+      },
+    ];
+    const group = () => [{ id: 7, mailing: { id: 9 } }];
+
+    async function openMailingDialog(...names: string[]) {
+      await screen.findByText("Name 1");
+      await selectRows(...names);
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /CiviMail/, hidden: true }));
+      return screen.findByRole("dialog", { name: "Email - schedule/send via CiviMail" });
+    }
+
+    it("creates the mailing and its hidden group, adds the contacts and opens it", async () => {
+      const location = { assign: vi.fn() };
+      vi.stubGlobal("location", location);
+      const calls = serve({
+        tasks: [enable, mailing],
+        handlers: {
+          "Mailing.getFields": () => typeField,
+          "Contact.get": () => Object.assign([], { count: 2 }),
+          "Group.create": group,
+          "GroupContact.save": () => done(2),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openMailingDialog("Name 1", "Name 2");
+      expect(dialog).toHaveTextContent("mass-mailing to the 2 selected contacts");
+      const create = within(dialog).getByRole("button", { name: "Create Mailing" });
+      expect(create).toBeDisabled();
+      await within(dialog).findByText("All of the selected contacts have active email addresses.");
+      const type = await within(dialog).findByRole("combobox", { name: "Mailing Type" });
+      expect(type).toHaveValue("traditional");
+      await userEvent.selectOptions(type, "mosaico");
+      await userEvent.type(within(dialog).getByRole("textbox", { name: /Mailing Name/ }), "News");
+      await userEvent.click(create);
+      await waitFor(() => {
+        expect(location.assign).toHaveBeenCalledWith("/civicrm/a#/mailing/9");
+      });
+      expect(named(calls, "Contact.get")[0]?.params).toMatchObject({
+        where: expect.arrayContaining([["id", "IN", [1, 2]]]) as unknown,
+      });
+      expect(named(calls, "Group.create")[0]?.params).toMatchObject({
+        values: { is_hidden: true },
+        chain: {
+          mailing: ["Mailing", "create", { values: { name: "News", template_type: "mosaico" } }, 0],
+        },
+      });
+      expect(named(calls, "GroupContact.save").map(({ params }) => params)).toEqual([
+        { defaults: { group_id: 7 }, records: [{ contact_id: 1 }, { contact_id: 2 }] },
+      ]);
+      expect(window.CRM.alert).not.toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    });
+
+    it("warns about contacts that cannot be mailed, withholds the button without any", async () => {
+      serve({
+        tasks: [enable, mailing],
+        handlers: {
+          "Mailing.getFields": () => typeField,
+          "Contact.get": () => Object.assign([], { count: 0 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openMailingDialog("Name 1", "Name 2");
+      await within(dialog).findByText(/None of the selected contacts are eligible/);
+      await userEvent.type(within(dialog).getByRole("textbox", { name: /Mailing Name/ }), "News");
+      expect(within(dialog).getByRole("button", { name: "Create Mailing" })).toBeDisabled();
+      await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("keeps the dialog with the error when the group cannot be created", async () => {
+      serve({
+        tasks: [enable, mailing],
+        handlers: {
+          "Mailing.getFields": () => [{ options: false }],
+          "Contact.get": () => Object.assign([], { count: 1 }),
+          "Group.create": () => {
+            throw apiError("Mailing component is disabled");
+          },
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openMailingDialog("Name 1", "Name 2");
+      await within(dialog).findByText(/1 of the selected contacts cannot receive mailings/);
+      expect(within(dialog).queryByRole("combobox", { name: "Mailing Type" })).toBeNull();
+      await userEvent.type(within(dialog).getByRole("textbox", { name: /Mailing Name/ }), "News");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Create Mailing" }));
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+        "An error occurred while attempting to create mailing. Mailing component is disabled",
+      );
+      expect(within(dialog).getByRole("button", { name: "Create Mailing" })).toBeEnabled();
     });
   });
 });

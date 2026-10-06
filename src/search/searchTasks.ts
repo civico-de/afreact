@@ -33,6 +33,8 @@ export interface ApiBatch {
   summary?: (counts: BatchCounts) => string;
   /** A delete the renderer's own dialog settled already runs without the forced question. */
   settled?: boolean;
+  /** The page a successful run opens (CRM.url path), instead of the success alert. */
+  successUrl?: string;
   errorMsg?: string;
 }
 
@@ -203,6 +205,7 @@ export type TaskRun =
   | { kind: "update" }
   | { kind: "tag" }
   | { kind: "relationship" }
+  | { kind: "mailing" }
   | { kind: "unsupported"; reason: string };
 
 /** The core task dialogs the renderer replaces with its own. */
@@ -210,6 +213,7 @@ const DOWNLOAD_DIALOG = "~/crmSearchTasks/crmSearchTaskDownload.html";
 const UPDATE_DIALOG = "~/crmSearchTasks/crmSearchTaskUpdate.html";
 const TAG_DIALOG = "~/crmSearchTasks/crmSearchTaskTag.html";
 const RELATIONSHIP_DIALOG = "~/crmSearchTasks/crmSearchTaskRelationship.html";
+const MAILING_DIALOG = "~/crmSearchTasks/crmSearchTaskMailing.html";
 
 /** A field the update task may set, as searchTaskFieldsTrait and GetSearchTasks read getFields. */
 export interface UpdateField {
@@ -475,6 +479,76 @@ export function relationshipBatch(
   };
 }
 
+/** crmSearchTaskMailing's lookups: the mailing types and how many selected contacts can be mailed. */
+export function mailingCalls(ids: Key[]): { templateTypes: ApiCall; recipientCount: ApiCall } {
+  return {
+    templateTypes: [
+      "Mailing",
+      "getFields",
+      { loadOptions: ["id", "label", "description"], where: [["name", "=", "template_type"]] },
+    ],
+    recipientCount: [
+      "Contact",
+      "get",
+      {
+        select: ["row_count"],
+        join: [["Email AS email", "INNER", ["id", "=", "email.contact_id"]]],
+        where: [
+          ["id", "IN", ids],
+          ["do_not_email", "!=", true],
+          ["is_opt_out", "!=", true],
+          ["email.on_hold", "=", 0],
+        ],
+        groupBy: ["id"],
+      },
+    ],
+  };
+}
+
+/** crmSearchTaskMailing's submit(): a hidden group, its mailing and the include group chained. */
+export function mailingGroupCall(mailing: { name: string; template_type: string | null }): ApiCall {
+  return [
+    "Group",
+    "create",
+    {
+      values: {
+        title: `Hidden Group ${String(Date.now())}`,
+        is_hidden: true,
+        "group_type:name": ["Mailing List"],
+      },
+      chain: {
+        mailing: ["Mailing", "create", { values: mailing }, 0],
+        mailingGroup: [
+          "MailingGroup",
+          "create",
+          {
+            values: {
+              group_type: "Include",
+              "entity_table:name": "Group",
+              entity_id: "$id",
+              mailing_id: "$mailing.id",
+            },
+          },
+          0,
+        ],
+      },
+    },
+  ];
+}
+
+/** The contacts join the hidden group, then the mailing opens; core's messages. */
+export function mailingBatch(groupId: number, mailingId: number): ApiBatch {
+  return {
+    entity: "GroupContact",
+    action: "save",
+    idField: "contact_id",
+    params: { defaults: { group_id: groupId } },
+    runMsg: "Adding contacts...",
+    successUrl: `civicrm/a#/mailing/${String(mailingId)}`,
+    errorMsg: "An error occurred while attempting to create mailing.",
+  };
+}
+
 /** searchTaskFieldsTrait: the clauses a hook preset for the update task; a list presets none. */
 export function presetValues(task: SearchTask): [string, unknown][] {
   const values = task.values;
@@ -549,6 +623,7 @@ export function taskRun(task: SearchTask): TaskRun {
   if (template === UPDATE_DIALOG) return { kind: "update" };
   if (template === TAG_DIALOG) return { kind: "tag" };
   if (template === RELATIONSHIP_DIALOG) return { kind: "relationship" };
+  if (template === MAILING_DIALOG) return { kind: "mailing" };
   if (template) return { kind: "unsupported", reason: `Angular dialog ${template}` };
   const batch = task.apiBatch;
   if (!isRecord(batch) || !isString(batch.action))

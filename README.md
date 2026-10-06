@@ -68,8 +68,8 @@ a setting render with React wherever core places them (see [Rendering forms with
   records in a row of inputs; the column picker hides columns and takes them
   from a saved filter set. Bulk actions and task links run API batch, popup
   and redirect tasks with their input fields, the spreadsheet download, the
-  update of chosen fields, the tag dialog and the relationship dialog. Rows
-  of draggable tables move by pointer or keyboard. Other tasks that are
+  update of chosen fields and the tag, relationship and mailing dialogs.
+  Rows of draggable tables move by pointer or keyboard. Other tasks that are
   Angular dialogs, full-row editing (`editableRow.full`), drag to reorder in
   hierarchical tables, include columns and the in-place editors for locations
   and multi-value text, number, date or Yes/No fields show a note instead.

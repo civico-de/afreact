@@ -9,7 +9,8 @@ const RUN = Date.now().toString(36);
 const LOAD = { timeout: 30_000 };
 const lastName = (renderer: Renderer) => `Rel${RUN}${renderer}`;
 const render = (renderer: Renderer) =>
-  `/civicrm/afreact/render?name=afsearchAfreactDemoContacts&renderer=${renderer}#?last_name=${lastName(renderer)}`;
+  `/civicrm/afreact/render?name=afsearchAfreactDemoContacts&renderer=${renderer}` +
+  `#?last_name=${lastName(renderer)}`;
 
 interface Related {
   contact_id_a: number;
@@ -44,7 +45,8 @@ test.afterAll(async ({ browser }) => {
   const page = await context.newPage();
   await page.goto("/civicrm/afreact/compare");
   const ids = [...Object.values(contacts).flat(), ...(employer ? [employer] : [])];
-  if (ids.length) await api(page, "Contact", "delete", { where: [["id", "IN", ids]], useTrash: false });
+  if (ids.length)
+    await api(page, "Contact", "delete", { where: [["id", "IN", ids]], useTrash: false });
   await context.close();
 });
 

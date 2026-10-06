@@ -6,6 +6,7 @@ import { Input } from "./EditableCell";
 import { editorFor } from "./inlineEdit";
 import { Icon } from "./LinkContent";
 import { onLinkClick } from "./links";
+import { MailingDialog } from "./MailingDialog";
 import { RelationshipDialog } from "./RelationshipDialog";
 import { TagDialog } from "./TagDialog";
 import { UpdateDialog } from "./UpdateDialog";
@@ -31,6 +32,7 @@ import {
   initialBatchValue,
   inlineEditCall,
   isRecord,
+  mailingBatch,
   parseTaskList,
   referencedTasks,
   relationshipBatch,
@@ -84,6 +86,7 @@ type RunningTask = Running &
     | { kind: "update" }
     | { kind: "tag" }
     | { kind: "relationship" }
+    | { kind: "mailing" }
   );
 
 const TASKS = "getSearchTasks";
@@ -189,7 +192,8 @@ export function useTasks(options: TasksOptions) {
       run.kind === "download" ||
       run.kind === "update" ||
       run.kind === "tag" ||
-      run.kind === "relationship"
+      run.kind === "relationship" ||
+      run.kind === "mailing"
     ) {
       setRunning({ kind: run.kind, task, ids, isLink, returnTo });
       return;
@@ -405,6 +409,16 @@ export function useTasks(options: TasksOptions) {
         }}
         onCancel={() => onDone({ ran: false, message: "" })}
       />
+    ) : running.kind === "mailing" ? (
+      <MailingDialog
+        task={running.task}
+        ids={running.ids}
+        onCreated={(groupId, mailingId) => {
+          const apiBatch = mailingBatch(groupId, mailingId);
+          setRunning({ ...running, kind: "batch", apiBatch, isLink: false });
+        }}
+        onCancel={() => onDone({ ran: false, message: "" })}
+      />
     ) : running.kind === "download" ? (
       <DownloadDialog
         running={running}
@@ -519,6 +533,9 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
       if (inline) {
         text = ts("Saved");
         window.CRM.status(text);
+      } else if (apiBatch.successUrl) {
+        text = "";
+        window.location.assign(window.CRM.url(apiBatch.successUrl));
       } else {
         text = apiBatch.summary
           ? apiBatch.summary({ fetched, matched, rows })
