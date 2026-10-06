@@ -3,6 +3,7 @@ import { onButtonKey } from "../keys";
 import { BodyRows, ControlHeader, PlaceholderRows, TallyRow } from "./Body";
 import { InlineEditContext, type InlineEdit } from "./inlineEdit";
 import { noResultsText, ServerError } from "./Items";
+import { NewRow } from "./NewRow";
 import { ReorderRows, type Reorder } from "./Reorder";
 import { editsCells, hasControlColumn, headerClass, isSortable, unlabelledHeader } from "./rows";
 import type { RowSelect } from "./Tasks";
@@ -138,6 +139,11 @@ export function TableView(props: TableViewProps) {
           </InlineEditContext>
         )}
       </tbody>
+      {!loading && result && settings.editableRow && settings.editableRow.create && (
+        <tbody>
+          <NewRow settings={settings} edit={props.inlineEdit} hidden={hidden} />
+        </tbody>
+      )}
       {tally && tally.footer !== false && tallyRow && <tfoot>{tallyRow}</tfoot>}
     </table>
   );

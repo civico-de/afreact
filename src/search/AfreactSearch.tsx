@@ -190,6 +190,7 @@ export function AfreactSearch({
     page: rows.data,
     rowsKey,
     tallyKey,
+    countKey,
     params: { ...params, ...columnParams, sort: activeSort, limit },
     // refreshAfterEditing(): a row that left the result reloads every display of the form.
     reloadAll: () => {

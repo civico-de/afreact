@@ -57,6 +57,7 @@ that no longer excuses anything fails the test.
 | Stored ids the autocomplete cannot find | dropped from view, kept in the model | kept, with a visible "No record found" message |
 | Chained selects (ChainSelect) | select2, disabled while the options load and when none came back (`master` also disables it while the control field is empty); a required one without options blocks the submit for good | native `<select>`, options from `Afform.getOptions` as in Angular, disabled the same way; the browser skips a disabled select, so the server reports the missing value instead |
 | In-place editors | select2, datepicker and select2 tags; text inputs at least as wide as the cell was | native `<select>`, `<input type="date">` and `datetime-local`, a colour picker beside a text input; inputs at their own width |
+| New row (`editableRow.create`) | an "Add" button in the control column opens a row of inputs; every input is required, as a new record has nothing to clear; Enter anywhere saves | the same row; only fields that allow no null are required; Enter in the row saves, Escape returns the focus to the button; a failed save keeps the row with the error |
 | Leaving an in-place editor | the editor stays open until Enter, Escape or a button | a valid change saves, an unchanged editor closes; switching windows leaves it open |
 | Emptying an in-place text | saves `""` | saves `null` where the field can be emptied |
 | Totals after an in-place edit | kept (see upstream bugs) | asked again |
@@ -114,8 +115,8 @@ instead of being dropped:
   `page-nav-submit-text` and `selected-tab` (6.20)
 - FormBuilder's own widgets (`af-admin-list-menu`) and the message template
   editor's `crm-monaco`: both need the Angular application they belong to
-- table features: row editing (`editableRow`: new rows and full-row mode),
-  drag to reorder in hierarchical tables, include columns
+- table features: full-row editing (`editableRow.full`), drag to reorder in
+  hierarchical tables, include columns
 - drag to reorder and re-parent in tree displays (`draggable`); the tree
   itself renders, with the note
 - in-place editors for contact references (EntityRef), locations, and
@@ -508,6 +509,15 @@ so:
   without role or tab stop (`colType/editable.html:10-15`). React makes it a
   button in the tab order with an "Edit <column>" name, opens it with Enter,
   Space or F2, and returns focus to it when the editor closes.
+
+**The "Add" row of `editableRow.create` throws per input.** The row's inputs
+run `crmSearchDisplayEditable` without a row, and its `$onInit` reads
+`this.row.columns[this.colIndex]` to size the input
+(`crmSearchDisplayEditable.component.js:55`, since the change of 2026-07-23),
+so each input logs a TypeError. The field and key handlers are set up before
+that line, so the row still saves (reproduced on 6.18.1 on the custom field
+options page; the line is unchanged on `master` as of 2026-10-05). The React
+renderer's row has no such error.
 
 **"Column undefined" in the column picker.** `getColumnToggleLabel()` numbers
 a column without label or key with `col.index`, which nothing sets

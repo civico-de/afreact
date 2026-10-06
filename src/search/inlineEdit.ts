@@ -101,10 +101,25 @@ interface Editing extends CellTarget {
 const same = (a: CellTarget | null, b: CellTarget) =>
   !!a && a.rowKey === b.rowKey && a.colIndex === b.colIndex;
 
+/** The row of inputs editableRow.create adds below the table (crmSearchDisplayTableCreateNew). */
+export interface NewRow {
+  page: RunPage;
+  busy: boolean;
+  /** What a failed save left in the inputs, with the error. */
+  values?: Record<string, unknown>;
+  error?: string;
+}
+
 export interface InlineEdit {
   editable: Record<string, EditableInfo>;
   /** The cell whose editor is open, if any. */
   editing: Editing | null;
+  /** The new row under edit, if any; it and a cell editor exclude each other. */
+  newRow: NewRow | null;
+  startCreating: () => void;
+  cancelCreating: () => void;
+  /** inlineEdit without a row key creates the record; the row it answers joins the page. */
+  saveNew: (values: Record<string, unknown>) => Promise<void>;
   isEditing: (target: CellTarget) => boolean;
   isSaving: (target: CellTarget) => boolean;
   /** Whether a closed editor should give focus back to this cell; true once. */
@@ -127,6 +142,7 @@ interface UseInlineEditOptions {
   /** The query of the shown page, whose cache entry the saved row is written into. */
   rowsKey: QueryKey;
   tallyKey: QueryKey;
+  countKey: QueryKey;
   /** SearchDisplay.run's parameters for the shown page, without `return`. */
   params: Record<string, unknown>;
   /** Reloads the display and the others of its form, as a popup form's success does. */
@@ -137,15 +153,18 @@ export function useInlineEdit({
   page,
   rowsKey,
   tallyKey,
+  countKey,
   params,
   reloadAll,
 }: UseInlineEditOptions): InlineEdit {
   const client = useQueryClient();
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [newRow, setNewRow] = useState<NewRow | null>(null);
   const [saving, setSaving] = useState<readonly CellTarget[]>([]);
   const [focus, setFocus] = useState<CellTarget | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const open = editing && page && runOf(editing.page) === runOf(page) ? editing : null;
+  const creating = newRow && page && runOf(newRow.page) === runOf(page) ? newRow : null;
   const close = (target: CellTarget | null) => {
     setEditing(null);
     setFocus(target);
@@ -196,9 +215,41 @@ export function useInlineEdit({
     );
   };
 
+  const saveNew = async (values: Record<string, unknown>) => {
+    if (!creating) return;
+    setNewRow({ ...creating, busy: true, error: undefined });
+    setAnnouncement(ts("Saving…"));
+    try {
+      const result = await api4<Row>("SearchDisplay", "inlineEdit", {
+        ...params,
+        return: null,
+        values,
+      });
+      const fresh = result[0];
+      if (!fresh) throw new Error("SearchDisplay.inlineEdit answered without the new row.");
+      setNewRow(null);
+      setAnnouncement(ts("Saved"));
+      writePage(client, rowsKey, (current) => ({ ...current, rows: [...current.rows, fresh] }));
+      client.setQueryData<number | null>(countKey, (count) => (count == null ? count : count + 1));
+      void client.invalidateQueries({ queryKey: tallyKey });
+    } catch (error) {
+      const message = errorMessage(error);
+      setAnnouncement(ts("Not saved: %1", { 1: message }));
+      setNewRow((current) => current && { ...current, busy: false, values, error: message });
+    }
+  };
+
   return {
     editable: page?.editable ?? {},
     editing: open,
+    newRow: creating,
+    startCreating: () => {
+      if (page && !open && !creating) setNewRow({ page, busy: false });
+    },
+    cancelCreating: () => {
+      setNewRow(null);
+    },
+    saveNew,
     isEditing: (target) => same(open, target),
     isSaving: (target) => saving.some((other) => same(other, target)),
     takeFocus: (target) => {
@@ -208,7 +259,7 @@ export function useInlineEdit({
     },
     // One editor at a time, as startEditing().
     start: (target) => {
-      if (page && !open) setEditing({ ...target, page });
+      if (page && !open && !creating) setEditing({ ...target, page });
     },
     cancel: () => {
       close(open);

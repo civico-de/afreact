@@ -137,7 +137,9 @@ export interface DisplaySettings {
   actions?: boolean | string[];
   actions_display_mode?: string;
   draggable?: string | false;
-  editableRow?: false | { create?: boolean; full?: boolean; disable?: boolean };
+  editableRow?:
+    | false
+    | { create?: boolean; createLabel?: string; full?: boolean; disable?: boolean };
   button?: string | false;
   toggleColumns?: boolean;
   /** List: "ol" for a numbered list, and the CSS list-style of its markers. */

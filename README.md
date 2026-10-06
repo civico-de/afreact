@@ -64,14 +64,15 @@ a setting render with React wherever core places them (see [Rendering forms with
   hierarchical and collapsible rows. Row and toolbar menus are native popovers
   with the menu button keyboard pattern. Cells the server marks editable open
   an editor by click, Enter, Space or F2 and save with
-  `SearchDisplay.inlineEdit`; the column picker hides columns and takes them
+  `SearchDisplay.inlineEdit`, and a table with `editableRow.create` adds new
+  records in a row of inputs; the column picker hides columns and takes them
   from a saved filter set. Bulk actions and task links run API batch, popup
   and redirect tasks with their input fields, the spreadsheet download and the
   update of chosen fields. Rows of draggable tables
-  move by pointer or keyboard. Other tasks that are Angular dialogs, row editing (`editableRow`), drag to reorder
-  in hierarchical tables, include columns and the in-place editors for contact
-  references, locations and multi-value text, number, date or Yes/No fields
-  show a note instead.
+  move by pointer or keyboard. Other tasks that are Angular dialogs, full-row
+  editing (`editableRow.full`), drag to reorder in hierarchical tables, include
+  columns and the in-place editors for contact references, locations and
+  multi-value text, number, date or Yes/No fields show a note instead.
 - **Types:** `src/api/entities.gen.ts` is generated from APIv4
   `getFields` (see [Development](#development)).
 - **Unsupported layout** is never dropped silently: the renderer shows a

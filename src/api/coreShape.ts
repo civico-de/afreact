@@ -52,7 +52,6 @@ type FieldDefnIgnored =
   | "options[].icon"
   | "options[].name";
 
-type TableSettingsOpen = "editableRow.createLabel";
 /**
  * Applied on the server: by SearchDisplay.run, whose result arrives in the rows, and for auto
  * columns by AfformSearchMetadataInjector. `nested` is read by no 6.18 code.
@@ -71,7 +70,7 @@ export const fieldDefn: Record<
   never
 > = {};
 export const tableSettings: Record<
-  Unexplained<DisplaySettings, Core.TableSettings, TableSettingsOpen | TableSettingsServer>,
+  Unexplained<DisplaySettings, Core.TableSettings, TableSettingsServer>,
   never
 > = {};
 export const tableRun: Record<

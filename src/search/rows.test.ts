@@ -133,7 +133,6 @@ describe("unsupportedFeatures", () => {
       }),
     );
     expect(unsupportedFeatures(settings, page)).toEqual([
-      "row editing (editableRow)",
       "in-place editing of employer_id.display_name (EntityRef)",
       "drag to reorder in hierarchical tables (draggable)",
     ]);
@@ -186,7 +185,7 @@ describe("unsupportedFeatures", () => {
       Object.assign([], { editable: { e: editInfo({ value_key: "e", fk_entity: "Contact" }) } }),
     );
     const settings = { columns: [field], editableRow: { full: true } };
-    expect(unsupportedFeatures(settings, page)).toEqual(["row editing (editableRow)"]);
+    expect(unsupportedFeatures(settings, page)).toEqual(["full-row editing (editableRow.full)"]);
   });
 
   it("drops in-place editing when row editing switches it off", () => {

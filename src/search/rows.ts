@@ -85,6 +85,7 @@ export function hasControlColumn(settings: DisplaySettings): boolean {
     !!settings.actions ||
     !!settings.draggable ||
     !!settings.collapsible ||
+    !!settings.editableRow ||
     !!(settings.tally && settings.tally.label)
   );
 }
@@ -199,8 +200,8 @@ export function unsupportedFeatures(
   if (typeof settings.pager === "object")
     for (const [key, value] of Object.entries(settings.pager))
       if (!PAGER_OPTIONS.has(key) && isSet(value)) features.push(`setting pager.${key}`);
-  if (settings.editableRow && (settings.editableRow.create || settings.editableRow.full))
-    features.push("row editing (editableRow)");
+  if (settings.editableRow && settings.editableRow.full)
+    features.push("full-row editing (editableRow.full)");
   if (editsCells(settings)) features.push(...unsupportedEditors(page));
   if (settings.draggable && type === "tree") features.push("drag to reorder (draggable)");
   else if (settings.draggable && settings.hierarchical)
