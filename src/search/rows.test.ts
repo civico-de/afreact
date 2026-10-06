@@ -134,6 +134,7 @@ describe("unsupportedFeatures", () => {
     );
     expect(unsupportedFeatures(settings, page)).toEqual([
       "in-place editing of employer_id.display_name (EntityRef)",
+      "new row: employer_id.display_name (EntityRef)",
       "drag to reorder in hierarchical tables (draggable)",
     ]);
   });

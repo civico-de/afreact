@@ -212,6 +212,7 @@ function CellEditor({
             nullable={nullable}
             labelId={`${id}-label`}
             common={common}
+            focusWhenLoaded
             onChange={setValue}
           />
         </div>
@@ -261,6 +262,8 @@ export interface InputProps {
     "aria-invalid": boolean | undefined;
     "aria-describedby": string | undefined;
   };
+  /** Options that load after the input opened take the focus when they arrive. */
+  focusWhenLoaded?: boolean;
   onChange: (value: unknown) => void;
 }
 
@@ -435,7 +438,7 @@ function LoadedSelect(props: InputProps) {
     );
   if (!loaded.data)
     return <select {...props.common} disabled className="form-control loading" aria-busy />;
-  return <Select {...props} options={loaded.data} autoFocus />;
+  return <Select {...props} options={loaded.data} autoFocus={props.focusWhenLoaded} />;
 }
 
 /** select.html: one value with a "None" or "Select" choice, or several. */

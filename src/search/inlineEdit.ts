@@ -49,6 +49,16 @@ export function unsupportedEditors(page: RunPage | undefined): string[] {
   });
 }
 
+/** Editable columns a new row cannot fill, for the table's note; a required one blocks the row. */
+export function unfillableColumns(page: RunPage | undefined): string[] {
+  return Object.entries(page?.editable ?? {}).flatMap(([key, info]) => {
+    const editor = editorFor(info);
+    if (!("unsupported" in editor)) return [];
+    const why = info.nullable ? editor.unsupported : `${editor.unsupported}, required`;
+    return [`new row: ${key} (${why})`];
+  });
+}
+
 /** The raw value under edit; the column key may carry a suffix such as ":label". */
 export function initialValue(row: Row, info: EditableInfo): unknown {
   return row.data?.[info.value_path] ?? null;
@@ -226,9 +236,13 @@ export function useInlineEdit({
         values,
       });
       const fresh = result[0];
-      if (!fresh) throw new Error("SearchDisplay.inlineEdit answered without the new row.");
       setNewRow(null);
       setAnnouncement(ts("Saved"));
+      // The record exists either way; without a row it does not match the filters.
+      if (!fresh) {
+        reloadAll();
+        return;
+      }
       writePage(client, rowsKey, (current) => ({ ...current, rows: [...current.rows, fresh] }));
       client.setQueryData<number | null>(countKey, (count) => (count == null ? count : count + 1));
       void client.invalidateQueries({ queryKey: tallyKey });

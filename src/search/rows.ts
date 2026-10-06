@@ -1,4 +1,4 @@
-import { unsupportedEditors } from "./inlineEdit";
+import { unfillableColumns, unsupportedEditors } from "./inlineEdit";
 import type {
   Column,
   DisplaySettings,
@@ -203,6 +203,8 @@ export function unsupportedFeatures(
   if (settings.editableRow && settings.editableRow.full)
     features.push("full-row editing (editableRow.full)");
   if (editsCells(settings)) features.push(...unsupportedEditors(page));
+  if (settings.editableRow && settings.editableRow.create)
+    features.push(...unfillableColumns(page));
   if (settings.draggable && type === "tree") features.push("drag to reorder (draggable)");
   else if (settings.draggable && settings.hierarchical)
     features.push("drag to reorder in hierarchical tables (draggable)");

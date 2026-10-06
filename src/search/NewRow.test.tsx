@@ -3,15 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { editInfo } from "../test/editInfo";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
 import { AfreactSearch } from "./AfreactSearch";
-import type { DisplaySettings, Row } from "./types";
+import type { DisplaySettings, EditableInfo, Row } from "./types";
 
 /** An option list with an editable label and description, as the custom field options page. */
 function setup({
   inlineEdit,
   settings: extra = {},
+  editable: extraEditable = {},
 }: {
   inlineEdit?: (params: Record<string, unknown>) => unknown;
   settings?: Partial<DisplaySettings>;
+  editable?: Record<string, EditableInfo>;
 } = {}) {
   const row = (key: number, label: string, description = ""): Row => ({
     key,
@@ -36,6 +38,7 @@ function setup({
             editable: {
               label: editInfo({ value_key: "label", entity: "OptionValue", nullable: false }),
               description: editInfo({ value_key: "description", entity: "OptionValue" }),
+              ...extraEditable,
             },
           }),
     "SearchDisplay.inlineEdit":
@@ -45,14 +48,17 @@ function setup({
         return [row(2, values.label, values.description)];
       }),
   });
-  renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+  renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} afform="afsearchX" />);
   const edits = () =>
     calls.filter(({ call }) => call === "SearchDisplay.inlineEdit").map(({ params }) => params);
-  return { calls, edits };
+  const pages = () =>
+    calls.filter(({ call, params }) => call === "SearchDisplay.run" && params.return === "page:1");
+  return { calls, edits, pages };
 }
 
 const addButton = () => screen.getByRole("button", { name: "Add Option" });
-const newRow = () => screen.getByRole("form", { name: "Add Option" }).closest("tr")!;
+const newRow = () => screen.getByRole("button", { name: "Save" }).closest("tr")!;
+const rowOpen = () => screen.queryByRole("button", { name: "Save" }) !== null;
 const rows = () => screen.getAllByRole("row").filter((row) => row.closest("tbody"));
 
 describe("editableRow.create", () => {
@@ -104,7 +110,7 @@ describe("editableRow.create", () => {
     expect(within(newRow()).getByRole("textbox", { name: "Label" })).toBeInvalid();
     expect(edits()).toHaveLength(0);
     await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("form", { name: "Add Option" })).not.toBeInTheDocument();
+    expect(rowOpen()).toBe(false);
     expect(addButton()).toHaveFocus();
     await userEvent.click(addButton());
     await userEvent.type(within(newRow()).getByRole("textbox", { name: "Label" }), "Three{Enter}");
@@ -128,8 +134,7 @@ describe("editableRow.create", () => {
     expect(within(newRow()).getByRole("textbox", { name: "Label" })).toBeDisabled();
     expect(within(newRow()).getByRole("button", { name: "Save" })).toBeDisabled();
     fail();
-    const alert = await within(newRow()).findByRole("alert");
-    expect(alert).toHaveTextContent("Duplicate label");
+    await within(newRow()).findByText("Duplicate label");
     const label = within(newRow()).getByRole("textbox", { name: "Label" });
     expect(label).toHaveValue("One");
     expect(label).toBeInvalid();
@@ -145,7 +150,57 @@ describe("editableRow.create", () => {
     await userEvent.click(addButton());
     await userEvent.click(screen.getByRole("button", { name: /Edit Label/ }));
     expect(screen.queryByLabelText("Label, One")).not.toBeInTheDocument();
-    expect(screen.getByRole("form", { name: "Add Option" })).toBeInTheDocument();
+    expect(rowOpen()).toBe(true);
+  });
+
+  it("reloads the form's displays when the new record does not match the filters", async () => {
+    const { pages } = setup({ inlineEdit: () => [] });
+    await screen.findByText("One");
+    await userEvent.click(addButton());
+    await userEvent.type(within(newRow()).getByRole("textbox", { name: "Label" }), "Other{Enter}");
+    await waitFor(() => {
+      expect(pages()).toHaveLength(2);
+    });
+    expect(rowOpen()).toBe(false);
+    expect(rows()).toHaveLength(2);
+    expect(addButton()).toHaveFocus();
+  });
+
+  it("leaves hidden columns out of the row", async () => {
+    setup({ settings: { toggleColumns: true } });
+    await screen.findByText("One");
+    await userEvent.click(screen.getByText("Pick Columns"));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Description" }));
+    await userEvent.click(addButton());
+    expect(within(newRow()).getAllByRole("cell")).toHaveLength(3);
+    expect(within(newRow()).queryByRole("textbox", { name: "Description" })).toBeNull();
+  });
+
+  it("names a column it cannot fill", async () => {
+    const employer = (nullable: boolean) =>
+      editInfo({ value_key: "employer_id", entity: "OptionValue", fk_entity: "Contact", nullable });
+    setup({ editable: { "employer_id.display_name": employer(true) } });
+    await screen.findByText("One");
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "in-place editing of employer_id.display_name (EntityRef), " +
+        "new row: employer_id.display_name (EntityRef)",
+    );
+    expect(addButton()).toBeInTheDocument();
+  });
+
+  it("withholds the row when a column it cannot fill is required", async () => {
+    const employer = editInfo({
+      value_key: "employer_id",
+      entity: "OptionValue",
+      fk_entity: "Contact",
+      nullable: false,
+    });
+    setup({ editable: { "employer_id.display_name": employer } });
+    await screen.findByText("One");
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "new row: employer_id.display_name (EntityRef, required)",
+    );
+    expect(screen.queryByRole("button", { name: "Add Option" })).not.toBeInTheDocument();
   });
 
   it("shows the button only on a table with editableRow.create", async () => {

@@ -3,7 +3,6 @@ import {
   useId,
   useRef,
   useState,
-  type FocusEvent,
   type KeyboardEvent,
 } from "react";
 import { Input } from "./EditableCell";
@@ -26,6 +25,10 @@ function inputs(settings: DisplaySettings, edit: InlineEdit, hidden: ReadonlySet
   });
 }
 
+/** A required column without an editor leaves every save failing, so the row stays closed. */
+const blocked = (editable: Record<string, EditableInfo>) =>
+  Object.values(editable).some((info) => !info.nullable && "unsupported" in editorFor(info));
+
 /**
  * crmSearchDisplayTableCreateNew.html: a button that turns into a row of inputs for the editable
  * columns; Enter or the check saves the record through inlineEdit, Escape cancels.
@@ -39,6 +42,7 @@ export function NewRow({ settings, edit, hidden }: NewRowProps) {
   const fields = inputs(settings, edit, hidden);
   const returnFocus = useRef(false);
   const label = (settings.editableRow && settings.editableRow.createLabel) || ts("Add");
+  const unusable = blocked(edit.editable);
 
   // The inputs start empty (or with a failed save's values); the first one takes the focus.
   // Once the row closes, the button that opened it gets the focus back.
@@ -49,9 +53,9 @@ export function NewRow({ settings, edit, hidden }: NewRowProps) {
       setValues(failed ?? {});
       row.current?.querySelector<HTMLElement>("input, select, textarea")?.focus();
     } else if (returnFocus.current) {
-      returnFocus.current = false;
       button.current?.focus();
     }
+    returnFocus.current = false;
   }, [open, failed]);
 
   const finish = (save: boolean) => {
@@ -79,16 +83,11 @@ export function NewRow({ settings, edit, hidden }: NewRowProps) {
       commit();
     }
   };
-  // Leaving the row keeps it open, as nothing was saved; a focus elsewhere is not a cancel.
-  const keepFocus = (event: FocusEvent | { preventDefault: () => void }) => {
-    event.preventDefault();
-  };
-
   if (!creating)
     return (
       <tr className="crm-search-add-new-column">
         <td className="crm-search-ctrl-column">
-          {!edit.editing && (
+          {!edit.editing && !unusable && (
             <div className="btn-group">
               <button
                 ref={button}
@@ -109,17 +108,11 @@ export function NewRow({ settings, edit, hidden }: NewRowProps) {
 
   const errorId = `${id}-error`;
   return (
-    <tr ref={row} className="crm-search-add-new-column" onKeyDown={onKeyDown}>
+    <tr ref={row} className="crm-search-add-new-column" aria-label={label} onKeyDown={onKeyDown}>
       <td className="crm-search-ctrl-column">
-        <form
-          noValidate
-          onSubmit={keepFocus}
-          className="btn-group"
-          aria-label={label}
-          aria-busy={creating.busy}
-        >
+        <div className="btn-group" aria-busy={creating.busy}>
           <button
-            type="submit"
+            type="button"
             className="btn btn-sm btn-success"
             disabled={creating.busy}
             onClick={commit}
@@ -138,9 +131,9 @@ export function NewRow({ settings, edit, hidden }: NewRowProps) {
             <span className="sr-only">{ts("Cancel")}</span>
             <i className="crm-i fa-times" role="img" aria-hidden="true" />
           </button>
-        </form>
+        </div>
         {creating.error && (
-          <p id={errorId} className="alert alert-danger" role="alert">
+          <p id={errorId} className="alert alert-danger">
             {creating.error}
           </p>
         )}
@@ -153,7 +146,7 @@ export function NewRow({ settings, edit, hidden }: NewRowProps) {
           <td key={index} data-field-name={column.key} className="crm-search-field-editing">
             <NewCell
               id={`${id}-${String(index)}`}
-              label={column.label ?? field.key}
+              label={column.label || field.key}
               info={field.info}
               kind={field.editor.kind}
               multiple={field.editor.multiple}
