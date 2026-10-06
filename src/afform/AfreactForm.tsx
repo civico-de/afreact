@@ -12,7 +12,10 @@ import {
   entityDeclarations,
   findElements,
   routeArgs,
+  routeParams,
+  submission,
   type PrefillItem,
+  type Submission,
 } from "./model";
 import { replacePageTitle, titleWithLabels } from "./pageTitle";
 import { announceSaved } from "./popup";
@@ -29,13 +32,13 @@ interface SubmitResponse {
 }
 
 interface SubmitRequest {
-  values: FormData;
+  values: Submission;
   /** The response of a submit whose uploads failed: the retry only uploads. */
   saved?: SubmitResponse[];
 }
 
 interface DraftRequest {
-  values: FormData;
+  values: Submission;
   /** The form's data and file choices when the save started. */
   snapshot: string;
   /** Saved by autosave rather than a button. */
@@ -72,6 +75,8 @@ interface Prefilled {
 interface Loaded extends Prefilled {
   form: FormDefinition;
   args: Record<string, unknown>;
+  /** afCore's routeParams, which fill empty fields. */
+  params: Record<string, string>;
 }
 
 /** afForm.loadData(): Angular prefills every af-form on load; search pages have none. */
@@ -79,10 +84,13 @@ async function prefillForm(
   name: string,
   form: FormDefinition,
   args: Record<string, unknown>,
+  params: Record<string, string>,
 ): Promise<Prefilled> {
   const entities = entityDeclarations(form.layout);
+  const prefilled = (prefill: PrefillItem[]) =>
+    applyPrefill(emptyData(Object.keys(entities)), prefill, entities);
   const initial = (prefill: PrefillItem[]) =>
-    initialiseData(form.layout, applyPrefill(emptyData(Object.keys(entities)), prefill, entities));
+    initialiseData(form.layout, prefilled(prefill), params);
   if (!isForm(form)) return { initial: initial([]), closed: null };
   try {
     const prefill = await api4<PrefillItem>("Afform", "prefill", { name, args, fillMode: "form" });
@@ -101,7 +109,8 @@ async function loadForm(
 ): Promise<Loaded> {
   const form = await loadDefinition(name, source, client);
   const args = routeArgs(location, Object.keys(entityDeclarations(form.layout)), options);
-  return { form, args, ...(await prefillForm(name, form, args)) };
+  const params = routeParams(location);
+  return { form, args, params, ...(await prefillForm(name, form, args, params)) };
 }
 
 /** ts() looks up the form's own translations first, then CiviCRM's page-wide strings; crmUrl() is CRM.url. */
@@ -231,7 +240,8 @@ interface LoadedFormProps extends Loaded {
   onReset: (fresh: Prefilled) => void;
 }
 
-function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: LoadedFormProps) {
+function LoadedForm(props: LoadedFormProps) {
+  const { name, form, args, params, initial, closed, pageTitle, onReset } = props;
   const [data, setData] = useState(initial);
   /** The message above the form; the summary takes focus for what the server rejected. */
   const [failure, setFailure] = useState<{
@@ -250,6 +260,8 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
   const [uploading, setUploading] = useState<string | null>(null);
   /** Counts the files chosen or removed, which change the form without changing its data. */
   const [fileChanges, setFileChanges] = useState(0);
+  /** afForm's submissionResponse: the last response Afform.submit returned. */
+  const submissionResponse = useRef<SubmitResponse[] | undefined>(undefined);
   const save = useMutation({
     mutationFn: async ({ values, saved }: SubmitRequest) => {
       const response =
@@ -258,6 +270,7 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
           { error: ts("Not Saved") },
           api4<SubmitResponse>("Afform", "submit", { name, args, values }),
         ));
+      submissionResponse.current = response;
       const token = response[0]?.token;
       if (uploads.size && typeof token !== "string")
         throw new Error("Afform.submit returned no token for the files.");
@@ -278,7 +291,7 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
       const { redirect, message } = response[0] ?? {};
       if (host.current) {
         const detail = {
-          afform: { name, title: form.title },
+          afform: form.meta,
           data: values,
           submissionResponse: [...response],
         };
@@ -290,8 +303,9 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
       announceFailure(error);
       if (host.current)
         window.CRM.$(host.current).trigger("crmFormError", {
-          afform: { name, title: form.title },
+          afform: form.meta,
           data: values,
+          submissionResponse: submissionResponse.current,
           error,
         });
     },
@@ -322,7 +336,7 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
     },
   });
   const reset = useMutation({
-    mutationFn: () => prefillForm(name, form, args),
+    mutationFn: () => prefillForm(name, form, args, params),
     onSuccess: onReset,
   });
   const saved = save.data?.failed.length ? undefined : save.data?.response[0];
@@ -362,6 +376,7 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
     // A submit waits for a running draft save, whose files and late answer would cross it.
     submitDisabled: busy || closed !== null || reset.isPending || draft.isPending,
     joinOffsets: offsets,
+    routeParams: params,
     entities,
     formName: name,
     showSubmitButton,
@@ -374,7 +389,7 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
       draft: {
         status: draftStatus,
         save: () => {
-          draft.mutate({ values: data, snapshot, background: false });
+          draft.mutate({ values: submission(data), snapshot, background: false });
         },
       },
     }),
@@ -392,7 +407,7 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
   useEffect(() => {
     if (!autosave || draftStatus !== "unsaved" || submitted || snapshot === draftFailed) return;
     const timer = setTimeout(() => {
-      saveDraft({ values: data, snapshot, background: true });
+      saveDraft({ values: submission(data), snapshot, background: true });
     }, AUTOSAVE_MS);
     return () => {
       clearTimeout(timer);
@@ -434,7 +449,7 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
       return;
     }
     setFailure(null);
-    save.mutate({ values: data, saved: retry?.response });
+    save.mutate({ values: submission(data), saved: retry?.response });
   }
 
   if (saved?.message) {

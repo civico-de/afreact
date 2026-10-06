@@ -8,6 +8,7 @@ import {
   repeatMinimum,
   refersToItself,
   replaceTokens,
+  routeValue,
   staticDefault,
   tokenValues,
 } from "./structure";
@@ -259,5 +260,69 @@ describe("initialiseData", () => {
     expect(
       initialiseData(layout, emptyData(["Individual1"])).Individual1?.[0]?.joins?.Email?.[1],
     ).toEqual({ email: "second@example.org" });
+  });
+});
+
+describe("routeValue", () => {
+  const scope = { entity: "Individual1", index: 0 };
+  it("takes the entity-prefixed name over the plain one", () => {
+    const params = { "Individual1.first_name": "Ada", first_name: "Bob" };
+    expect(routeValue(params, scope, "first_name")).toBe("Ada");
+    expect(routeValue({ first_name: "Bob" }, scope, "first_name")).toBe("Bob");
+    expect(routeValue({ "Individual2.first_name": "Ada" }, scope, "first_name")).toBeUndefined();
+  });
+
+  it("numbers later items n + 1 and names the join", () => {
+    const params = { "Individual12.first_name": "Second", "Individual1.Email.email": "a@x.org" };
+    expect(routeValue(params, { ...scope, index: 1 }, "first_name")).toBe("Second");
+    expect(routeValue(params, scope, "first_name")).toBeUndefined();
+    expect(routeValue(params, { ...scope, join: "Email", joinIndex: 1 }, "email")).toBe("a@x.org");
+  });
+
+  it("ignores inherited object properties", () => {
+    expect(routeValue({}, scope, "constructor")).toBeUndefined();
+  });
+});
+
+describe("initialiseData with route parameters", () => {
+  const layout: ElementNode[] = [
+    {
+      "#tag": "fieldset",
+      "af-fieldset": "Individual1",
+      "af-repeat": "Add",
+      min: "2",
+      "#children": [
+        field("first_name", { afform_default: "Default" }),
+        field("last_name", { afform_default: "Default" }),
+        field("age", { input_type: "Number", data_type: "Integer" }),
+        field("tags", { input_type: "Hidden", serialize: 1 }),
+        { "#tag": "div", "af-join": "Email", "#children": [field("email")] },
+      ],
+    },
+    { "#tag": "div", "af-fieldset": "", "#children": [field("source")] },
+  ];
+
+  it("fills fields over their default, converted like a default", () => {
+    const params = {
+      first_name: "Url",
+      "Individual12.last_name": "Second",
+      age: "42",
+      tags: "1,2",
+      "Individual1.Email.email": "a@example.org",
+      source: "ignored",
+    };
+    const data = initialiseData(layout, emptyData(["Individual1"]), params);
+    expect(data.Individual1?.map((item) => item.fields)).toEqual([
+      { first_name: "Url", last_name: "Default", age: 42, tags: ["1", "2"] },
+      { first_name: "Url", last_name: "Second", age: 42, tags: ["1", "2"] },
+    ]);
+    expect(data.Individual1?.[0]?.joins?.Email).toEqual([{ email: "a@example.org" }]);
+    expect(Object.keys(data)).toEqual(["Individual1"]);
+  });
+
+  it("leaves prefilled values alone", () => {
+    const start = { Individual1: [{ fields: { first_name: "Prefilled", age: null }, joins: {} }] };
+    const data = initialiseData(layout, start, { first_name: "Url", age: "3" });
+    expect(data.Individual1?.[0]?.fields).toMatchObject({ first_name: "Prefilled", age: null });
   });
 });

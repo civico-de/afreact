@@ -47,6 +47,7 @@ class GetForm extends AbstractAction {
       $module,
     ));
     $afform['layout'] = self::layout($module, $afform['strings']);
+    $afform['meta'] = Afforms::meta($this->name);
     $result[] = $afform;
   }
 

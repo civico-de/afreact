@@ -4,6 +4,8 @@ import { rangeValue } from "./fields/Range";
 import {
   ensurePrimary,
   ensureRepeatItems,
+  EXTRA_SCOPE,
+  fieldPlace,
   findElements,
   getValue,
   repeatCount,
@@ -83,6 +85,21 @@ export function defaultValue(defn: FieldDefn, value: unknown): unknown {
   return convertValue(defn, listed, { userContactId: window.CRM.config?.cid });
 }
 
+/**
+ * afField's setValueFromRouteParams(): "Entity[.join].field", the entity name followed by
+ * number n + 1 from the second item on, else the plain field name; extra fields take only that.
+ */
+export function routeValue(
+  params: Record<string, string>,
+  scope: Scope,
+  name: string,
+): string | undefined {
+  const join = scope.join === undefined ? "" : `.${scope.join}`;
+  const unique = `${scope.entity}${scope.index ? scope.index + 1 : ""}${join}.${name}`;
+  if (scope !== EXTRA_SCOPE && Object.hasOwn(params, unique)) return params[unique];
+  return Object.hasOwn(params, name) ? params[name] : undefined;
+}
+
 /** An af-if the renderer cannot read renders nothing, so it initialises nothing either. */
 function conditionHolds(attribute: string, data: FormData): boolean {
   try {
@@ -95,13 +112,15 @@ function conditionHolds(attribute: string, data: FormData): boolean {
 /**
  * Prepares data the way the Angular directives do when they render: creates the item
  * of every fieldset, pads every af-repeat to its initial count, marks a primary record in
- * repeated joins, and fills static defaults into empty fields. Skips what an af-if hides.
+ * repeated joins, and fills empty fields from the route, else their static default.
+ * Skips what an af-if hides.
  */
 export function initialiseNodes(
   nodes: LayoutNode[],
   data: FormData,
   start: Scope | null,
   offsets: WeakMap<ElementNode, number>,
+  params: Record<string, string>,
 ): FormData {
   let next = data;
   const walk = (children: LayoutNode[], scope: Scope | null) => {
@@ -132,16 +151,20 @@ export function initialiseNodes(
         } else {
           walk(node["#children"] ?? [], { ...joinScope, joinIndex: offsets.get(node) ?? 0 });
         }
-      } else if (node["#tag"] === "af-field" && scope) {
+      } else if (node["#tag"] === "af-field") {
+        const place = fieldPlace(node, scope);
+        if (!place) continue;
+        const { scope: at, name } = place;
         const defn = isFieldDefn(node.defn) ? node.defn : undefined;
-        const value = staticDefault(defn);
-        const name = String(node.name);
-        if (defn && value !== undefined && getValue(next, scope, name) === undefined)
-          next = setValue(next, scope, name, defaultValue(defn, value));
+        // A search fieldset (no entity) reads the route itself.
+        const given = at.entity ? routeValue(params, at, name) : undefined;
+        const value = given ?? staticDefault(defn);
+        if (defn && value !== undefined && getValue(next, at, name) === undefined)
+          next = setValue(next, at, name, defaultValue(defn, value));
         // A slider always holds a value, so an untouched one is not a change.
-        const current = getValue(next, scope, name);
+        const current = getValue(next, at, name);
         if (defn?.input_type === "Range" && typeof current !== "number")
-          next = setValue(next, scope, name, rangeValue(defn, current));
+          next = setValue(next, at, name, rangeValue(defn, current));
       } else {
         walk(node["#children"] ?? [], scope);
       }
@@ -151,6 +174,10 @@ export function initialiseNodes(
   return next;
 }
 
-export function initialiseData(layout: LayoutNode[], data: FormData): FormData {
-  return initialiseNodes(layout, data, null, joinOffsets(layout));
+export function initialiseData(
+  layout: LayoutNode[],
+  data: FormData,
+  params: Record<string, string> = {},
+): FormData {
+  return initialiseNodes(layout, data, null, joinOffsets(layout), params);
 }

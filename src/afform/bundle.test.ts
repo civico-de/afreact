@@ -114,9 +114,12 @@ describe("htmlToLayout", () => {
 });
 
 describe("compileBundle", () => {
+  const meta = { name: "afformA", title: "A", redirect: "civicrm/done" };
   const vars: BundleVars = {
     url: "/bundle.json",
-    forms: { afformA: { module: "afformA", title: "A", type: "form", autosave_draft: true } },
+    forms: {
+      afformA: { module: "afformA", title: "A", type: "form", autosave_draft: true, meta },
+    },
     blocks: { "afblock-b": "afblockB" },
     attributeTypes: TYPES,
   };
@@ -143,6 +146,7 @@ describe("compileBundle", () => {
       title: "A",
       type: "form",
       autosave_draft: true,
+      meta,
       strings: { Block: "Baustein" },
       layout: [
         {

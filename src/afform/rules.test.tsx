@@ -663,3 +663,91 @@ describe("live rules", () => {
     });
   });
 });
+
+describe("extra fields", () => {
+  const extra = (name: string, defn: Partial<FieldDefn> = {}): LayoutNode => ({
+    "#tag": "af-field",
+    defn: { name, label: name, input_type: "Text", data_type: "String", ...defn },
+  });
+
+  it("keep their values outside every entity and submit them as afForm does", async () => {
+    const calls = renderForm(
+      form([
+        field("first_name"),
+        extra("text1"),
+        extra("number1", { input_type: "Number", data_type: "Integer", afform_default: "3" }),
+      ]),
+      "?text1=Url&Individual1.number1=9",
+    );
+    expect(await screen.findByRole("textbox", { name: "text1" })).toHaveValue("Url");
+    await userEvent.type(box("first_name"), "Ada");
+    await userEvent.type(box("text1"), "!");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({
+        Individual1: [{ fields: { first_name: "Ada" }, joins: {} }],
+        extra: { fields: { text1: "Url!", number1: 3 } },
+      });
+    });
+  });
+});
+
+describe("values from the route", () => {
+  const reset: LayoutNode = {
+    "#tag": "button",
+    class: "af-button btn",
+    type: "reset",
+    "#children": [{ "#text": "Reset" }],
+  };
+
+  it("fill fields over their default and survive a reset", async () => {
+    const calls = renderForm(
+      form([field("first_name", { afform_default: "Default" }), field("last_name")], [reset]),
+      "?first_name=Ada&Individual1.last_name=Lovelace",
+    );
+    expect(await screen.findByRole("textbox", { name: "first_name" })).toHaveValue("Ada");
+    expect(box("last_name")).toHaveValue("Lovelace");
+    await userEvent.clear(box("first_name"));
+    await userEvent.click(screen.getByRole("button", { name: "Reset" }));
+    await waitFor(() => {
+      expect(box("first_name")).toHaveValue("Ada");
+    });
+    expect(calls.filter(({ call }) => call === "Afform.prefill")).toHaveLength(2);
+  });
+
+  it("fill fields an af-if shows later and items added later", async () => {
+    renderForm(
+      form([
+        field("first_name"),
+        { "#tag": "div", "af-if": when("first_name", "=", '"x"'), "#children": [field("nick_name")] },
+        {
+          "#tag": "div",
+          "af-join": "Email",
+          "af-repeat": "Add",
+          "#children": [field("email", { label: "Email" })],
+        },
+      ]),
+      "?nick_name=Nick&Individual1.Email.email=a@example.org",
+    );
+    await userEvent.type(await screen.findByRole("textbox", { name: "first_name" }), "x");
+    expect(await screen.findByRole("textbox", { name: "nick_name" })).toHaveValue("Nick");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    const emails = screen.getAllByRole("textbox", { name: "Email" });
+    expect(emails).toHaveLength(2);
+    for (const email of emails) expect(email).toHaveValue("a@example.org");
+  });
+
+  it("replace a token default until the fields it refers to change", async () => {
+    renderForm(
+      form([
+        field("first_name"),
+        field("nick_name", { afform_default: "Dear [Individual1.0.first_name]" }),
+      ]),
+      "?nick_name=Hi",
+    );
+    const nick = await screen.findByRole("textbox", { name: "nick_name" });
+    expect(nick).toHaveValue("Hi");
+    await userEvent.type(box("first_name"), "Ada");
+    expect(nick).toHaveValue("Dear Ada");
+  });
+});

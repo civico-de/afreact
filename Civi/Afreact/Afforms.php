@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace Civi\Afreact;
 
+use Civi\Afform\StringVisitor;
 use Civi\Angular\Manager;
 use Civi\Api4\Afform;
 
@@ -60,6 +61,22 @@ final class Afforms {
       $blocks[self::field($block, 'directive_name')] = self::field($block, 'module_name');
     }
     return $blocks;
+  }
+
+  /**
+   * The form metadata afform.js hands afCoreDirective, which afForm sends as `afform`
+   * with crmFormSuccess and crmFormError (afform_civicrm_buildAsset()).
+   *
+   * @return array<string, mixed>
+   */
+  public static function meta(string $name): array {
+    $meta = (array) Afform::get(checkPermissions: FALSE)
+      ->addSelect('redirect', 'name', 'title', 'autosave_draft', 'confirmation_type', 'confirmation_message')
+      ->addWhere('name', '=', $name)
+      ->execute()
+      ->first();
+    (new StringVisitor())->visitMetadata($meta, fn ($text) => _ts($text));
+    return $meta;
   }
 
   public static function field(mixed $afform, string $field): string {

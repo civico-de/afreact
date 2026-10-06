@@ -74,6 +74,33 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
     $this->assertTrue($this->form('afformAfreactTestHost')['autosave_draft']);
   }
 
+  public function testMetaIsWhatAfformJsHandsTheAngularDirective(): void {
+    Afform::create(checkPermissions: FALSE)
+      ->setValues([
+        'name' => 'afformAfreactTestHost',
+        'type' => 'form',
+        'title' => 'Host',
+        'redirect' => 'civicrm/done',
+        'autosave_draft' => TRUE,
+        'confirmation_type' => 'show_confirmation_message',
+        'confirmation_message' => '<p>Thanks</p>',
+        'layout' => '<af-form ctrl="afform"></af-form>',
+      ])
+      ->execute();
+    // Key order follows the API, as in afform.js.
+    $this->assertEquals(
+      [
+        'name' => 'afformAfreactTestHost',
+        'title' => 'Host',
+        'redirect' => 'civicrm/done',
+        'autosave_draft' => TRUE,
+        'confirmation_type' => 'show_confirmation_message',
+        'confirmation_message' => '<p>Thanks</p>',
+      ],
+      $this->form('afformAfreactTestHost')['meta'],
+    );
+  }
+
   public function testSearchDisplaySettingsArriveAsArray(): void {
     $form = Afreact::getForm(checkPermissions: FALSE)->setName('afsearchAfreactDemoContacts')->execute()->single();
     $display = $this->findTag($form['layout'], 'crm-search-display-table')[0];

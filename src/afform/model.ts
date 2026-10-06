@@ -1,5 +1,5 @@
 import type { ElementNode, EntityItem, FormData, LayoutNode, Scope, Values } from "./types";
-import { isElement } from "./types";
+import { isElement, isFieldDefn } from "./types";
 
 export function findElements(nodes: LayoutNode[], tag: string): ElementNode[] {
   return nodes
@@ -32,29 +32,56 @@ export function entityDeclarations(layout: LayoutNode[]): Record<string, EntityD
   );
 }
 
+/** afForm keeps an af-field without a name (an "extra" field) in data.extra, outside any entity. */
+export const EXTRA_SCOPE: Scope = { entity: "extra", index: 0 };
+
+/** Where an af-field's value lives and its key there: an extra field's is its definition's name. */
+export function fieldPlace(
+  node: ElementNode,
+  scope: Scope | null,
+): { scope: Scope; name: string } | null {
+  if (node.name) return scope && { scope, name: String(node.name) };
+  return isFieldDefn(node.defn) ? { scope: EXTRA_SCOPE, name: node.defn.name } : null;
+}
+
+/** The values afForm submits and announces: extra fields as one record, `extra: {fields}`. */
+export type Submission = Record<string, EntityItem[] | { fields: Values }>;
+
+export function submission(data: FormData): Submission {
+  const { extra, ...entities } = data;
+  return extra ? { ...entities, extra: { fields: extra[0]?.fields ?? {} } } : entities;
+}
+
 export function emptyData(names: string[]): FormData {
   return Object.fromEntries(names.map((name) => [name, []]));
 }
 
 /**
- * Route arguments as the Angular runtime builds them: every query parameter, then the
- * placement's options (e.g. contact_id on a contact summary tab) over them, with
- * comma-separated IDs split for entity names. Angular-style hash parameters
+ * afCore's routeParams: every query parameter; Angular-style hash parameters
  * ("#?Individual1=5") count too, so existing Afform links work.
+ */
+export function routeParams(location: { search: string; hash: string }): Record<string, string> {
+  const params: Record<string, string> = {};
+  const hashQuery = location.hash.replace(/^#\/?\??/, "");
+  new URLSearchParams(`${location.search.replace(/^\?/, "")}&${hashQuery}`).forEach(
+    (value, key) => {
+      params[key] = value;
+    },
+  );
+  return params;
+}
+
+/**
+ * Route arguments as afForm sends them to the server: the route parameters, then the
+ * placement's options (e.g. contact_id on a contact summary tab) over them, with
+ * comma-separated IDs split for entity names.
  */
 export function routeArgs(
   location: { search: string; hash: string },
   names: string[],
   options: Record<string, unknown> = {},
 ): Record<string, unknown> {
-  const args: Record<string, unknown> = {};
-  const hashQuery = location.hash.replace(/^#\/?\??/, "");
-  new URLSearchParams(`${location.search.replace(/^\?/, "")}&${hashQuery}`).forEach(
-    (value, key) => {
-      args[key] = value;
-    },
-  );
-  Object.assign(args, options);
+  const args: Record<string, unknown> = { ...routeParams(location), ...options };
   for (const name of names) {
     const value = args[name];
     if (typeof value === "string" && value) args[name] = value.split(",");
@@ -88,6 +115,12 @@ export function applyPrefill(
 ): FormData {
   const next = structuredClone(data);
   for (const { name, values } of prefill) {
+    // A stored draft holds extra fields as they were submitted.
+    if (name === EXTRA_SCOPE.entity) {
+      const fields: unknown = Array.isArray(values) ? undefined : values.fields;
+      if (isRecord(fields)) next.extra = [{ fields: { ...fields }, joins: {} }];
+      continue;
+    }
     const items = (next[name] ??= []);
     for (const [index, item] of Object.entries(values)) {
       const current = items[Number(index)];

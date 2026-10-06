@@ -7,6 +7,8 @@ import {
   entityDeclarations,
   ensurePrimary,
   ensureRepeatItems,
+  EXTRA_SCOPE,
+  fieldPlace,
   getValue,
   keepOffered,
   placementOptions,
@@ -15,6 +17,8 @@ import {
   routeArgs,
   setPrimary,
   setValue,
+  submission,
+  type PrefillItem,
 } from "./model";
 import type { FormData } from "./types";
 
@@ -236,5 +240,36 @@ describe("keepOffered", () => {
     expect(getValue(keepOffered(data(2), scope, "tags", [1]), scope, "tags")).toBeUndefined();
     const offered = data(1);
     expect(keepOffered(offered, scope, "tags", [1])).toBe(offered);
+  });
+});
+
+describe("extra fields", () => {
+  const defn = { name: "text1", input_type: "Text", data_type: "String" };
+  const scope = { entity: "Individual1", index: 0 };
+
+  it("are af-fields without a name, kept by their definition's name outside the entity", () => {
+    expect(fieldPlace({ "#tag": "af-field", defn }, scope)).toEqual({
+      scope: EXTRA_SCOPE,
+      name: "text1",
+    });
+    expect(fieldPlace({ "#tag": "af-field", name: "", defn }, null)?.scope).toBe(EXTRA_SCOPE);
+    expect(fieldPlace({ "#tag": "af-field", name: "email", defn }, scope)).toEqual({
+      scope,
+      name: "email",
+    });
+    expect(fieldPlace({ "#tag": "af-field", name: "email" }, null)).toBeNull();
+  });
+
+  it("submit as one record and come back from a stored draft", () => {
+    const data = setValue(emptyData(["Individual1"]), EXTRA_SCOPE, "text1", "x");
+    expect(submission(data)).toEqual({ Individual1: [], extra: { fields: { text1: "x" } } });
+    expect(submission(emptyData(["Individual1"]))).toEqual({ Individual1: [] });
+    // As Afform.prefill returns a draft's extra fields; PrefillItem describes entities only.
+    const wire = '[{"name":"extra","values":{"fields":{"text1":"y"}}}]';
+    const prefill: PrefillItem[] = JSON.parse(wire);
+    expect(applyPrefill(emptyData([]), prefill, {}).extra).toEqual([
+      { fields: { text1: "y" }, joins: {} },
+    ]);
+    expect(applyPrefill(emptyData([]), [{ name: "extra", values: [] }], {})).toEqual({});
   });
 });

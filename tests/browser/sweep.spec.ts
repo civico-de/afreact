@@ -50,6 +50,9 @@ interface Observed {
   notes: string[];
 }
 
+/** Demo forms whose list, grid and tree always hold items: equal must not mean unread. */
+const FILLED = ["afsearchAfreactDemoList", "afsearchAfreactDemoGrid", "afsearchAfreactDemoTree"];
+
 type Status = "identical" | "differs" | "unsupported note" | "error";
 
 interface Result {
@@ -68,6 +71,8 @@ interface Result {
   errors: string[];
   /** Why the gate fails this form; empty for forms it passes or does not gate. */
   failures: string[];
+  /** Rows and items the React page's displays show; proves the comparison read them. */
+  items: number;
 }
 
 /** AngularJS on the Angular page. */
@@ -568,6 +573,7 @@ async function sweepForm(
     supported,
     reported: reported && "problems" in reported ? [...new Set(reported.problems)] : [],
     status,
+    items: (react.observed?.displays ?? []).reduce((sum, shown) => sum + shown.rows.length, 0),
     urls,
     renderedEmpty,
     differences: found,
@@ -657,6 +663,8 @@ test("every form renders alike on both renderers", async ({ page }, testInfo) =>
       expect
         .soft(result.failures, `${row.name}, which the support report calls supported`)
         .toEqual([]);
+      if (FILLED.includes(row.name))
+        expect.soft(result.items, `items read from ${row.name}`).toBeGreaterThan(0);
     });
 
   const dir = testInfo.project.outputDir;

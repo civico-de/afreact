@@ -52,6 +52,7 @@ class AssetsHeadlessTest extends TestCase implements HeadlessInterface {
         'title' => 'Afreact demo contact',
         'type' => 'form',
         'autosave_draft' => FALSE,
+        'meta' => Afforms::meta('afformAfreactDemoContact'),
       ],
       $bundle['forms']['afformAfreactDemoContact'],
     );

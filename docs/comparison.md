@@ -642,3 +642,27 @@ saved filter set (`_s`) runs it through afField's `correctValueType()`, which
 compares the proximity filter's object with 1 because the field is Boolean
 (`master` as of 2026-10-05; read from the code, not run). The React renderer
 keeps the object, also from the URL.
+
+**A reset drops the values the URL gave.** afField fills a field from the
+route parameters (`first_name=…` or `Individual1.first_name=…`) once, when it
+renders; on `afFormReset` it only restores the default, while `loadData()`
+prefills the URL's records again, so a reset form loses what the link filled
+in (`afField.component.js`, `master` as of 2026-10-06; read from the code, not
+run). The React renderer fills them again on a reset.
+
+**`_s` in a submission form's URL.** afField sets every field the URL leaves
+out to the saved filter set's value, null before the set has loaded; the
+set's load, found or not, then resets the form, which drops the URL's values
+as above (read from the code, not run). The React renderer reads `_s` only on
+search forms.
+
+**A restored draft adds keys to its extra fields.** Extra fields (an
+`af-field` without a name, FormBuilder's "Extra …" fields) live in
+`data.extra.fields` and are submitted as `extra: {fields: {…}}`. When
+`Afform.prefill` returns a stored draft, afForm merges `extra` like an entity
+list: it treats `fields` as an item index and adds empty `joins` and `fields`
+keys among the field values, which the next save stores with them
+(`afForm.component.js` `loadData()`, `master` as of 2026-10-06; read from the
+code, not run). The React renderer restores the field values only. It sends
+`extra` only once a form holds an extra field's value; afForm always sends
+`extra: {fields: {}}`, which the server treats as no values.

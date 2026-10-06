@@ -4,7 +4,9 @@ import { layoutSource, loadDefinition } from "./source";
 
 const bundle: BundleVars = {
   url: "/bundle.json",
-  forms: { afformA: { module: "afformA", title: "A", type: "form", autosave_draft: false } },
+  forms: {
+    afformA: { module: "afformA", title: "A", type: "form", autosave_draft: false, meta: {} },
+  },
   blocks: {},
   attributeTypes: { "*": { "*": "text" } },
 };
@@ -24,7 +26,8 @@ describe("layoutSource", () => {
 
 describe("loadDefinition", () => {
   it("reads layouts the page embedded and reports the ones it left out", async () => {
-    const form = { name: "afformA", title: "A", type: "form", layout: [], strings: [] as [] };
+    const meta = { name: "afformA" };
+    const form = { name: "afformA", title: "A", type: "form", meta, layout: [], strings: [] as [] };
     window.CRM.vars = { afreact: { layouts: { afformA: form } } };
     await expect(loadDefinition("afformA", "page", createQueryClient())).resolves.toBe(form);
     await expect(loadDefinition("afformB", "page", createQueryClient())).rejects.toThrow(

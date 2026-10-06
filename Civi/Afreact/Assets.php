@@ -88,6 +88,7 @@ final class Assets {
         'title' => is_array($form) && is_string($form['title'] ?? NULL) ? $form['title'] : NULL,
         'type' => Afforms::field($form, 'type'),
         'autosave_draft' => is_array($form) && !empty($form['autosave_draft']),
+        'meta' => Afforms::meta(Afforms::field($form, 'name')),
       ];
     }
     $modules = array_column($forms, 'module');

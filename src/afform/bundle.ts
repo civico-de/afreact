@@ -12,7 +12,13 @@ export interface BundleVars {
   url: string | null;
   forms: Record<
     string,
-    { module: string; title: string | null; type: string; autosave_draft: boolean }
+    {
+      module: string;
+      title: string | null;
+      type: string;
+      autosave_draft: boolean;
+      meta: Record<string, unknown>;
+    }
   >;
   /** Block directive => Angular module name. */
   blocks: Record<string, string>;
@@ -226,6 +232,7 @@ export function compileBundle(vars: BundleVars, file: ModuleFile, name: string):
     title: form.title,
     type: form.type,
     autosave_draft: form.autosave_draft,
+    meta: form.meta,
     layout,
     strings: Object.fromEntries(
       compiled.flatMap((module) => Object.entries(file[module]?.strings ?? {})),

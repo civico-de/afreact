@@ -20,6 +20,7 @@ import {
   addRepeatItem,
   copyRepeatItem,
   deleteValue,
+  fieldPlace,
   getValue,
   keepOffered,
   removeRepeatItem,
@@ -40,6 +41,7 @@ import {
   initialiseNodes,
   refersToItself,
   replaceTokens,
+  routeValue,
   tokenValues,
 } from "./structure";
 import type { ElementNode, FieldDefn, FormData, LayoutNode, Scope } from "./types";
@@ -69,6 +71,8 @@ export interface FormState {
   /** Also enabled while the saved form only retries its failed uploads. */
   submitDisabled: boolean;
   joinOffsets: WeakMap<ElementNode, number>;
+  /** afCore's routeParams: fields shown later fill from them too. */
+  routeParams: Record<string, string>;
   entities: Record<string, EntityDeclaration>;
   formName: string;
   /** afForm hides the submit button when the route opens a stored submission (sid). */
@@ -255,7 +259,7 @@ function evaluateConditions(attribute: string, data: FormData, name: string): Ev
  */
 function Conditional({ node }: { node: ElementNode }) {
   const form = useForm();
-  const { update, joinOffsets } = form;
+  const { update, joinOffsets, routeParams } = form;
   const scope = useContext(ScopeContext);
   const hiddenWith = useContext(HiddenContext);
   const data = hiddenWith ?? form.data;
@@ -272,8 +276,8 @@ function Conditional({ node }: { node: ElementNode }) {
     }
     if (initialised.current) return;
     initialised.current = true;
-    update((current) => initialiseNodes([node], current, scope, joinOffsets));
-  }, [active, update, node, scope, joinOffsets]);
+    update((current) => initialiseNodes([node], current, scope, joinOffsets, routeParams));
+  }, [active, update, node, scope, joinOffsets, routeParams]);
   if (active && shownWith !== form.data) setShownWith(form.data);
   if ("error" in result) return <Unsupported what={result.error} />;
   if (shown) return <Rendered node={node} />;
@@ -381,8 +385,10 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
   const canAdd = !max || count < max;
   const children = node["#children"] ?? [];
   // A new item's fields and repeats initialise as afField and afRepeat do on render.
-  const initialiseLast = (data: FormData) =>
-    initialiseNodes(children, data, itemScope(repeatCount(data, scope) - 1), form.joinOffsets);
+  const initialiseLast = (data: FormData) => {
+    const last = itemScope(repeatCount(data, scope) - 1);
+    return initialiseNodes(children, data, last, form.joinOffsets, form.routeParams);
+  };
   const items = keys.map((key, position) => (
     <div af-repeat-item="" key={key}>
       <ScopeContext.Provider value={itemScope(position)}>
@@ -441,11 +447,12 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
 }
 
 function FieldNode({ node }: { node: ElementNode }) {
-  const scope = useContext(ScopeContext);
+  const place = fieldPlace(node, useContext(ScopeContext));
   const hidden = useContext(HiddenContext);
   const filters = useSearchFieldset();
   const defn = node.defn;
-  const name = String(node.name);
+  const scope = place?.scope ?? null;
+  const name = place?.name ?? String(node.name);
   if (filters && !scope) return <FilterFieldNode node={node} fieldset={filters} />;
   if (!scope || !isFieldDefn(defn)) return <Unsupported what={missingFieldNote(name)} />;
   if (hidden !== null) return <DroppedField scope={scope} name={name} defn={defn} />;
@@ -519,7 +526,9 @@ function useTokenDefault(
   const loops = template !== null && refersToItself(template, scope, name);
   const tokens = template === null ? null : JSON.stringify(tokenValues(template, form.data));
   const touched = useRef(false);
-  const calculatedFor = useRef<string | null>(null);
+  // A value from the route replaces the first calculation, as afField sets it afterwards.
+  const fromRoute = routeValue(form.routeParams, scope, name) !== undefined;
+  const calculatedFor = useRef<string | null>(fromRoute ? tokens : null);
   useEffect(() => {
     const target = element.current;
     const touch = ({ target: left }: FocusEvent) => {

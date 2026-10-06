@@ -43,6 +43,15 @@ const layout: LayoutNode[] = [
   },
 ];
 
+const meta = {
+  name: "afformTest",
+  title: "Test form",
+  redirect: null,
+  autosave_draft: false,
+  confirmation_type: "show_confirmation_message",
+  confirmation_message: null,
+};
+
 const prefill = [{ name: "Individual1", values: [{ fields: { id: 5, first_name: "Ada" } }] }];
 const values = (firstName: string) => ({
   Individual1: [{ fields: { id: 5, first_name: firstName }, joins: {} }],
@@ -59,6 +68,7 @@ function renderForm(
         title: "Test form",
         type: "form",
         autosave_draft: autosave,
+        meta,
         layout,
         strings: [],
       },
@@ -127,8 +137,9 @@ describe("submitting", () => {
       expect(trigger).toHaveBeenCalledWith(
         "crmFormError",
         expect.objectContaining({
-          afform: { name: "afformTest", title: "Test form" },
+          afform: meta,
           data: values("Ada"),
+          submissionResponse: undefined,
         }),
       );
       expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();

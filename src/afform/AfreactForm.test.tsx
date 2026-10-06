@@ -71,6 +71,15 @@ const contactForm: LayoutNode[] = [
   },
 ];
 
+const meta = {
+  name: "afformTest",
+  title: "Test form",
+  redirect: null,
+  autosave_draft: false,
+  confirmation_type: "show_confirmation_message",
+  confirmation_message: null,
+};
+
 const prefill = [
   {
     name: "Individual1",
@@ -90,7 +99,14 @@ function renderForm(
 ) {
   const calls = mockApi({
     "Afreact.getForm": () => [
-      { name: "afformTest", title: "Test form", type: "form", layout: contactForm, strings: [] },
+      {
+        name: "afformTest",
+        title: "Test form",
+        type: "form",
+        meta,
+        layout: contactForm,
+        strings: [],
+      },
     ],
     "Afform.prefill": () => (search ? prefill : []),
     "Afform.submit": submit,
@@ -297,7 +313,7 @@ describe("AfreactForm", () => {
     expect(trigger).toHaveBeenCalledWith(
       "crmFormSuccess",
       expect.objectContaining({
-        afform: { name: "afformTest", title: "Test form" },
+        afform: meta,
         submissionResponse: [{ saved: true }],
       }),
     );
@@ -372,6 +388,7 @@ describe("AfreactForm", () => {
       name: "afsearchTest",
       title: "Search",
       type: "search",
+      meta: { name: "afsearchTest", title: "Search" },
       layout,
       strings: [] as [],
     };
