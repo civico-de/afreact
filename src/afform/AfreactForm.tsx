@@ -263,8 +263,11 @@ interface LoadedFormProps extends Loaded {
 function LoadedForm(props: LoadedFormProps) {
   const { name, form, args, params, initial, pageTitle, onReset } = props;
   const [data, setData] = useState(initial);
+  // What the form holds by the time the prefill lands, for the async callback below.
   const latest = useRef(data);
-  latest.current = data;
+  useEffect(() => {
+    latest.current = data;
+  });
   const [closed, setClosed] = useState(props.closed);
   const [prefilled, setPrefilled] = useState(props.prefilled);
   /** The message above the form; the summary takes focus for what the server rejected. */
