@@ -255,7 +255,8 @@ describe("Field", () => {
   it("clears a date and hides the clear link while it is empty", async () => {
     const values = setup({ input_type: "Date", data_type: "Date" }, "2026-09-29");
     await userEvent.click(screen.getByRole("button", { name: "Clear" }));
-    expect(values).toEqual([null]);
+    // crmDatepicker writes "" into the model on clearing.
+    expect(values).toEqual([""]);
     expect(screen.getByLabelText("Field")).toHaveValue("");
     expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
   });
@@ -353,7 +354,7 @@ describe("Field", () => {
     const input = screen.getByLabelText("Field");
     expect(input).toHaveValue("2026-09-29T14:30");
     await userEvent.clear(input);
-    expect(values).toEqual([null]);
+    expect(values).toEqual([""]);
   });
 
   it("shows the year of a year-only date and stores January 1st", async () => {
@@ -363,10 +364,10 @@ describe("Field", () => {
     expect(input).toHaveAttribute("min", "1000");
     await userEvent.clear(input);
     await userEvent.type(input, "2001");
-    expect(values).toEqual([null, "2001-01-01"]);
+    expect(values).toEqual(["", "2001-01-01"]);
     expect(input).toHaveValue(2001);
     await userEvent.click(screen.getByRole("button", { name: "Clear" }));
-    expect(values.at(-1)).toBeNull();
+    expect(values.at(-1)).toBe("");
     expect(input).toHaveValue(null);
   });
 

@@ -310,7 +310,8 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                 className="form-control crm-form-text crm-form-date"
                 value={datePrefix(value, 7)}
                 onChange={(event) => {
-                  onChange(event.target.value ? `${event.target.value}-01` : null);
+                  const month = event.target.value;
+                  onChange(month ? `${month}-01` : emptied(required, false));
                 }}
               />
             )}
@@ -321,7 +322,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                 className="form-control crm-form-text crm-form-date"
                 value={toLocalDateTime(value)}
                 onChange={(event) => {
-                  onChange(fromLocalDateTime(event.target.value));
+                  onChange(fromLocalDateTime(event.target.value) ?? emptied(required, false));
                 }}
               />
             )}
@@ -332,7 +333,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                 className="form-control crm-form-text crm-form-date"
                 value={textValue(value)}
                 onChange={(event) => {
-                  onChange(event.target.value || null);
+                  onChange(event.target.value || emptied(required, false));
                 }}
               />
             )}
@@ -340,7 +341,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
             {!required && (
               <ClearButton
                 onClear={() => {
-                  onChange(null);
+                  onChange("");
                 }}
                 hidden={!value || disabled}
               />
@@ -520,7 +521,8 @@ function YearInput({
   onChange: (value: unknown) => void;
 }) {
   const [draft, setDraft] = useState(() => datePrefix(value, 4));
-  const stored = (text: string) => (/^\d{4}$/.test(text) ? `${text}-01-01` : null);
+  const stored = (text: string) => (/^\d{4}$/.test(text) ? `${text}-01-01` : "");
+  const current = value ? String(value) : "";
   return (
     <input
       {...common}
@@ -528,12 +530,12 @@ function YearInput({
       className={`form-control crm-form-number ${style ?? ""}`.trim()}
       min={1000}
       max={4000}
-      value={stored(draft) === (value ?? null) ? draft : datePrefix(value, 4)}
+      value={stored(draft) === current ? draft : datePrefix(value, 4)}
       onChange={(event) => {
         const text = event.target.value;
         setDraft(text);
         const next = stored(text);
-        if (next !== (value ?? null)) onChange(next);
+        if (next !== current) onChange(next || emptied(common.required === true, false));
       }}
     />
   );
