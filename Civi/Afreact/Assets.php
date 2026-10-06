@@ -36,7 +36,16 @@ final class Assets {
       ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchTasks.css')
       // What AfformMetadataInjector::preprocess() writes into afLocationInput's unit select.
       ->addVars('afreact', ['distanceUnit' => \CRM_Utils_Address::getDefaultDistanceUnit()]);
+    // What afCheckout's settingsFactory gives CRM.afCheckout, for CheckoutBlock fields.
+    if (class_exists(\Civi\Checkout\Afform::class) && \Civi::service('civi.checkout.afform')->isActive()) {
+      \Civi::resources()
+        ->addStyleFile('civi_contribute', 'ang/afCheckout.css')
+        ->addVars('afreact', ['afCheckout' => self::$checkout ??= \Civi\Checkout\Afform::getSettings()]);
+    }
   }
+
+  /** The checkout settings, asked once per request: load() runs once per element on a page. */
+  private static ?array $checkout = NULL;
 
   /**
    * Hands the page what <afreact-form source="page|bundle"> needs for the given forms.

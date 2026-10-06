@@ -374,11 +374,28 @@ function displayDifferences(react: Display[], angular: Display[]): string[] {
   });
 }
 
-function differences(react: Observed, angular: Observed): string[] {
+type SweptRow = SupportRow & { submit_currently_open: boolean | null };
+
+/** Afform/AbstractProcessor's refusals, which React shows above a closed form. */
+const CLOSED_ALERTS = [
+  "This form is not currently open for submissions.",
+  "You have reached the maximum number of submissions for this form.",
+];
+
+/**
+ * On a form closed for submissions React shows the reason and disables every control, where
+ * Angular only disables the submit button (docs/comparison.md); that difference is expected.
+ */
+function differences(react: Observed, angular: Observed, closed: boolean): string[] {
+  const alerts = closed ? react.alerts.filter((alert) => !CLOSED_ALERTS.includes(alert)) : react.alerts;
+  const byName = new Map(angular.fields.map((field) => [field.name, field.disabled]));
+  const fields = closed
+    ? react.fields.map((field) => ({ ...field, disabled: byName.get(field.name) ?? field.disabled }))
+    : react.fields;
   return [
     ...listed("texts", react.texts, angular.texts),
-    ...listed("alerts", react.alerts, angular.alerts),
-    ...fieldDifferences(react.fields, angular.fields),
+    ...listed("alerts", alerts, angular.alerts),
+    ...fieldDifferences(fields, angular.fields),
     ...listed("buttons", react.buttons, angular.buttons),
     ...displayDifferences(react.displays, angular.displays),
   ];
@@ -528,7 +545,7 @@ function sharedContent(name: string, reactOnly: string[], angular: string[]) {
 
 async function sweepForm(
   page: Page,
-  row: SupportRow,
+  row: SweptRow,
   reported: Reported | undefined,
 ): Promise<Result> {
   const options = checkedOptions(row);
@@ -552,7 +569,9 @@ async function sweepForm(
   const supported = !!reported && "problems" in reported && reported.problems.length === 0;
   const notes = (react.observed?.notes ?? []).map((note) => note.replace(NOTE_PREFIX, ""));
   const found =
-    react.observed && angularLoad.observed ? differences(react.observed, angularLoad.observed) : [];
+    react.observed && angularLoad.observed
+      ? differences(react.observed, angularLoad.observed, row.submit_currently_open === false)
+      : [];
   const shared =
     react.observed && angularLoad.observed
       ? sharedContent(row.name, ownFindings(react.axe, angularLoad.axe), angularLoad.axe)
@@ -645,8 +664,16 @@ async function write(testInfo: TestInfo, results: Result[], total: number) {
 test("every form renders alike on both renderers", async ({ page }, testInfo) => {
   test.setTimeout(300_000);
   const reported = await supportReport(page);
-  const forms = await api<SupportRow>(page, "Afform", "get", {
-    select: ["name", "title", "type:label", "server_route", "placement", "placement:label"],
+  const forms = await api<SweptRow>(page, "Afform", "get", {
+    select: [
+      "name",
+      "title",
+      "type:label",
+      "server_route",
+      "placement",
+      "placement:label",
+      "submit_currently_open",
+    ],
     // Core places blocks only inside other forms, which render them.
     where: [["type", "!=", "block"]],
     orderBy: { name: "ASC" },

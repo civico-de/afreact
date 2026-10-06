@@ -1,6 +1,7 @@
 import { useId, useState, type InputHTMLAttributes, type ReactNode } from "react";
 import { onButtonKey } from "../keys";
 import { ChainSelect } from "./fields/ChainSelect";
+import { CheckoutBlock } from "./fields/CheckoutBlock";
 import { DisplayOnly } from "./fields/DisplayOnly";
 import { EntityRef } from "./fields/EntityRef";
 import { Toggle } from "./fields/Toggle";
@@ -90,6 +91,7 @@ export const INPUT_TYPES: ReadonlySet<string> = new Set([
   "File",
   "Range",
   "Location",
+  "CheckoutBlock",
 ]);
 
 export function inputTypeNote(defn: FieldDefn): string {
@@ -230,7 +232,8 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
 
   const ranged = !!defn.search_range && RANGE_TYPES.has(defn.input_type);
   // Controls in a group named by the label.
-  const labelsGroup = grouped || ranged || defn.input_type === "Location";
+  const labelsGroup =
+    grouped || ranged || defn.input_type === "Location" || defn.input_type === "CheckoutBlock";
 
   const trimmed = useTrimmedText(
     !ranged && (defn.input_type === "Text" || defn.input_type === "TextArea"),
@@ -473,6 +476,13 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
         return <Range {...{ id, defn, value, onChange, disabled, describedBy }} />;
       case "Location":
         return <Location {...{ id, labelId, value, onChange, disabled, describedBy }} />;
+      case "CheckoutBlock":
+        return (
+          <CheckoutBlock
+            {...{ value, onChange, disabled, describedBy }}
+            labelId={label ? labelId : undefined}
+          />
+        );
       default:
         return null;
     }
@@ -487,7 +497,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
         <label
           className="crm-af-field-label"
           id={labelsGroup ? labelId : undefined}
-          htmlFor={grouped ? undefined : id}
+          htmlFor={grouped || defn.input_type === "CheckoutBlock" ? undefined : id}
         >
           <Markup html={label} />
           {required && <Marker />}

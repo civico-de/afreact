@@ -14,6 +14,8 @@ export interface FieldEnv {
   fieldName: string;
   /** The record the field's value lives in (afField's dataProvider.getFieldData()). */
   values: Values;
+  /** The af-entity's fixed `data`, which the checkout reads a fixed option from. */
+  entityData?: Values;
   /** In a form: the entity item, and the join record inside it, that the field belongs to. */
   entityIndex?: number;
   joinIndex?: number;

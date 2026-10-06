@@ -52,6 +52,24 @@ export function submission(data: FormData): Submission {
   return extra ? { ...entities, extra: { fields: extra[0]?.fields ?? {} } } : entities;
 }
 
+/** The field a CheckoutBlock writes; card details never go into a draft. */
+const CHECKOUT_PARAMS = "checkout_params";
+
+/** What autosave and the draft button send: the submission without checkout details. */
+export function draftValues(data: FormData): Submission {
+  const without = <T extends { fields: Values }>(item: T): T => {
+    if (!(CHECKOUT_PARAMS in item.fields)) return item;
+    const { [CHECKOUT_PARAMS]: _, ...fields } = item.fields;
+    return { ...item, fields };
+  };
+  return Object.fromEntries(
+    Object.entries(submission(data)).map(([entity, items]) => [
+      entity,
+      Array.isArray(items) ? items.map(without) : without(items),
+    ]),
+  );
+}
+
 export function emptyData(names: string[]): FormData {
   return Object.fromEntries(names.map((name) => [name, []]));
 }

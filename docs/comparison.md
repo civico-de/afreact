@@ -90,6 +90,7 @@ that no longer excuses anything fails the test.
 | Display-only fields (`DisplayOnly`) | option labels, dates in the site format, reference labels from `<Entity>.autocomplete`, rich text as HTML, URL and file links; a value matching no option, or not of the option's type (`"2"` for `2`), shows nothing, as does a date it cannot format | the same, with values compared as text and a value without option or a date that cannot be formatted shown as stored; rich text keeps what `ng-bind-html` keeps (no `id`, `role` or `aria-*`, links and images of plain schemes only), and a URL of another scheme stays text; a failed label lookup shows its error |
 | Route parameters | the hash (`#?first_name=…`), for the fields and for the server's `args` | the same for the fields; `args` also carry the page's query string, with the hash over it |
 | Reference field whose dynamic entity has no mapping for the controlling value | disabled, without a word | disabled, with "No entity to search for …" |
+| Checkout block (`CheckoutBlock`, the donation form's `checkout_params`) | `afCheckoutBlock`: test-mode warning, the chosen option's description, template and fields; the details start empty and a change of option empties them; the block reads `CRM.afCheckout` from its own Angular module | the same from the page's `afreact.afCheckout` variable (`Civi\Afreact\Assets`), set while contributions through forms are enabled; the fields' labels are tied to their controls and the expiry pair is a group; an option cleared to none also empties the details (Angular leaves the stale ones in the data, which the server ignores); a new country empties the billing state and a country without states frees a required one; drafts never carry the details (see upstream bugs) |
 | Tree items | `<li>` without `data-entity-id` | `<li data-entity-id>`, as list items have it, so focus can return to the row after a reload |
 
 ## Accessibility
@@ -113,7 +114,10 @@ instead of being dropped:
 - Angular expressions other than `:: ts('…', {…})` and `crmUrl(…)` with literal arguments
 - field types other than Text, Email, Url, Number, Hidden, TextArea, Date,
   Select, Radio, CheckBox, DisplayOnly, EntityRef, ChainSelect, Toggle,
-  RichTextEditor, File, Range and Location
+  RichTextEditor, File, Range, Location and CheckoutBlock
+- in a CheckoutBlock, a checkout option's own Angular template (a payment
+  processor's module) and a checkout field of a type other than text, select,
+  checkBox, expiryDate and the billing state chainSelect
 - File fields outside a form, as in search filters
 - directives outside plain HTML, forms, blocks, joins, repeats, search
   fieldsets, tab sets and table, list, grid and tree displays (for example the
@@ -248,6 +252,22 @@ deleted placed form stays in the list and the contact summary fails with a
 Present on upstream `master` as of 2026-10-02; fix proposed in
 [civicrm-core#37197](https://github.com/civicrm/civicrm-core/pull/37197)
 (`_afform_clear()` also clears the `metadata` cache).
+
+**Checkout field labels name nothing.** The templates under
+`ang/afCheckout/checkoutFields/` write `<label>` without `for` beside inputs
+and selects without `id`, and the checkbox template takes the field's name as
+its id, which collides when a form shows the block twice; a screen reader
+reads the card number input as unnamed. The select templates also set the
+literal `name='field.name'`. The React renderer ties each label to its
+control, names the expiry pair as a group and names each control after its
+field (read from the code of 6.18.1).
+
+**Billing state after a change of country.** The billing state select keeps
+the state chosen for the previous country, and a country without states shows
+"- please wait -" for good, since the fetched empty list counts as not loaded
+(`afCheckoutBlock.component.js`, read from 6.18.1). The React renderer empties
+the state with the country, and a country without states frees the required
+select.
 
 **"Choose undefined first".** When a chained select's control field is empty,
 afField looks the control field's label up among its neighbours and puts

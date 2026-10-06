@@ -1,6 +1,7 @@
 import { api4 } from "../api/civi";
 import type { QueryClient } from "@tanstack/react-query";
 import { compileBundle, isModuleFile, type BundleVars, type ModuleFile } from "./bundle";
+import type { CheckoutSettings } from "./fields/CheckoutBlock";
 import type { FormDefinition } from "./types";
 
 /**
@@ -20,6 +21,8 @@ export interface AfreactVars {
   bundle?: BundleVars;
   /** The site's default for Location fields (Civi\Afreact\Assets::load). */
   distanceUnit?: string;
+  /** Civi\Checkout\Afform::getSettings(), while contributions through forms are enabled. */
+  afCheckout?: CheckoutSettings;
 }
 
 function vars(): AfreactVars {

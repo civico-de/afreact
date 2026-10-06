@@ -9,6 +9,7 @@ import { uploadAll, UploadsContext, type Uploads, type UploadsState } from "./fi
 import { FormContext, Nodes, type DraftStatus, type FormState } from "./Layout";
 import {
   applyPrefill,
+  draftValues,
   emptyData,
   entityDeclarations,
   findElements,
@@ -392,7 +393,7 @@ function LoadedForm(props: LoadedFormProps) {
       draft: {
         status: draftStatus,
         save: () => {
-          draft.mutate({ values: submission(data), snapshot, background: false });
+          draft.mutate({ values: draftValues(data), snapshot, background: false });
         },
       },
     }),
@@ -410,7 +411,7 @@ function LoadedForm(props: LoadedFormProps) {
   useEffect(() => {
     if (!autosave || draftStatus !== "unsaved" || submitted || snapshot === draftFailed) return;
     const timer = setTimeout(() => {
-      saveDraft({ values: submission(data), snapshot, background: true });
+      saveDraft({ values: draftValues(data), snapshot, background: true });
     }, AUTOSAVE_MS);
     return () => {
       clearTimeout(timer);

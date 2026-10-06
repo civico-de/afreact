@@ -666,6 +666,7 @@ function fieldEnv(
     joinEntity: scope.join,
     fieldName: name,
     values: values ?? {},
+    entityData: form.entities[scope.entity]?.data,
     entityIndex: scope.index,
     joinIndex: scope.join === undefined ? undefined : (scope.joinIndex ?? 0),
     onSelect: autofill
