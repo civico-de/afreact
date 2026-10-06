@@ -50,6 +50,10 @@ async function waitReady(page: Page) {
     page.locator(".afreact-demo section").first().locator("input").first(),
   ).toBeVisible();
   await expect(page.locator(".afreact-demo table tbody tr a[href]").first()).toBeVisible();
+  // Until the prefill lands, Angular blocks the form and React disables its submit button,
+  // which the browser then skips on Enter.
+  await expect(page.locator(".blockOverlay")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Save" })).toBeEnabled();
 }
 
 const created: Partial<Record<Renderer, Saved>> = {};
