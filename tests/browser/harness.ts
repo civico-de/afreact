@@ -94,6 +94,14 @@ export async function api<T>(
   action: string,
   params: object,
 ): Promise<T[]> {
+  // CRM.url's templates come from an inline script late in the page; CRM.api4 needs them.
+  await page.waitForFunction(() => {
+    try {
+      return typeof window.CRM.url("civicrm/ajax/api4") === "string";
+    } catch {
+      return false;
+    }
+  });
   return asRows<T>(
     await page.evaluate(([e, a, p]) => window.CRM.api4(e, a, p), [entity, action, params] as const),
     `${entity}.${action}`,

@@ -8,6 +8,7 @@ import {
   searchPage,
   valueIds,
   type AutocompleteItem,
+  type AutocompleteParams,
   type SearchContext,
 } from "../afform/fields/autocomplete";
 import type { InputProps } from "./EditableCell";
@@ -18,15 +19,15 @@ const Combobox = lazy(async () => ({
 }));
 
 /** entityRef.html: crm-autocomplete on the field's foreign entity, named to the server by field. */
-export function EntityRefInput(props: InputProps) {
+export function EntityRefInput(props: InputProps & { params?: AutocompleteParams }) {
   const { info, multiple, value, nullable, common, onChange } = props;
   const entity = info.fk_entity ?? info.entity;
-  const params = { fieldName: `${info.entity}.${info.value_key}` };
+  const params = props.params ?? { fieldName: `${info.entity}.${info.value_key}` };
   const [known, setKnown] = useState<ReadonlyMap<string, AutocompleteItem>>(new Map());
   const ids = valueIds(value);
   const missing = ids.filter((id) => !known.has(String(id)));
   const resolved = useQuery({
-    queryKey: [entity, "autocomplete", params.fieldName, missing],
+    queryKey: [entity, "autocomplete", params, missing],
     queryFn: missing.length ? () => resolveIds(entity, params, missing) : skipToken,
   });
   const lookup = new Map(known);
@@ -75,6 +76,8 @@ export function EntityRefInput(props: InputProps) {
       {!multiple && nullable && ids.length > 0 && (
         <ClearButton
           onClear={() => {
+            // The link leaves with the value; the focus stays in the editor, on the input.
+            document.getElementById(common.id)?.focus();
             onChange(null);
           }}
         />

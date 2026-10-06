@@ -85,6 +85,25 @@ const relationship: SearchTask = {
   icon: "fa-handshake-o",
   number: "> 0",
   uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskRelationship.html" },
+  values: [],
+  relationshipTypes: [
+    { id: "4_a_b", text: "Employee of", description: null, contact_type: "Organization" },
+    { id: "4_b_a", text: "Employer of", description: null, contact_type: "Individual" },
+    {
+      id: "9_a_b",
+      text: "Parent of",
+      description: "A guardian",
+      contact_type: "Individual",
+      contact_sub_type: "Student",
+    },
+  ],
+};
+const mailing: SearchTask = {
+  name: "contact.mailing",
+  title: "Email - schedule/send via CiviMail",
+  icon: "fa-paper-plane",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskMailing.html" },
 };
 const label: SearchTask = {
   name: "contact.label",
@@ -568,22 +587,22 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("names the tasks it cannot run and keeps them in the menu, disabled", async () => {
-    const calls = serve({ tasks: [enable, relationship] });
+    const calls = serve({ tasks: [enable, mailing] });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await screen.findByText("Name 1");
     await selectRows("Name 1");
     expect(
       await screen.findByText(
-        "Not supported by the React renderer: task contact.relationship " +
-          "(Angular dialog ~/crmSearchTasks/crmSearchTaskRelationship.html)",
+        "Not supported by the React renderer: task contact.mailing " +
+          "(Angular dialog ~/crmSearchTasks/crmSearchTaskMailing.html)",
       ),
     ).toHaveAttribute("role", "note");
     await openActions();
-    const item = screen.getByRole("menuitem", { name: /Add Relationship/, hidden: true });
+    const item = screen.getByRole("menuitem", { name: /CiviMail/, hidden: true });
     expect(item).toHaveAttribute("aria-disabled", "true");
     expect(item).toHaveAttribute(
       "title",
-      "Not supported by the React renderer: task contact.relationship",
+      "Not supported by the React renderer: task contact.mailing",
     );
     await userEvent.click(item);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -691,8 +710,8 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("alerts for a row link to a task React cannot run", async () => {
-    const links = [{ task: "contact.relationship", text: "Relate" }];
-    serve({ rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })], tasks: [relationship] });
+    const links = [{ task: "contact.mailing", text: "Mail" }];
+    serve({ rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })], tasks: [mailing] });
     renderWithQuery(
       <AfreactSearch
         search="S"
@@ -700,11 +719,11 @@ describe("AfreactSearch bulk actions", () => {
         settings={{ columns: [...columns, linksColumn(links)] }}
       />,
     );
-    await userEvent.click(await screen.findByRole("button", { name: "Relate" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Mail" }));
     await waitFor(() => {
       expect(window.CRM.alert).toHaveBeenCalledWith(
-        "Not supported by the React renderer: task contact.relationship " +
-          "(Angular dialog ~/crmSearchTasks/crmSearchTaskRelationship.html)",
+        "Not supported by the React renderer: task contact.mailing " +
+          "(Angular dialog ~/crmSearchTasks/crmSearchTaskMailing.html)",
         "Error",
         "error",
       );
@@ -1103,6 +1122,10 @@ describe("AfreactSearch bulk actions", () => {
       expect(add).toBeDisabled();
       const tags = await within(dialog).findByRole("listbox", { name: "Tags" });
       expect(within(tags).getByRole("option", { name: "Heading only" })).toBeDisabled();
+      // Only no-break spaces survive in an option's text, so the tree keeps its indentation.
+      expect(within(tags).getByRole("option", { name: "Alpha child" }).textContent).toBe(
+        "\u00a0\u00a0Alpha child",
+      );
       // Tags are used for "Contact" whatever contact type the search lists.
       expect(named(calls, "Tag.get")[0]?.params.where).toContainEqual([
         "used_for:name",
@@ -1183,6 +1206,145 @@ describe("AfreactSearch bulk actions", () => {
       await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(named(calls, "EntityTag.save")).toHaveLength(0);
+    });
+  });
+
+  describe("relationship", () => {
+    const fields = [
+      { name: "description", label: "Description", input_type: "Text", data_type: "String" },
+      { name: "start_date", label: "Start Date", input_type: "Date", data_type: "Date" },
+    ];
+
+    async function openRelationshipDialog(...names: string[]) {
+      await screen.findByText("Name 1");
+      await selectRows(...names);
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /Relationship/, hidden: true }));
+      return screen.findByRole("dialog", { name: "Add Relationship" });
+    }
+
+    it("relates the selected rows to the chosen contact with the type's fields", async () => {
+      const calls = serve({
+        tasks: [enable, relationship],
+        handlers: {
+          "Relationship.getFields": () => fields,
+          "Relationship.save": () =>
+            Object.assign([{ id: 1 }, { id: 2, duplicate_id: 5 }], { countFetched: 2 }),
+          "Individual.autocomplete": () =>
+            Object.assign([{ id: 7, label: "Bob" }], { countMatched: 1 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openRelationshipDialog("Name 1", "Name 2");
+      const save = within(dialog).getByRole("button", { name: "Save" });
+      expect(save).toBeDisabled();
+      expect(within(dialog).getByRole("textbox", { name: /Contact/ })).toBeDisabled();
+      const type = within(dialog).getByRole("combobox", { name: /Relationship Type/ });
+      expect(within(type).getByRole("option", { name: "Parent of" })).toHaveAttribute(
+        "title",
+        "A guardian",
+      );
+      await userEvent.selectOptions(type, "9_a_b");
+      expect(named(calls, "Relationship.getFields")[0]?.params).toMatchObject({
+        values: { relationship_type_id: "9" },
+      });
+      const description = await within(dialog).findByRole("textbox", { name: "Description" });
+      await userEvent.type(description, "Met at the fair");
+      const contact = await within(dialog).findByRole("combobox", { name: /Contact/ });
+      await userEvent.type(contact, "Bo");
+      await userEvent.click(await screen.findByRole("option", { name: "Bob" }));
+      expect(named(calls, "Individual.autocomplete")[0]?.params).toEqual({
+        input: "Bo",
+        searchField: null,
+        exclude: null,
+        quickEdit: false,
+        filters: { contact_sub_type: "Student" },
+      });
+      await userEvent.click(save);
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "1 relationship added. 1 relationship already exists.",
+          "Saved",
+          "success",
+        );
+      });
+      expect(named(calls, "Relationship.save").map(({ params }) => params)).toEqual([
+        {
+          defaults: {
+            description: "Met at the fair",
+            relationship_type_id: "9",
+            contact_id_b: 7,
+          },
+          records: [{ contact_id_a: 1 }, { contact_id_a: 2 }],
+        },
+      ]);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(pageRuns(calls)).toHaveLength(2);
+      });
+    });
+
+    it("takes the other side when the type reads the other way round", async () => {
+      const calls = serve({
+        tasks: [enable, relationship],
+        handlers: {
+          "Relationship.getFields": () => [],
+          "Relationship.save": () => Object.assign([{ id: 1 }], { countFetched: 1 }),
+          "Organization.autocomplete": () =>
+            Object.assign([{ id: 8, label: "Acme" }], { countMatched: 1 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openRelationshipDialog("Name 3");
+      const type = within(dialog).getByRole("combobox", { name: /Relationship Type/ });
+      await userEvent.selectOptions(type, "4_a_b");
+      const contact = await within(dialog).findByRole("combobox", { name: /Contact/ });
+      await userEvent.type(contact, "Ac");
+      await userEvent.click(await screen.findByRole("option", { name: "Acme" }));
+      expect(named(calls, "Organization.autocomplete")[0]?.params).toMatchObject({
+        filters: { contact_sub_type: null },
+      });
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith("1 relationship added.", "Saved", "success");
+      });
+      expect(named(calls, "Relationship.save")[0]?.params).toEqual({
+        defaults: { relationship_type_id: "4", contact_id_b: 8 },
+        records: [{ contact_id_a: 3 }],
+      });
+    });
+
+    it("shows a failed save and reloads, as a batch may have run", async () => {
+      const calls = serve({
+        tasks: [enable, relationship],
+        handlers: {
+          "Relationship.getFields": () => [],
+          "Relationship.save": () => {
+            throw apiError("Relationship type is inactive");
+          },
+          "Individual.autocomplete": () =>
+            Object.assign([{ id: 7, label: "Bob" }], { countMatched: 1 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openRelationshipDialog("Name 1");
+      const type = within(dialog).getByRole("combobox", { name: /Relationship Type/ });
+      await userEvent.selectOptions(type, "4_b_a");
+      const contact = await within(dialog).findByRole("combobox", { name: /Contact/ });
+      await userEvent.type(contact, "Bo");
+      await userEvent.click(await screen.findByRole("option", { name: "Bob" }));
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "Relationship type is inactive",
+          "Error",
+          "error",
+        );
+      });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(pageRuns(calls)).toHaveLength(2);
+      });
     });
   });
 });

@@ -91,9 +91,14 @@ export function Menu({
     const place = () => {
       if (!list || !anchor) return;
       const box = anchor.getBoundingClientRect();
-      list.style.top = `${String(box.bottom)}px`;
-      // A long menu scrolls within the viewport instead of running off its bottom.
-      list.style.maxHeight = `${String(document.documentElement.clientHeight - box.bottom - 8)}px`;
+      const height = document.documentElement.clientHeight;
+      // A long menu scrolls within the viewport; one that fits better above its button goes there.
+      const below = height - box.bottom - 8;
+      const above = box.top - 8;
+      const flip = list.scrollHeight > below && above > below;
+      list.style.top = flip ? "auto" : `${String(box.bottom)}px`;
+      list.style.bottom = flip ? `${String(height - box.top)}px` : "auto";
+      list.style.maxHeight = `${String(Math.max(flip ? above : below, 0))}px`;
       list.style.left = alignRight ? "auto" : `${String(box.left)}px`;
       list.style.right = alignRight
         ? `${String(document.documentElement.clientWidth - box.right)}px`

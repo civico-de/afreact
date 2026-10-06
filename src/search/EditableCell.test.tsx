@@ -343,7 +343,9 @@ describe("in-place editing", () => {
     expect(input).toHaveAttribute("aria-expanded", "false");
     expect(input).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Clear" }));
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
+    expect(input).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
     await screen.findByRole("button", { name: edit("Saved") });
     expect(edits()[0]?.values).toEqual({ employer_id: null });
   });

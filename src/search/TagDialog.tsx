@@ -107,14 +107,15 @@ export function TagDialog({ task, entity, onSave, onCancel }: TagDialogProps) {
         )}
         {[tags.error, tagsets.error]
           .filter((error) => error !== null)
-          .map((error) => (
-            <p key={errorMessage(error)} className="alert alert-danger" role="alert">
+          .map((error, index) => (
+            <p key={index} className="alert alert-danger" role="alert">
               {errorMessage(error)}
             </p>
           ))}
         <hr />
         {!loading && (
           <fieldset>
+            <legend className="sr-only">{ts("Tags")}</legend>
             <div className="form-inline">
               <label htmlFor={`${titleId}-tags`}>{ts("Tags")}</label>{" "}
               <select

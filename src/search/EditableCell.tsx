@@ -160,15 +160,14 @@ function CellEditor({
   };
   const onKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
     const target = event.target;
-    // An open autocomplete list takes Escape and Enter for itself, as select2's does.
-    const listOpen = target instanceof Element && target.getAttribute("aria-expanded") === "true";
-    if (event.key === "Escape" && !listOpen) {
+    // An autocomplete takes Escape and Enter for its open list or typed text, as select2 does.
+    if (event.defaultPrevented) return;
+    if (event.key === "Escape") {
       event.preventDefault();
       finish(false);
     }
     if (
       event.key === "Enter" &&
-      !event.defaultPrevented &&
       !(target instanceof HTMLTextAreaElement || target instanceof HTMLButtonElement)
     ) {
       event.preventDefault();

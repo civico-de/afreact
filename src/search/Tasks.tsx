@@ -6,6 +6,7 @@ import { Input } from "./EditableCell";
 import { editorFor } from "./inlineEdit";
 import { Icon } from "./LinkContent";
 import { onLinkClick } from "./links";
+import { RelationshipDialog } from "./RelationshipDialog";
 import { TagDialog } from "./TagDialog";
 import { UpdateDialog } from "./UpdateDialog";
 import { Menu } from "./Menu";
@@ -29,8 +30,10 @@ import {
   fieldEditableInfo,
   initialBatchValue,
   inlineEditCall,
+  isRecord,
   parseTaskList,
   referencedTasks,
+  relationshipBatch,
   tagBatch,
   taskData,
   taskRun,
@@ -80,6 +83,7 @@ type RunningTask = Running &
     | { kind: "download" }
     | { kind: "update" }
     | { kind: "tag" }
+    | { kind: "relationship" }
   );
 
 const TASKS = "getSearchTasks";
@@ -181,7 +185,12 @@ export function useTasks(options: TasksOptions) {
       setRunning({ kind: "batch", task, apiBatch: run.apiBatch, ids, isLink, returnTo });
       return;
     }
-    if (run.kind === "download" || run.kind === "update" || run.kind === "tag") {
+    if (
+      run.kind === "download" ||
+      run.kind === "update" ||
+      run.kind === "tag" ||
+      run.kind === "relationship"
+    ) {
       setRunning({ kind: run.kind, task, ids, isLink, returnTo });
       return;
     }
@@ -387,6 +396,15 @@ export function useTasks(options: TasksOptions) {
         }}
         onCancel={() => onDone({ ran: false, message: "" })}
       />
+    ) : running.kind === "relationship" ? (
+      <RelationshipDialog
+        task={running.task}
+        onSave={(type, contactId, values) => {
+          const apiBatch = relationshipBatch(type, contactId, values);
+          setRunning({ ...running, kind: "batch", apiBatch, isLink: false });
+        }}
+        onCancel={() => onDone({ ran: false, message: "" })}
+      />
     ) : running.kind === "download" ? (
       <DownloadDialog
         running={running}
@@ -468,12 +486,10 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
   const entityTitle = (count: number) => (count === 1 ? entity.title : entity.title_plural);
   const message = (text: string | undefined, count: number) =>
     text ? ts(text, { 1: count, 2: entityTitle(count) }) : "";
-  // Deleting the listed records asks first even when a hook removed the question; the text is
-  // core's own. A delete on another entity (tags) runs as its dialog decided.
-  const deletesRows =
-    apiBatch.action === "delete" && (apiBatch.entity ?? entity.name) === entity.name;
+  // Deleting asks first even when a hook removed the question; the text is core's own.
+  const deletes = apiBatch.action === "delete" && !apiBatch.settled;
   const confirmMsg =
-    apiBatch.confirmMsg || (deletesRows ? "Are you sure you want to delete %1 %2?" : undefined);
+    apiBatch.confirmMsg || (deletes ? "Are you sure you want to delete %1 %2?" : undefined);
 
   const start = async () => {
     if (started.current) return;
@@ -482,6 +498,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
     const ranges = batches(ids);
     let fetched = 0;
     let matched = 0;
+    const rows: Record<string, unknown>[] = [];
     let ran = false;
     try {
       for (const [index, range] of ranges.entries()) {
@@ -495,6 +512,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
           throw new Error(`${callEntity}.${action} answered without countFetched.`);
         fetched += result.countFetched;
         matched += result.countMatched ?? result.count ?? 0;
+        rows.push(...result.filter(isRecord));
       }
       setProgress({ percent: 100, first: 0, last: ids.length });
       let text: string;
@@ -503,7 +521,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
         window.CRM.status(text);
       } else {
         text = apiBatch.summary
-          ? apiBatch.summary({ fetched, matched })
+          ? apiBatch.summary({ fetched, matched, rows })
           : message(apiBatch.successMsg, fetched);
         const title = apiBatch.successTitle
           ? ts(apiBatch.successTitle)

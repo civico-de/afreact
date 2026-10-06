@@ -65,6 +65,21 @@ describe("Menu", () => {
     expect(list.style.maxHeight).toBe("392px");
   });
 
+  it("opens above its button when the space below is too small", async () => {
+    const { button, list } = menu();
+    vi.spyOn(button, "getBoundingClientRect").mockReturnValue({
+      ...button.getBoundingClientRect(),
+      top: 460,
+      bottom: 480,
+    });
+    vi.spyOn(document.documentElement, "clientHeight", "get").mockReturnValue(500);
+    vi.spyOn(list, "scrollHeight", "get").mockReturnValue(150);
+    await userEvent.click(button);
+    expect(list.style.top).toBe("auto");
+    expect(list.style.bottom).toBe("40px");
+    expect(list.style.maxHeight).toBe("452px");
+  });
+
   it("opens on Enter and Space like any button", async () => {
     const { button, list } = menu();
     button.focus();

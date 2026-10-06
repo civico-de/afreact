@@ -122,8 +122,8 @@ instead of being dropped:
   itself renders, with the note
 - in-place editors for locations and multi-value text, number, date or Yes/No
   fields; their cells stay read-only
-- bulk actions whose task is an Angular dialog (add relationship, schedule a
-  mailing, open a case, and extensions' own; download, update and tag have
+- bulk actions whose task is an Angular dialog (schedule a mailing, open a
+  case, and extensions' own; download, update, tag and relationship have
   their own dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
   with a contact reference, as soft credits do), or uses an expression other
   than a literal, an object literal, `ids[n]`, `ids.join(',')` and the task's
@@ -155,8 +155,9 @@ kept across sorting and paging, cleared by new filters and after a task.
 | Update dialog preset on a field `getFields` does not list | the clause shows an empty picker and its value is sent | the clause shows the field's name, can be removed, and its value is sent |
 | Download dialog | format select; a progress bar grows by 10 % each second whatever the server does; the dialog's close button is hidden while it runs | the same format select; a full striped bar in a status region while the file loads, the title takes the focus; Escape and both buttons are off while it runs |
 | Tag dialog | add or remove; the plain tags in a select2 tree, each tagset's tags in an entityref search; the batch runs inside the dialog; looks tags up for the search's entity name (see upstream bugs) | the same choice; the tags in a native multi-select with the tree indented, each tagset's tags in a multi-select of their own; the batch then runs in the task dialog; looks tags up for "Contact" on any contact-type search; the result message counts as core's |
-| Delete task without `confirmMsg` (changed by a hook) | runs at once | asks with core's delete question; a delete on another entity (the removal of tags) runs as its dialog decided |
-| Actions menu longer than the space below its button | the page scrolls to the rest | the menu scrolls within the viewport |
+| Relationship dialog | relationship type in a select2, the contact in a `crm-autocomplete` filtered by the type's contact sub-type, then the type's description, dates and custom fields as `crm-search-input`; the batch runs inside the dialog; a failed batch leaves the dialog on its progress bar (see upstream bugs) | the same choice in a native select, the same autocomplete and filter, the type's fields as the in-place editors' inputs (fields they lack are noted); the batch then runs in the task dialog; the result message counts added and existing relationships as core's; a failed batch alerts with the server's message |
+| Delete task without `confirmMsg` (changed by a hook) | runs at once | asks with core's delete question; a delete the renderer's own dialog settled (the removal of tags) runs at once |
+| Actions menu longer than the space below its button | the page scrolls to the rest | the menu scrolls within the viewport, or opens above its button when that leaves more room |
 | After a row link updates its row | reloads that row (`refreshAfterEditing`) | reloads the table |
 | Select-all control | icon buttons | the same buttons with `role="checkbox"` and `aria-checked` (`mixed` for some) |
 | Selection count, task result | visible count only | also announced in a live region |
@@ -769,3 +770,10 @@ queries `Tag.get` with `used_for:name CONTAINS <entity>` and saves
 Organizations or Households lists no tags at all (run on 6.18.1: the select2
 holds no data). The React renderer looks tags up for "Contact" on any
 contact-type search, and the EntityTag rows name that table.
+
+**A failed relationship batch leaves its dialog hanging.** `crmSearchTaskRelationship.js`
+defines no `onError`, yet the template binds the batch runner's `error` to
+`$ctrl.onError(error)`; the Angular expression swallows the missing function,
+so a rejected `Relationship.save` shows nothing and the dialog stays on
+"Adding relationships..." (read from the code, not run). The React renderer
+alerts with the server's message and closes the dialog.

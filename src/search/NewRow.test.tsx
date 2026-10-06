@@ -10,10 +10,12 @@ function setup({
   inlineEdit,
   settings: extra = {},
   editable: extraEditable = {},
+  handlers = {},
 }: {
   inlineEdit?: (params: Record<string, unknown>) => unknown;
   settings?: Partial<DisplaySettings>;
   editable?: Record<string, EditableInfo>;
+  handlers?: Parameters<typeof mockApi>[0];
 } = {}) {
   const row = (key: number, label: string, description = ""): Row => ({
     key,
@@ -47,6 +49,7 @@ function setup({
         const values = params.values as { label: string; description?: string };
         return [row(2, values.label, values.description)];
       }),
+    ...handlers,
   });
   renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} afform="afsearchX" />);
   const edits = () =>
@@ -118,6 +121,41 @@ describe("editableRow.create", () => {
       expect(edits()).toHaveLength(1);
     });
     expect(edits()[0]?.values).toEqual({ label: "Three" });
+  });
+
+  it("leaves Enter and Escape with an open reference list, then saves the pick", async () => {
+    const { edits } = setup({
+      editable: {
+        description: editInfo({
+          value_key: "domain_id",
+          entity: "OptionValue",
+          fk_entity: "Domain",
+        }),
+      },
+      handlers: {
+        "Domain.autocomplete": () =>
+          Object.assign([{ id: 2, label: "Second" }], { countMatched: 1 }),
+      },
+    });
+    await screen.findByText("One");
+    await userEvent.click(addButton());
+    await userEvent.type(within(newRow()).getByRole("textbox", { name: "Label" }), "Three");
+    const domain = within(newRow()).getByRole("combobox", { name: "Description" });
+    await userEvent.type(domain, "Se");
+    await screen.findByRole("option", { name: "Second" });
+    await userEvent.keyboard("{Escape}");
+    expect(rowOpen()).toBe(true);
+    expect(domain).toHaveAttribute("aria-expanded", "false");
+    await userEvent.type(domain, "c");
+    await screen.findByRole("option", { name: "Second" });
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    expect(domain).toHaveValue("Second");
+    expect(edits()).toHaveLength(0);
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => {
+      expect(edits()).toHaveLength(1);
+    });
+    expect(edits()[0]?.values).toEqual({ label: "Three", description: 2 });
   });
 
   it("keeps the row open with the error and the typed values when the save fails", async () => {

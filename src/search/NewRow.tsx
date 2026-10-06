@@ -72,6 +72,8 @@ export function NewRow({ settings, edit, hidden }: NewRowProps) {
     if (!invalid) finish(true);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    // An autocomplete takes Escape and Enter for its open list or typed text, as select2 does.
+    if (event.defaultPrevented) return;
     if (event.key === "Escape") {
       event.preventDefault();
       finish(false);

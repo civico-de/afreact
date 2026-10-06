@@ -31,13 +31,25 @@ export interface ApiBatch {
   successTitle?: string;
   /** The renderer's own dialogs word the result from the counts; takes the place of successMsg. */
   summary?: (counts: BatchCounts) => string;
+  /** A delete the renderer's own dialog settled already runs without the forced question. */
+  settled?: boolean;
   errorMsg?: string;
 }
 
-/** crmSearchBatchRunner's batchCount and countMatched over every batch. */
+/** crmSearchBatchRunner's batchCount, countMatched and result rows over every batch. */
 export interface BatchCounts {
   fetched: number;
   matched: number;
+  rows: Record<string, unknown>[];
+}
+
+/** GetSearchTasks::getRelationshipTypes(): one entry per direction, keyed "<type>_<a>_<b>". */
+export interface RelationshipType {
+  id: string;
+  text: string;
+  description?: string | null;
+  contact_type: string;
+  contact_sub_type?: string | null;
 }
 
 /** Angular expressions over the task's data (ids, entity, …), as GetSearchTasks writes them. */
@@ -62,6 +74,7 @@ export interface SearchTask {
   uiDialog?: { templateUrl?: string };
   /** Values the update task starts with, set by hook_civicrm_searchKitTasks. */
   values?: Record<string, unknown> | unknown[];
+  relationshipTypes?: RelationshipType[];
 }
 
 export interface TaskList {
@@ -69,7 +82,7 @@ export interface TaskList {
   entityInfo: EntityInfo;
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 const isString = (value: unknown): value is string => typeof value === "string";
@@ -189,12 +202,14 @@ export type TaskRun =
   | { kind: "download" }
   | { kind: "update" }
   | { kind: "tag" }
+  | { kind: "relationship" }
   | { kind: "unsupported"; reason: string };
 
 /** The core task dialogs the renderer replaces with its own. */
 const DOWNLOAD_DIALOG = "~/crmSearchTasks/crmSearchTaskDownload.html";
 const UPDATE_DIALOG = "~/crmSearchTasks/crmSearchTaskUpdate.html";
 const TAG_DIALOG = "~/crmSearchTasks/crmSearchTaskTag.html";
+const RELATIONSHIP_DIALOG = "~/crmSearchTasks/crmSearchTaskRelationship.html";
 
 /** A field the update task may set, as searchTaskFieldsTrait and GetSearchTasks read getFields. */
 export interface UpdateField {
@@ -387,7 +402,76 @@ export function tagBatch(action: "save" | "delete", entity: string, tagIds: numb
     runMsg: action === "save" ? "Adding tags..." : "Removing tags...",
     successTitle: "Saved",
     summary,
+    settled: true,
     errorMsg: "An error occurred while updating tags.",
+  };
+}
+
+/** crmSearchTaskRelationship's onChangeRelationship(): a relationship type's editable fields. */
+export function relationshipFieldsCall(typeId: string): ApiCall {
+  return [
+    "Relationship",
+    "getFields",
+    {
+      action: "create",
+      values: { relationship_type_id: typeId },
+      loadOptions: ["id", "name", "label", "description", "color", "icon"],
+      select: [
+        "name",
+        "label",
+        "description",
+        "input_type",
+        "data_type",
+        "serialize",
+        "options",
+        "fk_entity",
+        "nullable",
+        "required",
+      ],
+      where: [
+        ["readonly", "=", false],
+        [
+          "OR",
+          [["type", "=", "Custom"], ["name", "IN", ["description", "start_date", "end_date"]]],
+        ],
+      ],
+    },
+  ];
+}
+
+/**
+ * crmSearchTaskRelationship's submit(): one relationship of the chosen type between every
+ * selected contact (side a) and the chosen one (side b); core's messages.
+ */
+export function relationshipBatch(
+  type: string,
+  contactId: number,
+  values: Record<string, unknown>,
+): ApiBatch {
+  const [typeId, a, b] = type.split("_");
+  if (!typeId || !a || !b) throw new Error(`Unexpected relationship type key: ${type}`);
+  const summary = ({ rows }: BatchCounts) => {
+    const duplicate = rows.filter((row) => !!row.duplicate_id).length;
+    const added = ts("1 relationship added.", {
+      plural: "%count relationships added.",
+      count: rows.length - duplicate,
+    });
+    const existing = ts("1 relationship already exists.", {
+      plural: "%count relationships already exist.",
+      count: duplicate,
+    });
+    return duplicate > 0 ? `${added} ${existing}` : added;
+  };
+  return {
+    entity: "Relationship",
+    action: "save",
+    idField: `contact_id_${a}`,
+    params: {
+      defaults: { ...values, relationship_type_id: typeId, [`contact_id_${b}`]: contactId },
+    },
+    runMsg: "Adding relationships...",
+    successTitle: "Saved",
+    summary,
   };
 }
 
@@ -464,6 +548,7 @@ export function taskRun(task: SearchTask): TaskRun {
   if (template === DOWNLOAD_DIALOG) return { kind: "download" };
   if (template === UPDATE_DIALOG) return { kind: "update" };
   if (template === TAG_DIALOG) return { kind: "tag" };
+  if (template === RELATIONSHIP_DIALOG) return { kind: "relationship" };
   if (template) return { kind: "unsupported", reason: `Angular dialog ${template}` };
   const batch = task.apiBatch;
   if (!isRecord(batch) || !isString(batch.action))

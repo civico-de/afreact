@@ -12,6 +12,8 @@ import {
   inlineEditCall,
   parseTaskList,
   referencedTasks,
+  relationshipBatch,
+  relationshipFieldsCall,
   tagBatch,
   tagCalls,
   tagEntity,
@@ -60,6 +62,12 @@ const relationship: SearchTask = {
   title: "Add Relationship",
   number: "> 0",
   uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskRelationship.html" },
+};
+const mailing: SearchTask = {
+  name: "contact.mailing",
+  title: "Email - schedule/send via CiviMail",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskMailing.html" },
 };
 const merge: SearchTask = {
   name: "contact.merge",
@@ -152,17 +160,18 @@ describe("taskRun", () => {
     expect(taskRun(label)).toEqual({ kind: "redirect", target: merge.crmPopup });
   });
 
-  it("runs the download, update and tag tasks itself", () => {
+  it("runs the download, update, tag and relationship tasks itself", () => {
     expect(taskRun(download)).toEqual({ kind: "download" });
     const update = { ...tag, uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskUpdate.html" } };
     expect(taskRun(update)).toEqual({ kind: "update" });
     expect(taskRun(tag)).toEqual({ kind: "tag" });
+    expect(taskRun(relationship)).toEqual({ kind: "relationship" });
   });
 
   it("names why it cannot run Angular dialogs, input fields and the rest", () => {
-    expect(taskRun(relationship)).toEqual({
+    expect(taskRun(mailing)).toEqual({
       kind: "unsupported",
-      reason: "Angular dialog ~/crmSearchTasks/crmSearchTaskRelationship.html",
+      reason: "Angular dialog ~/crmSearchTasks/crmSearchTaskMailing.html",
     });
     const where = { name: "geo", label: "Where", input_type: "Location", data_type: "String" };
     const located = { ...disable, apiBatch: { action: "save", fields: [where] } };
@@ -203,9 +212,9 @@ describe("referencedTasks and unsupportedTaskNotes", () => {
   });
 
   it("notes only the referenced tasks the renderer cannot run", () => {
-    const tasks = [disable, download, tag, relationship, merge];
+    const tasks = [disable, download, tag, relationship, mailing, merge];
     expect(unsupportedTaskNotes(tasks, "all")).toEqual([
-      "task contact.relationship (Angular dialog ~/crmSearchTasks/crmSearchTaskRelationship.html)",
+      "task contact.mailing (Angular dialog ~/crmSearchTasks/crmSearchTaskMailing.html)",
     ]);
     expect(unsupportedTaskNotes(tasks, new Set(["disable"]))).toEqual([]);
   });
@@ -419,8 +428,8 @@ describe("tag task", () => {
       },
     ]);
     expect(add).toMatchObject({ runMsg: "Adding tags...", successTitle: "Saved" });
-    expect(add.summary?.({ fetched: 4, matched: 0 })).toBe("4 tags added.");
-    expect(add.summary?.({ fetched: 4, matched: 3 })).toBe(
+    expect(add.summary?.({ fetched: 4, matched: 0, rows: [] })).toBe("4 tags added.");
+    expect(add.summary?.({ fetched: 4, matched: 3, rows: [] })).toBe(
       "1 tag added 3 tags already exist and were not added.",
     );
     const remove = tagBatch("delete", "Activity", [3]);
@@ -435,7 +444,55 @@ describe("tag task", () => {
         ],
       },
     ]);
-    expect(remove.summary?.({ fetched: 1, matched: 1 })).toBe("1 tag removed.");
-    expect(remove.summary?.({ fetched: 2, matched: 2 })).toBe("2 tags removed.");
+    expect(remove.summary?.({ fetched: 1, matched: 1, rows: [] })).toBe("1 tag removed.");
+    expect(remove.summary?.({ fetched: 2, matched: 2, rows: [] })).toBe("2 tags removed.");
+  });
+});
+
+describe("relationship task", () => {
+  it("asks for the type's editable fields as the dialog does", () => {
+    const [entity, action, params] = relationshipFieldsCall("5");
+    expect(entity).toBe("Relationship");
+    expect(action).toBe("getFields");
+    expect(params).toMatchObject({
+      action: "create",
+      values: { relationship_type_id: "5" },
+      where: [
+        ["readonly", "=", false],
+        [
+          "OR",
+          [["type", "=", "Custom"], ["name", "IN", ["description", "start_date", "end_date"]]],
+        ],
+      ],
+    });
+  });
+
+  it("relates every selected contact on side a to the chosen one on side b", () => {
+    const batch = relationshipBatch("5_a_b", 42, { description: "Met at the fair" });
+    expect(batchCall(batch, contact, [1, 2])).toEqual([
+      "Relationship",
+      "save",
+      {
+        defaults: { description: "Met at the fair", relationship_type_id: "5", contact_id_b: 42 },
+        records: [{ contact_id_a: 1 }, { contact_id_a: 2 }],
+      },
+    ]);
+    expect(batch).toMatchObject({ runMsg: "Adding relationships...", successTitle: "Saved" });
+    const reverse = relationshipBatch("5_b_a", 42, {});
+    expect(batchCall(reverse, contact, [1])).toEqual([
+      "Relationship",
+      "save",
+      { defaults: { relationship_type_id: "5", contact_id_a: 42 }, records: [{ contact_id_b: 1 }] },
+    ]);
+    expect(() => relationshipBatch("5", 42, {})).toThrow("Unexpected relationship type key: 5");
+  });
+
+  it("counts the duplicates the server reports in the summary", () => {
+    const { summary } = relationshipBatch("5_a_b", 42, {});
+    const counts = (rows: Record<string, unknown>[]) => ({ fetched: 0, matched: 0, rows });
+    expect(summary?.(counts([{ id: 1 }, { id: 2 }]))).toBe("2 relationships added.");
+    expect(summary?.(counts([{ id: 1 }, { id: 2, duplicate_id: 7 }]))).toBe(
+      "1 relationship added. 1 relationship already exists.",
+    );
   });
 });
