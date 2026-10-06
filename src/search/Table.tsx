@@ -1,6 +1,6 @@
 import type { MouseEvent, ReactNode } from "react";
 import { onButtonKey } from "../keys";
-import { BodyRows, ControlHeader, PlaceholderRows, TallyRow } from "./Body";
+import { BodyRows, ControlHeader, PlaceholderRows, TallyRow, useCollapse } from "./Body";
 import { InlineEditContext, type InlineEdit } from "./inlineEdit";
 import { noResultsText, ServerError } from "./Items";
 import { NewRow } from "./NewRow";
@@ -33,6 +33,7 @@ interface TableViewProps {
 /** crmSearchDisplayTable.html: the header with sort controls, the rows and the totals. */
 export function TableView(props: TableViewProps) {
   const { settings, label, loading, result, error, hidden, activeSort, onSort } = props;
+  const collapse = useCollapse(result?.rows ?? [], settings);
   const directionOf = (key: string | undefined) =>
     activeSort.find(([sorted]) => sorted === key)?.[1] ?? null;
   const tally = settings.tally;
@@ -122,7 +123,11 @@ export function TableView(props: TableViewProps) {
         )}
         {result && (
           <InlineEditContext value={props.inlineEdit}>
-            <ReorderRows reorder={props.reorder} rows={result.rows}>
+            <ReorderRows
+              reorder={props.reorder}
+              rows={result.rows}
+              shown={result.rows.filter((row) => !collapse.hidden.has(row.key))}
+            >
               {(drag) => (
                 <BodyRows
                   rows={result.rows}
@@ -133,6 +138,7 @@ export function TableView(props: TableViewProps) {
                   drag={drag}
                   onLinkClick={props.onLinkClick}
                   hidden={hidden}
+                  collapse={collapse}
                 />
               )}
             </ReorderRows>

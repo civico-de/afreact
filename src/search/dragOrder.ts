@@ -21,7 +21,8 @@ function parentOf(rows: Row[], index: number): number {
  * `active` moved to the place of `over`, and the weight it takes: the weight of the row it
  * displaces, as updateDraggableWeights() in crmSearchDisplayTable sends it. In a hierarchical
  * table the row brings its sub-rows and moves among its siblings only, since the weight orders
- * those; null when `over` is no sibling.
+ * those; a drop on a sibling's sub-row counts for that sibling, one on its own sub-row changes
+ * nothing, and one under another parent or at another depth gives null.
  */
 export function moveRow(
   rows: Row[],
@@ -31,20 +32,25 @@ export function moveRow(
   hierarchical = false,
 ): { rows: Row[]; weight: unknown } | null {
   const from = rows.findIndex((row) => row.key === active);
-  const to = rows.findIndex((row) => row.key === over);
+  let to = rows.findIndex((row) => row.key === over);
   const moved = rows[from];
-  const displaced = rows[to];
-  if (!moved || !displaced)
+  if (!moved || to < 0)
     throw new Error(`Row ${String(active)} or ${String(over)} is not on this page.`);
+  if (hierarchical) {
+    const depth = rowDepth(moved);
+    while (to >= 0 && rowDepth(rows[to]!) > depth) to = parentOf(rows, to);
+    if (to < 0 || rowDepth(rows[to]!) !== depth || parentOf(rows, from) !== parentOf(rows, to))
+      return null;
+  }
+  const displaced = rows[to]!;
   const weight = displaced.data?.[weightField];
   if (weight === undefined) throw new Error(`Row ${String(over)} has no ${weightField}.`);
+  if (to === from) return { rows, weight };
   if (!hierarchical) {
     const next = rows.filter((row) => row !== moved);
     next.splice(to, 0, moved);
     return { rows: next, weight };
   }
-  if (rowDepth(moved) !== rowDepth(displaced) || parentOf(rows, from) !== parentOf(rows, to))
-    return null;
   const moving = block(rows, from);
   const target = block(rows, to);
   const rest = rows.filter((row) => !moving.includes(row));

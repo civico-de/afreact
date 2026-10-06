@@ -27,9 +27,32 @@ interface BodyRowsProps {
   onLinkClick: (link: Link, key: Row["key"], event: MouseEvent<HTMLAnchorElement>) => void;
   /** Columns the column picker hides. */
   hidden?: ReadonlySet<number>;
+  /** Which rows are folded up, from useCollapse(). */
+  collapse: Collapse;
 }
 
 const NONE: ReadonlySet<number> = new Set();
+
+export interface Collapse {
+  /** Keys of the rows under a collapsed parent. */
+  hidden: ReadonlySet<Row["key"]>;
+  isCollapsed: (row: Row) => boolean;
+  toggle: (row: Row) => void;
+}
+
+/** crmSearchDisplayToggleCollapse's state per row, kept while the rows change. */
+export function useCollapse(rows: Row[], settings: DisplaySettings): Collapse {
+  const [toggled, setToggled] = useState<ReadonlyMap<Row["key"], boolean>>(new Map());
+  const isCollapsed = (row: Row) =>
+    descendents(row) > 0 && (toggled.get(row.key) ?? startsCollapsed(row, settings));
+  return {
+    hidden: hiddenRows(rows, isCollapsed),
+    isCollapsed,
+    toggle: (row) => {
+      setToggled(new Map(toggled).set(row.key, !isCollapsed(row)));
+    },
+  };
+}
 
 /** crmSearchDisplayTableBody.html: one row per result, rows under a collapsed parent left out. */
 export function BodyRows({
@@ -41,16 +64,13 @@ export function BodyRows({
   drag,
   onLinkClick,
   hidden: hiddenColumns = NONE,
+  collapse,
 }: BodyRowsProps) {
   const edit = useInlineEditContext();
-  const [toggled, setToggled] = useState<ReadonlyMap<Row["key"], boolean>>(new Map());
   const control = hasControlColumn(settings);
-  const isCollapsed = (row: Row) =>
-    descendents(row) > 0 && (toggled.get(row.key) ?? startsCollapsed(row, settings));
-  const hidden = hiddenRows(rows, isCollapsed);
   const Tr = drag?.Row ?? PlainRow;
   return rows
-    .filter((row) => !hidden.has(row.key))
+    .filter((row) => !collapse.hidden.has(row.key))
     .map((row) => (
       <Tr key={row.key} rowKey={row.key}>
         {control && (
@@ -76,9 +96,9 @@ export function BodyRows({
             {settings.collapsible && (
               <ToggleCollapse
                 count={descendents(row)}
-                collapsed={isCollapsed(row)}
+                collapsed={collapse.isCollapsed(row)}
                 onToggle={() => {
-                  setToggled(new Map(toggled).set(row.key, !isCollapsed(row)));
+                  collapse.toggle(row);
                 }}
               />
             )}

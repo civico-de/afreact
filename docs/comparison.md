@@ -65,7 +65,7 @@ that no longer excuses anything fails the test.
 | Emptying an in-place text | saves `""` | saves `null` where the field can be emptied |
 | Totals after an in-place edit | kept (see upstream bugs) | asked again |
 | Drag to reorder | jQuery UI sortable, pointer only | dnd-kit: pointer, and keyboard (Space or Enter, arrow keys) with screen-reader announcements; dnd-kit loads with the first draggable table on a page |
-| Drag to reorder in a hierarchical table | the row moves alone in the flat list and takes the weight of the row it displaces, whatever its depth or parent; its sub-rows stay behind until the next search | the row moves with its sub-rows, among its siblings only, and takes the displaced sibling's weight (the weight orders siblings; `SearchDisplay.inlineEdit` with `draggableWeight` changes nothing else); a drop under another parent or at another depth leaves the row where it was, with a notice |
+| Drag to reorder in a hierarchical table | the row moves alone in the flat list and takes the weight of the row it displaces, whatever its depth or parent; its sub-rows stay behind until the next search | the row moves with its sub-rows, among its siblings only, and takes the displaced sibling's weight, since weights order siblings (`SearchDisplay.inlineEdit` with `draggableWeight` could also take a new parent; React sends the weight only); a drop on a sibling's sub-row counts for that sibling, one under another parent or at another depth leaves the row where it was, announced and with a notice |
 | Toggle fields | checkbox drawn as a switch | the same checkbox with `role="switch"` |
 | Tab sets (`af-tabset`, `crm-ui-tab-set`) | tab list with clickable links | ARIA tabs pattern: `role="tab"` on the focusable element with `aria-selected` and `aria-controls`, one tab in the Tab order, arrow keys, Home and End |
 | Tab names without `name` | `tab0`, `tab1` … from one counter per page | numbered per tab set, the same on a page with one tab set |
@@ -527,8 +527,9 @@ marks the editable cells only.
 **Dragging a row of a hierarchical table leaves its sub-rows behind.** The
 table's `draggableOptions` move the row alone through the flat result list
 and give it the weight of whatever row it displaces, even one under another
-parent; the weight then orders it among the wrong siblings. React moves the
-row with its sub-rows and only among its siblings.
+parent; a weight from another sibling group then puts it at an arbitrary place
+among its own siblings, which core renumbers around it. React moves the row
+with its sub-rows and only among its siblings.
 
 **The "Add" row of `editableRow.create` throws per input.** The row's inputs
 run `crmSearchDisplayEditable` without a row, and its `$onInit` reads

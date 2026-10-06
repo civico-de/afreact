@@ -22,6 +22,8 @@ interface SortableRowsProps {
   /** The keys of the rows shown, in their order. */
   keys: Row["key"][];
   nameOf: (key: UniqueIdentifier) => string;
+  /** The position the row would take after a drop on `over`, or null where it stays. */
+  landing: (active: UniqueIdentifier, over: UniqueIdentifier) => number | null;
   /** While a move is saved, the weights on the page are not final. */
   disabled: boolean;
   onMove: (active: Row["key"], over: Row["key"]) => void;
@@ -29,7 +31,14 @@ interface SortableRowsProps {
 }
 
 /** The rows of a draggable table, moved by pointer or by keyboard, with announcements. */
-export function SortableRows({ keys, nameOf, disabled, onMove, children }: SortableRowsProps) {
+export function SortableRows({
+  keys,
+  nameOf,
+  landing,
+  disabled,
+  onMove,
+  children,
+}: SortableRowsProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -39,6 +48,11 @@ export function SortableRows({ keys, nameOf, disabled, onMove, children }: Sorta
     2: keys.indexOf(key) + 1,
     3: keys.length,
   });
+  // Where the row lands, which differs from the place of `over` when sub-rows move along.
+  const lands = (active: UniqueIdentifier, over: UniqueIdentifier) => {
+    const position = landing(active, over);
+    return position === null ? null : { 1: nameOf(active), 2: position, 3: keys.length };
+  };
   // A pick-up is over its own place at once; that must not replace the pick-up announcement.
   const pickedUp = useRef(false);
   const announcements: Announcements = {
@@ -50,12 +64,18 @@ export function SortableRows({ keys, nameOf, disabled, onMove, children }: Sorta
       const first = pickedUp.current;
       pickedUp.current = false;
       if (!over || (first && over.id === active.id)) return undefined;
-      return ts("%1 moved to position %2 of %3.", { ...at(over.id), 1: nameOf(active.id) });
+      const to = lands(active.id, over.id);
+      return to
+        ? ts("%1 moved to position %2 of %3.", to)
+        : ts("%1 cannot move there: a row moves among its siblings only.", at(active.id));
     },
-    onDragEnd: ({ active, over }) =>
-      over
-        ? ts("%1 dropped at position %2 of %3.", { ...at(over.id), 1: nameOf(active.id) })
-        : ts("%1 dropped.", { 1: nameOf(active.id) }),
+    onDragEnd: ({ active, over }) => {
+      const to = over && lands(active.id, over.id);
+      if (to) return ts("%1 dropped at position %2 of %3.", to);
+      return over
+        ? ts("%1 stays at position %2 of %3: a row moves among its siblings only.", at(active.id))
+        : ts("%1 dropped.", { 1: nameOf(active.id) });
+    },
     onDragCancel: ({ active }) =>
       ts("Moving %1 was cancelled; it stays at position %2 of %3.", at(active.id)),
   };

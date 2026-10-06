@@ -252,6 +252,8 @@ describe("AfreactSearch drag to reorder", () => {
       await waitFor(() => {
         expect(shownOrder()).toEqual(["3", "1", "2", "4", "5"]);
       });
+      // Where the row lands, not where the displaced row was.
+      expect(announced()).toBe("Name 1 dropped at position 2 of 5.");
       const edits = calls.filter(({ call }) => call === "SearchDisplay.inlineEdit");
       expect(edits.map(({ params }) => [params.rowKey, params.values])).toEqual([
         [1, { weight: 20 }],
@@ -261,11 +263,48 @@ describe("AfreactSearch drag to reorder", () => {
       });
     });
 
+    it("announces each step by where the row would land", async () => {
+      serve(() => ({}), tree);
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={hierarchical} />);
+      await screen.findByRole("button", { name: "Move Name 1" });
+      handle("Name 1").focus();
+      await userEvent.keyboard("[Space]");
+      expect(announced()).toBe("Picked up Name 1, position 1 of 5.");
+      await userEvent.keyboard("[ArrowDown]");
+      expect(announced()).toBe("Name 1 moved to position 1 of 5.");
+      await userEvent.keyboard("[ArrowDown]");
+      expect(announced()).toBe("Name 1 moved to position 2 of 5.");
+      await userEvent.keyboard("{Escape}");
+      expect(announced()).toBe("Moving Name 1 was cancelled; it stays at position 1 of 5.");
+    });
+
+    it("takes a drop on a sibling's sub-row for the sibling", async () => {
+      const calls = serve(() => ({ 1: 30, 4: 20 }), tree);
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={hierarchical} />);
+      await screen.findByRole("button", { name: "Move Name 1" });
+      // Over its own sub-row, the sibling without sub-rows, the next sibling and its sub-row.
+      await keyboardMove("Name 1", 4);
+      await waitFor(() => {
+        expect(shownOrder()).toEqual(["3", "4", "5", "1", "2"]);
+      });
+      expect(announced()).toBe("Name 1 dropped at position 4 of 5.");
+      const edits = calls.filter(({ call }) => call === "SearchDisplay.inlineEdit");
+      expect(edits.map(({ params }) => [params.rowKey, params.values])).toEqual([
+        [1, { weight: 30 }],
+      ]);
+    });
+
     it("leaves a row dropped under another parent where it is, and says so", async () => {
       const calls = serve(() => ({}), tree);
       renderWithQuery(<AfreactSearch search="S" display="D" settings={hierarchical} />);
       await screen.findByRole("button", { name: "Move Name 2" });
-      await keyboardMove("Name 2", 3);
+      handle("Name 2").focus();
+      await userEvent.keyboard("[Space][ArrowDown]");
+      expect(announced()).toBe("Name 2 cannot move there: a row moves among its siblings only.");
+      await userEvent.keyboard("[Space]");
+      expect(announced()).toBe(
+        "Name 2 stays at position 2 of 5: a row moves among its siblings only.",
+      );
       await waitFor(() => {
         expect(window.CRM.alert).toHaveBeenCalledWith(
           "Name 2 stays where it is: a row moves among its siblings only.",
@@ -275,6 +314,52 @@ describe("AfreactSearch drag to reorder", () => {
       });
       expect(shownOrder()).toEqual(["1", "2", "3", "4", "5"]);
       expect(calls.filter(({ call }) => call === "SearchDisplay.inlineEdit")).toHaveLength(0);
+    });
+
+    it("shows the row's name in the notice as text, not as markup", async () => {
+      const marked = tree.map((row) =>
+        row.key === 2 ? { ...row, columns: [{ val: "<b>Two</b>" }, { val: 10 }] } : row,
+      );
+      serve(() => ({}), marked);
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={hierarchical} />);
+      await screen.findByRole("button", { name: "Move <b>Two</b>" });
+      await keyboardMove("<b>Two</b>", 1);
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "&lt;b&gt;Two&lt;/b&gt; stays where it is: a row moves among its siblings only.",
+          "Not moved",
+          "info",
+        );
+      });
+    });
+
+    it("steps over the rows shown only, with sub-rows folded up moving along", async () => {
+      const calls = serve(() => ({ 1: 20, 3: 10 }), tree);
+      renderWithQuery(
+        <AfreactSearch
+          search="S"
+          display="D"
+          settings={{ ...hierarchical, collapsible: "closed" }}
+        />,
+      );
+      await screen.findByRole("button", { name: "Move Name 1" });
+      expect(shownOrder()).toEqual(["1", "3", "4"]);
+      handle("Name 1").focus();
+      await userEvent.keyboard("[Space]");
+      expect(announced()).toBe("Picked up Name 1, position 1 of 3.");
+      await userEvent.keyboard("[ArrowDown]");
+      expect(announced()).toBe("Name 1 moved to position 2 of 3.");
+      await userEvent.keyboard("[Space]");
+      await waitFor(() => {
+        expect(shownOrder()).toEqual(["3", "1", "4"]);
+      });
+      expect(announced()).toBe("Name 1 dropped at position 2 of 3.");
+      const edits = calls.filter(({ call }) => call === "SearchDisplay.inlineEdit");
+      expect(edits.map(({ params }) => [params.rowKey, params.values])).toEqual([
+        [1, { weight: 20 }],
+      ]);
+      await userEvent.click(screen.getAllByRole("button", { name: /Show sub-rows/ })[0]!);
+      expect(shownOrder()).toEqual(["3", "1", "2", "4"]);
     });
   });
 

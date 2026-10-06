@@ -42,7 +42,7 @@ function depth(row: Row, key: "_depth" | "_descendents"): number {
   return Number.isNaN(value) ? 0 : value;
 }
 
-/** Sub-rows of a hierarchical row on the same page. */
+/** Sub-rows of a hierarchical row, counted before the page limit; a page may cut them off. */
 export function descendents(row: Row): number {
   return depth(row, "_descendents");
 }

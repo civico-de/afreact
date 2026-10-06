@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import { api4, errorMessage, isApiError } from "../api/civi";
+import { asHtml } from "../html";
 import { RouteOptionsContext } from "../search/displayFilters";
 import type { ExpressionContext } from "./expressions";
 import { DisplayCountContext } from "../url/UrlState";
@@ -163,13 +164,6 @@ function invalidMessage(control: Control): string {
       : ts("One or more fields must have at least %1 characters.", { 1: minLength });
   }
   return ts("Please check all answers are valid.");
-}
-
-/** CRM.alert() takes HTML; the server's messages are text. */
-function asHtml(text: string): string {
-  const element = document.createElement("div");
-  element.textContent = text;
-  return element.innerHTML;
 }
 
 /** afForm's handleError(): validation messages as a warning, anything else as an error. */

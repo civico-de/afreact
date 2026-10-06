@@ -63,17 +63,40 @@ describe("moveRow", () => {
       expect(moved?.weight).toBe(10);
     });
 
-    it("moves sub-rows among their own siblings", () => {
-      const moved = moveRow(tree, 3, 2, "weight", true);
-      expect(keys(moved?.rows ?? [])).toEqual([1, 3, 4, 2, 5, 6, 7]);
-      expect(moved?.weight).toBe(10);
+    it("moves sub-rows among their own siblings, up and down", () => {
+      const up = moveRow(tree, 3, 2, "weight", true);
+      expect(keys(up?.rows ?? [])).toEqual([1, 3, 4, 2, 5, 6, 7]);
+      expect(up?.weight).toBe(10);
+      const down = moveRow(tree, 2, 3, "weight", true);
+      expect(keys(down?.rows ?? [])).toEqual([1, 3, 4, 2, 5, 6, 7]);
+      expect(down?.weight).toBe(20);
+    });
+
+    it("takes a drop on a sibling's sub-row for the sibling", () => {
+      const moved = moveRow(tree, 1, 7, "weight", true);
+      expect(keys(moved?.rows ?? [])).toEqual([5, 6, 7, 1, 2, 3, 4]);
+      expect(moved?.weight).toBe(30);
+      const before = moveRow(tree, 5, 4, "weight", true);
+      expect(keys(before?.rows ?? [])).toEqual([5, 1, 2, 3, 4, 6, 7]);
+      expect(before?.weight).toBe(10);
+    });
+
+    it("changes nothing on a drop on the row itself or its own sub-row", () => {
+      expect(moveRow(tree, 1, 1, "weight", true)?.rows).toBe(tree);
+      expect(moveRow(tree, 1, 4, "weight", true)?.rows).toBe(tree);
+      expect(moveRow(rows, 2, 2, "weight")?.rows).toBe(rows);
     });
 
     it("refuses a move under another parent or to another depth", () => {
       expect(moveRow(tree, 2, 7, "weight", true)).toBeNull();
       expect(moveRow(tree, 4, 2, "weight", true)).toBeNull();
-      expect(moveRow(tree, 5, 2, "weight", true)).toBeNull();
+      expect(moveRow(tree, 4, 5, "weight", true)).toBeNull();
       expect(keys(tree)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    });
+
+    it("moves a block the page cuts off", () => {
+      const cut = [nested(21, 10, 0), nested(22, 20, 0, 5), nested(23, 10, 1)];
+      expect(keys(moveRow(cut, 22, 21, "weight", true)?.rows ?? [])).toEqual([22, 23, 21]);
     });
   });
 

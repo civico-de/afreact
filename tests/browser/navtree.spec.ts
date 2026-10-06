@@ -107,11 +107,13 @@ test("react: a parent moves with its sub-row past its sibling, never under it", 
   await page.keyboard.press("Space");
   await expect(announced(page)).toHaveText("Picked up Tree A, position 2 of 5.");
   await measured(page, "Tree A");
+  // Over its own sub-row, then over the sibling; the announced place is where the row lands.
   await page.keyboard.press("ArrowDown");
-  await expect(announced(page)).toHaveText("Tree A moved to position 3 of 5.");
+  await expect(announced(page)).toHaveText("Tree A moved to position 2 of 5.");
   await page.keyboard.press("ArrowDown");
   await expect(announced(page)).toHaveText("Tree A moved to position 4 of 5.");
   await page.keyboard.press("Space");
+  await expect(announced(page)).toHaveText("Tree A dropped at position 4 of 5.");
   await expect.poll(() => shown(page)).toEqual(["Tree", "Tree B", "Tree B1", "Tree A", "Tree A1"]);
   await expect.poll(() => stored(page)).toEqual(MOVED);
 
@@ -122,14 +124,41 @@ test("react: a parent moves with its sub-row past its sibling, never under it", 
   await page.keyboard.press("Space");
   await measured(page, "Tree A1");
   await page.keyboard.press("ArrowUp");
-  await expect(announced(page)).toHaveText("Tree A1 moved to position 4 of 5.");
+  await expect(announced(page)).toHaveText(
+    "Tree A1 cannot move there: a row moves among its siblings only.",
+  );
   await page.keyboard.press("ArrowUp");
-  await expect(announced(page)).toHaveText("Tree A1 moved to position 3 of 5.");
+  await expect(announced(page)).toHaveText(
+    "Tree A1 cannot move there: a row moves among its siblings only.",
+  );
   await page.keyboard.press("Space");
+  await expect(announced(page)).toHaveText(
+    "Tree A1 stays at position 5 of 5: a row moves among its siblings only.",
+  );
   await expect(page.locator("#crm-notification-container")).toContainText(
     "Tree A1 stays where it is: a row moves among its siblings only.",
   );
   expect(await shown(page)).toEqual(["Tree", "Tree B", "Tree B1", "Tree A", "Tree A1"]);
+});
+
+/** Drags the handle of `name` to the middle of the row `target`. */
+async function drag(page: Page, name: string, target: string) {
+  const from = await row(page, name).locator(".crm-draggable").boundingBox();
+  const to = await row(page, target).boundingBox();
+  if (!from || !to) throw new Error(`No box for ${name} or ${target}`);
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + from.width / 2, to.y + to.height / 2, { steps: 10 });
+  await page.mouse.up();
+}
+
+test("react: a drop on a sibling's sub-row places the row after that sibling", async ({ page }) => {
+  await create(page);
+  await page.goto(render("react"));
+  await expect(row(page, "Tree B1")).toBeVisible(LOAD);
+  await drag(page, "Tree A", "Tree B1");
+  await expect.poll(() => stored(page)).toEqual(MOVED);
+  await expect.poll(() => shown(page)).toEqual(["Tree", "Tree B", "Tree B1", "Tree A", "Tree A1"]);
 });
 
 for (const renderer of ["react", "angular"] as const) {
@@ -139,6 +168,7 @@ for (const renderer of ["react", "angular"] as const) {
     await create(page);
     await page.goto(render(renderer));
     await expect(row(page, "Tree B1")).toBeVisible(LOAD);
+    // Just past the sibling's middle: core's sortable then puts the row after it.
     const from = await row(page, "Tree A").locator(".crm-draggable").boundingBox();
     const to = await row(page, "Tree B").boundingBox();
     if (!from || !to) throw new Error("No box for Tree A or Tree B");
