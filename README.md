@@ -180,12 +180,12 @@ differ (pinned by `PagesHeadlessTest`). The demo forms live in `ang/`.
 
 ## React vs Angular
 
-On the dev stack with debug off, the React demo page is ready (form input and
-first table row shown) sooner than the Angular one: 565–870 ms against
-1215–1375 ms from a cold cache, with almost the same script and style bytes.
-Absolute times drift between sessions; the order does not. Most of the lead
-is SearchKit's 600 ms debounce before the Angular table's first request.
-`npm run video` records both pages side by side (see [Demo video](#demo-video)).
+On the dev stack with debug off, every search display is ready about 600 ms
+sooner on React (roughly 200 against 800 ms from a cold cache), which is
+SearchKit's filter debounce before the Angular table's first request; forms
+come out within 40 ms of each other, both waiting for `Afform.prefill`.
+`tests/browser/pages.spec.ts` measures every page and comparison.md keeps the
+table. `npm run video` records both pages side by side (see [Demo video](#demo-video)).
 
 [docs/comparison.md](docs/comparison.md) holds the parity gaps, the measured
 load numbers and what they mean; [docs/architecture.md](docs/architecture.md)
@@ -241,15 +241,24 @@ CIVICRM_BASE_URL=http://localhost:8080 npm run test:e2e
 | `tests/browser/sources.spec.ts` | every layout source renders the demo page to the same DOM; `page` and `bundle` never call `getForm` |
 | `tests/browser/visual.spec.ts` | the React page matches the Angular page part by part in position, size and main styles; differences by design are listed with a reason |
 | `tests/browser/rules.spec.ts` | the rules form on both renderers: expressions, `af-if` (and the values it drops), `af-required`, `af-disabled`, a token default |
+| `tests/browser/details.spec.ts` | the finer points of a form on both renderers: HTML in labels and help, a live token in a content block, hash values, a display-only date, a text area's character count, a required checkbox list, a container's style, the primary flag in repeated joins and an extra field in the submission |
+| `tests/browser/fields.spec.ts` | every field type of the fields demo saves the same record on both renderers, and the search ranges send `SearchDisplay.run` the same filters |
+| `tests/browser/tabs.spec.ts` | a tab set with fields in two tabs, a Toggle and a display whose row count is the tab's badge, on both renderers |
+| `tests/browser/submission.spec.ts` | after a submission on both renderers: the confirmation message with a token, the redirect with tokens, a form closed for submissions |
 | `tests/browser/joins.spec.ts` | the joins form on both renderers: a Home and a Work email block with Home hidden by `af-if`, the location each saves to on create, and the record each shows and updates from the URL; Angular's deviation is core's (see comparison.md) |
 | `tests/browser/table.spec.ts` | SearchKit tables on both renderers: equal cells, links, classes, toolbar, counts and totals on the demo fixtures and the core forms the React table renders without a note; row menus, the menu keyboard path, collapsible rows, a `crm-popup` link and the reload after a popup form |
 | `tests/browser/displays.spec.ts` | list, grid and tree displays on both renderers: equal items, columns, labels, classes, grid tracks and pager on the demo fixtures; tree branches opening alike, and on React their `aria-expanded` state and the keyboard path |
 | `tests/browser/editable.spec.ts` | in-place editing on both renderers: a text cell saved with Enter and an option list saved with the Save button store the same values; the column picker hides and shows the same columns; on React, opening by keyboard, focus back on Escape and a failed save that keeps the editor open |
+| `tests/browser/fullrow.spec.ts` | full-row editing (`editableRow.full`) on both renderers: one click opens every editable cell, the control column saves them in one go, Escape drops the changes |
+| `tests/browser/newrow.spec.ts` | the Add row of `editableRow.create` creates the option through `SearchDisplay.inlineEdit` as core's row does |
+| `tests/browser/actions.spec.ts` | bulk actions on both renderers: select, download, update, disable and delete rows, then equal tables and records |
+| `tests/browser/mailing.spec.ts`, `relationship.spec.ts`, `tags.spec.ts` | the mailing, relationship and tag tasks on both renderers store the same mailing, group, relationship and tag rows |
 | `tests/browser/reorder.spec.ts` | drag to reorder on the demo options table: keyboard moves with announcements in React, pointer moves on both renderers, the stored weights and the order after a reload |
 | `tests/browser/navtree.spec.ts` | drag in the hierarchical demo table of navigation entries on both renderers: a row moved with its sub-rows among its siblings by keyboard and pointer, the stored weights, the refused drops with their announcements |
 | `tests/browser/checkout.spec.ts` | the checkout block of core's donation form shows the pay-later option's description on both renderers |
 | `tests/browser/treedrag.spec.ts` | drag in the demo tree of navigation entries: keyboard steps through every line and first place with announcements and store the weight and parent; a pointer drop after an item of another branch stores the same weight and parent as Angular does |
 | `tests/browser/filters.spec.ts` | search filters on both renderers: the same filters and rows from the defaults, the URL, stored values and a saved filter set, with one page request and no excluded row shown on first load; typed filters and a reload; the first-row time of each renderer |
+| `tests/browser/takeover.spec.ts` | a listed form rendered by React on its page, a contact summary tab and block, the contact actions popup, a case summary block and an event tab observes the same as the form left to Angular |
 | `tests/browser/dashboard.spec.ts` | on core's dashboard a listed Afform dashlet renders with React next to an unlisted one in Angular, without the listed form's Angular module; refresh and fullscreen render it again; unlisted, both are Angular |
 | `tests/browser/a11y.spec.ts` | axe in light and dark mode finds nothing on the React demo and rules forms, the demo tables (menu and subsearch open), the editable table with its column picker and a filtered search form that the Angular ones pass |
 | `tests/browser/sweep.spec.ts` | every form but blocks on both renderers: the same headings, help, fields (label, input, required, disabled, value), buttons, table headers and first-page rows, and no axe finding that only React has; forms the support report finds nothing unsupported in must pass, the others are reported |
