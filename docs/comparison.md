@@ -68,7 +68,8 @@ that no longer excuses anything fails the test.
 | File fields | upload progress in a CRM.status popup; the Replace link has no `href` and no role | progress in the form's status line, errors in its alert; Replace is a focusable button named after the file, and moves focus to the new file input |
 | Search ranges (`search_range`) | two inputs after the field's label | the same pair as a group named by the label, the inputs named "… from" and "… to"; a select range sends its bounds as typed option ids (`2`) where select2 sends strings (`"2"`) |
 | Form closed for submissions | "Sorry" alert; only the submit button is disabled, the fields stay editable | the same alert, the reason above the form, and every control disabled |
-| Errors from `Afform.submit` and `submitDraft` | an alert only | the same alert, plus a summary above the form that lists each message and takes focus, except after an autosave || Confirmation message | replaces the form; the focus is lost with the button | replaces the form and takes the focus |
+| Errors from `Afform.submit` and `submitDraft` | an alert only | the same alert, plus a summary above the form that lists each message and takes focus, except after an autosave |
+| Confirmation message | replaces the form; the focus is lost with the button | replaces the form and takes the focus |
 | Reset button | `resetForm()` tells the fields to reset (`afFormReset`) and prefills again | the form loads afresh, so repeats, conditions and draft state start over too |
 | Grid displays | boxes in plain `<div>`s | the same boxes with `role="list"` and `role="listitem"`, named by the display label where the display is loaded by name (a form's layout carries no label), as list displays are |
 | Tree items | `<li>` without `data-entity-id` | `<li data-entity-id>`, as list items have it, so focus can return to the row after a reload |
@@ -556,8 +557,11 @@ CRM.status popup reports the error (`afForm.component.js`, `master` as of
 2026-10-05; read from the code, not run). The React renderer counts the
 records as saved but announces nothing: it lists the failed files in its
 alert, disables every field except their file inputs, and Save uploads only
-those again with the same token, without a second `Afform.submit`. Once they
-are uploaded the form finishes as after any submit.
+those again with the same token, without a second `Afform.submit`. A failed
+file is no longer required and has a "Remove file" button, so the submit can
+finish without it. Once the files are uploaded or removed the form finishes as
+after any submit; a user who leaves before that leaves the records saved with
+nothing announced.
 
 **Replacing a join's file never clears it.** The Replace link sets the stored
 file's `id` to null and keeps `file_name`. For a join record,
@@ -579,7 +583,15 @@ draft after `submitDraft`, as afForm does, and sends the record's index.
 and gives a join record without an id an empty placeholder, so a file uploaded
 into the draft for a record the submit creates is not saved, and no upload
 follows because the file is no longer pending (`master` as of 2026-10-06;
-read from the code, not run). Both renderers share it.
+read from the code, not run). The React renderer keeps such a file and uploads
+it again after the submit.
+
+**A submit can cross a running draft save.** afForm lets Submit run while
+`submitDraft` or a draft's upload is in flight, so the late draft answer can
+leave a draft behind the submission, or the draft's upload fails with "Draft
+not found" after a successful save (`afForm.component.js`, `master` as of
+2026-10-06; read from the code, not run). The React renderer keeps the submit
+button disabled until the draft save has ended.
 
 **A range slider is never disabled.** `fields/Range.html` has no
 `ng-disabled`, so `af-disabled` and a saving form leave the slider movable

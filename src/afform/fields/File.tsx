@@ -54,6 +54,7 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
       <i className={`crm-i ${stored.icon ?? ""}`.trim()} role="img" aria-hidden="true" />
     );
     const replace = () => {
+      pending?.delete(key);
       // Both keys empty: the server then clears the field on the entity and on a join record.
       onChange({ id: null, file_name: null });
       setReplaced(true);
@@ -88,14 +89,15 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
       </span>
     );
   }
-  return (
+  const retrying = uploads.retry?.has(key) === true;
+  const chooser = (
     <input
       ref={input}
       id={id}
       type="file"
       name={defn.name}
-      required={defn.required === true}
-      disabled={disabled && !uploads.retry?.has(key)}
+      required={defn.required === true && !retrying}
+      disabled={disabled && !retrying}
       aria-describedby={describedBy}
       onChange={(event) => {
         const file = event.target.files?.[0];
@@ -115,8 +117,26 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
           onUploaded: (stored) => {
             latest.current.onChange(stored);
           },
+          // The submit drops a draft's file on a join record it creates.
+          again: () => !!latest.current.env.joinEntity && !latest.current.env.values.id,
         });
       }}
     />
+  );
+  // The records are saved: the file is no longer required, and leaving it out ends the retry.
+  if (!retrying) return chooser;
+  const remove = () => {
+    if (input.current) input.current.value = "";
+    uploads.pending.delete(key);
+    uploads.changed();
+    input.current?.focus();
+  };
+  return (
+    <>
+      {chooser}{" "}
+      <button type="button" className="btn btn-xs btn-default" onClick={remove}>
+        {ts("Remove file")}
+      </button>
+    </>
   );
 }

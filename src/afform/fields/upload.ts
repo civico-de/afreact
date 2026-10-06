@@ -25,6 +25,8 @@ export interface PendingUpload {
   target: () => UploadTarget;
   /** Shows the stored file in the field. */
   onUploaded: (file: FileInfo) => void;
+  /** Whether the submit must upload the file again after a draft took it. */
+  again: () => boolean;
 }
 
 /** The files chosen in a form's File fields, by field instance; uploaded after Afform.submit. */
@@ -68,7 +70,7 @@ async function uploadFile(formName: string, token: string | null, upload: Pendin
     typeof result === "object" && result !== null && "values" in result ? result.values : null;
   const [stored] = Array.isArray(values) ? values : [];
   // The contact image is written as image_URL and returns no file.
-  if (isFileInfo(stored) && stored.id) upload.onUploaded(stored);
+  return isFileInfo(stored) && stored.id ? stored : null;
 }
 
 /**
@@ -86,8 +88,11 @@ export async function uploadAll(
   for (const [key, upload] of [...uploads]) {
     onStart(upload.file.name);
     try {
-      await uploadFile(formName, token, upload);
-      uploads.delete(key);
+      const stored = await uploadFile(formName, token, upload);
+      // A file chosen or removed meanwhile stands; this one is outdated.
+      if (uploads.get(key) !== upload) continue;
+      if (token !== null || !upload.again()) uploads.delete(key);
+      if (stored) upload.onUploaded(stored);
     } catch (error) {
       failed.push(
         ts("%1 could not be uploaded: %2", { 1: upload.file.name, 2: errorMessage(error) }),

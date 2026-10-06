@@ -17,7 +17,11 @@ interface RangeProps {
 export function rangeValue(defn: FieldDefn, value: unknown): number {
   const stored = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
   if (typeof stored === "number" && !Number.isNaN(stored)) return stored;
-  const { min = 0, max = 100, step = 1 } = defn.input_attrs ?? {};
+  const attrs = defn.input_attrs ?? {};
+  // Option ids set the bounds and may be numeric strings.
+  const min = Number(attrs.min ?? 0);
+  const max = Number(attrs.max ?? 100);
+  const step = Number(attrs.step ?? 1);
   if (max < min) return min;
   const middle = min + Math.round((max - min) / 2 / step) * step;
   return middle > max ? middle - step : middle;

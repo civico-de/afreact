@@ -140,6 +140,8 @@ describe("Range fields", () => {
     expect(at({ min: 5, max: 1 })).toBe(5);
     expect(at({}, "6")).toBe(6);
     expect(at({}, 0)).toBe(0);
+    // Bounds from option ids the form declares as strings.
+    expect(at({ min: "1", max: "4" } as unknown as FieldDefn["input_attrs"])).toBe(3);
   });
 
   it("is disabled with the form", () => {

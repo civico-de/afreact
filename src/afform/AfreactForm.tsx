@@ -234,7 +234,12 @@ interface LoadedFormProps extends Loaded {
 function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: LoadedFormProps) {
   const [data, setData] = useState(initial);
   /** The message above the form; the summary takes focus for what the server rejected. */
-  const [failure, setFailure] = useState<{ message: string; focus: boolean } | null>(null);
+  const [failure, setFailure] = useState<{
+    message: string;
+    focus: boolean;
+    /** From a draft save, whose next success takes it away. */
+    draft?: boolean;
+  } | null>(null);
   const host = useRef<HTMLDivElement>(null);
   const summary = useRef<HTMLDivElement>(null);
   const announceFailure = (error: unknown) => {
@@ -263,7 +268,9 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
     onSuccess: ({ values, response, failed }) => {
       // The records exist: a failed upload leaves only the files to retry, without an announcement.
       if (failed.length) {
-        const retry = ts("The form is saved, except for these files. Save again to upload them.");
+        const retry = ts(
+          "The form is saved, except for these files. Choose them again or remove them, then save.",
+        );
         setFailure({ message: [retry, ...failed].join("\n"), focus: true });
         return;
       }
@@ -305,11 +312,12 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
     },
     onSuccess: (_, { snapshot: saved }) => {
       setDraftSaved(saved);
+      setFailure((current) => (current?.draft ? null : current));
     },
     // As afForm's handleError(), a background save only alerts and leaves the focus alone.
     onError: (error, { snapshot: failed, background }) => {
       alertFailure(error);
-      setFailure({ message: errorMessage(error), focus: !background });
+      setFailure({ message: errorMessage(error), focus: !background, draft: true });
       setDraftFailed(failed);
     },
   });
@@ -351,7 +359,8 @@ function LoadedForm({ name, form, args, initial, closed, pageTitle, onReset }: L
     data,
     update: setData,
     disabled: busy || closed !== null || reset.isPending || !!retry,
-    submitDisabled: busy || closed !== null || reset.isPending,
+    // A submit waits for a running draft save, whose files and late answer would cross it.
+    submitDisabled: busy || closed !== null || reset.isPending || draft.isPending,
     joinOffsets: offsets,
     entities,
     formName: name,
