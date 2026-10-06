@@ -107,7 +107,8 @@ function FieldLinks({ cell, links, onLinkClick }: CellProps & { links: Link[] })
   const left = cell.icons?.left ?? [];
   const right = cell.icons?.right ?? [];
   return links.map((link, index) => (
-    <span key={index}>
+    // Riverlea lays out link cells on the contact summary by Angular's scope class.
+    <span key={index} className="ng-scope">
       <a
         target={link.target}
         href={link.url}

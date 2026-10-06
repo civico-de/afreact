@@ -213,7 +213,8 @@ describe("AfreactSearch", () => {
       />,
     );
     const cell = await screen.findByRole("cell", { name: "Nobody here." });
-    expect(cell.firstElementChild).toHaveClass("alert alert-info text-center");
+    // The binding class is what Riverlea's `td > p.alert.ng-binding` rule sizes the box by.
+    expect(cell.firstElementChild).toHaveClass("alert alert-info text-center ng-binding");
   });
 
   it("shows no empty row when the display turns its text off", async () => {

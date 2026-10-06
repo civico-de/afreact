@@ -20,7 +20,7 @@ export function noResultsText(settings: DisplaySettings): string | null {
 /** searchDisplayError.html, e.g. for a search that ran past its time limit. */
 export function ServerError({ error }: { error: unknown }) {
   return (
-    <p className="alert alert-warning text-center" role="alert">
+    <p className="alert alert-warning text-center ng-binding" role="alert">
       <i className="crm-i fa-circle-exclamation" role="img" aria-hidden="true" />{" "}
       {errorMessage(error)}
     </p>

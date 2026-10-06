@@ -110,7 +110,8 @@ export function TableView(props: TableViewProps) {
         {result?.rows.length === 0 && noResults !== null && (
           <tr>
             <td colSpan={columnCount}>
-              <p className="alert alert-info text-center">{noResults}</p>
+              {/* Riverlea sizes a table's alerts by Angular's binding class. */}
+              <p className="alert alert-info text-center ng-binding">{noResults}</p>
             </td>
           </tr>
         )}
