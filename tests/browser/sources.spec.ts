@@ -11,7 +11,17 @@ async function rendered(page: Page, source: string): Promise<string> {
   await page.waitForFunction(`(${isReady.toString()})(document)`);
   await page.waitForLoadState("networkidle");
   const html = await page.locator(".afreact-demo").innerHTML();
-  return html.replaceAll(` source="${source}"`, "");
+  return numberIds(html.replaceAll(` source="${source}"`, ""));
+}
+
+/** React's useId() counts in mount order, which with `api` is the order the layouts arrive in. */
+function numberIds(html: string): string {
+  const ids = new Map<string, string>();
+  return html.replaceAll(/_r_[0-9a-z]+_/g, (id) => {
+    const numbered = ids.get(id) ?? `_r_${ids.size}_`;
+    ids.set(id, numbered);
+    return numbered;
+  });
 }
 
 test("every layout source renders the demo page identically", async ({ page }) => {
