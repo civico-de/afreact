@@ -49,6 +49,7 @@ that no longer excuses anything fails the test.
 | Character count of a text area with `maxlength` | "n / max" below the field, not tied to it | the same count, which describes the text area (`aria-describedby`): a screen reader reads it with the field, not on each keystroke |
 | Search filter text shorter than `minlength` | the value is dropped from the filter while typing, so the table shows unfiltered rows | filters by what was typed |
 | Clear links | `<a>` without `href`, not reachable by keyboard | same link with `role="button"`, focusable, Enter and Space |
+| Required text holding only spaces | ngModel trims it to empty and marks the field `ng-invalid-required`; the browser sees text and shows no hint | same model and alert; the control reports "This field is required." as a custom validity message, the browser's hint for that field |
 | Admin block menus | gear menu per block for administrators | not rendered |
 | API calls | calls made together share one request | one request per call |
 | Reference fields (EntityRef) | select2 over `<Entity>.autocomplete` | ARIA combobox in select2's multi-select markup for single and multiple fields; the search loads with the first such field on a page. A single field shows the chosen label in its input, with a clear link |

@@ -330,6 +330,30 @@ describe("live rules", () => {
     expect(nick).toHaveValue("Dear Ada!");
   });
 
+  it("evaluates conditions and token defaults on the trimmed text, as ngModel stores it", async () => {
+    const calls = renderForm(
+      form([
+        field("first_name"),
+        field("nick_name", { afform_default: "Dear [Individual1.0.first_name]" }),
+        {
+          "#tag": "div",
+          "af-if": when("first_name", "=", '"ada"'),
+          "#children": [field("job_title")],
+        },
+      ]),
+    );
+    await userEvent.type(await screen.findByRole("textbox", { name: "first_name" }), " Ada ");
+    expect(box("first_name")).toHaveValue(" Ada ");
+    expect(box("nick_name")).toHaveValue("Dear Ada");
+    expect(box("job_title")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toEqual({
+        Individual1: [{ fields: { first_name: "Ada", nick_name: "Dear Ada" }, joins: {} }],
+      });
+    });
+  });
+
   it("stops calculating a token default once the user leaves the field, even unchanged", async () => {
     renderForm(
       form([

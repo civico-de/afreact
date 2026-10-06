@@ -263,6 +263,18 @@ describe("AfreactForm", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Please check all answers are valid.");
   });
 
+  it("blocks a required field holding only spaces, as ngModel trims it to empty", async () => {
+    const calls = renderForm(() => [{}]);
+    const first = await screen.findByRole("textbox", { name: "First Name" });
+    await waitFor(() => expect(first).toHaveValue("Ada"));
+    await userEvent.clear(first);
+    await userEvent.type(first, "   ");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Please fill all required fields.");
+    expect(first).toHaveFocus();
+    expect(calls.map(({ call }) => call)).not.toContain("Afform.submit");
+  });
+
   it("submits with Enter in a text field", async () => {
     const calls = renderForm(() => [{}]);
     await userEvent.type(await screen.findByRole("textbox", { name: "First Name" }), "{Enter}");

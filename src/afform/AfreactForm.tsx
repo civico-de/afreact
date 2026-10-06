@@ -143,9 +143,11 @@ function labelText(control: Control): string {
   return label.textContent.trim();
 }
 
-/** A required autocomplete without a value: its input is marked invalid, not empty. */
+/** Required fields marked invalid by the renderer: an autocomplete without a value, only spaces. */
+const MISSING_MESSAGES = [ts("Please select a value."), ts("This field is required.")];
+
 function missingChoice(control: Control): boolean {
-  return control.validity.customError && control.validationMessage === ts("Please select a value.");
+  return control.validity.customError && MISSING_MESSAGES.includes(control.validationMessage);
 }
 
 /** afForm's message for the first invalid input: a missing value, a too short text, or else. */

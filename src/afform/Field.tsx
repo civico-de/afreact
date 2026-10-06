@@ -41,6 +41,34 @@ function emptied(required: boolean, numeric: boolean): string | null | undefined
   return numeric ? null : "";
 }
 
+/**
+ * ngModel trims typed text, while the control keeps the raw text so "John Smith" survives typing.
+ * Text the model no longer matches (a reset, a prefill, a token default) replaces the shown text.
+ */
+function useTrimmedText(
+  enabled: boolean,
+  value: unknown,
+  required: boolean,
+  onChange: (value: unknown) => void,
+) {
+  const model = enabled ? textValue(value) : "";
+  const [shown, setShown] = useState(model);
+  if (shown.trim() !== model.trim()) setShown(model);
+  const blank = shown !== "" && shown.trim() === "";
+  return {
+    value: shown,
+    onChange: (event: { target: { value: string } }) => {
+      const text = event.target.value;
+      setShown(text);
+      onChange(text.trim() === "" ? emptied(required, false) : text.trim());
+    },
+    // Only spaces pass the browser's required check, but leave ngModel's value empty.
+    ref: (node: HTMLInputElement | HTMLTextAreaElement | null) => {
+      node?.setCustomValidity(required && blank ? ts("This field is required.") : "");
+    },
+  };
+}
+
 /** The input types Field renders a control for; others show the "Not supported" note. */
 export const INPUT_TYPES: ReadonlySet<string> = new Set([
   ...Object.keys(TEXT_TYPES),
@@ -199,9 +227,29 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
   // Controls in a group named by the label.
   const labelsGroup = grouped || ranged || defn.input_type === "Location";
 
+  const trimmed = useTrimmedText(
+    !ranged && (defn.input_type === "Text" || defn.input_type === "TextArea"),
+    value,
+    required,
+    onChange,
+  );
+
   const control = ((): ReactNode => {
     if (ranged) return <SearchRange {...{ id, labelId, defn, value, onChange, disabled }} />;
     const textType = TEXT_TYPES[defn.input_type];
+    if (textType === "text") {
+      return (
+        <input
+          {...common}
+          {...trimmed}
+          type="text"
+          className={`form-control ${style ?? ""}`.trim()}
+          placeholder={attrs.placeholder}
+          maxLength={attrs.maxlength}
+          minLength={attrs.minlength}
+        />
+      );
+    }
     if (textType) {
       const numeric = textType === "number";
       return (
@@ -212,7 +260,6 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
           value={textValue(value)}
           placeholder={attrs.placeholder}
           maxLength={attrs.maxlength}
-          minLength={defn.input_type === "Text" ? attrs.minlength : undefined}
           min={attrs.min}
           max={attrs.max}
           step={numeric ? (attrs.step ?? 1) : undefined}
@@ -241,11 +288,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
               cols={attrs.cols ?? 60}
               maxLength={attrs.maxlength}
               minLength={attrs.minlength}
-              value={text}
-              onChange={(event) => {
-                const next = event.target.value;
-                onChange(next === "" ? emptied(required, false) : next);
-              }}
+              {...trimmed}
             />
             {!!attrs.maxlength && (
               <CharacterCount id={countId} length={text.length} max={attrs.maxlength} />

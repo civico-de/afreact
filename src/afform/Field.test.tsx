@@ -71,6 +71,82 @@ describe("Field", () => {
     expect(text).toEqual(["a", ""]);
   });
 
+  it("trims typed text as ngModel and keeps the raw text in the control", async () => {
+    const values = setup({});
+    const input = screen.getByRole("textbox", { name: "Field" });
+    await userEvent.type(input, " John Smith ");
+    expect(input).toHaveValue(" John Smith ");
+    expect(values).toEqual([
+      "",
+      "J",
+      "Jo",
+      "Joh",
+      "John",
+      "John",
+      "John S",
+      "John Sm",
+      "John Smi",
+      "John Smit",
+      "John Smith",
+      "John Smith",
+    ]);
+  });
+
+  it("trims a text area and empties it when it holds only spaces", async () => {
+    const values = setup({ input_type: "TextArea" });
+    const area = screen.getByRole("textbox", { name: "Field" });
+    await userEvent.type(area, " a\nb ");
+    expect(area).toHaveValue(" a\nb ");
+    expect(values.at(-1)).toBe("a\nb");
+    await userEvent.clear(area);
+    await userEvent.type(area, "  ");
+    expect(values.at(-1)).toBe("");
+  });
+
+  it("leaves a required field holding only spaces invalid and its value unset", async () => {
+    const values = setup({ required: true });
+    const input = screen.getByRole("textbox", { name: "Field" });
+    await userEvent.type(input, "  ");
+    expect(values).toEqual([undefined, undefined]);
+    expect(input).toBeInvalid();
+    await userEvent.type(input, "a");
+    expect(input).toBeValid();
+    expect(values.at(-1)).toBe("a");
+  });
+
+  it("shows a value set from outside, such as a reset or a prefill", async () => {
+    function Form() {
+      const [value, setValue] = useState<unknown>("");
+      return (
+        <>
+          <Field
+            defn={{ name: "f", label: "Field", input_type: "Text", data_type: "String" }}
+            value={value}
+            disabled={false}
+            onChange={setValue}
+          />
+          <button type="button" onClick={() => setValue("")}>
+            Reset
+          </button>
+          <button type="button" onClick={() => setValue("Bob")}>
+            Prefill
+          </button>
+        </>
+      );
+    }
+    render(<Form />);
+    const input = screen.getByRole("textbox", { name: "Field" });
+    await userEvent.type(input, "Ada ");
+    expect(input).toHaveValue("Ada ");
+    await userEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(input).toHaveValue("");
+    await userEvent.type(input, "  ");
+    await userEvent.click(screen.getByRole("button", { name: "Prefill" }));
+    expect(input).toHaveValue("Bob");
+    await userEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(input).toHaveValue("");
+  });
+
   it("empties an optional number input to null, as ngModel", async () => {
     const number = setup({ input_type: "Number", data_type: "Integer" });
     await userEvent.type(screen.getByRole("spinbutton", { name: "Field" }), "4");
