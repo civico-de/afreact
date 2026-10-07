@@ -68,7 +68,7 @@ async function uploadFile(formName: string, token: string | null, upload: Pendin
   if (!response.ok) throw new Error(errorMessage(result));
   const values =
     typeof result === "object" && result !== null && "values" in result ? result.values : null;
-  const [stored] = Array.isArray(values) ? values : [];
+  const stored: unknown = Array.isArray(values) ? values[0] : undefined;
   // The contact image is written as image_URL and returns no file.
   return isFileInfo(stored) && stored.id ? stored : null;
 }

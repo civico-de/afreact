@@ -5,7 +5,7 @@
  * style, the primary flag in repeated join records, and the extra field in the submission.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, AUTH, isRecord, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const render = (renderer: Renderer) =>
@@ -123,8 +123,9 @@ async function observe(page: Page, renderer: Renderer): Promise<Observed> {
   const submitted = page.waitForRequest((request) => request.url().includes("Afform/submit"));
   await page.getByRole("button", { name: "Save" }).click();
   const params = new URLSearchParams((await submitted).postData() ?? "").get("params");
-  const { values } = JSON.parse(params ?? "{}") as { values?: { extra?: unknown } };
-  observed.extra = values?.extra;
+  const body: unknown = JSON.parse(params ?? "{}");
+  const values = isRecord(body) && isRecord(body.values) ? body.values : {};
+  observed.extra = values.extra;
   await expect(page.getByText("Contact saved.")).toBeVisible();
 
   const [saved] = await api<{ id: number }>(page, "Individual", "get", {

@@ -327,7 +327,8 @@ function filterFieldProblems(node: ElementNode): string[] {
 function fieldProblems(node: ElementNode, scope: Scope): string[] {
   const defn = node.defn;
   // An af-field without a name is an "extra" field, named and typed by its definition alone.
-  const name = String(node.name || (isFieldDefn(defn) ? defn.name : ""));
+  const own = typeof node.name === "string" ? node.name : "";
+  const name = own || (isFieldDefn(defn) ? defn.name : "");
   if (scope.filters && !scope.entity) return filterFieldProblems(node);
   if (!(scope.entity || (!node.name && name)) || !isFieldDefn(defn))
     return [missingFieldNote(name)];

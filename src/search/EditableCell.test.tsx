@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { editInfo } from "../test/editInfo";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
 import { AfreactSearch } from "./AfreactSearch";
-import { rowLabel } from "./EditableCell";
+import { rowName } from "./EditableCell";
 import type { CellData, DisplaySettings, EditableInfo, Row } from "./types";
 
 type Info = Partial<EditableInfo> & { value_key: string };
@@ -297,7 +297,7 @@ describe("in-place editing", () => {
         { type: "field", key: "c" },
       ],
     };
-    const named = (columns: CellData[]) => rowLabel({ key: 9, columns }, settings, 3);
+    const named = (columns: CellData[]) => rowName({ key: 9, columns }, settings, 3);
     expect(named([{ val: "" }, { val: "Link" }, { val: ["x", "y"] }, { val: "self" }])).toBe(
       "x, y",
     );
@@ -582,7 +582,12 @@ describe("in-place editors", () => {
   it("closes with Escape while its options load", async () => {
     setup({ value_key: "state_province_id", entity: "Address", options: true }, 5, {
       shown: "Berlin",
-      handlers: { "Address.getFields": () => new Promise(() => undefined) },
+      handlers: {
+        "Address.getFields": () =>
+          new Promise(() => {
+            // Never answers.
+          }),
+      },
     });
     await open();
     expect(await screen.findByRole("button", { name: "Save" })).toHaveFocus();

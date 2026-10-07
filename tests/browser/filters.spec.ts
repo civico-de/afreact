@@ -4,7 +4,7 @@
  * rows the filters exclude; changed filters search once typing pauses and survive a reload.
  */
 import { expect, test, type Browser, type Page, type Request } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, AUTH, isRecord, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const PREFIX = `Afreact filters ${RUN}`;
@@ -14,9 +14,6 @@ const IMPORTS = "afsearchMyImports";
 const render = (form: string, renderer: Renderer, hash = "") =>
   `/civicrm/afreact/render?name=${form}&renderer=${renderer}${hash}`;
 const titleHash = (title: string) => `#?title=${encodeURIComponent(title)}`;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
  * SearchDisplay.run's parameters when the request asks for a page of rows: CRM.api4 posts
@@ -51,7 +48,8 @@ const RECORD_ROWS = () => {
   new MutationObserver(() => {
     for (const row of document.querySelectorAll(".afreact-render tbody tr")) {
       // React's editable cells also name their column for screen readers.
-      const copy = row.cloneNode(true) as Element;
+      const copy = row.cloneNode(true);
+      if (!(copy instanceof Element)) throw new Error("The row's clone is no element.");
       for (const hidden of copy.querySelectorAll(".sr-only")) hidden.remove();
       const text = (copy.textContent ?? "").replace(/\s+/g, " ").trim();
       if (text && !row.querySelector(".crm-search-loading-placeholder") && !seen.includes(text))
@@ -78,7 +76,8 @@ async function column(page: Page, header: string): Promise<string[]> {
   // React's editable cells also name their column for screen readers.
   const cells = await table.locator(`tbody tr td:nth-child(${index + 1})`).evaluateAll((all) =>
     all.map((td) => {
-      const copy = td.cloneNode(true) as Element;
+      const copy = td.cloneNode(true);
+      if (!(copy instanceof Element)) throw new Error("The cell's clone is no element.");
       for (const hidden of copy.querySelectorAll(".sr-only")) hidden.remove();
       return copy.textContent ?? "";
     }),

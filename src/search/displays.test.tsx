@@ -77,7 +77,9 @@ describe("list display", () => {
     expect(list).toHaveClass("crm-search-display-list-container");
     expect(list).toHaveStyle({ listStyle: "square" });
     expect(list.closest(".crm-search-display")).toHaveClass("crm-search-display-list my-list");
-    const [first, second, links] = item ? [...item.children] : [];
+    const [first, second, links] = item
+      ? [...item.children].filter((el) => el instanceof HTMLElement)
+      : [];
     expect(first).toHaveClass("nowrap crm-search-col-type-field crm-inline-block");
     expect(first).toHaveAttribute("title", "About 1");
     expect(first?.querySelector("label")).toBeNull();
@@ -85,10 +87,7 @@ describe("list display", () => {
     expect(second).toHaveClass("crm-search-col-type-field");
     expect(second).not.toHaveClass("crm-inline-block");
     expect(second?.querySelector("label")).toHaveTextContent("Name");
-    expect(within(links as HTMLElement).getByRole("link", { name: "View 1" })).toHaveAttribute(
-      "href",
-      "/view/1",
-    );
+    expect(within(links!).getByRole("link", { name: "View 1" })).toHaveAttribute("href", "/view/1");
   });
 
   it("numbers an ol list and shows placeholders while loading", async () => {

@@ -6,7 +6,7 @@ import { memoryStore, type ParamStore } from "../url/hash";
 import { AfreactForm } from "./AfreactForm";
 import { layoutProblems, nodeKind } from "./support";
 import { initialTab, tabForKey } from "./tabsets";
-import type { FieldDefn, LayoutNode } from "./types";
+import { isElement, type ElementNode, type FieldDefn, type LayoutNode } from "./types";
 
 const field = (name: string, defn: Partial<FieldDefn> = {}): LayoutNode => ({
   "#tag": "af-field",
@@ -176,7 +176,7 @@ describe("af-tabset", () => {
   });
 
   it("skips a tab name that no longer exists, in the URL or remembered", async () => {
-    window.CRM.cache = { get: () => "gone", set: vi.fn() };
+    window.CRM.cache = { get: () => "gone", set: vi.fn<(name: string, value: unknown) => void>() };
     renderTabs({
       layout: searchTabs({ "url-arg": "tab", "remember-selection": "true" }),
       hash: "#?tab=gone",
@@ -481,11 +481,13 @@ describe("crm-ui-tab-set", () => {
 
   it("shows a tab's count, from its attribute or a display's total-count", async () => {
     const counted = structuredClone(uiTabs);
-    const [set] = counted as unknown as [{ "#children": Record<string, unknown>[] }];
-    const [labels, badges] = set["#children"] as [Record<string, unknown>, Record<string, unknown>];
-    labels.count = "3";
-    const inner = (badges["#children"] as [{ "#children": Record<string, unknown>[] }])[0];
-    (inner["#children"][0] as Record<string, unknown>)["total-count"] = "$parent.count";
+    const child = (node: LayoutNode | undefined, index: number): ElementNode => {
+      const inner = node && isElement(node) ? node["#children"]?.[index] : undefined;
+      if (!inner || !isElement(inner)) throw new Error(`No element at ${index}.`);
+      return inner;
+    };
+    child(counted[0], 0).count = "3";
+    child(child(child(counted[0], 1), 0), 0)["total-count"] = "$parent.count";
     renderTabs({ layout: counted });
     const item = async (name: string) => (await screen.findByRole("tab", { name })).parentElement;
     expect(await item("Mailing Labels 3")).toHaveClass("crm-count-3");

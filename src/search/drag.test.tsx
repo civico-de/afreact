@@ -114,12 +114,13 @@ describe("AfreactSearch drag to reorder", () => {
     expect(announced()).toBe("Name 1 dropped at position 2 of 3.");
     const edits = calls.filter(({ call }) => call === "SearchDisplay.inlineEdit");
     expect(edits).toHaveLength(1);
-    expect(edits[0]?.params).toEqual({
+    const { seed, ...params } = edits[0]?.params ?? {};
+    expect(typeof seed).toBe("number");
+    expect(params).toEqual({
       savedSearch: "S",
       display: "D",
       afform: "afsearchTest",
       filters: {},
-      seed: expect.any(Number) as number,
       sort: [],
       limit: 0,
       return: "draggableWeight",
@@ -337,8 +338,8 @@ describe("AfreactSearch drag to reorder", () => {
     });
 
     it("shows the row's name in the notice as text, not as markup", async () => {
-      const marked = tree.map((row) =>
-        row.key === 2 ? { ...row, columns: [{ val: "<b>Two</b>" }, { val: 10 }] } : row,
+      const marked = tree.map((node) =>
+        node.key === 2 ? { ...node, columns: [{ val: "<b>Two</b>" }, { val: 10 }] } : node,
       );
       serve(() => ({}), marked);
       renderWithQuery(<AfreactSearch search="S" display="D" settings={hierarchical} />);

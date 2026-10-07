@@ -84,8 +84,11 @@ test("core's dialog lists no tags on an Individual search (6.18.1)", async ({ pa
   await expect(dialog.locator("#crm-search-task-tag-tag")).toBeAttached(LOAD);
   const options = await dialog.locator("#crm-search-task-tag-tag").evaluate((input) => {
     const select2: unknown = window.CRM.$(input).data("select2");
-    const opts = (select2 as { opts?: { data?: unknown } } | undefined)?.opts;
-    return Array.isArray(opts?.data) ? opts.data.length : null;
+    const isObject = (value: unknown): value is object =>
+      typeof value === "object" && value !== null;
+    const opts: unknown = isObject(select2) ? Reflect.get(select2, "opts") : null;
+    const data: unknown = isObject(opts) ? Reflect.get(opts, "data") : null;
+    return Array.isArray(data) ? data.length : null;
   });
   expect(options).toBe(0);
 });

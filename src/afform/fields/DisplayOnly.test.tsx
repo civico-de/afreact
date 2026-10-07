@@ -52,14 +52,10 @@ describe("DisplayOnly", () => {
     show({ data_type: "Integer", fk_entity: "Contact" }, [3, 4]);
     expect(output()).toHaveTextContent("Loading...");
     expect(await screen.findByText("Record three, Record four")).toBe(output());
-    expect(calls).toEqual([
+    expect(calls).toMatchObject([
       {
         call: "Contact.autocomplete",
-        params: expect.objectContaining({
-          ids: [3, 4],
-          formName: "afform:afformTest",
-          fieldName: "Individual1:f",
-        }),
+        params: { ids: [3, 4], formName: "afform:afformTest", fieldName: "Individual1:f" },
       },
     ]);
   });

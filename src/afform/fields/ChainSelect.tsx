@@ -61,7 +61,7 @@ export function ChainSelect({
   disabled,
   describedBy,
 }: ChainSelectProps) {
-  const env = useFieldEnv("ChainSelect");
+  const env = useFieldEnv();
   const element = useRef<HTMLSelectElement>(null);
   const attrs = defn.input_attrs ?? {};
   const control = attrs.control_field ? controlFieldName(defn, env, attrs.control_field) : null;

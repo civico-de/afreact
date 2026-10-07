@@ -97,7 +97,9 @@ describe("submitting", () => {
     vi.mocked(window.CRM.status).mockReturnValue(box);
     renderForm({});
     await userEvent.click(await screen.findByRole("button", { name: "Save" }));
-    await waitFor(() => expect(box.resolve).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(box.resolve).toHaveBeenCalled();
+    });
     expect(window.CRM.status).toHaveBeenCalledWith({ error: "Not Saved" });
     expect(box.reject).not.toHaveBeenCalled();
   });
@@ -343,7 +345,9 @@ describe("drafts", () => {
     act(() => {
       vi.advanceTimersByTime(1_000);
     });
-    await waitFor(() => expect(called(calls, "Afform.submitDraft")).toHaveLength(1));
+    await waitFor(() => {
+      expect(called(calls, "Afform.submitDraft")).toHaveLength(1);
+    });
     expect(await screen.findByRole("button", { name: "Draft Saved" })).toBeInTheDocument();
   });
 
@@ -379,7 +383,9 @@ describe("drafts", () => {
     act(() => {
       vi.advanceTimersByTime(10_000);
     });
-    await waitFor(() => expect(called(calls, "Afform.submitDraft")).toHaveLength(2));
+    await waitFor(() => {
+      expect(called(calls, "Afform.submitDraft")).toHaveLength(2);
+    });
   });
 
   it("wait for the user to save them without a known user or token", async () => {

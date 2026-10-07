@@ -39,9 +39,10 @@ export interface FieldDefn {
     time?: boolean;
     /** A custom field's date format, e.g. "yy" (year only) or "M yy" (month only). */
     date?: boolean | string;
-    min?: number;
-    max?: number;
-    step?: number;
+    /** A Range field over options carries their ids, which may be numeric strings. */
+    min?: number | string;
+    max?: number | string;
+    step?: number | string;
     maxlength?: number;
     /** Text and TextArea only, as in core's templates. */
     minlength?: number;

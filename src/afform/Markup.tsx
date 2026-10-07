@@ -103,9 +103,8 @@ function convert(nodes: NodeListOf<ChildNode>, tokens: boolean, record: boolean)
  */
 export function Markup({ html, tokens = true, record = false }: MarkupProps) {
   return useMemo(() => {
-    // A template's content is inert: nothing in it loads or runs while it is read.
-    const template = document.createElement("template");
-    template.innerHTML = html;
-    return convert(template.content.childNodes, tokens, record);
+    // DOMParser's document is inert: nothing in it loads or runs while it is read.
+    const { body } = new DOMParser().parseFromString(html, "text/html");
+    return convert(body.childNodes, tokens, record);
   }, [html, tokens, record]);
 }

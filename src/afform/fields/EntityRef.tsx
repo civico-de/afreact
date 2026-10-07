@@ -35,7 +35,7 @@ interface EntityRefProps {
 
 /** fields/EntityRef.html: crm-autocomplete on the field's entity, single or multiple. */
 export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: EntityRefProps) {
-  const env = useFieldEnv("EntityRef");
+  const env = useFieldEnv();
   const [known, setKnown] = useState<ReadonlyMap<string, AutocompleteItem>>(new Map());
   const [failed, setFailed] = useState<string | null>(null);
   const target = searchedEntity(defn, env);

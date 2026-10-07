@@ -53,7 +53,7 @@ function Harness({
 
 describe("Range fields", () => {
   it("shows the chosen option's label and writes the option id as a number", () => {
-    const onValue = vi.fn();
+    const onValue = vi.fn<(value: unknown) => void>();
     const { container } = render(<Harness defn={rating} initial={2} onValue={onValue} />);
     const slider = screen.getByRole("slider", { name: "Rating" });
     expect(slider).toHaveAttribute("aria-valuetext", "Poor");
@@ -69,14 +69,14 @@ describe("Range fields", () => {
   });
 
   it("writes the position an unset slider shows, as ngModel's range input does", () => {
-    const onValue = vi.fn();
+    const onValue = vi.fn<(value: unknown) => void>();
     render(<Harness defn={rating} initial={null} onValue={onValue} />);
     expect(onValue).toHaveBeenCalledExactlyOnceWith(4);
     expect(screen.getByRole("slider")).toHaveAttribute("aria-valuetext", "Fair");
   });
 
   it("takes a stored value given as text, and shows the value of a slider without options", () => {
-    const onValue = vi.fn();
+    const onValue = vi.fn<(value: unknown) => void>();
     const { unmount } = render(<Harness defn={rating} initial="6" onValue={onValue} />);
     expect(onValue).toHaveBeenCalledExactlyOnceWith(6);
     unmount();
@@ -140,8 +140,7 @@ describe("Range fields", () => {
     expect(at({ min: 5, max: 1 })).toBe(5);
     expect(at({}, "6")).toBe(6);
     expect(at({}, 0)).toBe(0);
-    // Bounds from option ids the form declares as strings.
-    expect(at({ min: "1", max: "4" } as unknown as FieldDefn["input_attrs"])).toBe(3);
+    expect(at({ min: "1", max: "4" })).toBe(3);
   });
 
   it("is disabled with the form", () => {

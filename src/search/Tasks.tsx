@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { api4, errorMessage } from "../api/civi";
+import { cellText } from "./Cell";
 import { asHtml } from "../html";
 import { fetchDownload, saveBlob } from "./download";
 import { Input } from "./EditableCell";
@@ -264,7 +265,12 @@ export function useTasks(options: TasksOptions) {
         select(selectPage(pageKeys, rowCount));
       },
     },
-    { link: { text: ts("None") }, run: () => select(NO_SELECTION) },
+    {
+      link: { text: ts("None") },
+      run: () => {
+        select(NO_SELECTION);
+      },
+    },
   ];
 
   /** crmSearchDisplayTaskHeader.html: select all or none, and the menu for all, page or none. */
@@ -389,7 +395,9 @@ export function useTasks(options: TasksOptions) {
           // Core's update dialog runs Entity.update even from a row link, never inlineEdit.
           setRunning({ ...running, kind: "batch", apiBatch: updateBatch(values), isLink: false });
         }}
-        onCancel={() => onDone({ ran: false, message: "" })}
+        onCancel={() => {
+          onDone({ ran: false, message: "" });
+        }}
       />
     ) : running.kind === "tag" ? (
       <TagDialog
@@ -399,7 +407,9 @@ export function useTasks(options: TasksOptions) {
           const apiBatch = tagBatch(action, entityInfo.name, tagIds);
           setRunning({ ...running, kind: "batch", apiBatch, isLink: false });
         }}
-        onCancel={() => onDone({ ran: false, message: "" })}
+        onCancel={() => {
+          onDone({ ran: false, message: "" });
+        }}
       />
     ) : running.kind === "relationship" ? (
       <RelationshipDialog
@@ -408,7 +418,9 @@ export function useTasks(options: TasksOptions) {
           const apiBatch = relationshipBatch(type, contactId, values);
           setRunning({ ...running, kind: "batch", apiBatch, isLink: false });
         }}
-        onCancel={() => onDone({ ran: false, message: "" })}
+        onCancel={() => {
+          onDone({ ran: false, message: "" });
+        }}
       />
     ) : running.kind === "mailing" ? (
       <MailingDialog
@@ -418,7 +430,9 @@ export function useTasks(options: TasksOptions) {
           const apiBatch = mailingBatch(groupId, mailingId);
           setRunning({ ...running, kind: "batch", apiBatch, isLink: false });
         }}
-        onCancel={() => onDone({ ran: false, message: "" })}
+        onCancel={() => {
+          onDone({ ran: false, message: "" });
+        }}
       />
     ) : running.kind === "download" ? (
       <DownloadDialog
@@ -466,7 +480,7 @@ export function rowName(row: Row): string {
     ? value.join(", ")
     : typeof value === "object"
       ? ""
-      : String(value ?? "");
+      : cellText(value);
   return text.trim() || String(row.key);
 }
 
@@ -504,7 +518,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
   // Deleting asks first even when a hook removed the question; the text is core's own.
   const deletes = apiBatch.action === "delete" && !apiBatch.settled;
   const confirmMsg =
-    apiBatch.confirmMsg || (deletes ? "Are you sure you want to delete %1 %2?" : undefined);
+    (apiBatch.confirmMsg ?? "") || (deletes ? "Are you sure you want to delete %1 %2?" : undefined);
 
   const start = async () => {
     if (started.current) return;
@@ -658,7 +672,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
           >
             <Icon name="fa-times" /> {ts("Cancel")}
           </button>
-          {(confirmMsg || fields.length > 0) && (
+          {(!!confirmMsg || fields.length > 0) && (
             <button type="submit" className="btn btn-primary" disabled={!!progress}>
               <Icon name={progress ? "fa-spin fa-spinner" : "fa-check"} /> {task.title}
             </button>
@@ -696,7 +710,7 @@ function DownloadDialog({ running, entity, runParams, rowCount, onDone }: Downlo
   const [format, setFormat] = useState<DownloadFormat>("csv");
   const [busy, setBusy] = useState(false);
   const done = useRef(false);
-  const count = ids.length || rowCount || 0;
+  const count = ids.length || (rowCount ?? 0);
   const entityTitle = count === 1 ? entity.title : entity.title_plural;
 
   const download = async () => {

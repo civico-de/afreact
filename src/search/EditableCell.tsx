@@ -40,12 +40,12 @@ export function editingClass(edit: InlineEdit | null, target: CellTarget): strin
 }
 
 /** A name for the row in the editor's label: its first other field with a value. */
-export function rowLabel(row: Row, settings: DisplaySettings, colIndex: number): string {
+export function rowName(row: Row, settings: DisplaySettings, colIndex: number): string {
   for (const [index, column] of settings.columns.entries()) {
     if (index === colIndex || column.type !== "field") continue;
     const value = row.columns[index]?.val;
-    const text = Array.isArray(value) ? value.map(cellText).join(", ") : cellText(value);
-    if (text) return text;
+    const label = Array.isArray(value) ? value.map(cellText).join(", ") : cellText(value);
+    if (label) return label;
   }
   return ts("ID %1", { 1: row.key });
 }
@@ -58,7 +58,7 @@ export function EditableCell(props: EditableCellProps) {
   if (!edit || !key || !info) return children;
   const editor = editorFor(info);
   if ("unsupported" in editor) return children;
-  const label = column.label || `[${key}]`;
+  const label = column.label ?? `[${key}]`;
   return (
     <EditableValue
       edit={edit}
@@ -69,7 +69,7 @@ export function EditableCell(props: EditableCellProps) {
       kind={editor.kind}
       multiple={editor.multiple}
       columnLabel={label}
-      rowLabel={rowLabel(row, settings, colIndex)}
+      rowLabel={rowName(row, settings, colIndex)}
     >
       {children}
     </EditableValue>
@@ -346,12 +346,12 @@ export interface InputProps {
   onChange: (value: unknown) => void;
 }
 
-function text(value: unknown): string {
+function asText(value: unknown): string {
   return value === null || value === undefined ? "" : cellText(value);
 }
 
 /** "2026-09-29 14:30:00" <-> "2026-09-29T14:30" for datetime-local inputs. */
-const toLocalDateTime = (value: unknown) => text(value).replace(" ", "T").slice(0, 16);
+const toLocalDateTime = (value: unknown) => asText(value).replace(" ", "T").slice(0, 16);
 const fromLocalDateTime = (value: string) => (value ? `${value.replace("T", " ")}:00` : null);
 
 /** The input crmSearchInput shows for a field: in a cell, and in the update task's dialog. */
@@ -377,7 +377,7 @@ export function Input(props: InputProps) {
           {...common}
           type={kind}
           className="form-control"
-          value={text(value)}
+          value={asText(value)}
           onChange={(event) => {
             typed(event.target.value);
           }}
@@ -391,7 +391,7 @@ export function Input(props: InputProps) {
           type="number"
           step={kind === "integer" ? 1 : "any"}
           className="form-control"
-          value={text(value)}
+          value={asText(value)}
           onChange={(event) => {
             number(event.target.value);
           }}
@@ -402,7 +402,7 @@ export function Input(props: InputProps) {
         <textarea
           {...common}
           className="form-control"
-          value={text(value)}
+          value={asText(value)}
           onChange={(event) => {
             typed(event.target.value);
           }}
@@ -414,7 +414,7 @@ export function Input(props: InputProps) {
           {...common}
           type="date"
           className="form-control"
-          value={text(value).slice(0, 10)}
+          value={asText(value).slice(0, 10)}
           onChange={(event) => {
             onChange(event.target.value || null);
           }}
@@ -438,7 +438,7 @@ export function Input(props: InputProps) {
           <input
             {...common}
             type="color"
-            value={text(value) || "#000000"}
+            value={asText(value) || "#000000"}
             onChange={(event) => {
               onChange(event.target.value);
             }}
@@ -450,7 +450,7 @@ export function Input(props: InputProps) {
             placeholder="#rrggbb"
             pattern="^#[0-9a-fA-F]{6}$"
             required={common.required}
-            value={text(value)}
+            value={asText(value)}
             onChange={(event) => {
               typed(event.target.value);
             }}
@@ -463,6 +463,8 @@ export function Input(props: InputProps) {
       return props.info.options === true ? <LoadedSelect {...props} /> : <Select {...props} />;
     case "entityref":
       return <EntityRefInput {...props} />;
+    default:
+      return kind satisfies never;
   }
 }
 
@@ -531,7 +533,7 @@ function LoadedSelect(props: InputProps) {
         loadOptions: ["id", "name", "label", "description", "color", "icon"],
         where: [["name", "=", info.value_key]],
       });
-      return field?.options || [];
+      return Array.isArray(field?.options) ? field.options : [];
     },
     // The options follow the row's values, so each opening loads them, as in core.
     gcTime: 0,
@@ -585,7 +587,7 @@ function Select({
       {...common}
       autoFocus={autoFocus}
       className="form-control"
-      value={text(value)}
+      value={asText(value)}
       onChange={(event) => {
         onChange(event.target.value === "" ? null : byId(event.target.value));
       }}

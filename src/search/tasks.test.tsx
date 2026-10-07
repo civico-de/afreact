@@ -1,8 +1,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
+import { vi, type Mock } from "vitest";
 import { events } from "../test/jquery";
-import { apiError, mockApi, renderWithQuery } from "../test/render";
+import { apiError, listParam, mockApi, renderWithQuery } from "../test/render";
 import { AfreactSearch } from "./AfreactSearch";
 import type { SearchTask } from "./searchTasks";
 import type { DisplaySettings, Row } from "./types";
@@ -148,7 +148,7 @@ function serve({ rows = [row(1), row(2), row(3)], count = rows.length, tasks, ha
   });
 }
 
-const done = (count: number) => Object.assign([], { countFetched: count });
+const counted = (count: number) => Object.assign([], { countFetched: count });
 
 const columns = [{ type: "field" as const, key: "display_name", label: "Name" }];
 // A links column as configured; the run type leaves the configured links out.
@@ -313,7 +313,7 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("confirms a delete, runs it on the selected ids, then reloads and clears the selection", async () => {
-    const calls = serve({ handlers: { "Contact.delete": () => done(2) } });
+    const calls = serve({ handlers: { "Contact.delete": () => counted(2) } });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await screen.findByText("Name 1");
     await selectRows("Name 1", "Name 3");
@@ -383,8 +383,7 @@ describe("AfreactSearch bulk actions", () => {
       count: 1001,
       handlers: {
         "Contact.update": (params) => {
-          const where = params.where as unknown[][];
-          return done((where[1]?.[2] as unknown[]).length);
+          return counted(listParam(listParam(listParam(params.where)[1])[2]).length);
         },
       },
     });
@@ -407,7 +406,7 @@ describe("AfreactSearch bulk actions", () => {
       );
     });
     const batches = named(calls, "Contact.update").map(({ params }) => params);
-    expect(batches.map((params) => (params.where as unknown[][])[1]?.[2])).toEqual([
+    expect(batches.map((params) => listParam(listParam(params.where)[1])[2])).toEqual([
       Array.from({ length: 500 }, (_, index) => index + 1),
       Array.from({ length: 500 }, (_, index) => index + 501),
       [1001],
@@ -465,7 +464,7 @@ describe("AfreactSearch bulk actions", () => {
     const calls = serve({
       tasks: [enable, credit],
       handlers: {
-        "ContributionSoft.save": (params) => done((params.records as unknown[]).length),
+        "ContributionSoft.save": (params) => counted(listParam(params.records).length),
         "Contact.autocomplete": () => Object.assign([{ id: 5, label: "Bob" }], { countMatched: 1 }),
       },
     });
@@ -515,7 +514,10 @@ describe("AfreactSearch bulk actions", () => {
       handlers: {
         "Contact.update": () => {
           call += 1;
-          if (call === 1) return new Promise((resolve) => (finish = resolve));
+          if (call === 1)
+            return new Promise((resolve) => {
+              finish = resolve;
+            });
           throw apiError("DB Error: deadlock");
         },
       },
@@ -544,7 +546,7 @@ describe("AfreactSearch bulk actions", () => {
     await userEvent.keyboard("{Escape}");
     expect(dialog).toHaveAttribute("open");
 
-    finish(done(500));
+    finish(counted(500));
     await waitFor(() => {
       expect(window.CRM.alert).toHaveBeenCalledWith(
         "An error occurred while attempting to enable 600 Contacts. DB Error: deadlock",
@@ -708,7 +710,7 @@ describe("AfreactSearch bulk actions", () => {
     const links = [{ task: "enable", text: "Enable", icon: "fa-toggle-on" }];
     const calls = serve({
       rows: [row(1), row(2, { columns: [{ val: "Name 2" }, { links }] })],
-      handlers: { "SearchDisplay.inlineEdit": () => done(1) },
+      handlers: { "SearchDisplay.inlineEdit": () => counted(1) },
     });
     const withLinks: DisplaySettings = {
       columns: [...columns, linksColumn(links)],
@@ -781,7 +783,7 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("runs a task from the keyboard: arrow into the menu, Enter, then confirm in the dialog", async () => {
-    const calls = serve({ handlers: { "Contact.delete": () => done(1) } });
+    const calls = serve({ handlers: { "Contact.delete": () => counted(1) } });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await screen.findByText("Name 1");
     checkbox("Name 1").focus();
@@ -811,8 +813,16 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   describe("download", () => {
-    function stubDownload(response: Partial<Response>) {
-      const fetchMock = vi.fn(() => Promise.resolve({ ok: true, ...response } as Response));
+    /** The URL and the `params` field of the download request. */
+    function sentDownload(fetchMock: Mock<typeof fetch>) {
+      const [url, init] = fetchMock.mock.calls[0] ?? [];
+      const body = init?.body;
+      if (!(body instanceof URLSearchParams)) throw new Error("No form body was sent.");
+      return { url, params: JSON.parse(body.get("params") ?? "") as unknown };
+    }
+
+    function stubDownload(response: Response) {
+      const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(response));
       vi.stubGlobal("fetch", fetchMock);
       const link = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
       vi.stubGlobal(
@@ -823,10 +833,11 @@ describe("AfreactSearch bulk actions", () => {
     }
 
     it("downloads the selected rows in the chosen format and names the file from the answer", async () => {
-      const { fetchMock, link } = stubDownload({
-        headers: new Headers({ "Content-Disposition": 'attachment; filename="Contacts.xlsx"' }),
-        blob: () => Promise.resolve(new Blob(["x"])),
-      });
+      const { fetchMock, link } = stubDownload(
+        new Response("x", {
+          headers: { "Content-Disposition": 'attachment; filename="Contacts.xlsx"' },
+        }),
+      );
       serve({ tasks: [enable, download] });
       renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
       await screen.findByText("Name 1");
@@ -844,9 +855,8 @@ describe("AfreactSearch bulk actions", () => {
           "success",
         );
       });
-      const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+      const { url, params } = sentDownload(fetchMock);
       expect(url).toBe("/civicrm/ajax/api4/SearchDisplay/download");
-      const params = JSON.parse(new URLSearchParams(init.body as string).get("params") ?? "");
       expect(params).toMatchObject({
         savedSearch: "S",
         display: "D",
@@ -862,11 +872,12 @@ describe("AfreactSearch bulk actions", () => {
     });
 
     it("offers every row without a selection and reports a failed download", async () => {
-      const { fetchMock } = stubDownload({
-        ok: false,
-        statusText: "Forbidden",
-        json: () => Promise.resolve({ error_message: "Not permitted" }),
-      });
+      const { fetchMock } = stubDownload(
+        new Response(JSON.stringify({ error_message: "Not permitted" }), {
+          status: 403,
+          statusText: "Forbidden",
+        }),
+      );
       serve({ tasks: [enable, download], count: 3 });
       renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
       await screen.findByText("Name 1");
@@ -879,22 +890,20 @@ describe("AfreactSearch bulk actions", () => {
         expect(window.CRM.alert).toHaveBeenCalledWith("Not permitted", "Error", "error");
       });
       // An empty id filter stands for every row, as in crmSearchTaskDownload.
-      const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-      const params = JSON.parse(new URLSearchParams(init.body as string).get("params") ?? "");
-      expect(params.filters).toEqual({ id: [] });
+      expect(sentDownload(fetchMock).params).toMatchObject({ filters: { id: [] } });
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(status()).toHaveTextContent("Not permitted");
     });
 
     it("keeps the dialog open while the file loads and closes it once, when done", async () => {
-      let answer = (response: Partial<Response>) => {
+      let answer = (response: Response) => {
         void response;
       };
-      const fetchMock = vi.fn(
+      const fetchMock = vi.fn<typeof fetch>(
         () =>
-          new Promise<Response>(
-            (resolve) => (answer = (r) => resolve({ ok: true, ...r } as Response)),
-          ),
+          new Promise<Response>((resolve) => {
+            answer = resolve;
+          }),
       );
       vi.stubGlobal("fetch", fetchMock);
       vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
@@ -914,7 +923,7 @@ describe("AfreactSearch bulk actions", () => {
       expect(within(dialog).getByRole("status")).toHaveTextContent("Downloading");
       await userEvent.keyboard("{Escape}");
       expect(dialog).toBeInTheDocument();
-      answer({ headers: new Headers(), blob: () => Promise.resolve(new Blob(["x"])) });
+      answer(new Response("x"));
       await waitFor(() => {
         expect(window.CRM.alert).toHaveBeenCalledWith(
           "Contacts.csv has been downloaded to your computer.",
@@ -975,7 +984,7 @@ describe("AfreactSearch bulk actions", () => {
         tasks: [enable, update],
         handlers: {
           "Contact.getFields": () => fields,
-          "Contact.update": () => done(2),
+          "Contact.update": () => counted(2),
           "Contact.autocomplete": () =>
             Object.assign([{ id: 2, label: "Bob" }], { countMatched: 1 }),
         },
@@ -1068,7 +1077,7 @@ describe("AfreactSearch bulk actions", () => {
       const calls = serve({
         rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })],
         tasks: [preset],
-        handlers: { "Contact.getFields": () => fields, "Contact.update": () => done(1) },
+        handlers: { "Contact.getFields": () => fields, "Contact.update": () => counted(1) },
       });
       renderWithQuery(
         <AfreactSearch
@@ -1099,7 +1108,7 @@ describe("AfreactSearch bulk actions", () => {
     it("holds a field that must not be empty until it has a value", async () => {
       const calls = serve({
         tasks: [enable, update],
-        handlers: { "Contact.getFields": () => fields, "Contact.update": () => done(1) },
+        handlers: { "Contact.getFields": () => fields, "Contact.update": () => counted(1) },
       });
       renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
       await screen.findByText("Name 1");
@@ -1380,9 +1389,7 @@ describe("AfreactSearch bulk actions", () => {
       expect(await within(dialog).findByRole("textbox", { name: "Description" })).toHaveValue(
         "Preset",
       );
-      await expect(within(dialog).findByRole("combobox", { name: /Contact/ })).resolves.toHaveValue(
-        "Acme",
-      );
+      expect(await within(dialog).findByRole("combobox", { name: /Contact/ })).toHaveValue("Acme");
       await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
       await waitFor(() => {
         expect(named(calls, "Relationship.save")).toHaveLength(1);
@@ -1485,7 +1492,7 @@ describe("AfreactSearch bulk actions", () => {
           "Mailing.getFields": () => typeField,
           "Contact.get": () => Object.assign([], { count: 2 }),
           "Group.create": group,
-          "GroupContact.save": () => done(2),
+          "GroupContact.save": () => counted(2),
         },
       });
       renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
@@ -1544,8 +1551,11 @@ describe("AfreactSearch bulk actions", () => {
         handlers: {
           "Mailing.getFields": () => [{ options: false }],
           "Contact.get": () => Object.assign([], { count: 2 }),
-          "Group.create": () => new Promise((done) => (resolve = done)),
-          "GroupContact.save": () => done(2),
+          "Group.create": () =>
+            new Promise((finish) => {
+              resolve = finish;
+            }),
+          "GroupContact.save": () => counted(2),
         },
       });
       vi.stubGlobal("location", { assign: vi.fn() });

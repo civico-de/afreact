@@ -436,13 +436,24 @@ describe("EntityRef quick-add links", () => {
       opened.push(url);
       const selection = jquerySelection({
         on: (name, handler) => {
-          if (name === "crmFormSuccess") succeed = (data) => handler(new Event(name), data);
+          if (name === "crmFormSuccess") {
+            succeed = (data) => {
+              handler(new Event(name), data);
+            };
+          }
           return selection;
         },
       });
       return selection;
     });
-    return { opened, succeed: (data: unknown) => act(() => succeed(data)) };
+    return {
+      opened,
+      succeed: (data: unknown) => {
+        act(() => {
+          succeed(data);
+        });
+      },
+    };
   }
 
   beforeEach(() => {

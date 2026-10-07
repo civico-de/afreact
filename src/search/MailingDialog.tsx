@@ -39,7 +39,7 @@ export function MailingDialog({ task, ids, onCreated, onCancel }: MailingDialogP
     queryKey: ["mailingDialog", "templateTypes"],
     queryFn: async () => {
       const [field] = await api4<TemplateTypeField>(...calls.templateTypes);
-      return field?.options || [];
+      return Array.isArray(field?.options) ? field.options : [];
     },
   });
   const recipients = useQuery({

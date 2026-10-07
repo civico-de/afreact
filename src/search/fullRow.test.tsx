@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { editInfo } from "../test/editInfo";
-import { apiError, mockApi, renderWithQuery } from "../test/render";
+import { apiError, mockApi, recordParam, renderWithQuery } from "../test/render";
 import { AfreactSearch } from "./AfreactSearch";
 import type { DisplaySettings, Row } from "./types";
 
@@ -49,7 +49,7 @@ function setup({
     "SearchDisplay.inlineEdit":
       inlineEdit ??
       ((params) => {
-        const values = params.values as Record<string, unknown>;
+        const values = recordParam(params.values);
         return [row(values.job_title, values.nick_name, "Saved")];
       }),
     ...handlers,
@@ -65,7 +65,7 @@ const openRow = async () => {
 };
 const title = () => screen.getByLabelText("Title, Ada");
 const nick = () => screen.getByLabelText("Nick, Ada");
-const control = () => screen.getAllByRole("cell")[0] as HTMLElement;
+const control = () => screen.getAllByRole("cell")[0]!;
 
 describe("full-row editing", () => {
   it("opens every editable cell of the row and saves their values in one call", async () => {

@@ -236,7 +236,7 @@ function Element({ node, children }: { node: ElementNode; children?: ReactNode }
       </>
     );
   const content = children ?? <Nodes nodes={node["#children"] ?? []} />;
-  const markup = String(node.class ?? "")
+  const markup = (typeof node.class === "string" ? node.class : "")
     .split(/\s+/)
     .includes("af-markup");
   return createElement(

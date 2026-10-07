@@ -36,7 +36,7 @@ let previous: Row[] = [];
 
 const mine = () => [
   ["contact_id", "=", "user_contact_id"],
-  ["dashboard_id", "IN", dashlets.map((dashlet) => dashlet.id)],
+  ["dashboard_id", "IN", dashlets.map((row) => row.id)],
 ];
 
 const adminPage = async (browser: Browser) =>
@@ -50,14 +50,14 @@ test.beforeAll(async ({ browser }) => {
     select: ["id", "name"],
     where: [["name", "IN", [LISTED, UNLISTED]]],
   });
-  baseExpect(dashlets.map((dashlet) => dashlet.name).sort()).toEqual([UNLISTED, LISTED].sort());
+  baseExpect(dashlets.map((row) => row.name).sort()).toEqual([UNLISTED, LISTED].sort());
   previous = await quietApi(page, "DashboardContact", "get", {
     select: ["id", "dashboard_id", "column_no", "weight", "is_active"],
     where: mine(),
   });
   await quietApi(page, "DashboardContact", "save", {
-    records: dashlets.map((dashlet, index) => ({
-      dashboard_id: dashlet.id,
+    records: dashlets.map((row, index) => ({
+      dashboard_id: row.id,
       column_no: index,
       weight: 0,
       is_active: true,
@@ -100,9 +100,7 @@ test("a listed Afform dashlet renders with React next to an unlisted one in Angu
   await expect(page.locator(DIRECTIVE[LISTED])).toHaveCount(0);
   await expect(page.locator(`afreact-form[name="${UNLISTED}"]`)).toHaveCount(0);
   // Core's dashboard loads no Angular module for the React dashlet.
-  const modules = await page.evaluate(
-    () => (window as unknown as { CRM: { angular: { modules: string[] } } }).CRM.angular.modules,
-  );
+  const modules: unknown = await page.evaluate("CRM.angular.modules");
   expect(modules).not.toContain(LISTED);
   expect(modules).toContain(UNLISTED);
 

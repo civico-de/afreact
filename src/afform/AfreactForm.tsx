@@ -239,7 +239,9 @@ export function AfreactForm({
           key={loaded.dataUpdatedAt}
           name={name}
           pageTitle={pageTitle}
-          onReset={(fresh) => client.setQueryData<Loaded>(queryKey, { ...loaded.data, ...fresh })}
+          onReset={(fresh) => {
+            client.setQueryData<Loaded>(queryKey, { ...loaded.data, ...fresh });
+          }}
           {...loaded.data}
         />
       </RouteOptionsContext.Provider>
@@ -455,7 +457,9 @@ function LoadedForm(props: LoadedFormProps) {
     (!!window.CRM.config?.cid || new URLSearchParams(window.location.search).has("_aff"));
   const submitted = save.isPending || save.isSuccess;
   useEffect(() => {
-    if (!autosave || draftStatus !== "unsaved" || submitted || snapshot === draftFailed) return;
+    if (!autosave || draftStatus !== "unsaved" || submitted || snapshot === draftFailed) {
+      return undefined;
+    }
     const timer = setTimeout(() => {
       saveDraft({ values: draftValues(data), snapshot, background: true });
     }, AUTOSAVE_MS);
@@ -474,7 +478,7 @@ function LoadedForm(props: LoadedFormProps) {
   }, [failure]);
 
   const title = titleWithLabels(form.title ?? "", labels) || "CiviCRM";
-  const shownTitle = useRef(form.title || "CiviCRM");
+  const shownTitle = useRef((form.title ?? "") || "CiviCRM");
   useEffect(() => {
     if (!pageTitle || !host.current || shownTitle.current === title) return;
     replacePageTitle(host.current, shownTitle.current, title);

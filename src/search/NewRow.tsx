@@ -35,7 +35,7 @@ export function NewRow({ settings, edit, hidden }: NewRowProps) {
   const [values, setValues] = useState<Record<string, unknown>>({});
   const fields = inputs(settings, edit, hidden);
   const returnFocus = useRef(false);
-  const label = (settings.editableRow && settings.editableRow.createLabel) || ts("Add");
+  const label = (settings.editableRow ? settings.editableRow.createLabel : undefined) ?? ts("Add");
   const unusable = blocked(edit.editable);
 
   // The inputs start empty (or with a failed save's values); the first one takes the focus.
@@ -142,7 +142,7 @@ export function NewRow({ settings, edit, hidden }: NewRowProps) {
           <td key={index} data-field-name={column.key} className="crm-search-field-editing">
             <NewCell
               id={`${id}-${String(index)}`}
-              label={column.label || field.key}
+              label={column.label ?? field.key}
               info={field.info}
               kind={field.editor.kind}
               multiple={field.editor.multiple}

@@ -40,7 +40,7 @@ export function fieldPlace(
   node: ElementNode,
   scope: Scope | null,
 ): { scope: Scope; name: string } | null {
-  if (node.name) return scope && { scope, name: String(node.name) };
+  if (typeof node.name === "string" && node.name) return scope && { scope, name: node.name };
   return isFieldDefn(node.defn) ? { scope: EXTRA_SCOPE, name: node.defn.name } : null;
 }
 
@@ -117,7 +117,16 @@ export function placementOptions(attribute: string | null): Record<string, unkno
 
 export interface PrefillItem {
   name: string;
-  values: EntityItem[] | Record<string, EntityItem>;
+  /** Items by index; a stored draft's extra fields ("extra") come as one `{fields}` record. */
+  values: EntityItem[] | Record<string, EntityItem> | { fields: Values };
+}
+
+const isEntityItem = (value: unknown): value is EntityItem =>
+  isRecord(value) && isRecord(value.fields);
+
+/** The first record of a prefill entry. */
+export function firstPrefilled(item: PrefillItem): EntityItem | undefined {
+  return Object.values(item.values).find(isEntityItem);
 }
 
 /**
@@ -139,6 +148,7 @@ export function applyPrefill(
     }
     const items = (next[name] ??= []);
     for (const [index, item] of Object.entries(values)) {
+      if (!isEntityItem(item)) throw new Error(`Prefill of ${name} holds no record at ${index}.`);
       const current = items[Number(index)];
       items[Number(index)] = {
         fields: { ...current?.fields, ...item.fields, ...entities[name]?.data },

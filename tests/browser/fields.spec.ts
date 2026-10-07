@@ -4,7 +4,7 @@
  * Location stays out: the proximity filter needs a geocoding provider.
  */
 import { expect, test, type Page, type Request } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, AUTH, isRecord, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const render = (form: string, renderer: Renderer) =>
@@ -123,14 +123,16 @@ function runFilters(request: Request): unknown[] {
   const body = new URLSearchParams(request.postData() ?? "");
   const single = body.get("params");
   if (single && request.url().includes("/SearchDisplay/run")) {
-    const params = JSON.parse(single) as { filters?: unknown };
-    return [params.filters];
+    const params: unknown = JSON.parse(single);
+    return [isRecord(params) ? params.filters : undefined];
   }
   const batch = body.get("calls");
   if (!batch) return [];
-  return Object.values(JSON.parse(batch) as Record<string, unknown[]>)
+  const calls: unknown = JSON.parse(batch);
+  return Object.values(isRecord(calls) ? calls : {})
+    .filter((call): call is unknown[] => Array.isArray(call))
     .filter((call) => call[0] === "SearchDisplay" && call[1] === "run")
-    .map((call) => (call[2] as { filters?: unknown }).filters);
+    .map((call) => (isRecord(call[2]) ? call[2].filters : undefined));
 }
 
 async function date(page: Page, renderer: Renderer, index: number, isoDate: string) {

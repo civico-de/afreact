@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
+import { vi, type Mock } from "vitest";
 import { jquerySelection } from "../../test/jquery";
 import { mockApi, renderWithQuery } from "../../test/render";
 import { AfreactForm } from "../AfreactForm";
@@ -62,16 +62,14 @@ function respond(status: number, json: unknown): Response {
 }
 
 /** The request the uploader sent: its URL, headers and the multipart `params` field. */
-function sent(fetchMock: ReturnType<typeof vi.fn>, call = 0) {
-  const [url, init] = fetchMock.mock.calls[call] as [string, RequestInit];
-  const body = init.body as globalThis.FormData;
-  const file = body.get("file") as File;
-  return {
-    url,
-    headers: init.headers,
-    params: JSON.parse(String(body.get("params"))) as unknown,
-    file: file.name,
-  };
+function sent(fetchMock: Mock<typeof fetch>, call = 0) {
+  const [url, init] = fetchMock.mock.calls[call] ?? [];
+  const body = init?.body;
+  if (!(body instanceof globalThis.FormData)) throw new Error("No multipart body was sent.");
+  const file = body.get("file");
+  const params = body.get("params");
+  if (!(file instanceof File) || typeof params !== "string") throw new Error("Fields missing.");
+  return { url, headers: init?.headers, params: JSON.parse(params) as unknown, file: file.name };
 }
 
 const png = (name = "ada.png") => new File(["x"], name, { type: "image/png" });
@@ -91,7 +89,7 @@ describe("File fields", () => {
   it("uploads the chosen file after submit with the token, then shows the stored file", async () => {
     window.history.replaceState(null, "", "/civicrm/form?_aff=page-token");
     let answer = (_: Response) => undefined as void;
-    const fetchMock = vi.fn(
+    const fetchMock = vi.fn<typeof fetch>(
       () =>
         new Promise<Response>((resolve) => {
           answer = resolve;
@@ -128,7 +126,7 @@ describe("File fields", () => {
   });
 
   it("sends the join and the record's position for a file in a join block", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(respond(200, { values: [] })));
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(respond(200, { values: [] })));
     vi.stubGlobal("fetch", fetchMock);
     renderForm(
       form([
@@ -142,7 +140,9 @@ describe("File fields", () => {
     await userEvent.upload(await screen.findByLabelText("Scan"), png("scan.pdf"));
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledOnce();
+    });
     expect(sent(fetchMock)).toMatchObject({
       headers: { "X-Requested-With": "XMLHttpRequest" },
       params: { joinEntity: "Attachment", entityIndex: 0, joinIndex: 0 },
@@ -168,7 +168,7 @@ describe("File fields", () => {
   });
 
   it("sends the record the field belongs to when the upload starts, after a removed item", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(respond(200, { values: [] })));
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(respond(200, { values: [] })));
     vi.stubGlobal("fetch", fetchMock);
     renderForm([
       {
@@ -191,7 +191,9 @@ describe("File fields", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledOnce();
+    });
     expect(sent(fetchMock)).toMatchObject({ params: { entityIndex: 0 }, file: "second.png" });
   });
 
@@ -233,7 +235,9 @@ describe("File fields", () => {
   });
 
   it("uploads a chosen file into the draft, without a token, and counts it as a change", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(respond(200, { values: [stored] })));
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(respond(200, { values: [stored] })),
+    );
     vi.stubGlobal("fetch", fetchMock);
     const calls = renderForm(form([imageField, draftButton]), undefined, [], {
       "Afform.submitDraft": () => [{}],
@@ -258,7 +262,9 @@ describe("File fields", () => {
   });
 
   it("ends the retry without a file that keeps failing, also where the field requires one", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(respond(500, { error_message: "Too large" })));
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(respond(500, { error_message: "Too large" })),
+    );
     vi.stubGlobal("fetch", fetchMock);
     const trigger = vi.fn(() => popup);
     const popup = jquerySelection({ length: 1, data: () => "", trigger, dialog: vi.fn() });
@@ -282,7 +288,9 @@ describe("File fields", () => {
   });
 
   it("uploads a draft's file again on submit for a join record the submit creates", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(respond(200, { values: [stored] })));
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(respond(200, { values: [stored] })),
+    );
     vi.stubGlobal("fetch", fetchMock);
     const scan = { ...imageField, defn: { ...image, label: "Scan" } };
     renderForm(
@@ -297,7 +305,9 @@ describe("File fields", () => {
     expect(sent(fetchMock).params).not.toHaveProperty("token");
 
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
     expect(sent(fetchMock, 1)).toMatchObject({
       params: { token: "tok", joinEntity: "Attachment", joinIndex: 0 },
       file: "ada.png",
@@ -305,7 +315,9 @@ describe("File fields", () => {
   });
 
   it("uploads a draft's file on the entity itself only once", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(respond(200, { values: [stored] })));
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(respond(200, { values: [stored] })),
+    );
     vi.stubGlobal("fetch", fetchMock);
     renderForm(form([imageField, draftButton]), undefined, [], {
       "Afform.submitDraft": () => [{}],
@@ -334,7 +346,9 @@ describe("File fields", () => {
     });
     await userEvent.upload(await screen.findByLabelText("Image"), png());
     await userEvent.click(screen.getByRole("button", { name: "Save Draft" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledOnce();
+    });
     // The submit waits for the draft save.
     expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
     await userEvent.upload(screen.getByLabelText("Image"), png("bob.png"));
@@ -369,7 +383,7 @@ describe("File fields", () => {
   });
 
   it("fails loudly when the submit returns no token for a chosen file", async () => {
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn<typeof fetch>();
     vi.stubGlobal("fetch", fetchMock);
     renderForm(form([imageField]), () => [{}]);
     await userEvent.upload(await screen.findByLabelText("Image"), png());
@@ -382,7 +396,7 @@ describe("File fields", () => {
   });
 
   it("requires a file when the field does, also once a chosen file is removed again", async () => {
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn<typeof fetch>();
     vi.stubGlobal("fetch", fetchMock);
     const calls = renderForm(form([{ ...imageField, defn: { ...image, required: true } }]));
     const input = await screen.findByLabelText(/Image/);
@@ -408,11 +422,11 @@ describe("File fields", () => {
 
     expect(screen.getByLabelText("Image")).toHaveFocus();
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
-    await waitFor(() =>
+    await waitFor(() => {
       expect(calls.find(({ call }) => call === "Afform.submit")?.params.values).toEqual({
         Individual1: [{ fields: { id: 3, image: { id: null, file_name: null } }, joins: {} }],
-      }),
-    );
+      });
+    });
   });
 
   it("opens the replace button from the keyboard and shows a file without a link", async () => {

@@ -291,9 +291,7 @@ describe("extra fields", () => {
     const data = setValue(emptyData(["Individual1"]), EXTRA_SCOPE, "text1", "x");
     expect(submission(data)).toEqual({ Individual1: [], extra: { fields: { text1: "x" } } });
     expect(submission(emptyData(["Individual1"]))).toEqual({ Individual1: [] });
-    // As Afform.prefill returns a draft's extra fields; PrefillItem describes entities only.
-    const wire = '[{"name":"extra","values":{"fields":{"text1":"y"}}}]';
-    const prefill: PrefillItem[] = JSON.parse(wire);
+    const prefill: PrefillItem[] = [{ name: "extra", values: { fields: { text1: "y" } } }];
     expect(applyPrefill(emptyData([]), prefill, {}).extra).toEqual([
       { fields: { text1: "y" }, joins: {} },
     ]);

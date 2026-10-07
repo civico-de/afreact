@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { mockApi, renderWithQuery } from "../test/render";
+import { listParam, mockApi, renderWithQuery } from "../test/render";
 import { AfreactSearch } from "./AfreactSearch";
 import {
   columnToggleLabel,
@@ -67,7 +67,8 @@ function setup(savedColumns?: Record<string, string>) {
     "SearchDisplay.run": (params) => {
       if (params.return === "row_count") return Object.assign([], { count: 2 });
       if (params.return === "tally") return [{ sort_name: "2" }];
-      const shown = (params.toggleColumns as number[] | undefined) ?? [0, 1, 2];
+      const shown =
+        params.toggleColumns === undefined ? [0, 1, 2] : listParam(params.toggleColumns);
       const page = String(params.return);
       return [
         {

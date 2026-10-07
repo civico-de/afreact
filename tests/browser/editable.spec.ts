@@ -16,7 +16,8 @@ const cell = (page: Page, field: string) =>
 /** The cell's text as seen; React's edit button also names its column for screen readers. */
 const shown = (page: Page, field: string) => async () =>
   cell(page, field).evaluate((td) => {
-    const copy = td.cloneNode(true) as HTMLElement;
+    const copy = td.cloneNode(true);
+    if (!(copy instanceof HTMLElement)) throw new Error("The cell's clone is no element.");
     for (const hidden of copy.querySelectorAll(".sr-only")) hidden.remove();
     return (copy.textContent ?? "").replace(/\s+/g, " ").trim();
   });

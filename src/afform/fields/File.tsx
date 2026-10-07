@@ -24,7 +24,7 @@ export function fileOutsideFormNote(defn: FieldDefn): string {
  * the form uploads through Afform.submitFile once the record is saved.
  */
 export function FileField({ id, defn, value, onChange, disabled, describedBy }: FileFieldProps) {
-  const env = useFieldEnv("File");
+  const env = useFieldEnv();
   const uploads = useContext(UploadsContext);
   const key = useId();
   const input = useRef<HTMLInputElement>(null);
@@ -120,8 +120,8 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
               joinIndex: joinIndex ?? null,
             };
           },
-          onUploaded: (stored) => {
-            latest.current.onChange(stored);
+          onUploaded: (uploaded) => {
+            latest.current.onChange(uploaded);
           },
           // The submit drops a draft's file on a join record it creates.
           again: () => !!latest.current.env.joinEntity && !latest.current.env.values.id,

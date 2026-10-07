@@ -212,7 +212,7 @@ export function AfreactSearch({
 
   if (loaded.error) return <Failure error={loaded.error} />;
   if (!givenType && loadedType !== undefined && !isDisplayType(loadedType))
-    return <Unsupported what={`display type ${String(loadedType)}`} />;
+    return <Unsupported what={`display type ${loadedType}`} />;
   if (!settings) return <p role="status">{ts("Loading…")}</p>;
   const label = loaded.data?.label ?? "";
   // A failed run shows no rows and no count, as searchDisplayBaseTrait does.

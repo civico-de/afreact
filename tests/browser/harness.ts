@@ -5,6 +5,9 @@ import { isReady } from "../../src/compare/metrics";
 
 export const AUTH = "tests/browser/.auth/admin.json";
 
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 /** Sets debug_enabled and returns the previous value. */
 export async function setDebug(browser: Browser, value: unknown): Promise<unknown> {
   const context = await browser.newContext({ storageState: AUTH });
@@ -51,14 +54,14 @@ export function driver(page: Page, renderer: Renderer): Driver {
   return {
     field,
     fill: (name, value) => field(name).locator("input, textarea").first().fill(value),
-    async select(name, label) {
+    async select(name, option) {
       if (renderer === "react") {
-        await field(name).locator("select").selectOption({ label });
+        await field(name).locator("select").selectOption({ label: option });
         return;
       }
       await field(name).locator(".select2-choice").click();
       await page
-        .locator(".select2-drop-active .select2-result-label", { hasText: label })
+        .locator(".select2-drop-active .select2-result-label", { hasText: option })
         .first()
         .click();
     },

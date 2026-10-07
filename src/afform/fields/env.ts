@@ -25,8 +25,8 @@ export interface FieldEnv {
 
 export const FieldEnvContext = createContext<FieldEnv | null>(null);
 
-export function useFieldEnv(inputType: string): FieldEnv {
+export function useFieldEnv(): FieldEnv {
   const env = useContext(FieldEnvContext);
-  if (!env) throw new Error(`${inputType} field outside a FieldEnvContext`);
+  if (!env) throw new Error("Field rendered outside a FieldEnvContext");
   return env;
 }

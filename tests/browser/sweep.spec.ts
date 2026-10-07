@@ -251,7 +251,8 @@ function observe(scope: string): Observed {
   ]
     .filter((el) => visible(el) && !el.closest(`${elsewhere}, .dropdown-menu`))
     .map((el) => {
-      const label = text(el) || el.getAttribute("title") || el.getAttribute("aria-label") || "";
+      const label =
+        [text(el), el.getAttribute("title"), el.getAttribute("aria-label")].find(Boolean) ?? "";
       const off = el instanceof HTMLButtonElement && el.disabled ? " (disabled)" : "";
       return `${label || (el instanceof HTMLInputElement ? el.value : "")}${off}`;
     });
@@ -296,15 +297,13 @@ function observe(scope: string): Observed {
 }
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
-const listed = (what: string, react: string[], angular: string[]) =>
-  same(react, angular)
-    ? []
-    : [`${what}: React ${JSON.stringify(react)}, Angular ${JSON.stringify(angular)}`];
+const listed = (what: string, react: string[], ng: string[]) =>
+  same(react, ng) ? [] : [`${what}: React ${JSON.stringify(react)}, Angular ${JSON.stringify(ng)}`];
 /** Values and cells may hold contact data, so only their shape goes into the report. */
 const shape = (values: string[]) =>
   values.length ? values.map((value) => `${value.length} chars`).join(", ") : "empty";
 
-function fieldDifferences(react: Field[], angular: Field[]): string[] {
+function fieldDifferences(react: Field[], ng: Field[]): string[] {
   const keyed = (fields: Field[]) => {
     const seen = new Map<string, number>();
     return new Map(
@@ -315,7 +314,7 @@ function fieldDifferences(react: Field[], angular: Field[]): string[] {
       }),
     );
   };
-  const [r, a] = [keyed(react), keyed(angular)];
+  const [r, a] = [keyed(react), keyed(ng)];
   return [...new Set([...r.keys(), ...a.keys()])].flatMap((key) => {
     const [mine, theirs] = [r.get(key), a.get(key)];
     if (!mine || !theirs) return [`field ${key}: only on ${mine ? "React" : "Angular"}`];
@@ -341,11 +340,11 @@ function fieldDifferences(react: Field[], angular: Field[]): string[] {
 
 const MAX_ROW_LINES = 20;
 
-function displayDifferences(react: Display[], angular: Display[]): string[] {
-  if (react.length !== angular.length)
-    return [`search displays: ${react.length} on React, ${angular.length} on Angular`];
+function displayDifferences(react: Display[], ng: Display[]): string[] {
+  if (react.length !== ng.length)
+    return [`search displays: ${react.length} on React, ${ng.length} on Angular`];
   return react.flatMap((mine, index) => {
-    const theirs = angular[index]!;
+    const theirs = ng[index]!;
     const where = `display ${index + 1}`;
     const found = listed(`${where} headers`, mine.headers, theirs.headers);
     if (mine.rows.length !== theirs.rows.length)
@@ -386,11 +385,11 @@ const CLOSED_ALERTS = [
  * On a form closed for submissions React shows the reason and disables every control, where
  * Angular only disables the submit button (docs/comparison.md); that difference is expected.
  */
-function differences(react: Observed, angular: Observed, closed: boolean): string[] {
+function differences(react: Observed, ng: Observed, closed: boolean): string[] {
   const alerts = closed
     ? react.alerts.filter((alert) => !CLOSED_ALERTS.includes(alert))
     : react.alerts;
-  const byName = new Map(angular.fields.map((field) => [field.name, field.disabled]));
+  const byName = new Map(ng.fields.map((field) => [field.name, field.disabled]));
   const fields = closed
     ? react.fields.map((field) => ({
         ...field,
@@ -398,11 +397,11 @@ function differences(react: Observed, angular: Observed, closed: boolean): strin
       }))
     : react.fields;
   return [
-    ...listed("texts", react.texts, angular.texts),
-    ...listed("alerts", alerts, angular.alerts),
-    ...fieldDifferences(fields, angular.fields),
-    ...listed("buttons", react.buttons, angular.buttons),
-    ...displayDifferences(react.displays, angular.displays),
+    ...listed("texts", react.texts, ng.texts),
+    ...listed("alerts", alerts, ng.alerts),
+    ...fieldDifferences(fields, ng.fields),
+    ...listed("buttons", react.buttons, ng.buttons),
+    ...displayDifferences(react.displays, ng.displays),
   ];
 }
 
@@ -533,13 +532,13 @@ const SHARED_CONTENT: Record<string, { rule: string; reason: string }[]> = {
 
 const ruleOf = (finding: string) => finding.slice(0, finding.indexOf(":"));
 
-function sharedContent(name: string, reactOnly: string[], angular: string[]) {
+function sharedContent(name: string, reactOnly: string[], ng: string[]) {
   const rules = new Map<string, string>();
   const stale: string[] = [];
   for (const { rule, reason } of SHARED_CONTENT[name] ?? []) {
     const count = (findings: string[]) => findings.filter((f) => ruleOf(f) === rule).length;
     if (!count(reactOnly)) stale.push(rule);
-    else if (count(reactOnly) <= count(angular)) rules.set(rule, reason);
+    else if (count(reactOnly) <= count(ng)) rules.set(rule, reason);
   }
   const excused = reactOnly.flatMap((finding) => {
     const reason = rules.get(ruleOf(finding));
@@ -636,7 +635,7 @@ function markdown(results: Result[], total: number): string {
     ),
   ];
   // Gate failures first, then the rest by name.
-  for (const result of [...failing, ...results.filter((result) => !result.failures.length)]) {
+  for (const result of [...failing, ...results.filter((entry) => !entry.failures.length)]) {
     lines.push(
       "",
       `## ${result.name}${result.title ? ` (${result.title})` : ""}: ${result.status}`,

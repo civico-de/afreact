@@ -3,7 +3,8 @@ import type { Column, DisplaySettings, Row } from "./types";
 
 /** The weight field rows are dragged by, or null. */
 export function dragField(settings: DisplaySettings): string | null {
-  return settings.draggable ? settings.draggable : null;
+  if (!settings.draggable) return null;
+  return settings.draggable;
 }
 
 /** The row at `index` with its sub-rows, which move with it. */

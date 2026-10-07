@@ -1,12 +1,12 @@
 import { api4 } from "../../api/civi";
-import type { EntityDeclaration, PrefillItem } from "../model";
+import { firstPrefilled, type EntityDeclaration, type PrefillItem } from "../model";
 import type { FormData, Scope, Values } from "../types";
 
 type Join = Record<string, Values>;
 
 /** A join record of a prefill result; `joins` lists may arrive as objects keyed by index. */
 function joinRecord(item: PrefillItem, scope: Scope): Values | undefined {
-  const entityItem = Object.values(item.values)[0];
+  const entityItem = firstPrefilled(item);
   const join: unknown = scope.join === undefined ? undefined : entityItem?.joins?.[scope.join];
   if (join === null || typeof join !== "object") return undefined;
   const records: Join = { ...join };
@@ -47,7 +47,7 @@ export async function loadSelected(
     return (data) =>
       replaceRecord(data, scope, { ...currentRecord(data, scope), ...record }, false);
   }
-  const loaded = Object.values(item.values)[0];
+  const loaded = firstPrefilled(item);
   return (data) =>
     replaceRecord(
       data,

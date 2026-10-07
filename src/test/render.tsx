@@ -32,6 +32,22 @@ export function renderWithQuery(
 
 type Handler = (params: Record<string, unknown>) => unknown;
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+const isList = (value: unknown): value is unknown[] => Array.isArray(value);
+
+/** A handler's nested parameter as the record it must be. */
+export function recordParam(value: unknown): Record<string, unknown> {
+  if (!isRecord(value)) throw new Error(`Expected an object, got ${JSON.stringify(value)}`);
+  return value;
+}
+
+/** A handler's nested parameter as the list it must be. */
+export function listParam(value: unknown): unknown[] {
+  if (!isList(value)) throw new Error(`Expected a list, got ${JSON.stringify(value)}`);
+  return value;
+}
+
 /** Routes CRM.api4 calls to handlers keyed "Entity.action"; unknown calls reject loudly. */
 export function mockApi(handlers: Record<string, Handler>) {
   const calls: { call: string; params: Record<string, unknown> }[] = [];

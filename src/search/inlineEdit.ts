@@ -231,7 +231,7 @@ export function useInlineEdit({
     setEditing(null);
     setSaving((current) => [...current, busy]);
     setAnnouncement(ts("Saving…"));
-    const done = () => {
+    const finish = () => {
       setSaving((current) => current.filter((other) => other !== busy));
     };
     // getApiParams(null) plus the row and its new values, as saveEditing() sends them.
@@ -242,7 +242,7 @@ export function useInlineEdit({
       values: { ...values },
     }).then(
       (result) => {
-        done();
+        finish();
         setAnnouncement(ts("Saved"));
         const fresh = result[0];
         const shown = client.getQueryData<RunPage>(key);
@@ -259,7 +259,7 @@ export function useInlineEdit({
         }
       },
       (error: unknown) => {
-        done();
+        finish();
         const message = errorMessage(error);
         setAnnouncement(ts("Not saved: %1", { 1: message }));
         // The editor opens again, with its values, unless another one opened meanwhile.
@@ -293,7 +293,9 @@ export function useInlineEdit({
         return;
       }
       writePage(client, rowsKey, (current) => ({ ...current, rows: [...current.rows, fresh] }));
-      client.setQueryData<number | null>(countKey, (count) => (count == null ? count : count + 1));
+      client.setQueryData<number | null>(countKey, (count) =>
+        typeof count === "number" ? count + 1 : count,
+      );
       void client.invalidateQueries({ queryKey: tallyKey });
     } catch (error) {
       const message = errorMessage(error);

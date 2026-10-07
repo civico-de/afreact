@@ -54,7 +54,7 @@ afterEach(() => {
 
 describe("Location fields", () => {
   it("writes distance, unit and address once all are set, the address on leaving it", async () => {
-    const onValue = vi.fn();
+    const onValue = vi.fn<(value: unknown) => void>();
     render(<Harness initial={null} onValue={onValue} />);
     const group = screen.getByRole("group", { name: "Near" });
     expect(group).toHaveClass("form-inline");

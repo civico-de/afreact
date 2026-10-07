@@ -9,7 +9,8 @@ import { useFieldEnv } from "./env";
 export interface CheckoutField {
   name: string;
   title: string;
-  htmlType: "text" | "select" | "checkBox" | "expiryDate" | "chainSelect" | string;
+  /** "text", "select", "checkBox", "expiryDate", "chainSelect" or another core input type. */
+  htmlType: string;
   is_required?: boolean;
   options?: FieldOption[];
 }
@@ -48,7 +49,8 @@ const STATE = "billing_state_province_id-";
 
 /** afCheckoutBlock reads the option from the field on the form, then from the entity's fixed data. */
 function optionKey(values: Params, entityData: Params | undefined): string | null {
-  const key = values.checkout_option || entityData?.checkout_option;
+  const own = values.checkout_option;
+  const key = typeof own === "string" && own ? own : entityData?.checkout_option;
   return typeof key === "string" && key ? key : null;
 }
 
@@ -310,7 +312,7 @@ export function CheckoutBlock({
   onChange,
   disabled,
 }: CheckoutBlockProps) {
-  const env = useFieldEnv("CheckoutBlock");
+  const env = useFieldEnv();
   const baseId = useId();
   const settings = window.CRM.vars?.afreact?.afCheckout;
   const key = optionKey(env.values, env.entityData);

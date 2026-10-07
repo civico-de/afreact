@@ -28,7 +28,7 @@ function itemOf(root: HTMLElement, key: string): Element | undefined {
 export function useKeptFocus(root: HTMLElement | null, loading: boolean) {
   const spot = useRef<Spot | null>(null);
   useEffect(() => {
-    if (!root) return;
+    if (!root) return undefined;
     const onFocus = (event: FocusEvent) => {
       const element = event.target instanceof Element ? event.target : null;
       const item = element?.closest("[data-entity-id]");

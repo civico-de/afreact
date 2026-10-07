@@ -43,7 +43,8 @@ test.beforeAll(async ({ browser }) => {
     },
     closed: { submit_enabled: false },
   };
-  for (const [key, name] of Object.entries(FORMS) as [keyof typeof FORMS, string][]) {
+  for (const key of ["message", "redirect", "closed"] as const) {
+    const name = FORMS[key];
     await quietApi(page, "Afform", "create", {
       layoutFormat: "html",
       values: {

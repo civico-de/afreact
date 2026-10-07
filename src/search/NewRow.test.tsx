@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { editInfo } from "../test/editInfo";
-import { apiError, mockApi, renderWithQuery } from "../test/render";
+import { apiError, mockApi, recordParam, renderWithQuery } from "../test/render";
 import { AfreactSearch } from "./AfreactSearch";
 import type { DisplaySettings, EditableInfo, Row } from "./types";
 
@@ -46,8 +46,9 @@ function setup({
     "SearchDisplay.inlineEdit":
       inlineEdit ??
       ((params) => {
-        const values = params.values as { label: string; description?: string };
-        return [row(2, values.label, values.description)];
+        const { label, description } = recordParam(params.values);
+        if (typeof label !== "string") throw new Error("A label is required.");
+        return [row(2, label, typeof description === "string" ? description : "")];
       }),
     ...handlers,
   });
@@ -162,7 +163,11 @@ describe("editableRow.create", () => {
     let fail = (): void => {};
     setup({
       inlineEdit: () =>
-        new Promise((_, reject) => (fail = () => reject(apiError("Duplicate label")))),
+        new Promise((_, reject) => {
+          fail = () => {
+            reject(apiError("Duplicate label"));
+          };
+        }),
     });
     await screen.findByText("One");
     await userEvent.click(addButton());

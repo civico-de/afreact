@@ -24,7 +24,7 @@ async function loaded(page: Page, name: string, renderer: Renderer, item: string
 
 interface ColumnInfo {
   className: string;
-  title: string | null;
+  title: string;
   label: string;
   text: string;
 }
@@ -65,7 +65,8 @@ function observe(page: Page): Promise<DisplayInfo> {
         columns: [...el.querySelectorAll(":scope > div[class*='crm-search-col-type-']")].map(
           (column) => ({
             className: classes(column),
-            title: column.getAttribute("title") || null,
+            // Angular interpolates an empty title attribute where React writes none.
+            title: column.getAttribute("title") ?? "",
             label: text(column.querySelector(":scope > label")),
             text: text(column.querySelector(":scope > span")),
           }),

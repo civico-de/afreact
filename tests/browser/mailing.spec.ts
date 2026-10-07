@@ -84,7 +84,7 @@ async function made(page: Page, renderer: Renderer, mailingId: number): Promise<
     name: mailing.name,
     template_type: mailing.template_type,
     group: { is_hidden: group.is_hidden, "group_type:name": group["group_type:name"] },
-    members: members.map((row) => ids.indexOf(row.contact_id)).sort(),
+    members: members.map((row) => ids.indexOf(row.contact_id)).sort((a, b) => a - b),
   };
 }
 

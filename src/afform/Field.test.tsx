@@ -125,10 +125,20 @@ describe("Field", () => {
             disabled={false}
             onChange={setValue}
           />
-          <button type="button" onClick={() => setValue("")}>
+          <button
+            type="button"
+            onClick={() => {
+              setValue("");
+            }}
+          >
             Reset
           </button>
-          <button type="button" onClick={() => setValue("Bob")}>
+          <button
+            type="button"
+            onClick={() => {
+              setValue("Bob");
+            }}
+          >
             Prefill
           </button>
         </>
@@ -161,7 +171,7 @@ describe("Field", () => {
       input_style: "short",
       input_attrs: { min: 0, max: 10, step: 0.5, placeholder: "Hours" },
     });
-    const input = screen.getByRole("spinbutton", { name: "Field" });
+    const input = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Field" });
     expect(input).toHaveAttribute("min", "0");
     expect(input).toHaveAttribute("max", "10");
     expect(input).toHaveAttribute("step", "0.5");
@@ -169,7 +179,7 @@ describe("Field", () => {
     expect(input).toHaveClass("form-control", "short");
     await userEvent.type(input, "-1.5");
     expect(number.at(-1)).toBe(-1.5);
-    expect((input as HTMLInputElement).validity.rangeUnderflow).toBe(true);
+    expect(input.validity.rangeUnderflow).toBe(true);
   });
 
   it("keeps numeric option IDs in selects", async () => {
@@ -375,7 +385,7 @@ describe("Field", () => {
     expect(input).toHaveValue(null);
   });
 
-  it.each(["yy-mm", "M yy"])("stores the 1st of the month for format %s", async (date) => {
+  it.each(["yy-mm", "M yy"])("stores the 1st of the month for format %s", (date) => {
     const values = setup({ input_type: "Date", input_attrs: { date } }, "1990-05-17");
     const input = screen.getByLabelText("Field");
     expect(input).toHaveAttribute("type", "month");

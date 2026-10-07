@@ -18,7 +18,6 @@ export function rangeValue(defn: FieldDefn, value: unknown): number {
   const stored = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
   if (typeof stored === "number" && !Number.isNaN(stored)) return stored;
   const attrs = defn.input_attrs ?? {};
-  // Option ids set the bounds and may be numeric strings.
   const min = Number(attrs.min ?? 0);
   const max = Number(attrs.max ?? 100);
   const step = Number(attrs.step ?? 1);

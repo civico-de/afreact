@@ -163,7 +163,7 @@ describe("join blocks of one entity behind af-if", () => {
             },
           ],
         },
-      ] as unknown as PrefillItem[],
+      ],
       "?Individual1=5",
     );
     expect(await screen.findByRole("textbox", { name: "Work" })).toHaveValue("w@example.org");

@@ -59,9 +59,9 @@ export function UpdateDialog({ task, entity, ids, onSave, onCancel }: UpdateDial
   const fieldByName = (name: string) => fields.data?.find((field) => field.name === name);
   const editor = (field: UpdateField) => editorFor(fieldEditableInfo(entity.name, field));
   const fieldTitle = (field: UpdateField) => {
-    const chosen = editor(field);
-    return "unsupported" in chosen
-      ? ts("Not supported by the React renderer: %1", { 1: chosen.unsupported })
+    const editorOf = editor(field);
+    return "unsupported" in editorOf
+      ? ts("Not supported by the React renderer: %1", { 1: editorOf.unsupported })
       : (field.description ?? undefined);
   };
 

@@ -53,11 +53,8 @@ describe("Menu", () => {
 
   it("sits under its button and scrolls within the space below it", async () => {
     const { button, list } = menu();
-    vi.spyOn(button, "getBoundingClientRect").mockReturnValue({
-      ...button.getBoundingClientRect(),
-      bottom: 100,
-      left: 20,
-    });
+    // A button at (20, 0), 100 px tall: its bottom is at 100.
+    vi.spyOn(button, "getBoundingClientRect").mockReturnValue(new DOMRect(20, 0, 0, 100));
     vi.spyOn(document.documentElement, "clientHeight", "get").mockReturnValue(500);
     await userEvent.click(button);
     expect(list.style.top).toBe("100px");
@@ -67,11 +64,8 @@ describe("Menu", () => {
 
   it("opens above its button when the space below is too small", async () => {
     const { button, list } = menu();
-    vi.spyOn(button, "getBoundingClientRect").mockReturnValue({
-      ...button.getBoundingClientRect(),
-      top: 460,
-      bottom: 480,
-    });
+    // A button from 460 to 480, 20 px above the viewport's bottom edge.
+    vi.spyOn(button, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 460, 0, 20));
     vi.spyOn(document.documentElement, "clientHeight", "get").mockReturnValue(500);
     vi.spyOn(list, "scrollHeight", "get").mockReturnValue(150);
     await userEvent.click(button);

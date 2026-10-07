@@ -83,13 +83,13 @@ async function measure(page: Page, url: string): Promise<Measured[]> {
       // popover menu is in React's markup but not in Angular's.
       const visibleText = (element: HTMLElement) => {
         const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-        const parts: string[] = [];
+        const texts: string[] = [];
         for (let node = walker.nextNode(); node; node = walker.nextNode()) {
           const parent = node.parentElement;
           if (!parent || parent.closest(".sr-only") || !parent.getClientRects().length) continue;
-          parts.push(node.textContent ?? "");
+          texts.push(node.textContent ?? "");
         }
-        return parts.join("").replace(/\s+/g, " ").trim();
+        return texts.join("").replace(/\s+/g, " ").trim();
       };
       return parts.flatMap(({ name, selector, text }) =>
         [...document.querySelectorAll<HTMLElement>(selector)]

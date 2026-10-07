@@ -415,7 +415,7 @@ describe("tag task", () => {
       { id: 4, label: "A1a", parent_id: 2 },
       { id: 5, label: "Orphan", parent_id: 9 },
     ];
-    expect(tagTree(tags).map(({ tag, depth }) => `${String(depth)}:${tag.label}`)).toEqual([
+    expect(tagTree(tags).map(({ tag: node, depth }) => `${String(depth)}:${node.label}`)).toEqual([
       "0:A",
       "1:A1",
       "2:A1a",

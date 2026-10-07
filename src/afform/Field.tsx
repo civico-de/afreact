@@ -542,7 +542,7 @@ function YearInput({
 }) {
   const [draft, setDraft] = useState(() => datePrefix(value, 4));
   const stored = (text: string) => (/^\d{4}$/.test(text) ? `${text}-01-01` : "");
-  const current = value ? String(value) : "";
+  const current = typeof value === "string" ? value : "";
   return (
     <input
       {...common}

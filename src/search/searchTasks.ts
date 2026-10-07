@@ -264,7 +264,7 @@ export function initialUpdateValue(field: UpdateField): unknown {
   if (field.serialize || field.data_type === "Array") return [];
   if (field.data_type === "Boolean") return true;
   if (field.default_value) return field.default_value;
-  const options = field.options || [];
+  const options = Array.isArray(field.options) ? field.options : [];
   return options.length ? options[0]?.id : "";
 }
 
@@ -273,7 +273,7 @@ export function initialBatchValue(field: UpdateField): unknown {
   if ("default_value" in field) return field.default_value;
   if (field.serialize || field.data_type === "Array") return [];
   if (field.data_type === "Boolean") return true;
-  const options = field.options || [];
+  const options = Array.isArray(field.options) ? field.options : [];
   return options.length ? options[0]?.id : "";
 }
 
@@ -284,7 +284,7 @@ export function fieldEditableInfo(entity: string, field: UpdateField): EditableI
     input_type: field.input_type,
     input_attrs: null,
     data_type: field.data_type,
-    options: field.options || false,
+    options: Array.isArray(field.options) ? field.options : false,
     serialize: !!field.serialize,
     nullable: !!field.nullable,
     fk_entity: field.fk_entity ?? null,
@@ -376,7 +376,7 @@ export function tagTree(tags: TagRow[]): { tag: TagRow; depth: number }[] {
   const byParent = new Map<number | null, TagRow[]>();
   const known = new Set(tags.map((tag) => tag.id));
   for (const tag of tags) {
-    const parent = tag.parent_id != null && known.has(tag.parent_id) ? tag.parent_id : null;
+    const parent = tag.parent_id && known.has(tag.parent_id) ? tag.parent_id : null;
     byParent.set(parent, [...(byParent.get(parent) ?? []), tag]);
   }
   const walk = (parent: number | null, depth: number): { tag: TagRow; depth: number }[] =>
@@ -589,7 +589,7 @@ export function dispositionFileName(header: string | null): string | null {
   const utf8 = /filename\*=utf-8''([\w%\-.]+)(?:; ?|$)/i.exec(header ?? "");
   if (utf8?.[1]) return decodeURIComponent(utf8[1]);
   const ascii = /filename=(["']?)(.*?[^\\])\1(?:; ?|$)/.exec(header ?? "");
-  return ascii?.[2] || null;
+  return ascii?.[2] ?? null;
 }
 
 /** The data doTask() hands to a task's expressions. */
@@ -696,7 +696,7 @@ export function batchCall(batch: ApiBatch, entity: EntityInfo, ids: Key[]): ApiC
     );
     return [target, "save", params];
   }
-  const where = Array.isArray(params.where) ? params.where : [];
+  const where: unknown[] = Array.isArray(params.where) ? params.where : [];
   return [target, batch.action, { ...params, where: [...where, [idField, "IN", ids]] }];
 }
 
