@@ -29,7 +29,7 @@ class RenderPageHeadlessTest extends TestCase implements HeadlessInterface {
     $page = RenderPage::renderWith('afformAfreactDemoContact', 'react');
     $this->assertStringContainsString(
       '<div id="bootstrap-theme" class="afreact-render" data-renderer="react">'
-      . '<afreact-form name="afformAfreactDemoContact"></afreact-form></div>',
+      . '<afreact-form name="afformAfreactDemoContact" source="page"></afreact-form></div>',
       $page,
     );
   }
@@ -49,7 +49,7 @@ class RenderPageHeadlessTest extends TestCase implements HeadlessInterface {
     $_GET['options'] = '{}';
     $_GET['renderer'] = 'react';
     $this->assertStringContainsString(
-      '<afreact-form name="afformAfreactDemoContact" options="{}"></afreact-form>',
+      '<afreact-form name="afformAfreactDemoContact" source="page" options="{}"></afreact-form>',
       RenderPage::render(),
     );
     $_GET['renderer'] = 'angular';
