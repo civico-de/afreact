@@ -145,7 +145,11 @@ It walks each form's layout with the same checks the renderer words its notes
 with (`src/afform/support.ts`), so the report and the rendered form agree
 (pinned by `tests/browser/support.spec.ts`). A form placed only in tabs or
 summary blocks is checked with its placement's options; its preview has none,
-so a display filtered by them shows a note there only.
+so a display filtered by them shows a note there only. Its button **Render
+every supported form with React** writes every form without a finding into
+the setting and drops those with one; a listed form that is missing or whose
+check failed keeps its state. The button writes the list as the page saw it,
+over any edit made on the settings form meanwhile.
 
 ## Pages
 
