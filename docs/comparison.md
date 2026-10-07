@@ -385,6 +385,15 @@ form as well (`master` as of 2026-10-05; read from the code, not run). The
 React renderer keeps its own `<form>` inside the case form: controls submit
 that form, and its submit event stops there.
 
+**Minetta's dark mode greys the primary button below contrast.** RiverLea's
+default stream sets `--crm-primary-color` to its grey 500 (`#919297`) with
+light text on it (`streams/minetta/_dark.css`), 3.1:1 where WCAG AA asks 4.5:1;
+the other streams keep a passing pair in both modes. Every `btn-primary` and
+`crm-button` on a core page is affected, measured on 6.18.2 with axe; the
+variable is the same on `master` as of 2026-10-07. The React pages keep the
+theme's button classes rather than colours of their own, and the a11y spec
+accepts the finding where a core page in the same theme shows it too.
+
 **`url-arg` blanks the tab set outside the Angular page.** On 6.18 afTabset
 binds `url-arg` with `$scope.$bindToRoute()` (`afTabset.component.js:24`),
 which needs the route of a `civicrm/a` page. On a form's own page it throws

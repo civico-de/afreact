@@ -1,7 +1,8 @@
 /**
  * The React pages must be as accessible as the Angular ones, in light and in dark mode. The
- * only axe findings allowed on it are contrast failures the Angular page has with the same colours
- * and font, i.e. the theme's. Findings are reported without element content.
+ * only axe findings allowed on it are contrast failures the Angular page (or, for the support
+ * report, a core page) has with the same colours and font, i.e. the theme's. Findings are
+ * reported without element content.
  */
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { isReady } from "../../src/compare/metrics";
@@ -208,14 +209,23 @@ for (const colorScheme of ["light", "dark"] as const) {
     }
   });
 
-  test(`axe finds nothing on the support report (${colorScheme})`, async ({ page }, testInfo) => {
+  test(`axe finds nothing on the support report beyond the theme contrast core shares (${colorScheme})`, async ({
+    page,
+  }, testInfo) => {
     test.setTimeout(180_000);
     await page.emulateMedia({ colorScheme });
     const report = await findings(page, "/civicrm/admin/afreact", {
       scope: ".afreact-support-page",
-      ready: `/^Checked \\d+ forms/.test(document.querySelector(".afreact-support [role=status]")?.textContent ?? "")`,
+      ready: `/^Checked \\d+ forms/.test(document.querySelector(".afreact-support p[role=status]")?.textContent ?? "")`,
     });
-    await testInfo.attach("findings.txt", { body: report.join("\n"), contentType: "text/plain" });
-    expect(report).toEqual([]);
+    // Core's settings form in the same theme: its Save button is the apply button's twin.
+    const settings = await findings(page, "/civicrm/admin/setting/afreact", {
+      scope: ".crm-container form",
+      ready: `!!document.querySelector(".crm-container form .crm-button")`,
+    });
+    await attach(testInfo, report, settings);
+    expect(ownFindings(report, settings), "findings the core settings form does not share").toEqual(
+      [],
+    );
   });
 }
