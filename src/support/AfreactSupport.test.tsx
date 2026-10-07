@@ -1,4 +1,5 @@
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
 import { AfreactSupport, checkedOptions, shownAt, takenOver } from "./AfreactSupport";
 import { listedForms } from "./listed";
@@ -83,6 +84,63 @@ describe("AfreactSupport", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("saves every form without problems; a listed form missing or failed to load keeps its state", async () => {
+    const user = userEvent.setup();
+    const calls = mockApi({
+      "Afform.get": () => forms,
+      "Afreact.getForm": ({ name }) => {
+        const layout = layouts[String(name)];
+        if (!layout) throw apiError("Form broke");
+        return [{ name, title: null, type: "form", layout }];
+      },
+      "Setting.set": () => [],
+    });
+    renderWithQuery(
+      <AfreactSupport
+        listed={["afsearchGaps", "afformBroken", "afformGone"]}
+        settings="/settings"
+      />,
+    );
+    const button = await screen.findByRole("button", {
+      name: "Render every supported form with React",
+    });
+    expect(
+      screen.getByText("Lists 1 more forms and drops 1 with parts React cannot show."),
+    ).toHaveAttribute("role", "status");
+    expect(within(row("afformPlaced")).getAllByRole("cell")[2]).toHaveTextContent("Angular");
+    await user.click(button);
+    const outcome = await screen.findByText("The settings list every supported form.");
+    expect(calls.find(({ call }) => call === "Setting.set")?.params).toEqual({
+      values: { afreact_forms: ["afformPlaced", "afformBroken", "afformGone"] },
+    });
+    expect(within(row("afformPlaced")).getAllByRole("cell")[2]).toHaveTextContent("React");
+    expect(button).toBeDisabled();
+    expect(outcome).toHaveFocus();
+  });
+
+  it("reports a failed save and keeps the listed state", async () => {
+    const user = userEvent.setup();
+    mockApi({
+      "Afform.get": () => forms,
+      "Afreact.getForm": ({ name }) => {
+        const layout = layouts[String(name)] ?? [];
+        return [{ name, title: null, type: "form", layout }];
+      },
+      "Setting.set": () => {
+        throw apiError("No write");
+      },
+    });
+    renderWithQuery(<AfreactSupport listed={[]} settings="/settings" />);
+    await user.click(
+      await screen.findByRole("button", { name: "Render every supported form with React" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("No write");
+    expect(
+      screen.getByText("Lists 2 more forms and drops 0 with parts React cannot show."),
+    ).toHaveFocus();
+    expect(within(row("afformPlaced")).getAllByRole("cell")[2]).toHaveTextContent("Angular");
+  });
+
   it("shows progress while forms are checked", async () => {
     let release = () => {};
     renderReport(
@@ -120,10 +178,17 @@ describe("AfreactSupport", () => {
     const layout = [
       { "#tag": "div", "#children": [table("All", { actions: true })] },
       table("Plain", {}),
-      table("Linked", { columns: [{ type: "links", links: [{ task: "enable" }] }] }),
+      table("Linked", {
+        columns: [{ type: "links", links: [{ task: "enable" }] }],
+      }),
     ];
     const tasks = [
-      { name: "enable", title: "Enable", number: "> 0", apiBatch: { action: "update" } },
+      {
+        name: "enable",
+        title: "Enable",
+        number: "> 0",
+        apiBatch: { action: "update" },
+      },
       {
         name: "download",
         title: "Download",
@@ -137,7 +202,12 @@ describe("AfreactSupport", () => {
       "SearchDisplay.getSearchTasks": () =>
         Object.assign(tasks, {
           editable: {
-            entityInfo: { name: "Contact", title: "C", title_plural: "Cs", primary_key: ["id"] },
+            entityInfo: {
+              name: "Contact",
+              title: "C",
+              title_plural: "Cs",
+              primary_key: ["id"],
+            },
           },
         }),
     });
@@ -180,7 +250,11 @@ describe("shownAt", () => {
 describe("checkedOptions and takenOver", () => {
   const [placed] = forms;
   if (!placed) throw new Error("fixture");
-  const dashlet = { ...placed, server_route: null, placement: ["dashboard_dashlet"] };
+  const dashlet = {
+    ...placed,
+    server_route: null,
+    placement: ["dashboard_dashlet"],
+  };
 
   it("checks a form shown only inline with options, one with a page or not inline without", () => {
     expect(checkedOptions({ ...placed, server_route: null })).toEqual({});

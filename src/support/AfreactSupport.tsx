@@ -1,4 +1,5 @@
-import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
 import { api4, errorMessage } from "../api/civi";
 import { loadDefinition } from "../afform/source";
 import { layoutProblems, taskDisplays } from "../afform/support";
@@ -27,12 +28,18 @@ function loadForms(): Promise<SupportRow[]> {
 async function taskProblems(layout: LayoutNode[]): Promise<string[]> {
   const notes = await Promise.all(
     taskDisplays(layout).map(async ({ search, display, referenced }) => {
-      const list = await api4("SearchDisplay", "getSearchTasks", { savedSearch: search, display });
+      const list = await api4("SearchDisplay", "getSearchTasks", {
+        savedSearch: search,
+        display,
+      });
       return unsupportedTaskNotes(parseTaskList(list).tasks, referenced);
     }),
   );
   return notes.flat();
 }
+
+/** The setting the button writes; the page reads it as the `listed` attribute. */
+const SETTING = "afreact_forms";
 
 /** Placements core renders with InlineAfform.tpl, which passes their options. */
 const INLINE_PLACEMENTS = new Set([
@@ -78,7 +85,12 @@ interface AfreactSupportProps {
  */
 export function AfreactSupport({ listed, settings }: AfreactSupportProps) {
   const client = useQueryClient();
-  const forms = useQuery({ queryKey: ["afreact-support-forms"], queryFn: loadForms });
+  // The setting as last saved; the page's own save updates it.
+  const [current, setCurrent] = useState(listed);
+  const forms = useQuery({
+    queryKey: ["afreact-support-forms"],
+    queryFn: loadForms,
+  });
   const rows = forms.data ?? [];
   const checks = useQueries({
     queries: rows.map((row) => ({
@@ -90,11 +102,37 @@ export function AfreactSupport({ listed, settings }: AfreactSupportProps) {
     })),
   });
   const known = new Set(rows.map((row) => row.name));
-  const missing = forms.isSuccess ? listed.filter((name) => !known.has(name)) : [];
+  const missing = forms.isSuccess ? current.filter((name) => !known.has(name)) : [];
   const done = checks.filter((check) => !check.isPending).length;
   const gaps = checks.filter((check) => check.data?.length).length;
   const failed = checks.filter((check) => check.isError).length;
   const busy = forms.isPending || done < rows.length;
+
+  // What the button saves: every form without a problem; a listed form that is missing or whose
+  // check failed keeps its state.
+  const supported = [
+    ...rows
+      .filter(
+        (row, index) =>
+          checks[index]?.data?.length === 0 ||
+          (checks[index]?.isError && current.includes(row.name)),
+      )
+      .map((row) => row.name),
+    ...missing,
+  ];
+  const added = supported.filter((name) => !current.includes(name)).length;
+  const dropped = current.filter((name) => !supported.includes(name)).length;
+  const outcome = useRef<HTMLSpanElement>(null);
+  const apply = useMutation({
+    mutationFn: (names: string[]) => api4("Setting", "set", { values: { [SETTING]: names } }),
+    onSuccess: (_, names) => {
+      setCurrent(names);
+    },
+    // The disabled button loses the focus; the outcome takes it.
+    onSettled: () => {
+      outcome.current?.focus();
+    },
+  });
 
   return (
     <div className="afreact-support">
@@ -107,9 +145,38 @@ export function AfreactSupport({ listed, settings }: AfreactSupportProps) {
           {errorMessage(forms.error)}
         </div>
       )}
+      {forms.isSuccess && !busy && (
+        <p className="afreact-support-apply">
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={apply.isPending || added + dropped === 0}
+            onClick={() => {
+              apply.mutate(supported);
+            }}
+          >
+            {ts("Render every supported form with React")}
+          </button>{" "}
+          <span role="status" tabIndex={-1} ref={outcome}>
+            {added + dropped === 0
+              ? ts("The settings list every supported form.")
+              : ts("Lists %1 more forms and drops %2 with parts React cannot show.", {
+                  1: added,
+                  2: dropped,
+                })}
+          </span>
+        </p>
+      )}
+      {apply.isError && (
+        <div className="alert alert-danger" role="alert">
+          {errorMessage(apply.error)}
+        </div>
+      )}
       {missing.length > 0 && (
         <div className="alert alert-warning" role="alert">
-          {ts("Listed in the settings but not found: %1", { 1: missing.join(", ") })}
+          {ts("Listed in the settings but not found: %1", {
+            1: missing.join(", "),
+          })}
         </div>
       )}
       <p role="status">
@@ -144,7 +211,7 @@ export function AfreactSupport({ listed, settings }: AfreactSupportProps) {
               <SupportRowView
                 key={row.name}
                 row={row}
-                listed={listed.includes(row.name)}
+                listed={current.includes(row.name)}
                 check={checks[index]}
               />
             ))}

@@ -490,7 +490,7 @@ type Reported = { problems: string[] } | { error: string };
 /** The support report's verdict per form, as civicrm/admin/afreact shows it. */
 async function supportReport(page: Page): Promise<Map<string, Reported>> {
   await page.goto("/civicrm/admin/afreact");
-  await expect(page.locator(".afreact-support [role=status]")).toHaveText(/^Checked \d+ forms/, {
+  await expect(page.locator(".afreact-support p[role=status]")).toHaveText(/^Checked \d+ forms/, {
     timeout: 180_000,
   });
   const rows = await page.locator(".afreact-support tbody tr").evaluateAll((trs) =>
