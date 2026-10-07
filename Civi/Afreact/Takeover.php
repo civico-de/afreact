@@ -84,7 +84,8 @@ final class Takeover {
    * by every request that finds it empty, racing the pages served meanwhile.
    */
   public static function rebuildMenu(): void {
-    \CRM_Core_Menu::store();
+    \CRM_Core_Menu::clear();
+    \CRM_Core_Menu::rebuild();
   }
 
 }

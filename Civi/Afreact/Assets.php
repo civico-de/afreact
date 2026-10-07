@@ -38,14 +38,19 @@ final class Assets {
       // What AfformMetadataInjector::preprocess() writes into afLocationInput's unit select.
       ->addVars('afreact', ['distanceUnit' => \CRM_Utils_Address::getDefaultDistanceUnit()]);
     // What afCheckout's settingsFactory gives CRM.afCheckout, for CheckoutBlock fields.
-    if (class_exists(\Civi\Checkout\Afform::class) && \Civi::service('civi.checkout.afform')->isActive()) {
+    $checkout = \Civi::container()->has('civi.checkout.afform') ? \Civi::service('civi.checkout.afform') : NULL;
+    if ($checkout instanceof \Civi\Checkout\Afform && $checkout->isActive()) {
       \Civi::resources()
         ->addStyleFile('civi_contribute', 'ang/afCheckout.css')
         ->addVars('afreact', ['afCheckout' => self::$checkout ??= \Civi\Checkout\Afform::getSettings()]);
     }
   }
 
-  /** The checkout settings, asked once per request: load() runs once per element on a page. */
+  /**
+   * The checkout settings, asked once per request: load() runs once per element on a page.
+   *
+   * @var array<mixed>|null
+   */
   private static ?array $checkout = NULL;
 
   /**
@@ -60,7 +65,7 @@ final class Assets {
     preg_match_all('~\bfrom\s*"\./(chunks/[^"]+)"~', $entry, $imports);
     $links = '';
     foreach (array_unique($imports[1]) as $chunk) {
-      $links .= '<link rel="modulepreload" href="' . htmlspecialchars(E::url("dist/$chunk")) . '">' . "\n";
+      $links .= '<link rel="modulepreload" href="' . htmlspecialchars(E::url("dist/{$chunk}")) . '">' . "\n";
     }
     return $links;
   }

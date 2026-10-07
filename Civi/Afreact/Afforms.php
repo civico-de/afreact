@@ -67,16 +67,19 @@ final class Afforms {
    * The form metadata afform.js hands afCoreDirective, which afForm sends as `afform`
    * with crmFormSuccess and crmFormError (afform_civicrm_buildAsset()).
    *
-   * @return array<string, mixed>
+   * @return array<mixed>
    */
   public static function meta(string $name): array {
-    $meta = (array) Afform::get(checkPermissions: FALSE)
+    $record = Afform::get(checkPermissions: FALSE)
       ->addSelect('redirect', 'name', 'title', 'autosave_draft', 'confirmation_type', 'confirmation_message')
       ->addWhere('name', '=', $name)
       ->execute()
       ->first();
-    (new StringVisitor())->visitMetadata($meta, fn ($text) => _ts($text));
-    return $meta;
+    if (!is_array($record)) {
+      throw new \CRM_Core_Exception("The form {$name} does not exist.");
+    }
+    (new StringVisitor())->visitMetadata($record, '_ts');
+    return $record;
   }
 
   public static function field(mixed $afform, string $field): string {
@@ -104,11 +107,8 @@ final class Afforms {
       }
       $found[$module] = $blocks[$module] ?? '';
       $requires = $angular->getModule($module)['requires'] ?? [];
-      $embedded = array_filter(
-        is_array($requires) ? $requires : [],
-        static fn (mixed $name) => is_string($name) && isset($blocks[$name]),
-      );
-      $modules = [...$modules, ...array_map('strval', array_values($embedded))];
+      $named = array_flip(array_filter(is_array($requires) ? $requires : [], 'is_string'));
+      $modules = [...$modules, ...array_keys(array_intersect_key($blocks, $named))];
     }
     ksort($found);
     return $found;

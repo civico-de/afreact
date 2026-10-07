@@ -26,11 +26,14 @@ final class CoreSamples {
       literals: ['input_type', 'data_type', 'columns[].type'],
       maps: ['operators', 'rows[].data', 'editable', 'subsearch'],
     );
-    $forms = Afform::get(FALSE)->addSelect('name', 'has_local')->addOrderBy('name')->execute();
+    $forms = Afform::get(checkPermissions: FALSE)->addSelect('name', 'has_local')->addOrderBy('name')->execute();
     // Local forms and local edits differ between a dev site and CI; extensions ship the rest.
     foreach (array_filter((array) $forms, static fn (array $form): bool => !$form['has_local']) as $form) {
       try {
-        $this->walk(Afreact::getForm(FALSE)->setName($form['name'])->execute()->single()['layout'], $form['name']);
+        $this->walk(
+          Afreact::getForm(checkPermissions: FALSE)->setName($form['name'])->execute()->single()['layout'],
+          $form['name'],
+        );
       }
       catch (\Throwable $e) {
         $this->failed[] = "{$form['name']}: {$e->getMessage()}";
@@ -110,7 +113,7 @@ final class CoreSamples {
    * @return array<string, mixed>
    */
   private function runDisplay(array $node, string $form): array {
-    $result = SearchDisplay::run(FALSE)
+    $result = SearchDisplay::run(checkPermissions: FALSE)
       ->setSavedSearch($node['search-name'])
       ->setDisplay($node['display-name'])
       ->setAfform($form)

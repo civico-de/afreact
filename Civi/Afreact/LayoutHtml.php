@@ -35,12 +35,18 @@ final class LayoutHtml extends \CRM_Afform_ArrayHtml {
     $js = trim($js);
     if (preg_match(self::TS_CALL, $js, $match)) {
       $text = \CRM_Utils_JS::decode($match[1]);
-      return is_string($text) ? $this->strings[$text] ?? ts($text) : NULL;
+      // Core's domain, as the Angular runtime's ts() falls back to.
+      return is_string($text) ? $this->strings[$text] ?? _ts($text) : NULL;
     }
     $first = substr($js, 0, 1);
     $last = substr($js, -1);
     if ($first === '{' && $last === '}' || $first === '[' && $last === ']') {
-      return array_map(fn (string $item): mixed => $this->decodeJs($item), \CRM_Utils_JS::getRawProps($js));
+      return array_map(
+        fn (mixed $item): mixed => $this->decodeJs(
+          is_string($item) ? $item : throw new \CRM_Core_Exception('getRawProps returned a non-string.'),
+        ),
+        \CRM_Utils_JS::getRawProps($js),
+      );
     }
     return \CRM_Utils_JS::decode($js);
   }

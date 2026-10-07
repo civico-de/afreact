@@ -65,7 +65,7 @@ final class Dashlets extends AutoSubscriber {
     if (!is_array($dashboard) || !isset($dashboard['partialsCallback']) || $forms === []) {
       return;
     }
-    $requires = is_array($dashboard['requires'] ?? NULL) ? $dashboard['requires'] : [];
+    $requires = is_array($dashboard['requires'] ?? NULL) ? array_filter($dashboard['requires'], 'is_string') : [];
     $dashboard['requires'] = array_values(array_diff($requires, array_column($forms, 'module')));
     $dashboard[self::CORE_PARTIALS] = $dashboard['partialsCallback'];
     $dashboard['partialsCallback'] = [self::class, 'partials'];
@@ -76,7 +76,7 @@ final class Dashlets extends AutoSubscriber {
    * Core's dashlet partials, with the React element for listed forms.
    *
    * @param array<mixed> $module
-   * @return array<string, string>
+   * @return array<mixed>
    */
   public static function partials(string $moduleName, array $module): array {
     $react = [];
@@ -86,18 +86,15 @@ final class Dashlets extends AutoSubscriber {
         htmlspecialchars($name),
       );
     }
-    $partials = Resolver::singleton()->call($module[self::CORE_PARTIALS] ?? NULL, [$moduleName, $module]);
+    $callback = $module[self::CORE_PARTIALS] ?? NULL;
+    if (!is_callable($callback)) {
+      throw new \CRM_Core_Exception("The module {$moduleName} has no partials callback to run.");
+    }
+    $partials = Resolver::singleton()->call($callback, [$moduleName, $module]);
     if (!is_array($partials)) {
       throw new \CRM_Core_Exception("The partials callback of {$moduleName} returned no list.");
     }
-    $result = [];
-    foreach ($partials as $path => $html) {
-      if (!is_string($html)) {
-        throw new \CRM_Core_Exception("Partial {$path} of {$moduleName} is no string.");
-      }
-      $result[(string) $path] = $react[$path] ?? $html;
-    }
-    return $result;
+    return array_replace($partials, array_intersect_key($react, $partials));
   }
 
   public static function onPageRun(GenericHookEvent $e): void {
