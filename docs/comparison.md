@@ -316,8 +316,10 @@ run yet, and the next run keeps the stale count because `rowCount` is set.
 A table filtered from 30 rows to 4 shows "30 results" and three pages for
 the four rows until the next filter change. The guard came with dev/core#5965
 (6.6) for the same symptom and covers only a count that lands after the
-next run has started. Present on 6.18 and `master` as of 2026-10-06. React asks for the count with the rows, keyed by the same
-filters, so a count never outlives its filters; the tour video shows both.
+next run has started. Present on 6.18; fixed on `master` in
+[civicrm-core#37253](https://github.com/civicrm/civicrm-core/pull/37253).
+React asks for the count with the rows, keyed by the same filters, so a count
+never outlives its filters; the tour video shows both.
 
 **Checkout field labels name nothing.** The templates under
 `ang/afCheckout/checkoutFields/` write `<label>` without `for` beside inputs
@@ -452,13 +454,15 @@ The React renderer leaves the marker out.
 
 **A saved filter set is dropped after loading.** With `#?_s=<id>` afFieldset
 loads the `SearchParamSet`, then resets the fields to their defaults, so the
-set's values never reach the search. The React renderer keeps them (fields the
-URL leaves out take the set's values).
+set's values never reach the search; fix proposed in
+[civicrm-core#37200](https://github.com/civicrm/civicrm-core/pull/37200). The
+React renderer keeps them (fields the URL leaves out take the set's values).
 
 **Defaults overwrite loaded or copied values.** A block behind `af-if` that
 opens after prefill gets its field defaults over the loaded values, and
-copying a repeat item overwrites the copied values with defaults. The React
-renderer keeps the loaded and copied values.
+copying a repeat item overwrites the copied values with defaults; fix proposed
+in [civicrm-core#37199](https://github.com/civicrm/civicrm-core/pull/37199).
+The React renderer keeps the loaded and copied values.
 
 **Join blocks are numbered in link order.** afJoin takes its record index
 from a counter in afFieldset each time it links (`afJoin.directive.js`,
