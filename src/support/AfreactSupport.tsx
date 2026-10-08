@@ -60,9 +60,9 @@ export function shownAt(row: SupportRow): string[] {
   return [...(row.server_route ? [row.server_route] : []), ...strings(row["placement:label"])];
 }
 
-/** A form shown only inline gets its placement's options; its page, where it has one, gets none. */
+/** A form core shows somewhere is checked as shown there: `options.x` names nothing or the placement's. */
 export function checkedOptions(row: SupportRow): Record<string, unknown> | undefined {
-  return !row.server_route && inlinePlaced(row) ? {} : undefined;
+  return takenOver(row) ? {} : undefined;
 }
 
 /** Whether a listed form is rendered by React somewhere: on its page, placed inline or as a dashlet. */

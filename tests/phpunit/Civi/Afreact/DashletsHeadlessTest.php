@@ -61,7 +61,10 @@ class DashletsHeadlessTest extends TestCase implements HeadlessInterface {
 
   public function testListedDashletPartialHoldsTheReactElement(): void {
     $partials = Afforms::angular()->getPartials(Dashlets::MODULE);
-    $this->assertSame('<afreact-form name="' . self::LISTED . '"></afreact-form>', $partials[self::LISTED_PARTIAL]);
+    $this->assertSame(
+      '<afreact-form name="' . self::LISTED . '" options="{}"></afreact-form>',
+      $partials[self::LISTED_PARTIAL],
+    );
     $this->assertSame(
       '<afsearch-afreact-demo-dashlet-contact-types></afsearch-afreact-demo-dashlet-contact-types>',
       $partials[self::UNLISTED_PARTIAL],

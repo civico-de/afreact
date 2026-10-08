@@ -256,10 +256,10 @@ describe("checkedOptions and takenOver", () => {
     placement: ["dashboard_dashlet"],
   };
 
-  it("checks a form shown only inline with options, one with a page or not inline without", () => {
+  it("checks a form core shows somewhere with options, one shown nowhere without", () => {
     expect(checkedOptions({ ...placed, server_route: null })).toEqual({});
-    expect(checkedOptions(placed)).toBeUndefined();
-    expect(checkedOptions(dashlet)).toBeUndefined();
+    expect(checkedOptions(placed)).toEqual({});
+    expect(checkedOptions(dashlet)).toEqual({});
     expect(checkedOptions({ ...placed, server_route: null, placement: [] })).toBeUndefined();
   });
 

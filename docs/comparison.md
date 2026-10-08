@@ -51,6 +51,7 @@ that no longer excuses anything fails the test.
 | Clear links | `<a>` without `href`, not reachable by keyboard | same link with `role="button"`, focusable, Enter and Space |
 | Required text holding only spaces | ngModel trims it to empty and marks the field `ng-invalid-required`; the browser sees text and shows no hint | same model and alert; the control reports "This field is required." as a custom validity message, the browser's hint for that field |
 | Admin block menus | gear menu per block for administrators | not rendered |
+| Display filters reading `options.x` where nothing placed the form | `options` is undefined on the form's page and in a dashlet, the name resolves to nothing and the filter is left out | the same on the form's page, in a dashlet and in a placement; the preview page and the support report, which show a form core shows nowhere, note the filter instead of leaving out what the form means to hide |
 | Theme rules keyed on Angular's runtime classes | Riverlea sizes a table's alerts by `td > p.alert.ng-binding` and lays out link cells on the contact summary by `span.ng-scope a` | the same markup carries `ng-binding` on a table's no-results and error paragraph and `ng-scope` on each link span, so the theme styles both alike; Riverlea's dashlet padding for `.crm-dashlet-content > .ng-scope` is not covered |
 | API calls | calls made together share one request | one request per call |
 | Reference fields (EntityRef) | select2 over `<Entity>.autocomplete` | ARIA combobox in select2's multi-select markup for single and multiple fields; the search loads with the first such field on a page. A single field shows the chosen label in its input, with a clear link |
@@ -922,3 +923,12 @@ failed batch.
 does not return, so `start()` runs and hides the title bar buttons of every
 open jQuery UI dialog (read from the code, not run). The React renderer closes
 the dialog and sends nothing.
+
+**A date range shows a time input on each bound.** `afField.component.js`
+fills `inputAttrs` for a `search_range` date in a `$timeout`, but
+`fields/Date.html` binds each bound's `crm-ui-datepicker=":: $ctrl.inputAttrs[n]"`
+once, when it links, before that timeout; the datepicker starts from empty
+options and shows date and time even for a field whose `input_attrs` say
+`time: false`, and the bounds' placeholders are lost (`master` as of
+2026-10-08; seen on the demo's birth date range). The React renderer renders
+the bounds from the field's own attributes: a date input for a date field.

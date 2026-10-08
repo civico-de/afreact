@@ -81,8 +81,9 @@ final class Dashlets extends AutoSubscriber {
   public static function partials(string $moduleName, array $module): array {
     $react = [];
     foreach (self::forms() as $name => $form) {
+      // A dashlet places the form without options, so `options.x` in its filters names nothing.
       $react["~/{$moduleName}/directives/{$form['directive']}.html"] = sprintf(
-        '<afreact-form name="%s"></afreact-form>',
+        '<afreact-form name="%s" options="{}"></afreact-form>',
         htmlspecialchars($name),
       );
     }
