@@ -106,11 +106,22 @@ const mailing: SearchTask = {
   uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskMailing.html" },
 };
 const openCase: SearchTask = {
-  name: "contact.case",
-  title: "Case - Open",
-  icon: "fa-folder-open",
+  name: "contact.addCase",
+  title: "Case - Open New Case",
+  icon: "fa-folder-plus",
   number: "> 0",
-  uiDialog: { templateUrl: "~/crmCaseSearchTasks/crmSearchTaskCase.html" },
+  uiDialog: { templateUrl: "~/civiCaseTasks/civiCaseTaskOpenCase.html" },
+  values: [],
+  allowMultipleClients: true,
+};
+const caseRole: SearchTask = {
+  name: "case.addRole",
+  title: "Case - Assign Role",
+  icon: "fa-user-plus",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/civiCaseTasks/civiCaseTaskCaseRole.html" },
+  values: [],
+  relationshipTypes: [],
 };
 const label: SearchTask = {
   name: "contact.label",
@@ -621,20 +632,20 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("names the tasks it cannot run and keeps them in the menu, disabled", async () => {
-    const calls = serve({ tasks: [enable, openCase] });
+    const calls = serve({ tasks: [enable, caseRole] });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await screen.findByText("Name 1");
     await selectRows("Name 1");
     expect(
       await screen.findByText(
-        "Not supported by the React renderer: task contact.case " +
-          "(Angular dialog ~/crmCaseSearchTasks/crmSearchTaskCase.html)",
+        "Not supported by the React renderer: task case.addRole " +
+          "(Angular dialog ~/civiCaseTasks/civiCaseTaskCaseRole.html)",
       ),
     ).toHaveAttribute("role", "note");
     await openActions();
-    const item = screen.getByRole("menuitem", { name: /Case - Open/, hidden: true });
+    const item = screen.getByRole("menuitem", { name: /Assign Role/, hidden: true });
     expect(item).toHaveAttribute("aria-disabled", "true");
-    expect(item).toHaveAttribute("title", "Not supported by the React renderer: task contact.case");
+    expect(item).toHaveAttribute("title", "Not supported by the React renderer: task case.addRole");
     await userEvent.click(item);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(calls.map(({ call }) => call)).not.toContain("Contact.update");
@@ -741,8 +752,8 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("alerts for a row link to a task React cannot run", async () => {
-    const links = [{ task: "contact.case", text: "Case" }];
-    serve({ rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })], tasks: [openCase] });
+    const links = [{ task: "case.addRole", text: "Case" }];
+    serve({ rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })], tasks: [caseRole] });
     renderWithQuery(
       <AfreactSearch
         search="S"
@@ -753,8 +764,8 @@ describe("AfreactSearch bulk actions", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Case" }));
     await waitFor(() => {
       expect(window.CRM.alert).toHaveBeenCalledWith(
-        "Not supported by the React renderer: task contact.case " +
-          "(Angular dialog ~/crmCaseSearchTasks/crmSearchTaskCase.html)",
+        "Not supported by the React renderer: task case.addRole " +
+          "(Angular dialog ~/civiCaseTasks/civiCaseTaskCaseRole.html)",
         "Error",
         "error",
       );
@@ -1596,6 +1607,235 @@ describe("AfreactSearch bulk actions", () => {
         "An error occurred while attempting to create mailing. Mailing component is disabled",
       );
       expect(within(dialog).getByRole("button", { name: "Create Mailing" })).toBeEnabled();
+    });
+  });
+
+  describe("case", () => {
+    const fields = [
+      {
+        name: "case_type_id",
+        label: "Case Type",
+        input_type: "Select",
+        data_type: "Integer",
+        required: true,
+        options: [
+          { id: 1, label: "Housing" },
+          { id: 2, label: "Legal" },
+        ],
+      },
+      {
+        name: "status_id",
+        label: "Status",
+        input_type: "Select",
+        data_type: "Integer",
+        required: true,
+        default_value: 1,
+        options: [{ id: 1, label: "Ongoing" }],
+      },
+      {
+        name: "subject",
+        label: "Subject",
+        input_type: "Text",
+        data_type: "String",
+        nullable: true,
+      },
+      { name: "start_date", label: "Start", input_type: "Date", data_type: "Date", nullable: true },
+    ];
+    const opened = (count: number) =>
+      Object.assign(
+        Array.from({ length: count }, (_, index) => ({ id: 10 + index })),
+        { countFetched: count },
+      );
+
+    async function openCaseDialog(...names: string[]) {
+      await screen.findByText("Name 1");
+      await selectRows(...names);
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /Open New Case/, hidden: true }));
+      return screen.findByRole("dialog", { name: "Case - Open New Case" });
+    }
+
+    it("starts with the required fields and the subject, skips open cases and saves one per contact", async () => {
+      const calls = serve({
+        tasks: [enable, openCase],
+        handlers: {
+          "Case.getFields": () => fields,
+          "CaseContact.get": () => [{ contact_id: 2 }],
+          "Case.save": () => opened(2),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openCaseDialog("Name 1", "Name 2", "Name 3");
+      expect(dialog).toHaveTextContent("Multiple contacts selected");
+      expect(within(dialog).getByRole("radio", { name: /for each contact/ })).toBeChecked();
+      const type = await within(dialog).findByRole("combobox", { name: "Case Type" });
+      expect(type).toHaveValue("1");
+      const subject = within(dialog).getByRole("textbox", { name: "Subject" });
+      // The status has a default, so the trait leaves it out; the dialog adds the subject itself.
+      const fieldSelects = within(dialog).getAllByRole("combobox", { name: "Field" });
+      expect(fieldSelects).toHaveLength(2);
+      expect(fieldSelects[0]).toHaveValue("case_type_id");
+      expect(fieldSelects[1]).toHaveValue("subject");
+      expect(
+        within(dialog).getByRole("radiogroup", { name: "1 contact already has an open case." }),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByRole("radio", { name: "Skip contact with open case" }),
+      ).toBeChecked();
+      await userEvent.selectOptions(type, "2");
+      await userEvent.type(subject, "Help");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "Successfully opened 2 cases.",
+          "Saved",
+          "success",
+        );
+      });
+      expect(named(calls, "Case.getFields")[0]?.params).toMatchObject({
+        action: "create",
+        where: expect.arrayContaining([
+          ["name", "NOT IN", ["contact_id", "is_deleted"]],
+        ]) as unknown,
+      });
+      expect(named(calls, "CaseContact.get")[0]?.params).toEqual({
+        select: ["contact_id"],
+        where: [
+          ["contact_id", "IN", [1, 2, 3]],
+          ["case_id.status_id:name", "!=", "Closed"],
+        ],
+      });
+      expect(named(calls, "Case.save").map(({ params }) => params)).toEqual([
+        {
+          records: [
+            { case_type_id: 2, subject: "Help", contact_id: 1 },
+            { case_type_id: 2, subject: "Help", contact_id: 3 },
+          ],
+        },
+      ]);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(pageRuns(calls)).toHaveLength(2);
+      });
+      expect(checkbox("Name 1")).not.toBeChecked();
+    });
+
+    it("opens one case for all contacts jointly, including those with a case when asked", async () => {
+      const calls = serve({
+        tasks: [enable, openCase],
+        handlers: {
+          "Case.getFields": () => fields,
+          "CaseContact.get": () => [{ contact_id: 1 }],
+          "Case.create": () => opened(1),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openCaseDialog("Name 1", "Name 2");
+      await within(dialog).findByRole("combobox", { name: "Case Type" });
+      await userEvent.click(within(dialog).getByRole("radio", { name: /single case/ }));
+      await userEvent.click(within(dialog).getByRole("radio", { name: "Create new case anyway" }));
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "Successfully opened 1 case.",
+          "Saved",
+          "success",
+        );
+      });
+      expect(named(calls, "Case.create").map(({ params }) => params)).toEqual([
+        { values: { case_type_id: 1, subject: "", contact_id: [1, 2] } },
+      ]);
+      expect(named(calls, "Case.save")).toHaveLength(0);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(pageRuns(calls)).toHaveLength(2);
+      });
+    });
+
+    it("offers no joint case where the setting forbids it, and looks cases up on each opening", async () => {
+      const calls = serve({
+        tasks: [enable, { ...openCase, allowMultipleClients: false }],
+        handlers: { "Case.getFields": () => fields, "CaseContact.get": () => [] },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openCaseDialog("Name 1", "Name 2");
+      await within(dialog).findByRole("combobox", { name: "Case Type" });
+      await waitFor(() => {
+        expect(within(dialog).getByRole("button", { name: "Save" })).toBeEnabled();
+      });
+      expect(within(dialog).queryByRole("radio")).not.toBeInTheDocument();
+      expect(dialog).not.toHaveTextContent("already");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      // A case opened or closed meanwhile must show, so the lookup is not served from the cache.
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /Open New Case/, hidden: true }));
+      await screen.findByRole("dialog", { name: "Case - Open New Case" });
+      await waitFor(() => {
+        expect(named(calls, "CaseContact.get")).toHaveLength(2);
+      });
+      expect(named(calls, "Case.getFields")).toHaveLength(1);
+    });
+
+    it("tells when every contact is skipped and opens nothing", async () => {
+      const calls = serve({
+        tasks: [enable, openCase],
+        handlers: {
+          "Case.getFields": () => fields,
+          "CaseContact.get": () => [{ contact_id: 1 }],
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openCaseDialog("Name 1");
+      await within(dialog).findByRole("combobox", { name: "Case Type" });
+      expect(within(dialog).queryByRole("radio", { name: /single case/ })).not.toBeInTheDocument();
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith("No cases to open.", "All contacts skipped");
+      });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(named(calls, "Case.save")).toHaveLength(0);
+      expect(pageRuns(calls)).toHaveLength(1);
+      expect(checkbox("Name 1")).toBeChecked();
+    });
+
+    it("keeps a failed joint case in the dialog with the server's message", async () => {
+      serve({
+        tasks: [enable, openCase],
+        handlers: {
+          "Case.getFields": () => fields,
+          "CaseContact.get": () => [],
+          "Case.create": () => {
+            throw apiError("Case type is inactive");
+          },
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openCaseDialog("Name 1", "Name 2");
+      await within(dialog).findByRole("combobox", { name: "Case Type" });
+      await userEvent.click(within(dialog).getByRole("radio", { name: /single case/ }));
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent("Case type is inactive");
+      expect(within(dialog).getByRole("button", { name: "Save" })).toBeEnabled();
+      await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("shows a failed case lookup and withholds the save", async () => {
+      serve({
+        tasks: [enable, openCase],
+        handlers: {
+          "Case.getFields": () => fields,
+          "CaseContact.get": () => {
+            throw apiError("No such entity");
+          },
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openCaseDialog("Name 1");
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent("No such entity");
+      await within(dialog).findByRole("combobox", { name: "Case Type" });
+      expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
     });
   });
 });

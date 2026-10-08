@@ -8,6 +8,7 @@ import { Input } from "./EditableCell";
 import { editorFor } from "./inlineEdit";
 import { Icon } from "./LinkContent";
 import { onLinkClick } from "./links";
+import { CaseDialog } from "./CaseDialog";
 import { MailingDialog } from "./MailingDialog";
 import { RelationshipDialog } from "./RelationshipDialog";
 import { TagDialog } from "./TagDialog";
@@ -89,6 +90,7 @@ type RunningTask = Running &
     | { kind: "tag" }
     | { kind: "relationship" }
     | { kind: "mailing" }
+    | { kind: "case" }
   );
 
 const TASKS = "getSearchTasks";
@@ -195,7 +197,8 @@ export function useTasks(options: TasksOptions) {
       run.kind === "update" ||
       run.kind === "tag" ||
       run.kind === "relationship" ||
-      run.kind === "mailing"
+      run.kind === "mailing" ||
+      run.kind === "case"
     ) {
       setRunning({ kind: run.kind, task, ids, isLink, returnTo });
       return;
@@ -429,6 +432,20 @@ export function useTasks(options: TasksOptions) {
         onCreated={(groupId, mailingId) => {
           const apiBatch = mailingBatch(groupId, mailingId);
           setRunning({ ...running, kind: "batch", apiBatch, isLink: false });
+        }}
+        onCancel={() => {
+          onDone({ ran: false, message: "" });
+        }}
+      />
+    ) : running.kind === "case" ? (
+      <CaseDialog
+        task={running.task}
+        ids={running.ids}
+        onSave={(apiBatch, ids) => {
+          setRunning({ ...running, kind: "batch", apiBatch, ids, isLink: false });
+        }}
+        onOpened={(opened) => {
+          onDone({ ran: true, message: opened });
         }}
         onCancel={() => {
           onDone({ ran: false, message: "" });

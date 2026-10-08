@@ -4,17 +4,21 @@ import {
   BATCH_SIZE,
   batchCall,
   batches,
+  caseBatch,
+  caseFieldsCall,
   dispositionFileName,
   downloadParams,
   presetValues,
   evaluateTaskExpression,
   initialUpdateValue,
+  initialCreateFields,
   inlineEditCall,
   parseTaskList,
   referencedTasks,
   mailingBatch,
   mailingCalls,
   mailingGroupCall,
+  openCasesCall,
   relationshipBatch,
   relationshipFieldsCall,
   tagBatch,
@@ -24,7 +28,7 @@ import {
   taskRun,
   unsupportedTaskNotes,
   updateBatch,
-  updateFieldsCall,
+  taskFieldsCall,
   type EntityInfo,
   type SearchTask,
 } from "./searchTasks";
@@ -73,10 +77,20 @@ const mailing: SearchTask = {
   uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskMailing.html" },
 };
 const openCase: SearchTask = {
-  name: "contact.case",
-  title: "Case - Open",
+  name: "contact.addCase",
+  title: "Case - Open New Case",
   number: "> 0",
-  uiDialog: { templateUrl: "~/crmCaseSearchTasks/crmSearchTaskCase.html" },
+  uiDialog: { templateUrl: "~/civiCaseTasks/civiCaseTaskOpenCase.html" },
+  values: [],
+  allowMultipleClients: true,
+};
+const caseRole: SearchTask = {
+  name: "case.addRole",
+  title: "Case - Assign Role",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/civiCaseTasks/civiCaseTaskCaseRole.html" },
+  values: [],
+  relationshipTypes: [],
 };
 const merge: SearchTask = {
   name: "contact.merge",
@@ -179,12 +193,13 @@ describe("taskRun", () => {
     expect(taskRun(tag)).toEqual({ kind: "tag" });
     expect(taskRun(relationship)).toEqual({ kind: "relationship" });
     expect(taskRun(mailing)).toEqual({ kind: "mailing" });
+    expect(taskRun(openCase)).toEqual({ kind: "case" });
   });
 
   it("names why it cannot run Angular dialogs, input fields and the rest", () => {
-    expect(taskRun(openCase)).toEqual({
+    expect(taskRun(caseRole)).toEqual({
       kind: "unsupported",
-      reason: "Angular dialog ~/crmCaseSearchTasks/crmSearchTaskCase.html",
+      reason: "Angular dialog ~/civiCaseTasks/civiCaseTaskCaseRole.html",
     });
     const where = { name: "geo", label: "Where", input_type: "Location", data_type: "String" };
     const located = { ...disable, apiBatch: { action: "save", fields: [where] } };
@@ -225,9 +240,9 @@ describe("referencedTasks and unsupportedTaskNotes", () => {
   });
 
   it("notes only the referenced tasks the renderer cannot run", () => {
-    const tasks = [disable, download, tag, relationship, mailing, openCase, merge];
+    const tasks = [disable, download, tag, relationship, mailing, openCase, caseRole, merge];
     expect(unsupportedTaskNotes(tasks, "all")).toEqual([
-      "task contact.case (Angular dialog ~/crmCaseSearchTasks/crmSearchTaskCase.html)",
+      "task case.addRole (Angular dialog ~/civiCaseTasks/civiCaseTaskCaseRole.html)",
     ]);
     expect(unsupportedTaskNotes(tasks, new Set(["disable"]))).toEqual([]);
   });
@@ -354,7 +369,7 @@ describe("update task", () => {
   });
 
   it("asks getFields for the writable fields and runs one update batch with core's messages", () => {
-    const [entity, action, params] = updateFieldsCall("Contact");
+    const [entity, action, params] = taskFieldsCall("Contact");
     expect([entity, action]).toEqual(["Contact", "getFields"]);
     expect(params).toMatchObject({
       action: "update",
@@ -568,5 +583,76 @@ describe("mailing task", () => {
       successUrl: "civicrm/a#/mailing/9",
       errorMsg: "An error occurred while attempting to create mailing.",
     });
+  });
+});
+
+describe("case task", () => {
+  const field = (name: string, extra: Record<string, unknown> = {}) => ({
+    name,
+    label: name,
+    input_type: "Text",
+    data_type: "String",
+    ...extra,
+  });
+
+  it("asks getFields for a new case's fields without the client and the flag", () => {
+    const [entity, action, params] = caseFieldsCall();
+    expect([entity, action]).toEqual(["Case", "getFields"]);
+    expect(params).toMatchObject({
+      action: "create",
+      where: [
+        ["name", "NOT IN", ["contact_id", "is_deleted"]],
+        ["deprecated", "=", false],
+        ["readonly", "=", false],
+      ],
+    });
+  });
+
+  it("starts with the required fields without a default, then the dialog's own, each once", () => {
+    const fields = [
+      field("case_type_id", { required: true }),
+      field("status_id", { required: true, default_value: 1 }),
+      field("subject"),
+      field("details"),
+    ];
+    expect(initialCreateFields(fields, ["subject"])).toEqual(["case_type_id", "subject"]);
+    expect(initialCreateFields(fields, ["case_type_id", "gone"])).toEqual(["case_type_id"]);
+    expect(initialCreateFields([], ["subject"])).toEqual([]);
+  });
+
+  it("looks up the selected contacts whose cases are not closed", () => {
+    expect(openCasesCall([1, 2])).toEqual([
+      "CaseContact",
+      "get",
+      {
+        select: ["contact_id"],
+        where: [
+          ["contact_id", "IN", [1, 2]],
+          ["case_id.status_id:name", "!=", "Closed"],
+        ],
+      },
+    ]);
+  });
+
+  it("saves a case per contact and counts the cases opened", () => {
+    const batch = caseBatch({ subject: "Help" });
+    expect(batchCall(batch, contact, [1, 2])).toEqual([
+      "Case",
+      "save",
+      {
+        records: [
+          { subject: "Help", contact_id: 1 },
+          { subject: "Help", contact_id: 2 },
+        ],
+      },
+    ]);
+    expect(batch.runMsg).toBe("Opening cases...");
+    expect(batch.successTitle).toBe("Saved");
+    expect(batch.summary?.({ fetched: 2, matched: 2, rows: [{ id: 5 }, { id: 6 }] })).toBe(
+      "Successfully opened 2 cases.",
+    );
+    expect(batch.summary?.({ fetched: 1, matched: 1, rows: [{ id: 5 }] })).toBe(
+      "Successfully opened 1 case.",
+    );
   });
 });

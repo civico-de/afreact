@@ -131,9 +131,9 @@ instead of being dropped:
 - an in-place editor for a multi-value colour field, should one exist; the
   renderer also turns a Location input away, though core defines that type
   only for the `Address.proximity` search filter, which is never editable
-- bulk actions whose task is an Angular dialog (open a case, and extensions'
-  own; download, update, tag, relationship and mailing have their own
-  dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
+- bulk actions whose task is an Angular dialog (assign a case role, and
+  extensions' own; download, update, tag, relationship, mailing and open case
+  have their own dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
   with a Location or multi-value colour input), or uses an expression other
   than a literal, an object literal, `ids[n]`, `ids.join(',')` and the task's
   data names. They stay in the actions menu, disabled, with the note as their
@@ -166,6 +166,7 @@ kept across sorting and paging, cleared by new filters and after a task.
 | Tag dialog | add or remove; the plain tags in a select2 tree, each tagset's tags in an entityref search; the batch runs inside the dialog; looks tags up for the search's entity name (see upstream bugs) | the same choice; the tags in a native multi-select with the tree indented, each tagset's tags in a multi-select of their own; the batch then runs in the task dialog; looks tags up for "Contact" on any contact-type search; the result message counts as core's |
 | Relationship dialog | relationship type in a select2, the contact in a `crm-autocomplete` filtered by the type's contact sub-type, then the type's description, dates and custom fields as `crm-search-input`; the batch runs inside the dialog; a failed batch leaves the dialog on its progress bar (see upstream bugs) | the same choice in a native select, the same autocomplete and filter, the type's fields as the in-place editors' inputs (fields they lack are noted); the batch then runs in the task dialog; the result message counts added and existing relationships as core's; a failed batch alerts with the server's message |
 | Mailing dialog | name and type, a recipient check (`Contact.get` with an e-mail join) colouring an alert; "Create Mailing" makes a hidden group with the mailing and its include group chained, a second batch adds the contacts, then the browser opens the mailing; a failed step alerts core's message and closes | the same inputs and check; the group and mailing are made from the dialog, the contacts join in the task dialog's batch, then the browser opens the mailing; a failed group alerts core's and the server's message in the dialog, which stays open for another try (each try that got as far as the group leaves a hidden group behind); a failed batch alerts both and closes |
+| Open case dialog (`contact.addCase`) | the new case's fields as `crm-search-input`, starting with the required ones without a default and the subject; a choice between a case per contact and one joint case where `civicaseAllowMultipleClients` allows it; `CaseContact.get` for the selected contacts with a case not closed, counting a contact once per open case, with a choice to skip them (the default); Save is enabled before that lookup answers (see upstream bugs); "No cases to open." when every contact is skipped; the batch runs inside the dialog with "Opening case..." / "Opening %count cases..."; a failed batch leaves the dialog hanging (see upstream bugs); the success alert counts the cases and links "View case" for a single one | the same fields as the in-place editors' inputs, the same choices as native radios; the lookup runs afresh each time the dialog opens and counts each contact once; Save waits for the fields and the lookup; a case per contact runs in the task dialog's batch with "Opening cases...", a joint case is created from the dialog, where a failed create stays with the server's message and a failed batch alerts and closes; the success alert counts the cases without the link |
 | Delete task without `confirmMsg` (changed by a hook) | runs at once | asks with core's delete question; a delete the renderer's own dialog settled (the removal of tags) runs at once |
 | Actions menu longer than the space below its button | the page scrolls to the rest | the menu scrolls within the viewport, or opens above its button when that leaves more room |
 | After a row link updates its row | reloads that row (`refreshAfterEditing`) | reloads the table |
@@ -900,3 +901,24 @@ function, so the dialog throws a TypeError and shows neither the contact
 field nor the type's fields (read from the code, not run). The React renderer
 starts from the preset type, contact and field values, with the type locked
 when `disableRelationshipSelect` is set.
+
+**The open case dialog's Save needs no lookup.** `civiCaseTaskOpenCase.ctrl.js`
+never sets `existingCount`, yet its template disables Save on
+`$ctrl.existingCount === null`, so Save is enabled before `CaseContact.get`
+answers; a click then throws a TypeError on `existingCaseContacts.includes`
+(read from the code, not run). The React renderer enables Save once the
+fields and the lookup are loaded.
+
+**A failed open case batch leaves its dialog hanging.** As with the
+relationship dialog, `civiCaseTaskOpenCase.ctrl.js` defines no `onError`
+while its template binds the batch runner's `error` to `$ctrl.onError(error)`,
+so a rejected `Case.save` or `Case.create` shows nothing and the dialog stays
+on "Opening case..." (read from the code, not run). The React renderer keeps a
+failed joint case in the dialog with the server's message and alerts for a
+failed batch.
+
+**Skipping every contact still starts the open case batch.** `submit()` in
+`civiCaseTaskOpenCase.ctrl.js` cancels the dialog when no contact is left but
+does not return, so `start()` runs and hides the title bar buttons of every
+open jQuery UI dialog (read from the code, not run). The React renderer closes
+the dialog and sends nothing.

@@ -77,6 +77,8 @@ export interface SearchTask {
   /** Values the update task starts with, set by hook_civicrm_searchKitTasks. */
   values?: Record<string, unknown> | unknown[];
   relationshipTypes?: RelationshipType[];
+  /** The open-case task: one case for all selected contacts is allowed (civicaseAllowMultipleClients). */
+  allowMultipleClients?: boolean;
 }
 
 export interface TaskList {
@@ -206,6 +208,7 @@ export type TaskRun =
   | { kind: "tag" }
   | { kind: "relationship" }
   | { kind: "mailing" }
+  | { kind: "case" }
   | { kind: "unsupported"; reason: string };
 
 /** The core task dialogs the renderer replaces with its own. */
@@ -214,6 +217,7 @@ const UPDATE_DIALOG = "~/crmSearchTasks/crmSearchTaskUpdate.html";
 const TAG_DIALOG = "~/crmSearchTasks/crmSearchTaskTag.html";
 const RELATIONSHIP_DIALOG = "~/crmSearchTasks/crmSearchTaskRelationship.html";
 const MAILING_DIALOG = "~/crmSearchTasks/crmSearchTaskMailing.html";
+const CASE_DIALOG = "~/civiCaseTasks/civiCaseTaskOpenCase.html";
 
 /** A field the update task may set, as searchTaskFieldsTrait and GetSearchTasks read getFields. */
 export interface UpdateField {
@@ -230,13 +234,16 @@ export interface UpdateField {
   default_value?: unknown;
 }
 
-/** searchTaskFieldsTrait's getFields call: the writable, current fields with their options. */
-export function updateFieldsCall(entity: string): ApiCall {
+/**
+ * searchTaskFieldsTrait's getFields call: the writable, current fields of `action` with their
+ * options, less the names in `exclude`.
+ */
+export function taskFieldsCall(entity: string, action = "update", exclude: string[] = []): ApiCall {
   return [
     entity,
     "getFields",
     {
-      action: "update",
+      action,
       select: [
         "name",
         "label",
@@ -252,11 +259,57 @@ export function updateFieldsCall(entity: string): ApiCall {
       ],
       loadOptions: ["id", "name", "label", "description", "color", "icon"],
       where: [
+        ...(exclude.length ? [["name", "NOT IN", exclude]] : []),
         ["deprecated", "=", false],
         ["readonly", "=", false],
       ],
     },
   ];
+}
+
+/** civiCaseTaskOpenCase's getFields call: the fields a new case takes, less the client and the flag. */
+export const caseFieldsCall = (): ApiCall =>
+  taskFieldsCall("Case", "create", ["contact_id", "is_deleted"]);
+
+/**
+ * The fields a create dialog starts with: the required ones without a default, as the trait adds
+ * them, then the dialog's own, in that order, each once.
+ */
+export function initialCreateFields(fields: UpdateField[], own: string[]): string[] {
+  const required = fields.filter((f) => f.required && !f.default_value).map((f) => f.name);
+  return [...new Set([...required, ...own])].filter((name) => fields.some((f) => f.name === name));
+}
+
+/** civiCaseTaskOpenCase's lookup of the selected contacts that have a case not yet closed. */
+export function openCasesCall(ids: Key[]): ApiCall {
+  return [
+    "CaseContact",
+    "get",
+    {
+      select: ["contact_id"],
+      where: [
+        ["contact_id", "IN", ids],
+        ["case_id.status_id:name", "!=", "Closed"],
+      ],
+    },
+  ];
+}
+
+/** civiCaseTaskOpenCase's run for a case per contact: Case.save with the values, the client per id. */
+export function caseBatch(values: Record<string, unknown>): ApiBatch {
+  return {
+    entity: "Case",
+    action: "save",
+    idField: "contact_id",
+    params: { records: [values] },
+    runMsg: "Opening cases...",
+    successTitle: "Saved",
+    summary: ({ rows }: BatchCounts) =>
+      ts("Successfully opened 1 case.", {
+        plural: "Successfully opened %count cases.",
+        count: rows.length,
+      }),
+  };
 }
 
 /** searchTaskFieldsTrait.addField(): the value a field starts with when added to the update. */
@@ -638,6 +691,7 @@ export function taskRun(task: SearchTask): TaskRun {
   if (template === TAG_DIALOG) return { kind: "tag" };
   if (template === RELATIONSHIP_DIALOG) return { kind: "relationship" };
   if (template === MAILING_DIALOG) return { kind: "mailing" };
+  if (template === CASE_DIALOG) return { kind: "case" };
   if (template) return { kind: "unsupported", reason: `Angular dialog ${template}` };
   const batch = task.apiBatch;
   if (!isRecord(batch) || !isString(batch.action))
