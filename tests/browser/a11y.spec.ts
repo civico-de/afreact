@@ -180,6 +180,8 @@ for (const colorScheme of ["light", "dark"] as const) {
     test(`axe finds nothing on the React ${pair.name} beyond the theme contrast Angular shares (${colorScheme})`, async ({
       page,
     }, testInfo) => {
+      // axe over the draggable tree takes about 20 s; a loaded runner needs room for a few times that.
+      test.setTimeout(120_000);
       await page.emulateMedia({ colorScheme });
       const react = await findings(page, pair.react, pair);
       const angular = await findings(page, pair.angular, pair);
