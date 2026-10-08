@@ -51,6 +51,17 @@ const BY_DESIGN: Record<string, { skip: string[]; reason: string }> = {
     reason: "the native date field shows its format and calendar icon, wider than the datepicker's",
   },
   "clear 1": { skip: ["x"], reason: "the date's clear link follows the wider date field" },
+  // Core's date range links its datepickers before afField fills their options, so Angular adds
+  // a time input to each bound of a date-only range (see docs/comparison.md, upstream bugs).
+  "control 12": { skip: ["presence"], reason: "Angular's time input on the range's lower bound" },
+  "control 13": { skip: ["presence"], reason: "Angular's time input on the range's upper bound" },
+  "date 3": {
+    skip: ["x", "width"],
+    reason:
+      "the range's upper bound follows Angular's time input and is the wider native date field",
+  },
+  "clear 3": { skip: ["x"], reason: "the lower bound's clear link follows Angular's time input" },
+  "clear 4": { skip: ["x"], reason: "the upper bound's clear link follows Angular's time input" },
 };
 
 /** Up to 6.19 the theme warns on an untouched required select; from 6.20 only on a changed one, as React does. */
@@ -130,16 +141,16 @@ function differences(
   for (const key of new Set([...react.map((part) => part.key), ...byKey.keys()])) {
     const r = react.find((part) => part.key === key);
     const a = byKey.get(key);
-    if (!r || !a) {
-      found.push(`${key}: only in ${r ? "React" : "Angular"}`);
-      continue;
-    }
     const entry = key in byDesign ? key : key.replace(/ \d+$/, "");
-    const label = a.text ? `${key} "${a.text}"` : key;
+    const label = a?.text ? `${key} "${a.text}"` : key;
     const report = (aspect: string, message: string) => {
       if (byDesign[entry]?.skip.includes(aspect)) used.add(entry);
       else found.push(`${label}: ${message}`);
     };
+    if (!r || !a) {
+      report("presence", `only in ${r ? "React" : "Angular"}`);
+      continue;
+    }
     if (r.text !== a.text) report("text", `text "${r.text}" vs "${a.text}"`);
     for (const side of ["x", "y", "width", "height"] as const) {
       if (Math.abs(r.box[side] - a.box[side]) > TOLERANCE_PX)
