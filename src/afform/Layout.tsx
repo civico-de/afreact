@@ -163,10 +163,12 @@ function FormNode({ node }: { node: ElementNode }) {
 }
 
 function TabsetNode({ node }: { node: ElementNode }) {
-  const { formName, expressions } = useForm();
+  const { formName, expressions, showSubmitButton, submitDisabled, draft } = useForm();
+  // The draft handlers exist on a layout with an af-form, whose afFormCtrl shows the button.
+  const submit = draft ? { shown: showSubmitButton, disabled: submitDisabled } : undefined;
   return (
     <Tabset
-      {...{ node, formName, expressions }}
+      {...{ node, formName, expressions, submit }}
       nodes={(nodes) => <Nodes nodes={nodes} />}
       element={(outer, children) => <Element node={outer}>{children}</Element>}
     />

@@ -202,6 +202,91 @@ describe("af-tabset", () => {
     expect(set).toHaveBeenLastCalledWith("afTabsSelectedTab", "search");
   });
 
+  it("starts on the tab selected-tab names, after the URL and before the remembered one", async () => {
+    window.CRM.cache = { get: () => "block", set: vi.fn<(name: string, value: unknown) => void>() };
+    renderTabs({
+      layout: searchTabs({ "selected-tab": "'search'", "remember-selection": "true" }),
+    });
+    expect(await screen.findByRole("tab", { name: /Search Forms/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  /** A form in two pages, the second with a required field. */
+  const pages = (attributes: Record<string, unknown>): LayoutNode[] => [
+    {
+      "#tag": "af-form",
+      ctrl: "afform",
+      "#children": [
+        { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+        {
+          "#tag": "af-tabset",
+          "page-nav-buttons": "true",
+          ...attributes,
+          "#children": [
+            {
+              "#tag": "af-tab",
+              title: "Name",
+              "#children": [
+                {
+                  "#tag": "div",
+                  "af-fieldset": "Individual1",
+                  "#children": [field("first_name", { label: "First", required: true })],
+                },
+              ],
+            },
+            {
+              "#tag": "af-tab",
+              title: "More",
+              "#children": [
+                {
+                  "#tag": "div",
+                  "af-fieldset": "Individual1",
+                  "#children": [field("nick_name", { label: "Nick" })],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ];
+
+  it("pages with Back, Next and the submit button, Next holding an invalid page", async () => {
+    const submit = vi.fn((_params: Record<string, unknown>) => []);
+    renderTabs({ layout: pages({ "page-nav-submit-text": "Send" }), type: "form", submit });
+    const next = await screen.findByRole("button", { name: "Next" });
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
+    await userEvent.click(next);
+    expect(tab("Name")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("textbox", { name: /First/ })).toHaveFocus();
+    expect(submit).not.toHaveBeenCalled();
+    await userEvent.type(screen.getByRole("textbox", { name: /First/ }), "Ada{Enter}");
+    // Enter on a page moves on, as Next is the page's default button.
+    expect(tab("More")).toHaveAttribute("aria-selected", "true");
+    expect(submit).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(tab("Name")).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await userEvent.type(screen.getByRole("textbox", { name: /Nick/ }), "Lovelace");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => {
+      expect(submit).toHaveBeenCalledTimes(1);
+    });
+    expect(submit.mock.calls[0]?.[0]).toMatchObject({
+      values: { Individual1: [{ fields: { first_name: "Ada", nick_name: "Lovelace" } }] },
+    });
+  });
+
+  it("labels the last page's button Submit without page-nav-submit-text", async () => {
+    renderTabs({ layout: pages({ "selected-tab": "'tab1'" }), type: "form" });
+    expect(await screen.findByRole("button", { name: "Submit" })).toHaveAttribute("type", "submit");
+    expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
+  });
+
   it("keeps fields of hidden tabs in the form, submits them, and shows the tab of an invalid one", async () => {
     const submit = vi.fn((_params: Record<string, unknown>) => []);
     const layout: LayoutNode[] = [
@@ -508,6 +593,15 @@ describe("support for tab sets", () => {
     expect(layoutProblems(searchTabs({ "url-arg": "tab", "remember-selection": "true" }))).toEqual(
       [],
     );
+    expect(
+      layoutProblems(
+        searchTabs({
+          "page-nav-buttons": "true",
+          "page-nav-submit-text": "Go",
+          "selected-tab": "'search'",
+        }),
+      ),
+    ).toEqual([]);
     expect(layoutProblems(uiTabs)).toEqual([]);
   });
 
@@ -515,8 +609,9 @@ describe("support for tab sets", () => {
   const gappy: LayoutNode[] = [
     {
       "#tag": "af-tabset",
-      "page-nav-buttons": "true",
+      "page-nav-buttons": "$ctrl.paged",
       "remember-selection": "options.remember",
+      "selected-tab": "$ctrl.start",
       "#children": [
         {
           "#tag": "af-tab",
@@ -539,8 +634,9 @@ describe("support for tab sets", () => {
   it("names every part it cannot show, as the rendered form does", async () => {
     const report = layoutProblems(gappy);
     expect(report).toEqual([
-      "page-nav-buttons on <af-tabset>",
       'remember-selection="options.remember"',
+      'page-nav-buttons="$ctrl.paged"',
+      'selected-tab="$ctrl.start"',
       "ng-if on <af-tab>",
       "Angular expression {{ tab.title }}",
       'total-count="count"',

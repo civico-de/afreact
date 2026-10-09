@@ -1,4 +1,4 @@
-import { evaluateExpression, interpolate, type ExpressionContext } from "./expressions";
+import { evaluateExpression, interpolate, literal, type ExpressionContext } from "./expressions";
 import type { ElementNode, LayoutNode } from "./types";
 import { isElement } from "./types";
 
@@ -17,6 +17,9 @@ const TABSET_ATTRIBUTES = new Set([
   "id",
   "url-arg",
   "remember-selection",
+  "selected-tab",
+  "page-nav-buttons",
+  "page-nav-submit-text",
 ]);
 const TAB_ATTRIBUTES = new Set(["#tag", "#children", "name", "title", "icon", "count"]);
 /** What crmUiTab reads off its element; the element renders without them. */
@@ -42,19 +45,39 @@ function unknownAttributes(node: ElementNode, known: Set<string>): string[] {
   return unknown.length ? [`${unknown.join(", ")} on <${node["#tag"]}>`] : [];
 }
 
-/** afTabset's remember-selection is an expression; the literals FormBuilder writes are read. */
-export function remembersSelection(node: ElementNode): boolean | null {
-  const value = node["remember-selection"];
+/** An afTabset flag is an expression; the literals FormBuilder writes are read, else null. */
+function flag(node: ElementNode, attr: string): boolean | null {
+  const value = node[attr];
   if (value === undefined) return false;
-  const literal = text(value).trim();
-  if (["true", "1"].includes(literal)) return true;
-  return ["false", "0", ""].includes(literal) ? false : null;
+  const written = text(value).trim();
+  if (["true", "1"].includes(written)) return true;
+  return ["false", "0", ""].includes(written) ? false : null;
+}
+
+export const remembersSelection = (node: ElementNode) => flag(node, "remember-selection");
+
+/** page-nav-buttons (6.20): Back, Next and Submit buttons under the panels. */
+export const hasPageNav = (node: ElementNode) => flag(node, "page-nav-buttons");
+
+const STRING_LITERAL = /^\s*(?:::)?\s*('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")\s*$/;
+
+/**
+ * selected-tab (6.20) names the tab to start on as an expression; a string literal is read.
+ * Undefined without the attribute, null for any other expression.
+ */
+export function selectedTabOf(node: ElementNode): string | null | undefined {
+  const value = node["selected-tab"];
+  if (value === undefined) return undefined;
+  const match = STRING_LITERAL.exec(text(value));
+  return match ? literal(match[1] ?? "''") : null;
 }
 
 export function tabsetProblems(node: ElementNode): string[] {
   const problems = unknownAttributes(node, TABSET_ATTRIBUTES);
-  if (remembersSelection(node) === null)
-    problems.push(`remember-selection=${JSON.stringify(node["remember-selection"])}`);
+  for (const attr of ["remember-selection", "page-nav-buttons"])
+    if (flag(node, attr) === null) problems.push(`${attr}=${JSON.stringify(node[attr])}`);
+  if (selectedTabOf(node) === null)
+    problems.push(`selected-tab=${JSON.stringify(node["selected-tab"])}`);
   return problems;
 }
 
@@ -118,7 +141,7 @@ export function tabsOf(tabset: ElementNode, context: ExpressionContext): Tab[] {
     .map((child, index) => make(child, index, context));
 }
 
-/** afTabset's first tab: from the URL, else the remembered one, else the first; unknown names are skipped. */
+/** afTabset's first tab: the first candidate naming a tab (URL, selected-tab, remembered), else the first tab. */
 export function initialTab(
   names: string[],
   candidates: (string | null | undefined)[],

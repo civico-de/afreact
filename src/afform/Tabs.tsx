@@ -22,9 +22,11 @@ import { api4 } from "../api/civi";
 import { useFormSuccess } from "../search/links";
 import type { ExpressionContext } from "./expressions";
 import {
+  hasPageNav,
   initialTab,
   isTabOf,
   remembersSelection,
+  selectedTabOf,
   tabForKey,
   tabsetProblems,
   tabsOf,
@@ -60,6 +62,8 @@ export interface TabsetProps {
   nodes: (nodes: LayoutNode[]) => ReactNode;
   /** The tab set's own element with its attributes, around `children`. */
   element: (node: ElementNode, children: ReactNode) => ReactNode;
+  /** The page navigation's submit button inside af-form; undefined elsewhere, as afFormCtrl. */
+  submit?: { shown: boolean; disabled: boolean };
 }
 
 type Counts = Record<string, number>;
@@ -77,7 +81,10 @@ interface Selection {
   shown: string[];
 }
 
-/** The selected tab, kept under url-arg in the hash and in CRM.cache with remember-selection. */
+/**
+ * The selected tab, kept under url-arg in the hash and in CRM.cache with remember-selection;
+ * selected-tab names the start where the URL does not.
+ */
 function useSelection(names: string[], node: ElementNode, formName: string): Selection {
   const urlArg = typeof node["url-arg"] === "string" && node["url-arg"] ? node["url-arg"] : null;
   const keys = useMemo(
@@ -93,7 +100,7 @@ function useSelection(names: string[], node: ElementNode, formName: string): Sel
     // crmUiTabSet's jQuery UI tabs open the tab whose id is the URL fragment.
     const fragment = node["#tag"] === "af-tabset" ? null : window.location.hash.slice(1);
     const stored = typeof remembered === "string" ? remembered : null;
-    return initialTab(names, [fromUrl, stored, fragment]);
+    return initialTab(names, [fromUrl, selectedTabOf(node), stored, fragment]);
   });
   const selected = fromUrl && names.includes(fromUrl) ? fromUrl : chosen;
   useEffect(() => {
@@ -186,8 +193,72 @@ function TabPanel(props: PanelProps) {
   );
 }
 
+type Control = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+/** The page's first invalid control gets the browser's message, so Next stays on the page. */
+function reportInvalid(panel: HTMLElement | null): boolean {
+  const controls = panel?.querySelectorAll<Control>("input, select, textarea") ?? [];
+  const first = [...controls].find((control) => !control.checkValidity());
+  if (!first) return false;
+  first.focus();
+  first.reportValidity();
+  return true;
+}
+
+interface PageNavProps {
+  node: ElementNode;
+  names: string[];
+  selected: string | null;
+  select: (name: string) => void;
+  panelIds: string[];
+  submit: TabsetProps["submit"];
+}
+
+/**
+ * page-nav-buttons (6.20): Back and Next between the pages, the form's submit on the last.
+ * Next is the page's default button, so Enter moves on as it does under afTabset.
+ */
+function PageNav({ node, names, selected, select, panelIds, submit }: PageNavProps) {
+  const index = selected === null ? -1 : names.indexOf(selected);
+  const previous = names[index - 1];
+  const next = names[index + 1];
+  const text = typeof node["page-nav-submit-text"] === "string" ? node["page-nav-submit-text"] : "";
+  return (
+    <div className="crm-buttons">
+      {previous !== undefined && (
+        <button
+          type="button"
+          className="crm-button crm-button-back"
+          onClick={() => {
+            select(previous);
+          }}
+        >
+          <i className="crm-i fa-angle-left" role="img" aria-hidden="true" /> {ts("Back")}
+        </button>
+      )}
+      {next !== undefined && (
+        <button
+          type="submit"
+          className="crm-button crm-button-next"
+          onClick={(event) => {
+            event.preventDefault();
+            if (!reportInvalid(document.getElementById(panelIds[index] ?? ""))) select(next);
+          }}
+        >
+          <i className="crm-i fa-angle-right" role="img" aria-hidden="true" /> {ts("Next")}
+        </button>
+      )}
+      {submit?.shown && next === undefined && (
+        <button type="submit" className="crm-button crm-button-submit" disabled={submit.disabled}>
+          {text || ts("Submit")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** af-tabset or a crm-ui-tab-set element, by the tag of `node`. */
-export function Tabset({ node, formName, expressions, nodes, element }: TabsetProps) {
+export function Tabset({ node, formName, expressions, nodes, element, submit }: TabsetProps) {
   const ui = node["#tag"] !== "af-tabset";
   const tabs = tabsOf(node, expressions);
   const names = tabs.map((tab) => tab.name);
@@ -288,6 +359,9 @@ export function Tabset({ node, formName, expressions, nodes, element }: TabsetPr
       <div className="crm-tab-panel" ref={root}>
         {panels}
       </div>
+      {!ui && hasPageNav(node) === true && (
+        <PageNav {...{ node, names, selected, select, panelIds, submit }} />
+      )}
     </>
   );
   // afTabset adds crm-tabset to its element; crmUiTabSet's template wraps the tabs in one.
