@@ -5,6 +5,9 @@ import {
   batchCall,
   batches,
   caseBatch,
+  caseRoleBatch,
+  caseRoleReplaceCall,
+  caseRolesCall,
   caseFieldsCall,
   dispositionFileName,
   downloadParams,
@@ -91,6 +94,12 @@ const caseRole: SearchTask = {
   uiDialog: { templateUrl: "~/civiCaseTasks/civiCaseTaskCaseRole.html" },
   values: [],
   relationshipTypes: [],
+};
+const foreign: SearchTask = {
+  name: "contact.foreign",
+  title: "Foreign dialog",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/myext/myDialog.html" },
 };
 const merge: SearchTask = {
   name: "contact.merge",
@@ -194,12 +203,13 @@ describe("taskRun", () => {
     expect(taskRun(relationship)).toEqual({ kind: "relationship" });
     expect(taskRun(mailing)).toEqual({ kind: "mailing" });
     expect(taskRun(openCase)).toEqual({ kind: "case" });
+    expect(taskRun(caseRole)).toEqual({ kind: "caseRole" });
   });
 
   it("names why it cannot run Angular dialogs, input fields and the rest", () => {
-    expect(taskRun(caseRole)).toEqual({
+    expect(taskRun(foreign)).toEqual({
       kind: "unsupported",
-      reason: "Angular dialog ~/civiCaseTasks/civiCaseTaskCaseRole.html",
+      reason: "Angular dialog ~/myext/myDialog.html",
     });
     const where = { name: "geo", label: "Where", input_type: "Location", data_type: "String" };
     const located = { ...disable, apiBatch: { action: "save", fields: [where] } };
@@ -240,9 +250,19 @@ describe("referencedTasks and unsupportedTaskNotes", () => {
   });
 
   it("notes only the referenced tasks the renderer cannot run", () => {
-    const tasks = [disable, download, tag, relationship, mailing, openCase, caseRole, merge];
+    const tasks = [
+      disable,
+      download,
+      tag,
+      relationship,
+      mailing,
+      openCase,
+      caseRole,
+      foreign,
+      merge,
+    ];
     expect(unsupportedTaskNotes(tasks, "all")).toEqual([
-      "task case.addRole (Angular dialog ~/civiCaseTasks/civiCaseTaskCaseRole.html)",
+      "task contact.foreign (Angular dialog ~/myext/myDialog.html)",
     ]);
     expect(unsupportedTaskNotes(tasks, new Set(["disable"]))).toEqual([]);
   });
@@ -653,6 +673,79 @@ describe("case task", () => {
     );
     expect(batch.summary?.({ fetched: 1, matched: 1, rows: [{ id: 5 }] })).toBe(
       "Successfully opened 1 case.",
+    );
+  });
+});
+
+describe("case role task", () => {
+  it("counts the selected cases holding the role, by its type id", () => {
+    expect(caseRolesCall([1, 2], "9_b_a")).toEqual([
+      "Relationship",
+      "get",
+      {
+        select: ["row_count"],
+        where: [
+          ["case_id", "IN", [1, 2]],
+          ["is_current", "=", true],
+          ["relationship_type_id", "=", "9"],
+        ],
+        groupBy: ["case_id"],
+      },
+    ]);
+    expect(() => caseRolesCall([1], "9")).toThrow("Unexpected relationship type key: 9");
+  });
+
+  it("ends the role's other holders on the type's side b when replacing", () => {
+    expect(caseRoleReplaceCall([1, 2], "9_b_a", 7)).toEqual([
+      "Relationship",
+      "update",
+      {
+        values: { end_date: "now", is_active: false },
+        where: [
+          ["case_id", "IN", [1, 2]],
+          ["is_current", "=", true],
+          ["relationship_type_id", "=", "9"],
+          ["contact_id_a", "!=", 7],
+        ],
+      },
+    ]);
+  });
+
+  it("chains a relationship per case client onto the cases and counts the roles added", () => {
+    const batch = caseRoleBatch("9_a_b", 7);
+    expect(batchCall(batch, contact, [1, 2])).toEqual([
+      "CaseContact",
+      "get",
+      {
+        chain: {
+          relationship: [
+            "Relationship",
+            "create",
+            {
+              values: {
+                case_id: "$case_id",
+                relationship_type_id: "9",
+                start_date: "now",
+                contact_id_a: "$contact_id",
+                contact_id_b: 7,
+              },
+            },
+          ],
+        },
+        where: [["case_id", "IN", [1, 2]]],
+      },
+    ]);
+    expect(batch.runMsg).toBe("Adding roles...");
+    expect(batch.successTitle).toBe("Saved");
+    const rows = [
+      { case_id: 1, relationship: [{ id: 3 }, { id: 4 }] },
+      { case_id: 2, relationship: [{ id: 5, duplicate_id: 5 }] },
+    ];
+    expect(batch.summary?.({ fetched: 2, matched: 2, rows })).toBe(
+      "2 case roles added. 1 case role already occupied by the selected contact.",
+    );
+    expect(batch.summary?.({ fetched: 1, matched: 1, rows: [rows[0] ?? {}] })).toBe(
+      "2 case roles added.",
     );
   });
 });

@@ -9,6 +9,7 @@ import { editorFor } from "./inlineEdit";
 import { Icon } from "./LinkContent";
 import { onLinkClick } from "./links";
 import { CaseDialog } from "./CaseDialog";
+import { CaseRoleDialog } from "./CaseRoleDialog";
 import { MailingDialog } from "./MailingDialog";
 import { RelationshipDialog } from "./RelationshipDialog";
 import { TagDialog } from "./TagDialog";
@@ -91,6 +92,7 @@ type RunningTask = Running &
     | { kind: "relationship" }
     | { kind: "mailing" }
     | { kind: "case" }
+    | { kind: "caseRole" }
   );
 
 const TASKS = "getSearchTasks";
@@ -198,7 +200,8 @@ export function useTasks(options: TasksOptions) {
       run.kind === "tag" ||
       run.kind === "relationship" ||
       run.kind === "mailing" ||
-      run.kind === "case"
+      run.kind === "case" ||
+      run.kind === "caseRole"
     ) {
       setRunning({ kind: run.kind, task, ids, isLink, returnTo });
       return;
@@ -446,6 +449,17 @@ export function useTasks(options: TasksOptions) {
         }}
         onOpened={(opened) => {
           onDone({ ran: true, message: opened });
+        }}
+        onCancel={() => {
+          onDone({ ran: false, message: "" });
+        }}
+      />
+    ) : running.kind === "caseRole" ? (
+      <CaseRoleDialog
+        task={running.task}
+        ids={running.ids}
+        onSave={(apiBatch) => {
+          setRunning({ ...running, kind: "batch", apiBatch, isLink: false });
         }}
         onCancel={() => {
           onDone({ ran: false, message: "" });

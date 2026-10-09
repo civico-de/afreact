@@ -209,6 +209,7 @@ export type TaskRun =
   | { kind: "relationship" }
   | { kind: "mailing" }
   | { kind: "case" }
+  | { kind: "caseRole" }
   | { kind: "unsupported"; reason: string };
 
 /** The core task dialogs the renderer replaces with its own. */
@@ -218,6 +219,7 @@ const TAG_DIALOG = "~/crmSearchTasks/crmSearchTaskTag.html";
 const RELATIONSHIP_DIALOG = "~/crmSearchTasks/crmSearchTaskRelationship.html";
 const MAILING_DIALOG = "~/crmSearchTasks/crmSearchTaskMailing.html";
 const CASE_DIALOG = "~/civiCaseTasks/civiCaseTaskOpenCase.html";
+const CASE_ROLE_DIALOG = "~/civiCaseTasks/civiCaseTaskCaseRole.html";
 
 /** A field the update task may set, as searchTaskFieldsTrait and GetSearchTasks read getFields. */
 export interface UpdateField {
@@ -309,6 +311,97 @@ export function caseBatch(values: Record<string, unknown>): ApiBatch {
         plural: "Successfully opened %count cases.",
         count: rows.length,
       }),
+  };
+}
+
+/** The relationship type id and the sides a, b of a type key "<type>_<a>_<b>". */
+function relationshipSides(type: string): [typeId: string, a: string, b: string] {
+  const [typeId, a, b] = type.split("_");
+  if (!typeId || !a || !b) throw new Error(`Unexpected relationship type key: ${type}`);
+  return [typeId, a, b];
+}
+
+/** civiCaseTaskCaseRole's lookup of how many selected cases hold the role already. */
+export function caseRolesCall(ids: Key[], type: string): ApiCall {
+  const [typeId] = relationshipSides(type);
+  return [
+    "Relationship",
+    "get",
+    {
+      select: ["row_count"],
+      where: [
+        ["case_id", "IN", ids],
+        ["is_current", "=", true],
+        ["relationship_type_id", "=", typeId],
+      ],
+      groupBy: ["case_id"],
+    },
+  ];
+}
+
+/** civiCaseTaskCaseRole's "Replace existing roles": the role's other holders end today. */
+export function caseRoleReplaceCall(ids: Key[], type: string, contactId: number): ApiCall {
+  const [typeId, , b] = relationshipSides(type);
+  return [
+    "Relationship",
+    "update",
+    {
+      values: { end_date: "now", is_active: false },
+      where: [
+        ["case_id", "IN", ids],
+        ["is_current", "=", true],
+        ["relationship_type_id", "=", typeId],
+        [`contact_id_${b}`, "!=", contactId],
+      ],
+    },
+  ];
+}
+
+/**
+ * civiCaseTaskCaseRole's run: a relationship from each case's clients to the contact, chained
+ * onto CaseContact.get over the selected cases.
+ */
+export function caseRoleBatch(type: string, contactId: number): ApiBatch {
+  const [typeId, a, b] = relationshipSides(type);
+  const summary = ({ rows }: BatchCounts) => {
+    const relationships = rows.flatMap((row) =>
+      Array.isArray(row.relationship) ? row.relationship.filter(isRecord) : [],
+    );
+    const duplicate = relationships.filter((row) => !!row.duplicate_id).length;
+    const added = ts("1 case role added.", {
+      plural: "%count case roles added.",
+      count: relationships.length - duplicate,
+    });
+    const occupied = ts("1 case role already occupied by the selected contact.", {
+      plural: "%count case roles already occupied by the selected contact.",
+      count: duplicate,
+    });
+    return duplicate > 0 ? `${added} ${occupied}` : added;
+  };
+  return {
+    entity: "CaseContact",
+    action: "get",
+    idField: "case_id",
+    params: {
+      chain: {
+        relationship: [
+          "Relationship",
+          "create",
+          {
+            values: {
+              case_id: "$case_id",
+              relationship_type_id: typeId,
+              start_date: "now",
+              [`contact_id_${a}`]: "$contact_id",
+              [`contact_id_${b}`]: contactId,
+            },
+          },
+        ],
+      },
+    },
+    runMsg: "Adding roles...",
+    successTitle: "Saved",
+    summary,
   };
 }
 
@@ -519,8 +612,7 @@ export function relationshipBatch(
   contactId: number,
   values: Record<string, unknown>,
 ): ApiBatch {
-  const [typeId, a, b] = type.split("_");
-  if (!typeId || !a || !b) throw new Error(`Unexpected relationship type key: ${type}`);
+  const [typeId, a, b] = relationshipSides(type);
   const summary = ({ rows }: BatchCounts) => {
     const duplicate = rows.filter((row) => !!row.duplicate_id).length;
     const added = ts("1 relationship added.", {
@@ -692,6 +784,7 @@ export function taskRun(task: SearchTask): TaskRun {
   if (template === RELATIONSHIP_DIALOG) return { kind: "relationship" };
   if (template === MAILING_DIALOG) return { kind: "mailing" };
   if (template === CASE_DIALOG) return { kind: "case" };
+  if (template === CASE_ROLE_DIALOG) return { kind: "caseRole" };
   if (template) return { kind: "unsupported", reason: `Angular dialog ${template}` };
   const batch = task.apiBatch;
   if (!isRecord(batch) || !isString(batch.action))

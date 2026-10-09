@@ -121,7 +121,23 @@ const caseRole: SearchTask = {
   number: "> 0",
   uiDialog: { templateUrl: "~/civiCaseTasks/civiCaseTaskCaseRole.html" },
   values: [],
-  relationshipTypes: [],
+  relationshipTypes: [
+    { id: "4_a_b", text: "Case Coordinator is", description: null, contact_type: "Individual" },
+    {
+      id: "9_b_a",
+      text: "Benefits Specialist is",
+      description: "Handles claims",
+      contact_type: "Individual",
+      contact_sub_type: "Staff",
+    },
+  ],
+};
+const foreign: SearchTask = {
+  name: "contact.foreign",
+  title: "Foreign dialog",
+  icon: "fa-puzzle-piece",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/myext/myDialog.html" },
 };
 const label: SearchTask = {
   name: "contact.label",
@@ -632,20 +648,23 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("names the tasks it cannot run and keeps them in the menu, disabled", async () => {
-    const calls = serve({ tasks: [enable, caseRole] });
+    const calls = serve({ tasks: [enable, foreign] });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
     await screen.findByText("Name 1");
     await selectRows("Name 1");
     expect(
       await screen.findByText(
-        "Not supported by the React renderer: task case.addRole " +
-          "(Angular dialog ~/civiCaseTasks/civiCaseTaskCaseRole.html)",
+        "Not supported by the React renderer: task contact.foreign " +
+          "(Angular dialog ~/myext/myDialog.html)",
       ),
     ).toHaveAttribute("role", "note");
     await openActions();
-    const item = screen.getByRole("menuitem", { name: /Assign Role/, hidden: true });
+    const item = screen.getByRole("menuitem", { name: /Foreign dialog/, hidden: true });
     expect(item).toHaveAttribute("aria-disabled", "true");
-    expect(item).toHaveAttribute("title", "Not supported by the React renderer: task case.addRole");
+    expect(item).toHaveAttribute(
+      "title",
+      "Not supported by the React renderer: task contact.foreign",
+    );
     await userEvent.click(item);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(calls.map(({ call }) => call)).not.toContain("Contact.update");
@@ -752,8 +771,8 @@ describe("AfreactSearch bulk actions", () => {
   });
 
   it("alerts for a row link to a task React cannot run", async () => {
-    const links = [{ task: "case.addRole", text: "Case" }];
-    serve({ rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })], tasks: [caseRole] });
+    const links = [{ task: "contact.foreign", text: "Case" }];
+    serve({ rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })], tasks: [foreign] });
     renderWithQuery(
       <AfreactSearch
         search="S"
@@ -764,8 +783,8 @@ describe("AfreactSearch bulk actions", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Case" }));
     await waitFor(() => {
       expect(window.CRM.alert).toHaveBeenCalledWith(
-        "Not supported by the React renderer: task case.addRole " +
-          "(Angular dialog ~/civiCaseTasks/civiCaseTaskCaseRole.html)",
+        "Not supported by the React renderer: task contact.foreign " +
+          "(Angular dialog ~/myext/myDialog.html)",
         "Error",
         "error",
       );
@@ -1835,6 +1854,193 @@ describe("AfreactSearch bulk actions", () => {
       const dialog = await openCaseDialog("Name 1");
       expect(await within(dialog).findByRole("alert")).toHaveTextContent("No such entity");
       await within(dialog).findByRole("combobox", { name: "Case Type" });
+      expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
+    });
+  });
+  describe("case role", () => {
+    const roleCount = (count: number) =>
+      Object.assign(
+        Array.from({ length: count }, (_, index) => ({ row_count: 1, case_id: index })),
+        { count },
+      );
+    const assigned = () =>
+      Object.assign(
+        [
+          { case_id: 1, relationship: [{ id: 3 }, { id: 4 }] },
+          { case_id: 2, relationship: [{ id: 5, duplicate_id: 5 }] },
+        ],
+        { countFetched: 2 },
+      );
+
+    async function openRoleDialog(...names: string[]) {
+      await screen.findByText("Name 1");
+      await selectRows(...names);
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /Assign Role/, hidden: true }));
+      return screen.findByRole("dialog", { name: "Case - Assign Role" });
+    }
+
+    it("counts the cases holding the chosen role and adds it to each case's clients", async () => {
+      const calls = serve({
+        tasks: [enable, caseRole],
+        handlers: {
+          "Relationship.get": () => roleCount(0),
+          "CaseContact.get": assigned,
+          "Individual.autocomplete": () =>
+            Object.assign([{ id: 7, label: "Bob" }], { countMatched: 1 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openRoleDialog("Name 1", "Name 2");
+      const save = within(dialog).getByRole("button", { name: "Save" });
+      expect(save).toBeDisabled();
+      expect(within(dialog).getByRole("textbox", { name: /Contact/ })).toBeDisabled();
+      const type = within(dialog).getByRole("combobox", { name: /Role Type/ });
+      expect(within(type).getByRole("option", { name: "Benefits Specialist is" })).toHaveAttribute(
+        "title",
+        "Handles claims",
+      );
+      await userEvent.selectOptions(type, "9_b_a");
+      expect(
+        await within(dialog).findByText("The selected cases do not yet have this role assigned."),
+      ).toBeInTheDocument();
+      expect(named(calls, "Relationship.get")[0]?.params).toEqual({
+        select: ["row_count"],
+        where: [
+          ["case_id", "IN", [1, 2]],
+          ["is_current", "=", true],
+          ["relationship_type_id", "=", "9"],
+        ],
+        groupBy: ["case_id"],
+      });
+      const contact = await within(dialog).findByRole("combobox", { name: /Contact/ });
+      await userEvent.type(contact, "Bo");
+      await userEvent.click(await screen.findByRole("option", { name: "Bob" }));
+      expect(named(calls, "Individual.autocomplete")[0]?.params).toMatchObject({
+        filters: { contact_sub_type: "Staff" },
+      });
+      await userEvent.click(save);
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "2 case roles added. 1 case role already occupied by the selected contact.",
+          "Saved",
+          "success",
+        );
+      });
+      expect(named(calls, "Relationship.update")).toHaveLength(0);
+      expect(named(calls, "CaseContact.get").map(({ params }) => params)).toEqual([
+        {
+          chain: {
+            relationship: [
+              "Relationship",
+              "create",
+              {
+                values: {
+                  case_id: "$case_id",
+                  relationship_type_id: "9",
+                  start_date: "now",
+                  contact_id_b: "$contact_id",
+                  contact_id_a: 7,
+                },
+              },
+            ],
+          },
+          where: [["case_id", "IN", [1, 2]]],
+        },
+      ]);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(pageRuns(calls)).toHaveLength(2);
+      });
+    });
+
+    it("asks whether to add or replace where cases hold the role, and ends the others first", async () => {
+      const calls = serve({
+        tasks: [enable, caseRole],
+        handlers: {
+          "Relationship.get": () => roleCount(1),
+          "Relationship.update": () => [{ id: 2 }],
+          "CaseContact.get": assigned,
+          "Individual.autocomplete": () =>
+            Object.assign([{ id: 7, label: "Bob" }], { countMatched: 1 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openRoleDialog("Name 1", "Name 2");
+      await userEvent.selectOptions(
+        within(dialog).getByRole("combobox", { name: /Role Type/ }),
+        "4_a_b",
+      );
+      const group = await within(dialog).findByRole("radiogroup", {
+        name: "1 cases already have this role assigned.",
+      });
+      expect(within(group).queryByRole("radio", { checked: true })).toBeNull();
+      const contact = await within(dialog).findByRole("combobox", { name: /Contact/ });
+      await userEvent.type(contact, "Bo");
+      await userEvent.click(await screen.findByRole("option", { name: "Bob" }));
+      const save = within(dialog).getByRole("button", { name: "Save" });
+      expect(save).toBeDisabled();
+      await userEvent.click(within(group).getByRole("radio", { name: "Replace existing roles" }));
+      await userEvent.click(save);
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          expect.stringMatching(/^2 case roles added\./) as unknown,
+          "Saved",
+          "success",
+        );
+      });
+      expect(named(calls, "Relationship.update")[0]?.params).toEqual({
+        values: { end_date: "now", is_active: false },
+        where: [
+          ["case_id", "IN", [1, 2]],
+          ["is_current", "=", true],
+          ["relationship_type_id", "=", "4"],
+          ["contact_id_b", "!=", 7],
+        ],
+      });
+      const order = calls.map(({ call }) => call);
+      expect(order.indexOf("Relationship.update")).toBeLessThan(order.indexOf("CaseContact.get"));
+    });
+
+    it("starts from a hook's preset role and contact, and shows a failed replace", async () => {
+      serve({
+        tasks: [enable, { ...caseRole, values: { relationship_type: "4_a_b", contact_id: 7 } }],
+        handlers: {
+          "Relationship.get": () => roleCount(2),
+          "Relationship.update": () => {
+            throw apiError("No write");
+          },
+          "Individual.autocomplete": () =>
+            Object.assign([{ id: 7, label: "Bob" }], { countMatched: 1 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openRoleDialog("Name 1", "Name 2");
+      expect(within(dialog).getByRole("combobox", { name: /Role Type/ })).toHaveValue("4_a_b");
+      await userEvent.click(
+        await within(dialog).findByRole("radio", { name: "Replace existing roles" }),
+      );
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent("No write");
+      expect(within(dialog).getByRole("button", { name: "Save" })).toBeEnabled();
+      await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("shows a failed role count and withholds the save", async () => {
+      serve({
+        tasks: [enable, { ...caseRole, values: { relationship_type: "4_a_b", contact_id: 7 } }],
+        handlers: {
+          "Relationship.get": () => {
+            throw apiError("No access");
+          },
+          "Individual.autocomplete": () =>
+            Object.assign([{ id: 7, label: "Bob" }], { countMatched: 1 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openRoleDialog("Name 1");
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent("No access");
       expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
     });
   });
