@@ -124,9 +124,10 @@ instead of being dropped:
   checkBox, expiryDate and the billing state chainSelect
 - File fields outside a form, as in search filters
 - directives outside plain HTML, forms, blocks, joins, repeats, search
-  fieldsets, tab sets and table, list, grid and tree displays (for example the
-  batch and chart display types); on `af-tabset` a `selected-tab` other than
+  fieldsets, tab sets and table, list, grid, tree and batch displays (for
+  example the chart display type); on `af-tabset` a `selected-tab` other than
   a string literal
+- in a batch display, a formula other than fields, numbers and `+ - * / ( )`
 - FormBuilder's own widgets (`af-admin-list-menu`) and the message template
   editor's `crm-monaco`: both need the Angular application they belong to
 - table features: include columns
@@ -175,6 +176,30 @@ kept across sorting and paging, cleared by new filters and after a task.
 | After a row link updates its row | reloads that row (`refreshAfterEditing`) | reloads the table |
 | Select-all control | icon buttons | the same buttons with `role="checkbox"` and `aria-checked` (`mixed` for some) |
 | Selection count, task result | visible count only | also announced in a live region |
+
+### Batch display
+
+The batch display (`crm-search-display-batch`, core's contribution batch
+entry) starts a batch with `SearchDisplay.createBatch`, edits its rows in the
+`Import_<id>` table and hands them to `SearchDisplay.importBatch`, whose queue
+runner the browser then opens. `tests/browser/batch.spec.ts` enters the same
+two contributions with both renderers and compares what the import stored.
+
+| Area | Angular | React |
+|---|---|---|
+| New batch form | Name, Rows and a target per column with `tally.target`; the Name label points at an id the input lacks (see upstream bugs); a failed create leaves the button spinning (see upstream bugs); the new batch adds a history entry, so Back returns to the form | the same fields, each labelled; a failed create shows the server's message under the button; the new batch replaces the history entry, as every URL key of the renderer does |
+| A batch that does not load | the error alert above an empty table | the server's message and a New Batch button that clears `batch` |
+| Cells | `crm-search-input` per editable column, unlabelled; a display-only column reads the row by its key, not its import column (see upstream bugs) | the in-place editors' inputs, labelled "Column, Row n"; a column whose input they lack shows its value with the note; a display-only column shows the stored value of its import column |
+| Formulas (`input_attrs.formula`) | built into an Angular expression and evaluated; a joined entity's fields read 0 (see upstream bugs) | parsed as fields, numbers and arithmetic, computed on numbers, each field read from the column showing it; anything else is noted |
+| Totals | summed in binary floating point and compared with `==` (see upstream bugs) | summed to 15 significant digits, so typed amounts meet their target |
+| Saving | every 10 seconds and before the import; a failed save drops the changes, and the import can run without the edits made during a save (see upstream bugs); leaving the page drops what was not saved yet (see upstream bugs) | the same rhythm; a failed save keeps the rows unsaved and shows the server's message until a save succeeds; the import saves until no edit is left and stops when a save fails; the page asks before it is left with unsaved rows and saves them when the display closes |
+| Removing a row | removed at once, the delete sent without waiting (see upstream bugs) | removed once the delete succeeds; the focus moves to the next row's remove button, or the previous one, or Add Rows |
+| Copy column | copies the first row's value and sends `Import.update` for the later rows; formulas fed by the column keep their old value (see upstream bugs) | copies the value, recomputes the formulas and saves the rows with the next save |
+| Required values | checked on the rows of the current page (see upstream bugs); a CRM alert lists the first three rows | checked on every row; an alert under the table lists the same messages, the pager moves to the first row missing a value and focuses it, invalid inputs get `aria-invalid` |
+| Totals mismatch | `CRM.confirm` "Totals Mismatch" | a native modal dialog with the same text and buttons |
+| While importing | the display is blocked | the table is inert |
+| A failed import | the display stays blocked (see upstream bugs) | shows the server's message and lets the import run again |
+| Status | visible only | saving, adding rows and importing also announced in a live region |
 
 ## Load metrics
 
@@ -957,3 +982,75 @@ options and shows date and time even for a field whose `input_attrs` say
 `time: false`, and the bounds' placeholders are lost (`master` as of
 2026-10-08; seen on the demo's birth date range). The React renderer renders
 the bounds from the field's own attributes: a date input for a date field.
+
+**10.1 + 20.2 does not meet a target of 30.3.** `crmSearchDisplayBatch`
+adds the amounts as JavaScript numbers in `getTally()` and compares the sum
+with the target by `==`, so two rows of 10.1 and 20.2 against a target of 30.3
+show the total in red and ask "Total Amount value 30.299999999999997 does not
+match expected 30.3" before the import (seen in `batch.spec.ts`). The React
+renderer rounds the sum to 15 significant digits and imports without asking.
+
+**The new batch's Name label points nowhere.** `crmSearchDisplayBatch.html`
+labels the name with `for="crm-create-new-batch-name"`, but the input's id is
+`crm-create-new-batch-label`, so the field has no accessible name and a click
+on the label does nothing (`batch.spec.ts` finds Angular's input by id). The
+React renderer labels it.
+
+**A failed batch save drops the changes.** `saveRows()` empties the unsaved
+rows before the save and ignores a rejection, so the edits are neither kept
+for the next save nor reported, and the import then runs on the old rows
+(read from the code, not run). The React renderer keeps the rows unsaved and
+shows the server's message.
+
+**A removed batch row can come back.** `deleteRow()` takes the row out of the
+table before `Import.delete` answers and ignores a rejection, so a failed
+delete leaves the row in the import, hidden until a reload (read from the code,
+not run). The React renderer removes the row once the delete succeeds.
+
+**Copying a batch column leaves its formulas stale.** `copyCol()` writes the
+value into every row and the import table, but recomputes no formula, so
+copying a fee keeps every other row's net amount as it was (read from the code,
+not run). The React renderer recomputes the formulas of every row.
+
+**A formula adds strings.** `onChangeData()` evaluates `[a] + [b]` on the
+values as stored, and a text input stores strings, so a formula with `+` joins
+them (`"10" + "5"` is `"105"`); core's only formula, the net amount, subtracts
+and is not affected (read from the code, not run). The React renderer computes
+on numbers.
+
+**Required batch values are checked on one page only.** `doImport()` asks the
+Angular form whether it is valid, and the form holds only the inputs of the
+current page (`resultsPage`), so an empty required value on another page of a
+batch longer than the display's limit passes into the import (read from the
+code, not run). The React renderer checks every row and moves to the first
+row missing a value.
+
+**A failed batch create or import hangs.** `createNewBatch()` and
+`runImport()` handle no rejection, so a failed `createBatch` leaves the button
+spinning and a failed `importBatch` leaves the display blocked without a
+message (read from the code, not run). The React renderer shows the server's
+message and lets the user try again.
+
+**The batch import can miss the last edits.** `saveRows()` hands back the save
+already running, which holds only the rows changed before it started, and
+`runImport()` calls `importBatch` once that save answers. An edit made while
+an autosave runs is then left out of the import (read from the code, not run).
+The React renderer saves again until no edit is left, then imports.
+
+**Leaving a batch drops its unsaved edits.** `$onDestroy` only cancels the
+autosave timer, and nothing asks before the page is left, so the edits of up
+to the last 10 seconds are lost on navigation (read from the code, not run).
+The React renderer asks before the page is left with unsaved rows and saves
+them when the display closes.
+
+**A display-only batch column with a joined or suffixed key shows nothing.**
+`crmSearchDisplayBatchBody.html` writes `row.data[col.key]`, but the rows are
+keyed by the import column, `Meta::createSqlName()`, which strips the `:label`
+suffix and munges dots to underscores (read from the code, not run). The React
+renderer reads the import column (`col.spec.name`).
+
+**A batch formula over a joined entity computes 0.** `onChangeData()` reads
+each formula field as `data["<join>.<field>"]`, while the row is keyed by the
+munged import column (`<join>_<field>`), so every field reads 0 (read from the
+code, not run). The React renderer reads each field from the column showing
+it.
