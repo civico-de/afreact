@@ -118,7 +118,7 @@ for (const renderer of ["react", "angular"] as const) {
     await pointerMove(page, "Order A", "Order C");
     await expect.poll(() => stored(page)).toEqual(order(["Order B", "Order C", "Order A"]));
     await expect.poll(() => shown(page)).toEqual(["Order B", "Order C", "Order A"]);
-    // Core writes the new weights into its rows but the cells keep the old text (comparison.md).
+    // Core writes the new weights into its rows but the cells keep the old text (upstream-bugs.md).
     const weight = renderer === "react" ? /^\s*3\s*$/ : /^\s*1\s*$/;
     await expect(row(page, "Order A").locator('[data-field-name="weight"]')).toHaveText(weight);
   });

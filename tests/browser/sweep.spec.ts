@@ -260,7 +260,7 @@ function observe(scope: string): Observed {
     .filter((display) => !display.parentElement?.closest(".crm-search-display"))
     .map((display): Display => {
       const table = display.querySelector(":scope > table");
-      // Core up to 6.19 puts a space before the comma of linked lists (comparison.md,
+      // Core up to 6.19 puts a space before the comma of linked lists (upstream-bugs.md,
       // "A space before the comma in linked lists"); React writes the fixed markup.
       const cell = (el: Element) => text(el).replace(/\s+,/g, ",");
       if (!table) {
@@ -509,7 +509,7 @@ async function supportReport(page: Page): Promise<Map<string, Reported>> {
 
 /**
  * axe rules a form's own layout or display settings break on both renderers, which React renders
- * as written (comparison.md, upstream bugs). Per form and rule, React may have as many findings as
+ * as written (upstream-bugs.md). Per form and rule, React may have as many findings as
  * Angular; an entry that excuses nothing fails.
  */
 const SHARED_CONTENT: Record<string, { rule: string; reason: string }[]> = {

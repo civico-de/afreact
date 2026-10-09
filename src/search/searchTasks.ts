@@ -481,7 +481,7 @@ export interface Tagset {
   label: string;
 }
 
-/** Tags are used for "Contact", whatever contact type a search lists (see comparison.md). */
+/** Tags are used for "Contact", whatever contact type a search lists (see upstream-bugs.md). */
 export function tagEntity(entity: string): string {
   return ["Individual", "Organization", "Household"].includes(entity) ? "Contact" : entity;
 }

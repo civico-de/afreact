@@ -2,8 +2,8 @@
 
 How the React renderer is built, where the Angular runtime's behaviour is
 kept and where it is not. The README says what the extension does and where
-each part lives; [comparison.md](comparison.md) lists the differences and the
-measured load times.
+each part lives; [comparison.md](comparison.md) lists the differences and
+[load-metrics.md](load-metrics.md) the measured load times.
 
 ## Boundary
 
@@ -77,7 +77,7 @@ render core's markup and classes:
 
 React Aria would cover all of it in one library at several times the size of
 these three together; Radix adds dialog, menu and tabs the platform already
-has. Sizes are in comparison.md's load metrics; the bundle is measured there.
+has. Sizes are in load-metrics.md; the bundle is measured there.
 
 The two widgets load as lazy chunks with the first element that needs them.
 `vite.config.ts` names chunks by content hash, so they need no cache code,
@@ -110,7 +110,7 @@ form placed as `dashboard_dashlet`, named after the form. "Refresh" and
 "View fullscreen" remove the `<form>` and put it back, which compiles the
 directive afresh. Layout writes go through one debounced
 `DashboardContact.save`; moving and adding dashlets is jQuery UI sortable,
-mouse only (an upstream bug in comparison.md).
+mouse only (an upstream bug in upstream-bugs.md).
 
 `Civi\Afreact\Dashlets` keeps all of that and swaps only the partial: an
 `angularModules` listener after core's wraps `partialsCallback`, the listed

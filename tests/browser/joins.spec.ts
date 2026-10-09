@@ -2,7 +2,7 @@
  * Two Email blocks of one contact, Home behind an af-if and Work always shown. The server pairs
  * record n with block n of the layout (its location type, its prefilled record). Angular numbers
  * blocks in the order they link, so with Home hidden the Work block takes Home's record; React
- * keeps the layout position (comparison.md, "Join blocks are numbered in link order").
+ * keeps the layout position (upstream-bugs.md, "Join blocks are numbered in link order").
  */
 import { expect, test, type Page } from "@playwright/test";
 import { api, AUTH, type Renderer } from "./harness";

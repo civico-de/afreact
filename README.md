@@ -181,7 +181,9 @@ Angular table's first request. Forms come out within 40 ms of each other.
 
 | Document | Content |
 |---|---|
-| [docs/comparison.md](docs/comparison.md) | parity gaps, differences by design, the measured load times, upstream bugs found |
+| [docs/comparison.md](docs/comparison.md) | parity gaps, differences by design, what is not implemented and why |
+| [docs/upstream-bugs.md](docs/upstream-bugs.md) | bugs in core found on the way, by area, and what React does instead |
+| [docs/load-metrics.md](docs/load-metrics.md) | the measured load times of both renderers and the layout sources |
 | [docs/architecture.md](docs/architecture.md) | state, the first search, libraries and chunks, dashlets |
 | [docs/testing.md](docs/testing.md) | every browser spec, the sweep, the demo videos |
 

@@ -1,7 +1,7 @@
 /**
  * afformAfreactDemoTabs on both renderers: an af-tabset with fields in two tabs, a Toggle, and a
  * search display whose row count is the tab's badge. url-arg is left out: on 6.18 it blanks the
- * Angular tab set (comparison.md, "`url-arg` blanks the tab set outside the Angular page").
+ * Angular tab set (upstream-bugs.md, "`url-arg` blanks the tab set outside the Angular page").
  */
 import { expect, test, type Page } from "@playwright/test";
 import { api, AUTH, type Renderer } from "./harness";

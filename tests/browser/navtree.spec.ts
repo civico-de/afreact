@@ -1,7 +1,7 @@
 /**
  * Drag to reorder in a hierarchical table: navigation entries the test creates, two parents with
  * a child each. Both renderers store the same weight when a parent is dragged past its sibling;
- * React moves the sub-row along and refuses a drop under another parent (comparison.md).
+ * React moves the sub-row along and refuses a drop under another parent (upstream-bugs.md).
  */
 import { expect, test, type Page } from "@playwright/test";
 import { api, AUTH, keysListened, type Renderer } from "./harness";
@@ -188,7 +188,7 @@ for (const renderer of ["react", "angular"] as const) {
     await page.mouse.move(from.x + from.width / 2, to.y + to.height * 0.75, { steps: 10 });
     await page.mouse.up();
     await expect.poll(() => stored(page)).toEqual(MOVED);
-    // Core moves the parent alone (comparison.md); React brings the sub-row.
+    // Core moves the parent alone (upstream-bugs.md); React brings the sub-row.
     await expect
       .poll(() => shown(page))
       .toEqual(

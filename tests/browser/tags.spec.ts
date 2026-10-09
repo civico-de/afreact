@@ -1,7 +1,7 @@
 /**
  * The tag task on the contacts demo (an Individual search): React adds and removes tags through
  * EntityTag batches as core's dialog does on a Contact search. Core's own dialog looks tags up
- * for "Individual" and so offers none here (comparison.md, "The tag dialog offers no tags on a
+ * for "Individual" and so offers none here (upstream-bugs.md, "The tag dialog offers no tags on a
  * contact-type search").
  */
 import { expect, test, type Page } from "@playwright/test";

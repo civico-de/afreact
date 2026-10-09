@@ -52,7 +52,7 @@ const BY_DESIGN: Record<string, { skip: string[]; reason: string }> = {
   },
   "clear 1": { skip: ["x"], reason: "the date's clear link follows the wider date field" },
   // Core's date range links its datepickers before afField fills their options, so Angular adds
-  // a time input to each bound of a date-only range (see docs/comparison.md, upstream bugs).
+  // a time input to each bound of a date-only range (see docs/upstream-bugs.md).
   "control 12": { skip: ["presence"], reason: "Angular's time input on the range's lower bound" },
   "control 13": { skip: ["presence"], reason: "Angular's time input on the range's upper bound" },
   "date 3": {

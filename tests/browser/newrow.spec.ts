@@ -1,7 +1,7 @@
 /**
  * The "Add Option" row of editableRow.create on the custom field options page: React creates the
  * option through SearchDisplay.inlineEdit, as core's row does, which on 6.18.1 also logs a
- * TypeError per input (comparison.md, "The Add row of editableRow.create throws").
+ * TypeError per input (upstream-bugs.md, "The Add row of editableRow.create throws").
  */
 import { expect, test, type Page } from "@playwright/test";
 import { api, AUTH, type Renderer } from "./harness";

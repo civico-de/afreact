@@ -169,7 +169,7 @@ test("both renderers pick columns alike", async ({ page }) => {
   ]);
 });
 
-// Core opens an editor only by mouse and keeps a failed one as a placeholder (comparison.md).
+// Core opens an editor only by mouse and keeps a failed one as a placeholder (upstream-bugs.md).
 test("React edits by keyboard and keeps a failed editor open", async ({ page }) => {
   await open(page, "react");
   const value = cell(page, "job_title").getByRole("button", { name: /^Edit Job title/ });

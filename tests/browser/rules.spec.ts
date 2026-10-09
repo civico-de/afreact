@@ -110,7 +110,7 @@ test.afterAll(async ({ browser }) => {
 
 /**
  * Core recalculates a token default once the prefill changes the fields it refers to, which
- * rewrites the stored value (comparison.md, "A token default overwrites the loaded value").
+ * rewrites the stored value (upstream-bugs.md, "A token default overwrites the loaded value").
  * React keeps the loaded value until the user changes a referenced field.
  */
 test("a loaded record keeps its stored value over the token default on React", async ({ page }) => {
