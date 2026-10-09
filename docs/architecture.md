@@ -92,7 +92,7 @@ filters, tasks, placements) are where most of the code is.
 
 The build runs the React Compiler (`oxc-transform-react`, the Rust port), so
 components and hooks are memoized without `useMemo` or `useCallback` by hand.
-A component it cannot compile is left as written; `npm run build` logs each
+A component it cannot compile is left as written; `bun run build` logs each
 one with the reason (a `finally` clause, a `throw` inside `try`, a ref passed
 as a prop), and the build fails only on a fatal diagnostic.
 

@@ -1,12 +1,12 @@
 # Tests
 
-Unit tests (Vitest, jsdom) run with `npm test`; the PHP gates and the headless
+Unit tests (Vitest, jsdom) run with `bun run test`; the PHP gates and the headless
 PHPUnit suite with `ck ci` inside the container (README, "Checks"). The
 browser tests below run with Playwright against the dev stack, logged in as
 `admin`:
 
 ```sh
-CIVICRM_BASE_URL=http://localhost:8080 npm run test:e2e
+CIVICRM_BASE_URL=http://localhost:8080 bun run test:e2e
 ```
 
 ## Browser specs
@@ -60,7 +60,7 @@ the same for the tour's pages, with `PAGES_ROUNDS`.
 ## Demo video
 
 ```sh
-CIVICRM_BASE_URL=http://localhost:8080 npm run video   # needs ffmpeg
+CIVICRM_BASE_URL=http://localhost:8080 bun run video   # needs ffmpeg
 ```
 
 `tests/browser/demo.video.ts` records the same session on both renderers:
@@ -70,7 +70,7 @@ up side by side in `video/angular-vs-react.mp4`, and the label in each
 half shows when that page was ready. The suite does not run it.
 
 ```sh
-CIVICRM_BASE_URL=http://localhost:8080 npm run video:tour
+CIVICRM_BASE_URL=http://localhost:8080 bun run video:tour
 ```
 
 `tests/browser/tour.video.ts` records a longer tour: a bulk action, editing

@@ -197,16 +197,18 @@ of contact types.
 
 ```sh
 cd .docker && docker compose up -d        # or civikitchen's ckup for free ports
-npm ci
-npm run build                             # type check + bundle into dist/
-npm test                                  # unit tests (Vitest, jsdom)
-npm run coverage
-npm run types                             # regenerate entities.gen.ts from the stack
-npm run inventory                         # what the site's Afforms use, per feature
+bun install --frozen-lockfile
+bun run build                             # type check + bundle into dist/
+bun run test                              # unit tests (Vitest, jsdom)
+bun run coverage
+bun run types                             # regenerate entities.gen.ts from the stack
+bun run inventory                         # what the site's Afforms use, per feature
 ```
 
-`dist/` is committed, so the extension installs without a Node toolchain.
-`npm run types` runs as the stack's admin user, so the types cover every
+`dist/` is not committed: the extension needs `bun run build` before the
+stack can render it, and sites install the release archive, which the release
+workflow builds with the bundle (`policy.dist.build` in `civikitchen.yaml`).
+`bun run types` runs as the stack's admin user, so the types cover every
 entity an administrator can see.
 
 ### Checks
@@ -224,8 +226,8 @@ CI runs the same gates plus the unit and browser tests.
 ### Browser and video tests
 
 ```sh
-CIVICRM_BASE_URL=http://localhost:8080 npm run test:e2e
-CIVICRM_BASE_URL=http://localhost:8080 npm run video:tour   # needs ffmpeg
+CIVICRM_BASE_URL=http://localhost:8080 bun run test:e2e
+CIVICRM_BASE_URL=http://localhost:8080 bun run video:tour   # needs ffmpeg
 ```
 
 [docs/testing.md](docs/testing.md) lists every spec with what it checks, the

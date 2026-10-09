@@ -1,6 +1,6 @@
 /**
  * Records the same session on each renderer with a cold browser cache and a warm server, as a
- * returning visitor meets it; npm run video puts the two side by side. Debug is off as in
+ * returning visitor meets it; bun run video puts the two side by side. Debug is off as in
  * production and restored afterwards.
  */
 import { expect, test, type Locator, type Response } from "@playwright/test";

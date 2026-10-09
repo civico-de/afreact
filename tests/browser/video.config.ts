@@ -1,6 +1,6 @@
 /**
- * Records the demo video, outside the test suite (npm run video):
- *   CIVICRM_BASE_URL=http://localhost:8081 npm run video
+ * Records the demo video, outside the test suite (bun run video):
+ *   CIVICRM_BASE_URL=http://localhost:8081 bun run video
  */
 import { defineConfig, devices } from "@playwright/test";
 import { AUTH } from "./harness";

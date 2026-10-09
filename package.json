@@ -3,6 +3,7 @@
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
+  "packageManager": "bun@1.4.2",
   "scripts": {
     "build": "tsc --noEmit && vite build",
     "test": "tsc --noEmit && vitest run",

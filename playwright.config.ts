@@ -1,6 +1,6 @@
 /**
  * Browser scenarios against the dev stack (.docker, ckup picks the port):
- *   CIVICRM_BASE_URL=http://localhost:8081 npx playwright test
+ *   CIVICRM_BASE_URL=http://localhost:8081 bun run test:e2e
  */
 import { defineConfig, devices } from "@playwright/test";
 import { AUTH } from "./tests/browser/harness";

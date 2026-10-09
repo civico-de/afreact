@@ -38,5 +38,6 @@ jobs:
     uses: jfilter/civikitchen/.github/workflows/extension-ci.yml@v1
 # END CIVIKITCHEN MANAGED caller
     with:
+      bun: true
       js_tests: true
       playwright: true

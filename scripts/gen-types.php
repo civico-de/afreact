@@ -4,7 +4,7 @@
  * Prints TypeScript interfaces for every APIv4 entity of the running site.
  * Each interface is a full `get` row; `select` narrows it with Pick<>.
  *
- * Run inside the dev stack as a user with full API access (npm run types).
+ * Run inside the dev stack as a user with full API access (bun run types).
  * The output depends on the site's custom fields; regenerate after schema changes.
  */
 

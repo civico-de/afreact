@@ -33,5 +33,8 @@ Thumbs.db
 /tests/browser/.auth/
 /video/
 
+# The bundle: built locally and by CI, shipped in the release archive
+/dist/
+
 # Where ckrelease dist writes the archive locally
 /.ckrelease/

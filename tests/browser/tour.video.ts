@@ -1,5 +1,5 @@
 /**
- * Records a tour over tables, lists, tabs and forms on each renderer; npm run video:tour puts the
+ * Records a tour over tables, lists, tabs and forms on each renderer; bun run video:tour puts the
  * two side by side. Every scene has a fixed slot, so both halves show the same scene at the same
  * time and the faster page waits; a slot is its scene's longest run plus a few seconds to look.
  * The groups, options and contact it works on are its own.

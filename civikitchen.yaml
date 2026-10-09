@@ -25,3 +25,9 @@ policy:
   license: Proprietary
   npm_license: UNLICENSED
   copyright: 'civico GmbH'
+  # The bundle is built by the release (and by CI), not committed.
+  dist:
+    build:
+      tool: bun
+      outputs:
+        - dist/

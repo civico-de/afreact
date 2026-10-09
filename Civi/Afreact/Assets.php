@@ -63,7 +63,7 @@ final class Assets {
   private static function preloads(): string {
     $entry = file_get_contents(E::path('dist/afreact.js'));
     if ($entry === FALSE) {
-      throw new \CRM_Core_Exception('dist/afreact.js is missing; run npm run build.');
+      throw new \CRM_Core_Exception('dist/afreact.js is missing; run bun run build.');
     }
     preg_match_all('~\bfrom\s*"\./(chunks/[^"]+)"~', $entry, $imports);
     $links = '';

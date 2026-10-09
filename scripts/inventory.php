@@ -2,7 +2,7 @@
 
 /**
  * Counts what the site's Afforms use once compiled: elements, attributes, expressions, field
- * input types and search display settings, each with the number of forms using it (npm run inventory).
+ * input types and search display settings, each with the number of forms using it (bun run inventory).
  */
 
 declare(strict_types = 1);
