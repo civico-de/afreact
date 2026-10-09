@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import { mockApi, renderWithQuery } from "../test/render";
 import { AfreactForm } from "./AfreactForm";
-import { layoutProblems, nodeKind } from "./support";
+import { layoutProblems, nodeKind, noteKind } from "./support";
 import type { ElementNode, FieldDefn, LayoutNode } from "./types";
 
 const field = (
@@ -72,6 +72,39 @@ describe("nodeKind", () => {
     expect(nodeKind({ "#tag": "div", "af-fieldset": "" })).toBe("searchFieldset");
     expect(nodeKind({ "#tag": "div", "af-fieldset": "Individual1" })).toBe("fieldset");
     expect(nodeKind({ "#tag": "div", "af-join": "Email" })).toBe("join");
+  });
+});
+
+describe("noteKind", () => {
+  it("tells Angular code and a missing placement from vocabulary React does not render yet", () => {
+    for (const note of [
+      "<af-admin-list-menu>",
+      "<af-tab> outside its tab set",
+      'ng-if, ng-click="go()"',
+      "placeholder, ng-model on <input>",
+      "af-repeat-min, class on nick_name",
+      'af-join="Email" outside a fieldset',
+      'filters="{x: foo()}"',
+      'total-count="x"',
+      "Angular expression {{ x }}",
+      "include column ~/afAdmin/afListPlacementColumn.html",
+      "task download (Angular dialog ~/x.html)",
+      "task go (Unsupported task expression: a.b())",
+    ]) {
+      expect(noteKind(note), note).toBe("angular");
+    }
+    for (const note of [
+      "<crm-search-display-batch>",
+      "<img>",
+      "field x without metadata",
+      "search range (Date)",
+      "display type batch",
+      "setting pager.foo",
+      "column type include",
+    ]) {
+      expect(noteKind(note), note).toBe("react");
+    }
+    expect(noteKind("display filters from options outside a placement")).toBe("placement");
   });
 });
 

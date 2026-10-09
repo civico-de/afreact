@@ -36,7 +36,7 @@ test("the report checks every form but blocks and links to both renderers", asyn
   await expect(rows).toHaveCount(forms.length);
   await expect(status(page)).toHaveText(
     new RegExp(
-      `^Checked ${forms.length} forms: \\d+ with parts React cannot show yet, 0 not loaded\\.$`,
+      `^Checked ${forms.length} forms: \\d+ with parts not yet in React, \\d+ needing Angular code, \\d+ shown nowhere by core, 0 not loaded\\.$`,
     ),
   );
   const demo = rows.filter({

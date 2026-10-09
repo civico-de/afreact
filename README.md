@@ -140,10 +140,16 @@ drop, and every unlisted dashlet stay core's (see
 [docs/architecture.md](docs/architecture.md), "Dashlets").
 
 The **support report** (`civicrm/admin/afreact`) lists every form but blocks,
-which core only places inside other forms, with what React cannot show yet.
-It walks each form's layout with the same checks the renderer words its notes
+which core only places inside other forms, with what React cannot show. It
+walks each form's layout with the same checks the renderer words its notes
 with (`src/afform/support.ts`), so the report and the rendered form agree
-(pinned by `tests/browser/support.spec.ts`). A form core shows somewhere is
+(pinned by `tests/browser/support.spec.ts`). The notes come in two kinds:
+parts of the layout vocabulary not yet in React (plain HTML, display, column
+and setting names), and Angular code — any note naming a directive (`ng-`,
+`af-`, `crm-`), an attribute holding an expression, a template or a dialog —
+that only the Angular application runs. A display filtering on a placement's
+options in a form core shows nowhere is listed apart. The status line counts
+the first two kinds and the forms core shows nowhere. A form core shows somewhere is
 checked as shown there, where `options.x` in a display's filters names the
 placement's arguments or nothing; a form shown nowhere, and the preview of any
 form, has no placement, so a display filtered by `options.x` shows a note
@@ -161,7 +167,7 @@ over any edit made on the settings form meanwhile.
 | `civicrm/afreact/angular` | the same forms, Angular runtime |
 | `civicrm/afreact/compare` | loads every React variant and the Angular page in iframes and compares metrics |
 | `civicrm/afreact/render?name=…&renderer=react\|angular` | any form the user may open, with the renderer named (React with `source="page"`); `&options={…}` (a JSON object) stands for a placement's arguments |
-| `civicrm/admin/afreact` | support report: every form with what React cannot show yet |
+| `civicrm/admin/afreact` | support report: every form with what React cannot show, by kind |
 | `civicrm/admin/setting/afreact` | the forms React renders |
 
 Both demo pages share one markup; only the elements that mount the forms

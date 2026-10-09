@@ -2,7 +2,8 @@ import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/rea
 import { useRef, useState } from "react";
 import { api4, errorMessage } from "../api/civi";
 import { loadDefinition } from "../afform/source";
-import { layoutProblems, taskDisplays } from "../afform/support";
+import { layoutProblems, noteKind, taskDisplays } from "../afform/support";
+import type { NoteKind } from "../afform/support";
 import type { LayoutNode } from "../afform/types";
 import { parseTaskList, unsupportedTaskNotes } from "../search/searchTasks";
 
@@ -104,7 +105,11 @@ export function AfreactSupport({ listed, settings }: AfreactSupportProps) {
   const known = new Set(rows.map((row) => row.name));
   const missing = forms.isSuccess ? current.filter((name) => !known.has(name)) : [];
   const done = checks.filter((check) => !check.isPending).length;
-  const gaps = checks.filter((check) => check.data?.length).length;
+  const withNotes = (kind: NoteKind) =>
+    checks.filter((check) => check.data?.some((note) => noteKind(note) === kind)).length;
+  const gaps = withNotes("react");
+  const angular = withNotes("angular");
+  const nowhere = rows.filter((row) => shownAt(row).length === 0).length;
   const failed = checks.filter((check) => check.isError).length;
   const busy = forms.isPending || done < rows.length;
 
@@ -181,11 +186,10 @@ export function AfreactSupport({ listed, settings }: AfreactSupportProps) {
       )}
       <p role="status">
         {forms.isSuccess && !busy
-          ? ts("Checked %1 forms: %2 with parts React cannot show yet, %3 not loaded.", {
-              1: rows.length,
-              2: gaps,
-              3: failed,
-            })
+          ? ts(
+              "Checked %1 forms: %2 with parts not yet in React, %3 needing Angular code, %4 shown nowhere by core, %5 not loaded.",
+              { 1: rows.length, 2: gaps, 3: angular, 4: nowhere, 5: failed },
+            )
           : ""}
       </p>
       {busy && !forms.isError && (
@@ -251,7 +255,7 @@ function SupportRowView({
         <code>{row.name}</code>
       </th>
       <td>{row["type:label"]}</td>
-      <td>{shownAt(row).join(", ")}</td>
+      <td>{shownAt(row).join(", ") || ts("Nowhere")}</td>
       <td>{listed && takenOver(row) ? "React" : "Angular"}</td>
       <td>
         <Problems check={check} />
@@ -268,11 +272,27 @@ function Problems({ check }: { check?: Check }) {
   const problems = check?.data;
   if (!problems) return <>{ts("Checking…")}</>;
   if (!problems.length) return <>{ts("Nothing")}</>;
+  const unique = [...new Set(problems)];
+  const list = (kind: NoteKind, heading: string) => {
+    const notes = unique.filter((note) => noteKind(note) === kind);
+    return (
+      notes.length > 0 && (
+        <>
+          <p className="afreact-support-kind">{heading}</p>
+          <ul className="afreact-support-problems">
+            {notes.map((problem) => (
+              <li key={problem}>{problem}</li>
+            ))}
+          </ul>
+        </>
+      )
+    );
+  };
   return (
-    <ul className="afreact-support-problems">
-      {[...new Set(problems)].map((problem) => (
-        <li key={problem}>{problem}</li>
-      ))}
-    </ul>
+    <>
+      {list("react", ts("Not yet in React"))}
+      {list("angular", ts("Angular code, needs the Angular application"))}
+      {list("placement", ts("Needs a placement's arguments"))}
+    </>
   );
 }

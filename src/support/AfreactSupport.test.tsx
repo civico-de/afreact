@@ -32,7 +32,17 @@ const forms = [
 ];
 const layouts: Record<string, unknown[]> = {
   afformPlaced: [{ "#tag": "div", "#children": [{ "#text": "fine" }] }],
-  afsearchGaps: [{ "#tag": "crm-search-display-batch" }, { "#tag": "crm-search-display-batch" }],
+  afsearchGaps: [
+    { "#tag": "crm-search-display-batch" },
+    { "#tag": "crm-search-display-batch" },
+    {
+      "#tag": "crm-search-display-table",
+      "search-name": "Contacts",
+      "display-name": "Mine",
+      filters: "{contact_id: options.contact_id}",
+      settings: { columns: [] },
+    },
+  ],
 };
 
 function renderReport(listed: string[], held?: Promise<void>) {
@@ -55,7 +65,9 @@ describe("AfreactSupport", () => {
   it("lists every form but blocks with what React cannot show, from one check per form", async () => {
     const calls = renderReport(["afformPlaced"]);
     expect(
-      await screen.findByText("Checked 3 forms: 1 with parts React cannot show yet, 1 not loaded."),
+      await screen.findByText(
+        "Checked 3 forms: 1 with parts not yet in React, 0 needing Angular code, 2 shown nowhere by core, 1 not loaded.",
+      ),
     ).toHaveAttribute("role", "status");
     expect(calls[0]?.params.where).toEqual([["type", "!=", "block"]]);
     expect(calls.filter(({ call }) => call === "Afreact.getForm")).toHaveLength(3);
@@ -72,10 +84,14 @@ describe("AfreactSupport", () => {
       "href",
       "/civicrm/afreact/render",
     );
-    expect(within(row("afsearchGaps")).getAllByRole("listitem")).toHaveLength(1);
-    expect(within(row("afsearchGaps")).getByRole("listitem")).toHaveTextContent(
+    const gaps = within(row("afsearchGaps"));
+    expect(gaps.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
       "<crm-search-display-batch>",
-    );
+      "display filters from options outside a placement",
+    ]);
+    expect(gaps.getByText("Not yet in React")).toBeInTheDocument();
+    expect(gaps.getByText("Needs a placement's arguments")).toBeInTheDocument();
+    expect(within(row("afsearchGaps")).getAllByRole("cell")[1]).toHaveTextContent("Nowhere");
     expect(within(row("afformBroken")).getByText("Form broke")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Choose the forms React renders" })).toHaveAttribute(
       "href",
@@ -212,7 +228,10 @@ describe("AfreactSupport", () => {
         }),
     });
     renderWithQuery(<AfreactSupport listed={[]} settings="/s" />);
-    await screen.findByText(/^Checked 1 forms: 1 with parts/);
+    await screen.findByText(/^Checked 1 forms: 0 with parts not yet in React, 1 needing Angular/);
+    expect(
+      within(row("afsearchGaps")).getByText("Angular code, needs the Angular application"),
+    ).toBeInTheDocument();
     expect(within(row("afsearchGaps")).getByRole("listitem")).toHaveTextContent(
       "task download (Angular dialog ~/x.html)",
     );

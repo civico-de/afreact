@@ -199,6 +199,32 @@ export function expressionNote(expressions: string[]): string {
   return `Angular expression ${expressions.join(", ")}`;
 }
 
+export const PLACEMENT_NOTE = "display filters from options outside a placement";
+
+export type NoteKind = "react" | "angular" | "placement";
+
+/** A directive's element or attribute anywhere in a note: on its own, in a list or after "<". */
+const DIRECTIVE = /(^|[<, ])(ng|af|crm)-[\w-]+/;
+/** An attribute whose value is an expression React cannot read, e.g. `filters="…"`. */
+const EXPRESSION_ATTRIBUTE = /^[\w-]+=/;
+
+/**
+ * What a note names: Angular code (a directive, an expression, a template or a dialog only the
+ * Angular application runs), a placement a form shown nowhere lacks, or vocabulary not yet in
+ * React (plain HTML, display types, column types, settings).
+ */
+export function noteKind(note: string): NoteKind {
+  if (note === PLACEMENT_NOTE) return "placement";
+  if (note.startsWith("<crm-search-display-")) return "react";
+  return DIRECTIVE.test(note) ||
+    EXPRESSION_ATTRIBUTE.test(note) ||
+    /^Angular expression |^include column |\((Angular dialog|Unsupported task expression)/.test(
+      note,
+    )
+    ? "angular"
+    : "react";
+}
+
 export function conditionNote(name: string, attribute: string): string {
   return `${name}="${attribute}"`;
 }
@@ -265,7 +291,7 @@ export function searchDisplayCheck(
   if ("error" in parsed) return { notes: [...notes, parsed.error], filters: null };
   if (options === undefined && readsOptions(parsed.filters))
     return {
-      notes: [...notes, "display filters from options outside a placement"],
+      notes: [...notes, PLACEMENT_NOTE],
       filters: null,
     };
   // Core writes the row count into the page's scope; only a tab's badge reads it here.
