@@ -113,38 +113,58 @@ renderers.
 ### Not implemented in the React renderer
 
 Each of these shows a visible "Not supported by the React renderer" note
-instead of being dropped:
+instead of being dropped. Each item names why it is left out: either core does
+not support it either, or it runs Angular code the renderer cannot run. The
+survey behind this covered every `*.aff.html` in core and the dev stack's
+extensions.
 
-- Angular expressions other than `:: ts('…', {…})` and `crmUrl(…)` with literal arguments
-- field types other than Text, Email, Url, Number, Hidden, TextArea, Date,
-  Select, Radio, CheckBox, DisplayOnly, EntityRef, ChainSelect, Toggle,
-  RichTextEditor, File, Range, Location and CheckoutBlock
+Angular code from elsewhere, which a React renderer cannot run:
+
+- Angular expressions other than `:: ts('…', {…})` and `crmUrl(…)` with
+  literal arguments. In the surveyed layouts all other expressions sit in
+  oauth-client's forms and afform's mock page, and read variables their own
+  Angular controllers set (`options.client.id`, `token.scopes`), so a general
+  expression evaluator would not open those forms either.
+- field types other than afform's 18 (Text, Email, Url, Number, Hidden,
+  TextArea, Date, Select, Radio, CheckBox, DisplayOnly, EntityRef, ChainSelect,
+  Toggle, RichTextEditor, File, Range and Location) and civi_contribute's
+  CheckoutBlock. An extension's own field type brings its own Angular template.
 - in a CheckoutBlock, a checkout option's own Angular template (a payment
   processor's module) and a checkout field of a type other than text, select,
   checkBox, expiryDate and the billing state chainSelect
-- File fields outside a form, as in search filters
 - directives outside plain HTML, forms, blocks, joins, repeats, search
-  fieldsets, tab sets and table, list, grid, tree, batch and chart displays;
-  on `af-tabset` a `selected-tab` other than
-  a string literal
-- in a batch display, a formula other than fields, numbers and `+ - * / ( )`
+  fieldsets, tab sets and table, list, grid, tree, batch and chart displays; on
+  `af-tabset` a `selected-tab` other than a string literal
 - FormBuilder's own widgets (`af-admin-list-menu`) and the message template
   editor's `crm-monaco`: both need the Angular application they belong to
-- table features: include columns
+- include columns: a column of type `include` is an `ng-include` of any Angular
+  template, used by SearchKit's own admin listings, which stay Angular
+- bulk actions whose task is an extension's own Angular dialog (download,
+  update, tag, relationship, mailing, open case and assign case role have
+  their own dialogs), takes an input field the in-place editors lack
+  (`apiBatch.fields` with a Location or multi-value colour input), or uses an
+  expression other than a literal, an object literal, `ids[n]`,
+  `ids.join(',')` and the task's data names. They stay in the actions menu,
+  disabled, with the note as their title; a row link to one alerts. A single
+  extension's dialog can be rebuilt as the core ones were.
+- in a batch display, a formula other than fields, numbers and `+ - * / ( )`:
+  core evaluates the formula as an Angular expression. The only formula core
+  defines, Contribution's `net_amount` as `[total_amount] - [fee_amount]`, is
+  arithmetic.
+
+What core does not support either:
+
+- File fields outside a form, as in search filters: core's file input takes
+  its uploader from `afForm`, which a search page does not have
+- save-draft and reset buttons outside `af-form`, as on a search page:
+  `afButton` calls `afForm.resetForm()` and the draft handling of `afForm`
 - an in-place editor for a multi-value colour field, should one exist; the
   renderer also turns a Location input away, though core defines that type
   only for the `Address.proximity` search filter, which is never editable
-- bulk actions whose task is an extension's own Angular dialog (download,
-  update, tag, relationship, mailing, open case and assign case role have
-  their own dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
-  with a Location or multi-value colour input), or uses an expression other
-  than a literal, an object literal, `ids[n]`, `ids.join(',')` and the task's
-  data names. They stay in the actions menu, disabled, with the note as their
-  title; a row link to one alerts.
-- save-draft and reset buttons outside `af-form`, as on a search page
 
 The support report (`civicrm/admin/afreact`) lists these per form; for bulk
-actions it asks the server for each display's tasks.
+actions it asks the server for each display's tasks. Its notes on a site's
+own forms show which gaps matter there.
 
 ### Bulk actions
 
