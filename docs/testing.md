@@ -30,7 +30,7 @@ CIVICRM_BASE_URL=http://localhost:8080 npm run test:e2e
 | `tests/browser/fullrow.spec.ts` | full-row editing (`editableRow.full`) on both renderers: one click opens every editable cell, the control column saves them in one go, Escape drops the changes |
 | `tests/browser/newrow.spec.ts` | the Add row of `editableRow.create` creates the option through `SearchDisplay.inlineEdit` as core's row does |
 | `tests/browser/actions.spec.ts` | bulk actions on both renderers: select, download, update, disable and delete rows, then equal tables and records |
-| `tests/browser/case.spec.ts`, `mailing.spec.ts`, `relationship.spec.ts`, `tags.spec.ts` | the open case, mailing, relationship and tag tasks on both renderers store the same case, mailing, group, relationship and tag rows |
+| `tests/browser/case.spec.ts`, `caseRole.spec.ts`, `mailing.spec.ts`, `relationship.spec.ts`, `tags.spec.ts` | the open case, assign case role, mailing, relationship and tag tasks on both renderers store the same case, relationship, mailing, group and tag rows; the role spec builds its case search and form through the API and removes them after |
 | `tests/browser/reorder.spec.ts` | drag to reorder on the demo options table: keyboard moves with announcements in React, pointer moves on both renderers, the stored weights and the order after a reload |
 | `tests/browser/navtree.spec.ts` | drag in the hierarchical demo table of navigation entries on both renderers: a row moved with its sub-rows among its siblings by keyboard and pointer, the stored weights, the refused drops with their announcements |
 | `tests/browser/checkout.spec.ts` | the checkout block of core's donation form shows the pay-later option's description on both renderers |

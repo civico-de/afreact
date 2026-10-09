@@ -75,6 +75,7 @@ that no longer excuses anything fails the test.
 | Tab names without `name` | `tab0`, `tab1` … from one counter per page | numbered per tab set, the same on a page with one tab set |
 | Tab under `url-arg` | written to the URL also when the page opens | written when the user selects a tab |
 | Invalid field in a hidden tab | submit does nothing visible (6.20 also blocks moving to a later tab while the current one has an invalid field) | submit selects the field's tab and the browser points at the field; moving between tabs is free |
+| Pages (`page-nav-buttons`, 6.20) | Back and Next buttons, the form's submit button on the last page labelled by `page-nav-submit-text` (empty without it, see upstream bugs); Next does nothing while the current page holds an invalid field; Enter in a field presses Next | the same buttons, "Submit" without the attribute; Next focuses the page's first invalid field and shows the browser's message; Enter presses Next; `selected-tab` with a string literal names the page to start on, after `url-arg` and before the remembered selection (core drops the URL's tab, see upstream bugs); a URL naming no tab is skipped, where core falls through to the remembered tab |
 | Tab badge from `total-count="$parent.count"` | counted after 900 ms without the form's filter values | counted at once, also without the form's filter values |
 | File fields | upload progress in a CRM.status popup; the Replace link has no `href` and no role | progress in the form's status line, errors in its alert; Replace is a focusable button named after the file, and moves focus to the new file input |
 | Search ranges (`search_range`) | two inputs after the field's label | the same pair as a group named by the label, the inputs named "… from" and "… to"; a select range sends its bounds as typed option ids (`2`) where select2 sends strings (`"2"`) |
@@ -124,17 +125,17 @@ instead of being dropped:
 - File fields outside a form, as in search filters
 - directives outside plain HTML, forms, blocks, joins, repeats, search
   fieldsets, tab sets and table, list, grid and tree displays (for example the
-  batch and chart display types); on `af-tabset` also `page-nav-buttons`,
-  `page-nav-submit-text` and `selected-tab` (6.20)
+  batch and chart display types); on `af-tabset` a `selected-tab` other than
+  a string literal
 - FormBuilder's own widgets (`af-admin-list-menu`) and the message template
   editor's `crm-monaco`: both need the Angular application they belong to
 - table features: include columns
 - an in-place editor for a multi-value colour field, should one exist; the
   renderer also turns a Location input away, though core defines that type
   only for the `Address.proximity` search filter, which is never editable
-- bulk actions whose task is an Angular dialog (assign a case role, and
-  extensions' own; download, update, tag, relationship, mailing and open case
-  have their own dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
+- bulk actions whose task is an extension's own Angular dialog (download,
+  update, tag, relationship, mailing, open case and assign case role have
+  their own dialogs), takes an input field the in-place editors lack (`apiBatch.fields`
   with a Location or multi-value colour input), or uses an expression other
   than a literal, an object literal, `ids[n]`, `ids.join(',')` and the task's
   data names. They stay in the actions menu, disabled, with the note as their
@@ -168,6 +169,7 @@ kept across sorting and paging, cleared by new filters and after a task.
 | Relationship dialog | relationship type in a select2, the contact in a `crm-autocomplete` filtered by the type's contact sub-type, then the type's description, dates and custom fields as `crm-search-input`; the batch runs inside the dialog; a failed batch leaves the dialog on its progress bar (see upstream bugs) | the same choice in a native select, the same autocomplete and filter, the type's fields as the in-place editors' inputs (fields they lack are noted); the batch then runs in the task dialog; the result message counts added and existing relationships as core's; a failed batch alerts with the server's message |
 | Mailing dialog | name and type, a recipient check (`Contact.get` with an e-mail join) colouring an alert; "Create Mailing" makes a hidden group with the mailing and its include group chained, a second batch adds the contacts, then the browser opens the mailing; a failed step alerts core's message and closes | the same inputs and check; the group and mailing are made from the dialog, the contacts join in the task dialog's batch, then the browser opens the mailing; a failed group alerts core's and the server's message in the dialog, which stays open for another try (each try that got as far as the group leaves a hidden group behind); a failed batch alerts both and closes |
 | Open case dialog (`contact.addCase`) | the new case's fields as `crm-search-input`, starting with the required ones without a default and the subject; a choice between a case per contact and one joint case where `civicaseAllowMultipleClients` allows it; `CaseContact.get` for the selected contacts with a case not closed, counting a contact once per open case, with a choice to skip them (the default); Save is enabled before that lookup answers (see upstream bugs); "No cases to open." when every contact is skipped; the batch runs inside the dialog with "Opening case..." / "Opening %count cases..."; a failed batch leaves the dialog hanging (see upstream bugs); the success alert counts the cases and links "View case" for a single one | the same fields as the in-place editors' inputs, the same choices as native radios; the lookup runs afresh each time the dialog opens and counts each contact once; Save waits for the fields and the lookup; a case per contact runs in the task dialog's batch with "Opening cases...", a joint case is created from the dialog, where a failed create stays with the server's message and a failed batch alerts and closes; the success alert counts the cases without the link |
+| Assign case role dialog (`case.addRole`) | the role in a select2 over the case types' roles, the contact in a `crm-autocomplete` on the role's contact type and sub-type; `Relationship.get` counts the selected cases holding the role, with "Checking...", "The selected cases do not yet have this role assigned." or "%1 cases already have this role assigned." and a choice between adding and replacing; replacing fires `Relationship.update` ending the other holders without waiting for it; `CaseContact.get` over the cases with `Relationship.create` chained per client runs inside the dialog with "Adding roles..."; a failed batch leaves the dialog hanging (see upstream bugs); the success alert counts the roles added and those the contact held already | the role in a native select with the description as title, the contact in the in-place editors' entityref input with the same filter; the count runs afresh each time the dialog opens and shows the same three states as alerts, the choice as a radio group; Save waits for the role, the contact and the count, and for a choice where cases hold the role; replacing ends the other holders first and keeps the dialog with the server's message when that fails; the batch runs in the task dialog with "Adding roles..." and a failed batch alerts and closes; the same success alert; a hook's preset role, contact and choice are taken over, the role locked by `disableRelationshipSelect`; changing the role clears the contact, whose type may not fit the new role (core keeps it) |
 | Delete task without `confirmMsg` (changed by a hook) | runs at once | asks with core's delete question; a delete the renderer's own dialog settled (the removal of tags) runs at once |
 | Actions menu longer than the space below its button | the page scrolls to the rest | the menu scrolls within the viewport, or opens above its button when that leaves more room |
 | After a row link updates its row | reloads that row (`refreshAfterEditing`) | reloads the table |
@@ -918,11 +920,34 @@ on "Opening case..." (read from the code, not run). The React renderer keeps a
 failed joint case in the dialog with the server's message and alerts for a
 failed batch.
 
+**A failed assign role batch leaves its dialog hanging.** `civiCaseTaskCaseRole.ctrl.js`
+defines no `onError` either, while its template binds the batch runner's
+`error` to `$ctrl.onError(error)`, so a rejected `CaseContact.get` with its
+chained `Relationship.create` shows nothing and the dialog stays on "Adding
+roles..." (read from the code, not run). The React renderer alerts with the
+server's message and closes the dialog.
+
 **Skipping every contact still starts the open case batch.** `submit()` in
 `civiCaseTaskOpenCase.ctrl.js` cancels the dialog when no contact is left but
 does not return, so `start()` runs and hides the title bar buttons of every
 open jQuery UI dialog (read from the code, not run). The React renderer closes
 the dialog and sends nothing.
+
+**A paged form's submit button has no text without `page-nav-submit-text`.**
+`afTabset.html` (6.20) writes `{{ $ctrl.pageNavSubmitText }}` into the
+button on the last page with no fallback; FormBuilder shows "Submit" as the
+attribute's default in the editor only, so a tab set with `page-nav-buttons`
+and no `page-nav-submit-text` renders an empty, unnamed button (read from the
+code, not run). The React renderer labels it "Submit".
+
+**`url-arg` loses to a literal `selected-tab`.** `afTabset.component.js`
+(6.20) binds `selected-tab` two-way (`=?`) and `$onInit` overwrites
+`selectedTab` with the URL's tab. A string literal cannot be assigned back, so
+the first digest's binding watch finds the child changed, resets it to the
+literal and throws `nonassign` (`initializeDirectiveBindings` in AngularJS
+1.8): the URL's tab is dropped with a console error (read from the code, not
+run). The React renderer opens the URL's tab and starts on `selected-tab`
+only without one.
 
 **A date range shows a time input on each bound.** `afField.component.js`
 fills `inputAttrs` for a `search_range` date in a `$timeout`, but
