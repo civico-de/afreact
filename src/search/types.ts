@@ -31,7 +31,12 @@ export interface Column {
   editable?: boolean;
   /** Template of an include column, e.g. "~/afAdmin/afListPlacementColumn.html". */
   path?: string;
-  tally?: { fn?: string; label?: string; rewrite?: string };
+  /** Batch: `target` asks for a SUM's expected total when a batch starts. */
+  tally?: { fn?: string; label?: string; rewrite?: string; target?: boolean };
+  /** Batch: the import column the column writes to (BatchDisplaySubscriber). */
+  spec?: { name: string };
+  /** Batch: the input must be filled before the import runs. */
+  required?: boolean;
   /** List, grid and tree: the column starts a new line instead of following inline. */
   break?: boolean;
 }
@@ -104,6 +109,10 @@ export interface EditableInfo {
   explicit_join: string | null;
   control_field: string | null;
   grouping_fields: unknown;
+  /** Batch: set from the column's `required` (RunBatch). */
+  required?: boolean;
+  /** Batch: the expected total of a SUM column, as given when the batch started. */
+  target?: unknown;
 }
 
 /** A page of SearchDisplay.run with the extras the result object carries. */
@@ -155,7 +164,7 @@ export interface DisplaySettings {
 }
 
 /** The SearchKit display types the renderer shows, by the suffix of their element. */
-export const DISPLAY_TYPES = ["table", "list", "grid", "tree"] as const;
+export const DISPLAY_TYPES = ["table", "list", "grid", "tree", "batch"] as const;
 export type DisplayType = (typeof DISPLAY_TYPES)[number];
 
 export function isDisplayType(value: unknown): value is DisplayType {

@@ -18,6 +18,7 @@ const $ = (target: Element) => events(target);
 window.CRM = {
   api4: vi.fn(),
   url: (path) => `/${path}`,
+  checkPerm: vi.fn(() => false),
   $: vi.fn($),
   loadForm: vi.fn(() => events(new EventTarget())),
   status: vi.fn(() => ({ resolve: vi.fn(), reject: vi.fn() })),
@@ -32,6 +33,7 @@ installDialog();
 
 afterEach(() => {
   vi.mocked(window.CRM.api4).mockReset();
+  vi.mocked(window.CRM.checkPerm).mockReset().mockReturnValue(false);
   vi.mocked(window.CRM.$).mockReset().mockImplementation($);
   vi.mocked(window.CRM.alert).mockClear();
   vi.mocked(window.CRM.status).mockClear();

@@ -46,8 +46,8 @@ export function editorFor(info: EditableInfo): Editor {
 }
 
 /** Editable columns of a page whose input the React table cannot show, for the table's note. */
-export function unsupportedEditors(page: RunPage | undefined): string[] {
-  return Object.entries(page?.editable ?? {}).flatMap(([key, info]) => {
+export function unsupportedEditors(editable: Record<string, EditableInfo>): string[] {
+  return Object.entries(editable).flatMap(([key, info]) => {
     const editor = editorFor(info);
     return "unsupported" in editor ? [`in-place editing of ${key} (${editor.unsupported})`] : [];
   });

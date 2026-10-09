@@ -450,6 +450,7 @@ export function Input(props: InputProps) {
             placeholder="#rrggbb"
             pattern="^#[0-9a-fA-F]{6}$"
             required={common.required}
+            aria-invalid={common["aria-invalid"]}
             value={asText(value)}
             onChange={(event) => {
               typed(event.target.value);
@@ -501,6 +502,7 @@ function BooleanInput({ value, labelId, common, onChange, multiple }: InputProps
       role="radiogroup"
       aria-labelledby={labelId}
       aria-describedby={common["aria-describedby"]}
+      aria-invalid={common["aria-invalid"]}
     >
       {choices.map(([choice, text]) => (
         <label key={text} className="radio-inline">

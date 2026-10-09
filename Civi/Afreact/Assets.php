@@ -36,7 +36,9 @@ final class Assets {
       ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchDisplayTree.css')
       ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchTasks.css')
       // What AfformMetadataInjector::preprocess() writes into afLocationInput's unit select.
-      ->addVars('afreact', ['distanceUnit' => \CRM_Utils_Address::getDefaultDistanceUnit()]);
+      ->addVars('afreact', ['distanceUnit' => \CRM_Utils_Address::getDefaultDistanceUnit()])
+      // CRM.checkPerm() for the batch display's link to all import batches.
+      ->addPermissions(['administer queues']);
     // What afCheckout's settingsFactory gives CRM.afCheckout, for CheckoutBlock fields.
     $checkout = \Civi::container()->has('civi.checkout.afform') ? \Civi::service('civi.checkout.afform') : NULL;
     if ($checkout instanceof \Civi\Checkout\Afform && $checkout->isActive()) {

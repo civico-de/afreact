@@ -86,10 +86,10 @@ describe("unsupportedEditors", () => {
         },
       }),
     );
-    expect(unsupportedEditors(page)).toEqual([
+    expect(unsupportedEditors(page.editable)).toEqual([
       "in-place editing of address_primary.geo_code_1 (Location)",
     ]);
-    expect(unsupportedEditors(undefined)).toEqual([]);
+    expect(unsupportedEditors({})).toEqual([]);
   });
 });
 

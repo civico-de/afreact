@@ -349,10 +349,10 @@ describe("loaded display type", () => {
 
   it("names a type it does not render", async () => {
     mockApi({
-      "SearchDisplay.get": () => [{ label: "Batch", type: "batch", settings: { columns } }],
+      "SearchDisplay.get": () => [{ label: "Chart", type: "chart-kit", settings: { columns } }],
     });
     renderWithQuery(<AfreactSearch search="S" display="D" />);
-    expect(await screen.findByRole("note")).toHaveTextContent("display type batch");
+    expect(await screen.findByRole("note")).toHaveTextContent("display type chart-kit");
   });
 });
 

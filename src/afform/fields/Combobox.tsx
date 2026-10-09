@@ -42,6 +42,7 @@ export interface ComboboxProps {
   onRemove: (item: AutocompleteItem) => void;
   /** Takes the focus on mount, for an editor whose first input it is. */
   autoFocus?: boolean;
+  invalid?: boolean;
 }
 
 interface Results {
@@ -281,6 +282,7 @@ export function Combobox(props: ComboboxProps) {
               "aria-labelledby": undefined,
               "aria-describedby": props.describedBy,
               "aria-required": props.required,
+              "aria-invalid": props.invalid,
               "aria-busy": props.resolving,
               onKeyDown: removeLast,
               onFocus: (event) => {

@@ -56,6 +56,7 @@ export function EntityRefInput(props: InputProps & { params?: AutocompleteParams
           className={undefined}
           disabled={false}
           required={common.required}
+          invalid={common["aria-invalid"]}
           multiple={multiple}
           minLength={1}
           selected={selected}

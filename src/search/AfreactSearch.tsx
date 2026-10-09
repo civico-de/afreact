@@ -8,6 +8,7 @@ import { ColumnPicker, useColumnToggles } from "./ColumnPicker";
 import { useInlineEdit } from "./inlineEdit";
 import { ItemList, TreeView } from "./Items";
 import { useKeptFocus } from "./keptFocus";
+import { BatchDisplay } from "./BatchDisplay";
 import { useAutoOpen, useFormSuccess } from "./links";
 import { Pager, SearchButton } from "./Pager";
 import { useReorder } from "./Reorder";
@@ -48,20 +49,32 @@ interface AfreactSearchProps {
 
 const NO_FILTERS = {};
 
-export function AfreactSearch({
-  search,
-  display,
-  type: givenType,
-  settings: given,
-  afform,
-  filters = NO_FILTERS,
-  typed = filters,
-  enabled = true,
-  savedColumns,
-  onLabels,
-}: AfreactSearchProps) {
-  const client = useQueryClient();
-  const loaded = useQuery({
+/** A batch display edits import rows instead of showing results; every other type shows them. */
+export function AfreactSearch(props: AfreactSearchProps) {
+  const loaded = useDisplay(props.search, props.display, !props.settings);
+  const type = props.type ?? loaded.data?.type;
+  if (type !== "batch")
+    return <ResultDisplay {...props} type={props.type === "batch" ? undefined : props.type} />;
+  const settings = props.settings ?? loaded.data?.settings;
+  if (loaded.error) return <Failure error={loaded.error} />;
+  if (!settings) return <p role="status">{ts("Loading…")}</p>;
+  return (
+    <BatchDisplay
+      search={props.search}
+      display={props.display}
+      settings={settingsOf(settings, "batch")}
+      notes={unsupportedFeatures(settings, undefined, "batch")}
+      afform={props.afform}
+      filters={props.filters ?? NO_FILTERS}
+    />
+  );
+}
+
+type ResultType = Exclude<DisplayType, "batch">;
+const isResultType = (type: unknown): type is ResultType => isDisplayType(type) && type !== "batch";
+
+function useDisplay(search: string, display: string, enabled: boolean) {
+  return useQuery({
     queryKey: ["SearchDisplay", "get", search, display],
     queryFn: async () => {
       const [found] = await get("SearchDisplay", {
@@ -78,10 +91,26 @@ export function AfreactSearch({
         throw new Error(ts("Search display %1 has no columns.", { 1: `${search}.${display}` }));
       return { label: found.label ?? "", type: found.type, settings };
     },
-    enabled: !given,
+    enabled,
   });
+}
+
+function ResultDisplay({
+  search,
+  display,
+  type: givenType,
+  settings: given,
+  afform,
+  filters = NO_FILTERS,
+  typed = filters,
+  enabled = true,
+  savedColumns,
+  onLabels,
+}: AfreactSearchProps & { type?: ResultType }) {
+  const client = useQueryClient();
+  const loaded = useDisplay(search, display, !given);
   const loadedType = loaded.data?.type;
-  const type = givenType ?? (isDisplayType(loadedType) ? loadedType : "table");
+  const type = givenType ?? (isResultType(loadedType) ? loadedType : "table");
   const stored = given ?? loaded.data?.settings;
   const settings = useMemo(() => stored && settingsOf(stored, type), [stored, type]);
   const [url, setUrl] = useQueryStates(

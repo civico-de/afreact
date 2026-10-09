@@ -39,6 +39,8 @@ declare global {
     CRM: {
       api4: (entity: string, action: string, params?: object) => Promise<unknown>;
       url: (path: string, query?: string | Record<string, unknown>, mode?: string) => string;
+      /** Whether the user holds a permission the page added (js/Common.js). */
+      checkPerm: (permission: string) => boolean;
       /** CiviCRM's jQuery; popups announce success with jQuery events and keep their urlHash in data(). */
       $: (target: Element) => JQueryObject;
       /** Opens a form in a popup (js/crm.ajax.js); `post` sends data on its first load. */

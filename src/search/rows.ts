@@ -157,6 +157,7 @@ const TYPE_SETTINGS: Record<DisplayType, string[]> = {
   list: ["pager", "style", "symbol", "section_group_by", "header_tag"],
   grid: ["pager", "colno", "section_group_by", "header_tag"],
   tree: ["parent_field", "collapsible", "draggable"],
+  batch: ["pager", "tally"],
 };
 /** Any other setting with a value gets a note, so a new SearchKit feature never goes missing. */
 const KNOWN_SETTINGS = new Set([...COMMON_SETTINGS, ...Object.values(TYPE_SETTINGS).flat()]);
@@ -197,7 +198,7 @@ export function unsupportedFeatures(
   if (typeof settings.pager === "object")
     for (const [key, value] of Object.entries(settings.pager))
       if (!PAGER_OPTIONS.has(key) && isSet(value)) features.push(`setting pager.${key}`);
-  features.push(...unsupportedEditors(page));
+  features.push(...unsupportedEditors(page?.editable ?? {}));
   if (settings.editableRow && settings.editableRow.create)
     features.push(...unfillableColumns(page));
   return features;
@@ -230,6 +231,11 @@ function editableInfos(value: unknown): Record<string, EditableInfo> {
   );
 }
 
+/** The `editable` CRM.api4 copied onto a run's row list. */
+export function editableOf(result: unknown[]): Record<string, EditableInfo> {
+  return editableInfos(Object.getOwnPropertyDescriptor(result, "editable")?.value);
+}
+
 /** CRM.api4 copies the run result's properties (toolbar, subsearch, labels) onto the row list. */
 export function runPage(result: Row[]): RunPage {
   const property = (name: string): unknown => Object.getOwnPropertyDescriptor(result, name)?.value;
@@ -240,7 +246,7 @@ export function runPage(result: Row[]): RunPage {
     rows: [...result],
     toolbar: isLinks(toolbar) ? toolbar : [],
     subsearch: isSubsearchDisplays(subsearch) ? subsearch : {},
-    editable: editableInfos(property("editable")),
+    editable: editableOf(result),
     labels: Array.isArray(labels) ? labels.filter((label) => typeof label === "string") : [],
   };
 }

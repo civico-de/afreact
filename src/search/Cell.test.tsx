@@ -303,9 +303,9 @@ describe("subsearch columns", () => {
 
   it("flags a nested display of a type React does not render", () => {
     subsearchCells([info("inline", 4)], {
-      "Emails.Table": { ...subsearch["Emails.Table"], type: "batch" },
+      "Emails.Table": { ...subsearch["Emails.Table"], type: "chart-kit" },
     });
-    expect(screen.getByRole("note")).toHaveTextContent("subsearch display type batch");
+    expect(screen.getByRole("note")).toHaveTextContent("subsearch display type chart-kit");
   });
 
   it("renders a nested display of another type as that type", async () => {

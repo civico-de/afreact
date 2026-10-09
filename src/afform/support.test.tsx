@@ -68,7 +68,7 @@ describe("nodeKind", () => {
     expect(nodeKind({ "#tag": "crm-search-display-table" })).toBe("search");
     for (const type of ["list", "grid", "tree"])
       expect(nodeKind({ "#tag": `crm-search-display-${type}` })).toBe("search");
-    expect(nodeKind({ "#tag": "crm-search-display-batch" })).toBe("unknown");
+    expect(nodeKind({ "#tag": "crm-search-display-chart-kit" })).toBe("unknown");
     expect(nodeKind({ "#tag": "div", "af-fieldset": "" })).toBe("searchFieldset");
     expect(nodeKind({ "#tag": "div", "af-fieldset": "Individual1" })).toBe("fieldset");
     expect(nodeKind({ "#tag": "div", "af-join": "Email" })).toBe("join");
@@ -94,11 +94,11 @@ describe("noteKind", () => {
       expect(noteKind(note), note).toBe("angular");
     }
     for (const note of [
-      "<crm-search-display-batch>",
+      "<crm-search-display-chart-kit>",
       "<img>",
       "field x without metadata",
       "search range (Date)",
-      "display type batch",
+      "display type chart-kit",
       "setting pager.foo",
       "column type include",
     ]) {
