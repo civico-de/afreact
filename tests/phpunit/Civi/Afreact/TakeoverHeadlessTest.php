@@ -94,6 +94,31 @@ class TakeoverHeadlessTest extends TestCase implements HeadlessInterface {
     $this->assertSame(['id' => 'url', 'url' => 'civicrm/x'], $tabs[2]);
   }
 
+  public function testOnlyATabsetThatRendersLoadsTheBundle(): void {
+    // Page settings live in this region and merge across calls.
+    $region = \CRM_Core_Region::instance('html-header');
+    $region->clear();
+    $loaded = static fn (): bool => isset(\Civi::resources()->getSettings()['vars']['afreact']);
+    $tabs = static fn (): array => [['id' => 'mine', 'template' => 'afform/InlineAfform.tpl', 'module' => self::FORM]];
+    try {
+      \Civi::dispatcher()->dispatch('hook_civicrm_tabset', GenericHookEvent::create([
+        'tabsetName' => 'civicrm/contact/view',
+        'tabs' => $tabs(),
+        'context' => ['caller' => 'ContactLayout'],
+      ]));
+      $this->assertFalse($loaded());
+      \Civi::dispatcher()->dispatch('hook_civicrm_tabset', GenericHookEvent::create([
+        'tabsetName' => 'civicrm/contact/view',
+        'tabs' => $tabs(),
+        'context' => [],
+      ]));
+      $this->assertTrue($loaded());
+    }
+    finally {
+      $region->clear();
+    }
+  }
+
   public function testContactSummaryBlocksOfListedFormsGetTheReactMarkup(): void {
     $region = \CRM_Core_Region::instance('contact-basic-info-left');
     $region->add(['name' => 'afform:' . self::FORM, 'markup' => '<crm-angular-js/>']);
@@ -107,6 +132,36 @@ class TakeoverHeadlessTest extends TestCase implements HeadlessInterface {
         preg_replace('#>\s+<#', '><', trim((string) $region->get('afform:' . self::FORM)['markup'])),
       );
       $this->assertSame('<crm-angular-js/>', $region->get('afform:afformAfreactDemoRules')['markup']);
+    }
+    finally {
+      $region->clear();
+    }
+  }
+
+  public function testCaseSummaryBlocksOfListedFormsGetTheReactMarkup(): void {
+    $region = \CRM_Core_Region::instance('case-view-custom-data-view');
+    $region->add(['name' => 'afform:' . self::FORM, 'markup' => '<crm-angular-js/>']);
+    $form = new class() extends \CRM_Core_Form {
+
+      public function get($name) {
+        return ['id' => 7, 'cid' => 5][$name] ?? NULL;
+      }
+
+    };
+    try {
+      \Civi::dispatcher()->dispatch('hook_civicrm_buildForm', GenericHookEvent::create([
+        'formName' => 'CRM_Contact_Form_Contact',
+        'form' => $form,
+      ]));
+      $this->assertSame('<crm-angular-js/>', $region->get('afform:' . self::FORM)['markup']);
+      \Civi::dispatcher()->dispatch('hook_civicrm_buildForm', GenericHookEvent::create([
+        'formName' => 'CRM_Case_Form_CaseView',
+        'form' => $form,
+      ]));
+      $this->assertSame(
+        '<div id="bootstrap-theme"><afreact-form name="afformAfreactDemoContact" options="{&quot;case_id&quot;:7,&quot;contact_id&quot;:5}"></afreact-form></div>',
+        preg_replace('#>\s+<#', '><', trim((string) $region->get('afform:' . self::FORM)['markup'])),
+      );
     }
     finally {
       $region->clear();
