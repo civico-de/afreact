@@ -1,3 +1,4 @@
+import { chartKitMissing } from "../search/ChartDisplay";
 import { parseFiltersAttribute, readsOptions, type DisplayFilters } from "../search/displayFilters";
 import { columnNote, settingsOf, unsupportedFeatures } from "../search/rows";
 import { referencedTasks } from "../search/searchTasks";
@@ -380,11 +381,21 @@ function inputProblems(defn: FieldDefn): string[] {
 function searchProblems(node: ElementNode, scope: Scope): string[] {
   const check = searchDisplayCheck(node, scope.options, scope.tab);
   if (check.filters === null || !check.settings) return check.notes;
-  const columns = check.settings.columns.flatMap((column) => columnNote(column) ?? []);
-  // The display names its features in one note.
   const type = displayTypeOf(node["#tag"]) ?? "table";
+  // A chart's columns are read by core's own element.
+  const columns =
+    type === "chart-kit"
+      ? []
+      : check.settings.columns.flatMap((column) => columnNote(column) ?? []);
+  // The display names its features in one note.
   const features = unsupportedFeatures(check.settings, undefined, type).join(", ");
-  return [...check.notes, ...(features ? [features] : []), ...new Set(columns)];
+  const chartKit = type === "chart-kit" && !window.CRM.vars?.afreact?.chartKit;
+  return [
+    ...check.notes,
+    ...(features ? [features] : []),
+    ...(chartKit ? [chartKitMissing()] : []),
+    ...new Set(columns),
+  ];
 }
 
 function elementProblems(node: ElementNode): string[] {

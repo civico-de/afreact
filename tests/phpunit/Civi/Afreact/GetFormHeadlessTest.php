@@ -38,7 +38,7 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
    */
   public static function builder(): CiviEnvBuilder {
     return ck_headless()
-      ->install(['org.civicrm.afform_admin', 'civicrm_admin_ui'])
+      ->install(['org.civicrm.afform_admin', 'civicrm_admin_ui', 'chart_kit'])
       ->callback([\CRM_Core_Menu::class, 'store'], 'afreact-menu')
       ->apply();
   }

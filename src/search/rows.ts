@@ -158,6 +158,7 @@ const TYPE_SETTINGS: Record<DisplayType, string[]> = {
   grid: ["pager", "colno", "section_group_by", "header_tag"],
   tree: ["parent_field", "collapsible", "draggable"],
   batch: ["pager", "tally"],
+  "chart-kit": [],
 };
 /** Any other setting with a value gets a note, so a new SearchKit feature never goes missing. */
 const KNOWN_SETTINGS = new Set([...COMMON_SETTINGS, ...Object.values(TYPE_SETTINGS).flat()]);
@@ -168,7 +169,8 @@ const PAGER_OPTIONS = new Set(["show_count", "hide_single", "expose_limit"]);
  * neither load nor show in another type, as core's templates ignore them.
  */
 export function settingsOf(settings: DisplaySettings, type: DisplayType): DisplaySettings {
-  if (type === "table") return settings;
+  // A chart is core's own element, which reads its settings itself.
+  if (type === "table" || type === "chart-kit") return settings;
   const read = new Set([...COMMON_SETTINGS, ...TYPE_SETTINGS[type]]);
   const kept = Object.entries(settings).filter(([key]) => read.has(key));
   return { ...Object.fromEntries(kept), columns: settings.columns };
@@ -191,6 +193,7 @@ export function unsupportedFeatures(
   page?: RunPage,
   type: DisplayType = "table",
 ): string[] {
+  if (type === "chart-kit") return [];
   const features: string[] = Object.entries(stored)
     .filter(([key, value]) => !KNOWN_SETTINGS.has(key) && isSet(value))
     .map(([key]) => `setting ${key}`);

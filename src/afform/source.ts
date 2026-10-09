@@ -23,6 +23,8 @@ export interface AfreactVars {
   distanceUnit?: string;
   /** Civi\Checkout\Afform::getSettings(), while contributions through forms are enabled. */
   afCheckout?: CheckoutSettings;
+  /** chart_kit's scripts and styles in load order, or why they cannot load, while it is enabled. */
+  chartKit?: { scripts: string[]; styles: string[] } | { error: string };
 }
 
 function vars(): AfreactVars {

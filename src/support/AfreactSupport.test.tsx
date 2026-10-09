@@ -33,8 +33,8 @@ const forms = [
 const layouts: Record<string, unknown[]> = {
   afformPlaced: [{ "#tag": "div", "#children": [{ "#text": "fine" }] }],
   afsearchGaps: [
-    { "#tag": "crm-search-display-chart-kit" },
-    { "#tag": "crm-search-display-chart-kit" },
+    { "#tag": "crm-search-display-map" },
+    { "#tag": "crm-search-display-map" },
     {
       "#tag": "crm-search-display-table",
       "search-name": "Contacts",
@@ -86,7 +86,7 @@ describe("AfreactSupport", () => {
     );
     const gaps = within(row("afsearchGaps"));
     expect(gaps.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
-      "<crm-search-display-chart-kit>",
+      "<crm-search-display-map>",
       "display filters from options outside a placement",
     ]);
     expect(gaps.getByText("Not yet in React")).toBeInTheDocument();

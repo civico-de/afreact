@@ -349,10 +349,10 @@ describe("loaded display type", () => {
 
   it("names a type it does not render", async () => {
     mockApi({
-      "SearchDisplay.get": () => [{ label: "Chart", type: "chart-kit", settings: { columns } }],
+      "SearchDisplay.get": () => [{ label: "Map", type: "map", settings: { columns } }],
     });
     renderWithQuery(<AfreactSearch search="S" display="D" />);
-    expect(await screen.findByRole("note")).toHaveTextContent("display type chart-kit");
+    expect(await screen.findByRole("note")).toHaveTextContent("display type map");
   });
 });
 

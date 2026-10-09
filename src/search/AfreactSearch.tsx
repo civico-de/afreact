@@ -9,6 +9,7 @@ import { useInlineEdit } from "./inlineEdit";
 import { ItemList, TreeView } from "./Items";
 import { useKeptFocus } from "./keptFocus";
 import { BatchDisplay } from "./BatchDisplay";
+import { ChartDisplay } from "./ChartDisplay";
 import { useAutoOpen, useFormSuccess } from "./links";
 import { Pager, SearchButton } from "./Pager";
 import { useReorder } from "./Reorder";
@@ -49,15 +50,29 @@ interface AfreactSearchProps {
 
 const NO_FILTERS = {};
 
-/** A batch display edits import rows instead of showing results; every other type shows them. */
+/**
+ * A batch display edits import rows and a chart is core's own element; every other type shows
+ * the results itself.
+ */
 export function AfreactSearch(props: AfreactSearchProps) {
   const loaded = useDisplay(props.search, props.display, !props.settings);
   const type = props.type ?? loaded.data?.type;
-  if (type !== "batch")
-    return <ResultDisplay {...props} type={props.type === "batch" ? undefined : props.type} />;
+  if (type !== "batch" && type !== "chart-kit")
+    return <ResultDisplay {...props} type={isResultType(props.type) ? props.type : undefined} />;
   const settings = props.settings ?? loaded.data?.settings;
   if (loaded.error) return <Failure error={loaded.error} />;
   if (!settings) return <p role="status">{ts("Loading…")}</p>;
+  if (type === "chart-kit")
+    return (
+      <ChartDisplay
+        search={props.search}
+        display={props.display}
+        settings={settings}
+        afform={props.afform}
+        filters={props.filters ?? NO_FILTERS}
+        enabled={props.enabled ?? true}
+      />
+    );
   return (
     <BatchDisplay
       search={props.search}
@@ -70,8 +85,9 @@ export function AfreactSearch(props: AfreactSearchProps) {
   );
 }
 
-type ResultType = Exclude<DisplayType, "batch">;
-const isResultType = (type: unknown): type is ResultType => isDisplayType(type) && type !== "batch";
+type ResultType = Exclude<DisplayType, "batch" | "chart-kit">;
+const isResultType = (type: unknown): type is ResultType =>
+  isDisplayType(type) && type !== "batch" && type !== "chart-kit";
 
 function useDisplay(search: string, display: string, enabled: boolean) {
   return useQuery({

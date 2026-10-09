@@ -66,9 +66,9 @@ describe("nodeKind", () => {
     expect(nodeKind({ "#tag": "div", "ng-if": "afform.showSubmitButton" })).toBe("submitCondition");
     expect(nodeKind({ "#tag": "afblock-name-individual" })).toBe("block");
     expect(nodeKind({ "#tag": "crm-search-display-table" })).toBe("search");
-    for (const type of ["list", "grid", "tree"])
+    for (const type of ["list", "grid", "tree", "batch", "chart-kit"])
       expect(nodeKind({ "#tag": `crm-search-display-${type}` })).toBe("search");
-    expect(nodeKind({ "#tag": "crm-search-display-chart-kit" })).toBe("unknown");
+    expect(nodeKind({ "#tag": "crm-search-display-map" })).toBe("unknown");
     expect(nodeKind({ "#tag": "div", "af-fieldset": "" })).toBe("searchFieldset");
     expect(nodeKind({ "#tag": "div", "af-fieldset": "Individual1" })).toBe("fieldset");
     expect(nodeKind({ "#tag": "div", "af-join": "Email" })).toBe("join");
@@ -94,11 +94,11 @@ describe("noteKind", () => {
       expect(noteKind(note), note).toBe("angular");
     }
     for (const note of [
-      "<crm-search-display-chart-kit>",
+      "<crm-search-display-map>",
       "<img>",
       "field x without metadata",
       "search range (Date)",
-      "display type chart-kit",
+      "display type map",
       "setting pager.foo",
       "column type include",
     ]) {
@@ -122,6 +122,24 @@ describe("layoutProblems", () => {
       'ng-model, af-required="(broken" on first_name',
       "field type Signature (State)",
     ]);
+  });
+
+  it("leaves a chart's settings and columns to core's element, which needs chart_kit", () => {
+    const chart: LayoutNode = {
+      "#tag": "crm-search-display-chart-kit",
+      "search-name": "Contacts",
+      "display-name": "Chart",
+      settings: {
+        // chart_kit's columns name an axis instead of a column type.
+        columns: [{ axis: "x", key: "contact_type", scaleType: "categorical" }],
+        chartType: "pie",
+        format: { height: 480 },
+      },
+    };
+    window.CRM.vars = { afreact: { chartKit: { scripts: [], styles: [] } } };
+    expect(layoutProblems([chart])).toEqual([]);
+    delete window.CRM.vars;
+    expect(layoutProblems([chart])).toEqual(["Charts need the chart_kit extension."]);
   });
 
   it("takes an extra field, named by its definition alone, as supported", () => {

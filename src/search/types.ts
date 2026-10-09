@@ -164,7 +164,7 @@ export interface DisplaySettings {
 }
 
 /** The SearchKit display types the renderer shows, by the suffix of their element. */
-export const DISPLAY_TYPES = ["table", "list", "grid", "tree", "batch"] as const;
+export const DISPLAY_TYPES = ["table", "list", "grid", "tree", "batch", "chart-kit"] as const;
 export type DisplayType = (typeof DISPLAY_TYPES)[number];
 
 export function isDisplayType(value: unknown): value is DisplayType {

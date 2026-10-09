@@ -105,9 +105,61 @@ class AssetsHeadlessTest extends TestCase implements HeadlessInterface {
     ));
   }
 
+  public function testLoadHandsChartsChartKitsAssetsInBundleOrder(): void {
+    Assets::load();
+    $chartKit = $this->vars()['chartKit'];
+    $this->assertCount(13, $chartKit['scripts']);
+    // d3, dc and crossfilter first, the element last.
+    $this->assertStringContainsString('chart_kit.js', $chartKit['scripts'][0]);
+    $this->assertStringContainsString('/js/components/civi-search-display-chart-kit.js?', end($chartKit['scripts']));
+    $this->assertStringContainsString('/ang/crmChartKit.css', $chartKit['styles'][0]);
+    $this->assertStringContainsString('chart_kit.css', $chartKit['styles'][1]);
+  }
+
+  public function testLoadSkipsDisabledBundleEntries(): void {
+    $chartKit = $this->withBundle(static function (\CRM_Core_Resources_Bundle $bundle): void {
+      $bundle->addStyleUrl('https://example.org/dropped.css', ['disabled' => TRUE]);
+      $bundle->addStyleFile('chart_kit', 'ang/crmChartKit.css');
+    });
+    $this->assertNotContains('https://example.org/dropped.css', $chartKit['styles']);
+    $this->assertCount(3, $chartKit['styles']);
+  }
+
+  public function testABundleEntryTheRendererCannotLoadReachesOnlyTheCharts(): void {
+    $chartKit = $this->withBundle(static function (\CRM_Core_Resources_Bundle $bundle): void {
+      $bundle->addMarkup('<p></p>');
+    });
+    $this->assertSame(
+      ['error' => 'chart_kit\'s bundle has a resource the renderer cannot load: "markup"'],
+      $chartKit,
+    );
+    $this->assertArrayHasKey('distanceUnit', $this->vars());
+  }
+
   public function testUnknownSourceIsRejected(): void {
     $this->expectExceptionMessage('Unknown layout source "file".');
     Assets::layouts('file', Pages::FORMS);
+  }
+
+  /**
+   * The chartKit var while a hook adds to chart_kit's bundle.
+   *
+   * @return array<string, mixed>
+   */
+  private function withBundle(callable $alter): array {
+    $listener = static function (\Civi\Core\Event\GenericHookEvent $event) use ($alter): void {
+      if ($event->bundle->name === 'chart_kit') {
+        $alter($event->bundle);
+      }
+    };
+    \Civi::dispatcher()->addListener('hook_civicrm_alterBundle', $listener);
+    try {
+      Assets::load();
+      return $this->vars()['chartKit'];
+    }
+    finally {
+      \Civi::dispatcher()->removeListener('hook_civicrm_alterBundle', $listener);
+    }
   }
 
   /**
