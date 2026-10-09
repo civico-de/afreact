@@ -7,7 +7,7 @@ Angular.
 
 Status: alpha. Forms with blocks, joins, repeats, live rules, drafts and the
 checkout block; table, list, grid and tree displays with filters, in-place
-editing, drag ordering and bulk actions; batch entry. What is left out:
+editing, drag ordering and bulk actions; batch entry; charts. What is left out:
 [comparison.md](docs/comparison.md#not-implemented-in-the-react-renderer).
 
 ## How it works
@@ -47,7 +47,7 @@ editing, drag ordering and bulk actions; batch entry. What is left out:
   | Element | Attributes | Renders |
   |---|---|---|
   | `<afreact-form>` | `name`, `source`, `options` (JSON object of a placement's arguments) | a FormBuilder form or search page |
-  | `<afreact-search>` | `search`, `display` | a SearchKit table, list, grid, tree or batch display |
+  | `<afreact-search>` | `search`, `display` | a SearchKit table, list, grid, tree, batch or chart display |
   | `<afreact-compare>` | `pages` (JSON list of `{label, url}`) | the comparison page |
   | `<afreact-support>` | `listed` (JSON list of form names), `settings` (URL) | the support report |
 

@@ -124,8 +124,8 @@ instead of being dropped:
   checkBox, expiryDate and the billing state chainSelect
 - File fields outside a form, as in search filters
 - directives outside plain HTML, forms, blocks, joins, repeats, search
-  fieldsets, tab sets and table, list, grid, tree and batch displays (for
-  example the chart display type); on `af-tabset` a `selected-tab` other than
+  fieldsets, tab sets and table, list, grid, tree, batch and chart displays;
+  on `af-tabset` a `selected-tab` other than
   a string literal
 - in a batch display, a formula other than fields, numbers and `+ - * / ( )`
 - FormBuilder's own widgets (`af-admin-list-menu`) and the message template
@@ -200,6 +200,24 @@ two contributions with both renderers and compares what the import stored.
 | While importing | the display is blocked | the table is inert |
 | A failed import | the display stays blocked (see upstream bugs) | shows the server's message and lets the import run again |
 | Status | visible only | saving, adding rows and importing also announced in a live region |
+
+### Chart display
+
+The chart display (`crm-search-display-chart-kit`, from the chart_kit
+extension) is drawn by core's own `<civi-search-display-chart-kit>` element on
+both renderers; Angular's directive only wraps it. React creates the same
+element and hands it the display, the form's name and the merged filters.
+`tests/browser/chart.spec.ts` draws a pie chart with both renderers, with and
+without a filter, and compares title, legend and slices.
+
+| Area | Angular | React |
+|---|---|---|
+| Loading | chart_kit's scripts (d3, dc, crossfilter) load with the form's Angular modules, before the form renders | the same scripts load when the first chart on the page is drawn, with a "Loading…" status until then; the server lists them from chart_kit's bundle, and an entry it cannot load (inline markup, an ES module) shows as the chart's alert, leaving the rest of the page alone |
+| Filters | the element reads the form's values from the `afFieldset` controller; an empty filter list from the server breaks the search (see upstream bugs) | the element gets the form's values in its `filters` attribute, an empty list as `{}`; a changed value updates the attribute, and the element reruns |
+| Hidden tab, filters not final | the element runs as soon as it is attached | the element is attached once the display may run, and stays while its tab is hidden again; its filters update when it is shown |
+| Removed chart | its pending search still runs (see upstream bugs) | its pending timers are cleared |
+| Without chart_kit | no module defines the directive, nothing is drawn | an alert says that charts need the chart_kit extension, and the support report notes it |
+| Drawing, download links, accessibility | core's element (see upstream bugs) | the same element |
 
 ## Load metrics
 
@@ -1054,3 +1072,32 @@ each formula field as `data["<join>.<field>"]`, while the row is keyed by the
 munged import column (`<join>_<field>`), so every field reads 0 (read from the
 code, not run). The React renderer reads each field from the column showing
 it.
+
+**A removed chart keeps running.** `disconnectedCallback()` in chart_kit's
+`civi-search-display.js` only drops the filter listener: the timers for the next
+run and reload stay, and so does the `crmFormSuccess` handler bound on the
+enclosing form, so a removed chart still searches and draws into a detached
+node (read from the code, not run). The React renderer clears the timers when
+it removes the chart; the form handler is bound anonymously and stays.
+
+**An empty filter list breaks a chart's search.** `getJsonAttribute()` returns
+a value without `{` as the raw string, so a `filters` of `[]`, the server's
+empty filters, is spread as `{0: "[", 1: "]"}` into `SearchDisplay.run` (read
+from the code, not run). The React renderer hands an empty list over as `{}`.
+
+**A chart on a contact summary tab throws.** `initializeDisplay()` looks the
+tab up with `querySelector(id + ' [search][display]')`, missing the `#`, so the
+check never matches, and the count request then calls `.replace()` on the tab
+element, a TypeError (read from the code, not run). Both renderers use the
+same element and share it.
+
+**A chart's download links and drawing are out of reach for assistive
+technology.** The download links are `<a>` elements with an `onclick` and no
+`href`, so the keyboard skips them, and the SVG has no text alternative (read
+from the code, not run). Both renderers use the same element and share it.
+
+**chart_kit's bundle is built anew on every read.** `Civi\ChartKit\Bundle::getAll()`
+checks `$this->initialized` but never sets it, so each read re-adds every file
+and fires `hook_civicrm_alterBundle` again (read from the code, not run). The
+React renderer reads the bundle once per afreact element on a page, so the
+hook fires that often; it adds nothing of its own to the bundle.
