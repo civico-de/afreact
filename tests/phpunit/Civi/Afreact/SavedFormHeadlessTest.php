@@ -93,7 +93,8 @@ class SavedFormHeadlessTest extends TestCase implements HeadlessInterface {
   }
 
   public function testSelfIncludingBlockIsRejected(): void {
-    // Only the block: saving a form that embeds it crashes core before 6.19 (FormDataModel recursion).
+    // Core's loop check (Utils::findEmbedCycle) knows only forms already saved, so it lets a new
+    // block that includes itself through.
     Afform::save(checkPermissions: FALSE)
       ->addRecord([
         'name' => 'afblockAfreactLoop',

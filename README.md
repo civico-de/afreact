@@ -9,6 +9,7 @@ Status: alpha. Forms with blocks, joins, repeats, live rules, drafts and the
 checkout block; table, list, grid and tree displays with filters, in-place
 editing, drag ordering and bulk actions; batch entry; charts. What is left out:
 [comparison.md](docs/comparison.md#not-implemented-in-the-react-renderer).
+Needs CiviCRM 6.19 or later (`info.xml`).
 
 ## How it works
 

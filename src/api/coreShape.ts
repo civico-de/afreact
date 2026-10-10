@@ -54,7 +54,7 @@ type FieldDefnIgnored =
 
 /**
  * Applied on the server: by SearchDisplay.run, whose result arrives in the rows, and for auto
- * columns by AfformSearchMetadataInjector. `nested` is read by no 6.18 code.
+ * columns by AfformSearchMetadataInjector. `nested` is read by no 6.19 code.
  */
 type TableSettingsServer =
   | "columnMode"

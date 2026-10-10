@@ -25,6 +25,9 @@ policy:
   license: Proprietary
   npm_license: UNLICENSED
   copyright: 'civico GmbH'
+  # Dispatched by contactlayout, which afreact supports without requiring it.
+  known_hooks:
+    - contactSummaryBlocks
   # The bundle is built by the release (and by CI), not committed.
   dist:
     build:

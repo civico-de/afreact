@@ -38,13 +38,11 @@ while the settings metadata is translated during boot, before the database is
 known (dev/core#5862). Fix proposed in civicrm/civicrm-core#37148; the
 civikitchen standalone image carries it as a patch.
 
-**Self-including block crashes PHP.** Saving a form that embeds a block which
-includes itself crashes the PHP process on CiviCRM up to 6.18:
-`FormDataModel::parseFields` recurses into the block without a guard. Afform
-runs the parser on save (through `CreateContribution::validateFormModel`),
-prefill, submit and autocomplete. Core fixed it in 6.19 (commit
-`375489330c`). `Afreact.getForm` guards the recursion itself and rejects such a
-block with an error.
+**A new block can include itself.** Core rejects saving a form that would
+embed itself, but its check (`Utils::findEmbedCycle`) knows only forms already
+saved, so a new block whose layout includes itself is saved anyway
+(`SavedFormHeadlessTest` saves one on 6.19.0). `Afreact.getForm` stops at the
+loop and rejects such a block with an error.
 
 **Confirmation message is not escaped.** `Afform.submit` fills tokens such as
 `[Individual1.0.first_name]` in the confirmation message with the submitted
@@ -61,12 +59,9 @@ afform 6.18.1 on both paths:
 The redirect URL is built by the same function without URL encoding, so a
 submitted `&`, `=` or `#` adds query parameters or cuts the URL short. The
 contribution checkout passes the same unescaped message to its landing page,
-which sets it as `innerHTML` (read from the code, not run). Processing a
-submission by `sid` also warned `Undefined variable $submission` at
-`Submit.php:101`, fixed in 6.19
-([`cb183eb64e`](https://github.com/civicrm/civicrm-core/commit/cb183eb64e)).
-The missing escaping is present on upstream `master` as of 2026-10-05; to go to
-the CiviCRM security team rather than the public tracker.
+which sets it as `innerHTML` (read from the code, not run). The missing
+escaping is present on upstream `master` as of 2026-10-05; to go to the
+CiviCRM security team rather than the public tracker.
 
 afreact escapes the submitted values site-wide, whichever
 renderer shows it: a `civi.api.respond` listener on `Afform.submit` rebuilds
@@ -267,14 +262,6 @@ a checkbox list or multi-select emptied again (`[]`) and an emptied range
 React renderer takes unset, `""`, `[]` and `{}` as empty and `false` and `0`
 as answers.
 
-**`BETWEEN` conditions decide nothing before 6.20.** FormBuilder's condition
-editor offers `BETWEEN` and `NOT BETWEEN` (`afGuiCondition.component.js`), but
-`compareConditions()` had no case for them, so the clause was skipped; `master`
-checks both bounds since
-[`b5f0168f9c`](https://github.com/civicrm/civicrm-core/commit/b5f0168f9c)
-(2026-08-17; read from the code, not run). The React renderer checks the
-value against both bounds, inclusive, on every version.
-
 ## Joins and repeats
 
 **Repeat buttons without a name.** `afRepeat.html` gives the remove button
@@ -363,19 +350,6 @@ it again after the submit.
 
 ## Tabs
 
-**`url-arg` blanks the tab set outside the Angular page.** On 6.18 afTabset
-binds `url-arg` with `$scope.$bindToRoute()` (`afTabset.component.js:24`),
-which needs the route of a `civicrm/a` page. On a form's own page it throws
-and the tab set renders nothing (read from the code). 6.19 reads the hash
-with `$location.search()` instead
-([`014650dbd5`](https://github.com/civicrm/civicrm-core/commit/014650dbd5)).
-The React renderer keeps the tab in the hash on every page.
-
-**A stale tab name shows an empty tab set.** On 6.18 a `url-arg` value or a
-remembered tab that names no tab becomes the selected tab, so no panel shows
-and no tab is active; fixed in 6.19. The React renderer ignores
-such a name and opens the first tab.
-
 **A tab's title becomes a tooltip on its panel.** afTab reads `title` as a
 binding but leaves the attribute on `<af-tab>`, so hovering anywhere in the
 panel shows the tab's title. The React renderer drops the attribute.
@@ -446,7 +420,7 @@ run yet, and the next run keeps the stale count because `rowCount` is set.
 A table filtered from 30 rows to 4 shows "30 results" and three pages for
 the four rows until the next filter change. The guard came with dev/core#5965
 (6.6) for the same symptom and covers only a count that lands after the
-next run has started. Present on 6.18; fixed on `master` in
+next run has started. Present on 6.18; fixed on `master` (6.20) in
 [civicrm-core#37253](https://github.com/civicrm/civicrm-core/pull/37253).
 React asks for the count with the rows, keyed by the same filters, so a count
 never outlives its filters; the tour video shows both.

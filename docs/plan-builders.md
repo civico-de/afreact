@@ -17,7 +17,7 @@ stay installed and reachable.
 |---|---|---|
 | Scope | everything afform and search_kit ship in Angular, plus the core extensions that plug into their builders (chart_kit, civi_case, civi_contribute, recaptcha) | also core's other Angular apps (table below), about 11,500 lines more, each better served by a plan of its own |
 | Order | SearchKit admin first, then FormBuilder | FormBuilder first; but its search forms place SearchKit displays, which admins make and edit in the SearchKit admin, so a React FormBuilder would keep sending them to the Angular one |
-| Core versions | 6.19.0 and every release after it, minor and patch, since sites run several side by side once the builders are released (see "Core versions"); older cores keep the Angular builders | the runtime's floor (6.12, `info.xml`) for the builders too, which adds seven older minors to the browser tests of the fastest-changing part |
+| Core versions | 6.19.0 and every release after it, minor and patch, for the builders as for the runtime (`info.xml`), since sites run several side by side once the builders are released (see "Core versions") | the runtime on an older floor and the builders on 6.19: two support ranges and a floor check in the builder pages, while the runtime's tests already need 6.19 (`\Civi::router()`) |
 | Fallback | per page: the Angular builder stays at a route of its own, and React links a record there when it holds something React cannot edit | Angular islands inside the React builder (see "Why no Angular islands"; phase 0 tests one) |
 | Packages | no new runtime package | `@tanstack/react-virtual`, only if a measurement shows a slow list |
 | Home | in afreact, as a second entry `afreact-admin.js` | a separate extension, which would copy or re-export the runtime's displays, widgets and API types |
@@ -392,18 +392,19 @@ with only the edited keys changed.
 
 ## Core versions
 
-The builders support 6.19.0 and every release after it. Core ships a minor
-a month and patches in between, 45 releases of 6.x in the twelve months to
-2026-10-10 (12 minors, 33 patches), and each site upgrades on its own
-schedule. Once released, the builders therefore run on several minors and
-patch levels at once, and a site keeps them through every core upgrade. An
-afreact release supports the core releases up to the newest minor its test
-runs covered, and a release covering the next minor comes out before core
-ships it.
+The builders, like the runtime, support 6.19.0 and every release after it.
+Core ships a minor a month and patches in between, 45 releases of 6.x in the
+twelve months to 2026-10-10 (12 minors, 33 patches), and each site upgrades
+on its own schedule. Once released, the builders therefore run on several
+minors and patch levels at once, and a site keeps them through every core
+upgrade. An afreact release supports the core releases up to the newest
+minor its test runs covered, and a release covering the next minor comes out
+before core ships it.
 
-- **Floor.** Below 6.19.0 the React builder pages say that they need
-  CiviCRM 6.19, and `afreact_builders` takes over nothing; core's builders
-  keep their routes.
+- **Floor.** `info.xml` declares 6.19 for all of afreact. Core does not
+  check that floor when it installs an extension (`CRM_Extension_Manager`
+  refuses only the extensions on its own incompatibility list), so it states
+  what is supported and tested, and the pages carry no check of their own.
 - **Differences come from the server.** The builders take entities, fields,
   functions, display types, elements and attribute types from the running
   core (the reads under "Server contracts", APIv4's actions and parameters,
@@ -431,8 +432,8 @@ ships it.
   same run started by hand on the commit a release is tagged from, adds a
   leg for every supported minor at its newest patch, for the release before
   each patch boundary a version check names, so that both sides of the
-  check run, for the next release branch (6.20 today) and for core's
-  master.
+  check run, for the release branch of the next minor (`:standalone-beta`)
+  and for core's master (`:standalone-master`).
 - **Lead time.** A change that reaches core through master meets the weekly
   run one to two months before its minor ships, and again on the release
   branch it ships from, which can differ from master. A backport can reach
@@ -443,16 +444,15 @@ ships it.
   minor. In the patch releases of 6.9 to 6.18, 14 commits reached the
   builder paths, between none and four per minor; core-watch lists each one
   (see "Upstream tracking").
-- **civikitchen** needs three changes first. `matrix_images` boots one stack
-  per image but runs only PHPUnit there, and its legs share one concurrency
-  group with `cancel-in-progress` (`ck-<repo>-<ref>-<dir>-compat`), so they
-  cancel each other: the legs need the browser suite and a group per image.
-  A minor's image follows its patches only while civikitchen builds the
-  minor, so each supported minor goes on `CK_STANDALONE_EXTRA_MINORS`
-  (`toolbelt/versions.env`) before its successor ships, 6.19 before 6.20.
-  And the weekly run needs images of core's master and of the next release
-  branch, which civikitchen can build from git (`CIVICRM_SOURCE=git`) but
-  does not publish.
+- **civikitchen** carries the runs. Its `matrix_playwright` input runs the
+  browser suite on every `matrix_images` leg, each leg on a stack and port
+  and in a concurrency group of its own, so that the legs run side by side
+  and neither two legs nor a push and the weekly run cancel each other. It
+  builds `:standalone-master` and `:standalone-beta` daily from core's git.
+  And once its successor ships, a minor's image follows its patches only
+  while the minor is on `CK_STANDALONE_EXTRA_MINORS`
+  (`toolbelt/versions.env`), so each supported minor goes on that list
+  before then; 6.19 is on it.
 
 The floor rises only by decision, announced with an afreact release, and
 the checks below it go then. Until then the weekly run grows by one minor a
@@ -469,14 +469,13 @@ classic routes and the `basePages` listener (verified in a throwaway stack
 before anything builds on it: core's route loads none of the builder's
 modules, the classic route all of them, plugins included, also right after
 the setting changes, without a manual cache flush); the
-`civi.afreact.assets` event; the 6.19.0 floor and the version check per
-branch; the test runs per core release, with the three civikitchen changes
-they need (see "Core versions"); metadata loading for both builders; shared
-widgets (pickers, icon picker, Monaco, tags, MD5); undo and redo; layout
-tree functions; the round-trip sweep and the parity harness; the support
-report's builders section with its registry of core's template changes and
-modules; the core-watch paths and release branches; the `ts()` question
-above.
+`civi.afreact.assets` event; the version check per branch; the test runs
+per core release (see "Core versions"); metadata loading for both builders;
+shared widgets (pickers, icon picker, Monaco, tags, MD5); undo and redo;
+layout tree functions; the round-trip sweep and the parity harness; the
+support report's builders section with its registry of core's template
+changes and modules; the core-watch paths and release branches; the `ts()`
+question above.
 
 Phase 0 also runs a throwaway island attempt on a civikitchen stack, before
 phase 3 settles the fallback for display type editors. A test page boots
