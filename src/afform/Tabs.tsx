@@ -215,7 +215,7 @@ interface PageNavProps {
 }
 
 /**
- * page-nav-buttons (6.20): Back and Next between the pages, the form's submit on the last.
+ * page-nav-buttons (6.19): Back and Next between the pages, the form's submit on the last.
  * Next is the page's default button, so Enter moves on as it does under afTabset.
  */
 function PageNav({ node, names, selected, select, panelIds, submit }: PageNavProps) {

@@ -1,7 +1,7 @@
 /**
  * afformAfreactDemoTabs on both renderers: an af-tabset with fields in two tabs, a Toggle, and a
- * search display whose row count is the tab's badge. url-arg is left out: on 6.18 it blanks the
- * Angular tab set (upstream-bugs.md, "`url-arg` blanks the tab set outside the Angular page").
+ * search display whose row count is the tab's badge. The form keeps remember-selection alone, so
+ * the reload test measures it; url-arg is covered in Tabs.test.tsx.
  */
 import { expect, test, type Page } from "@playwright/test";
 import { api, AUTH, type Renderer } from "./harness";
@@ -13,6 +13,8 @@ const form = (page: Page) => page.locator(".afreact-render");
 const tab = (page: Page, name: string) =>
   form(page).locator(`.crm-tab-button[data-name="${name}"]`);
 const input = (page: Page, name: string) => form(page).locator(`af-field[name="${name}"] input`);
+// From 6.19 Angular opens no later tab while the required last name is empty (upstream-bugs.md).
+const fillRequired = (page: Page) => input(page, "last_name").fill("Tabs");
 
 const contacts: number[] = [];
 
@@ -40,6 +42,7 @@ for (const renderer of ["react", "angular"] as const) {
 
     test("opens a tab on click and remembers it on reload", async ({ page }) => {
       await page.goto(render(renderer));
+      await fillRequired(page);
       await tab(page, "privacy").locator("a").click();
       await expect(tab(page, "privacy")).toHaveClass(/\bactive\b/);
       await expect(input(page, "is_opt_out")).toBeVisible();
@@ -62,8 +65,17 @@ for (const renderer of ["react", "angular"] as const) {
       });
       expect(count).not.toBeNull();
       await expect(tab(page, "contacts").locator(".badge")).toHaveText(count ?? "");
+      await fillRequired(page);
       await tab(page, "contacts").locator("a").click();
       await expect(form(page).locator("table tbody tr").first()).toBeVisible();
+    });
+
+    test("with a required field empty, a later tab opens on click", async ({ page }) => {
+      await page.goto(render(renderer));
+      await tab(page, "privacy").locator("a").click();
+      // Angular refuses the click silently; React opens the tab and checks the field on submit.
+      const opened = renderer === "react" ? "privacy" : "name";
+      await expect(tab(page, opened)).toHaveClass(/\bactive\b/);
     });
 
     test("submits the fields of a hidden tab", async ({ page }) => {
@@ -90,7 +102,12 @@ for (const renderer of ["react", "angular"] as const) {
         (request) => request.url().includes("/Afform/submit") && submits.push(request.url()),
       );
       await page.goto(render(renderer));
-      await tab(page, "privacy").locator("a").click();
+      // The remembered tab opens on load, where Angular refuses the click.
+      await page.evaluate(() =>
+        window.CRM.cache?.set("afformAfreactDemoTabsSelectedTab", "privacy"),
+      );
+      await page.reload();
+      await expect(tab(page, "privacy")).toHaveClass(/\bactive\b/);
       await page.getByRole("button", { name: "Save" }).click();
       // Both alert the missing field on CiviCRM screens, so the click has been handled.
       await expect(page.locator("#crm-notification-container")).toContainText(

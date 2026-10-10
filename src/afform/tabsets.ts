@@ -56,13 +56,13 @@ function flag(node: ElementNode, attr: string): boolean | null {
 
 export const remembersSelection = (node: ElementNode) => flag(node, "remember-selection");
 
-/** page-nav-buttons (6.20): Back, Next and Submit buttons under the panels. */
+/** page-nav-buttons (6.19): Back, Next and Submit buttons under the panels. */
 export const hasPageNav = (node: ElementNode) => flag(node, "page-nav-buttons");
 
 const STRING_LITERAL = /^\s*(?:::)?\s*('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")\s*$/;
 
 /**
- * selected-tab (6.20) names the tab to start on as an expression; a string literal is read.
+ * selected-tab names the tab to start on as an expression; a string literal is read.
  * Undefined without the attribute, null for any other expression.
  */
 export function selectedTabOf(node: ElementNode): string | null | undefined {

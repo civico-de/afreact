@@ -97,7 +97,7 @@ saves that (reproduced on civikitchen 6.18.1 with `afformAfreactDemoRules`,
 until a referenced field changes.
 
 **A paged form's submit button has no text without `page-nav-submit-text`.**
-`afTabset.html` (6.20) writes `{{ $ctrl.pageNavSubmitText }}` into the
+`afTabset.html` (6.19) writes `{{ $ctrl.pageNavSubmitText }}` into the
 button on the last page with no fallback; FormBuilder shows "Submit" as the
 attribute's default in the editor only, so a tab set with `page-nav-buttons`
 and no `page-nav-submit-text` renders an empty, unnamed button (read from the
@@ -366,14 +366,14 @@ it again after the submit.
 **`url-arg` blanks the tab set outside the Angular page.** On 6.18 afTabset
 binds `url-arg` with `$scope.$bindToRoute()` (`afTabset.component.js:24`),
 which needs the route of a `civicrm/a` page. On a form's own page it throws
-and the tab set renders nothing (read from the code). `master` (6.20) reads
-the hash with `$location.search()` instead
+and the tab set renders nothing (read from the code). 6.19 reads the hash
+with `$location.search()` instead
 ([`014650dbd5`](https://github.com/civicrm/civicrm-core/commit/014650dbd5)).
 The React renderer keeps the tab in the hash on every page.
 
 **A stale tab name shows an empty tab set.** On 6.18 a `url-arg` value or a
 remembered tab that names no tab becomes the selected tab, so no panel shows
-and no tab is active; fixed on `master` (6.20). The React renderer ignores
+and no tab is active; fixed in 6.19. The React renderer ignores
 such a name and opens the first tab.
 
 **A tab's title becomes a tooltip on its panel.** afTab reads `title` as a
@@ -391,7 +391,8 @@ the tab (`role="tab"`) and leaves the `<a href>` in it focusable by click
 a link inside too. Every tab therefore holds a nested interactive element (axe
 `nested-interactive`, measured on 6.18.1 for both tab sets). The React renderer
 makes the link the tab, inside an item with `role="presentation"` that keeps
-jQuery UI's classes, as `afTabset.html` does on `master` (6.20).
+jQuery UI's classes, as `afTabset.html` does on `master`
+([`f7156dc5f0`](https://github.com/civicrm/civicrm-core/commit/f7156dc5f0)).
 
 **A required field in a hidden tab blocks submit silently.** afTab hides its
 panel with `ng-show`; the browser refuses to submit while a control in it is
@@ -399,8 +400,16 @@ invalid and cannot point at it, so nothing visible happens. The React
 renderer selects that tab first, and the browser shows its message at the
 field.
 
+**A later tab does not open while the current one has an invalid field.**
+From 6.19 `selectTab()` in `afTabset.component.js` refuses to move forward
+while the open tab holds an `.ng-invalid` control, also in a tab set without
+`page-nav-buttons` and for a required field nobody has touched yet. The click
+does nothing and says nothing (measured on 6.19.0, `tabs.spec.ts`). The React
+renderer opens the tab; submit and Next check the fields and show the
+browser's message at the first invalid one.
+
 **`url-arg` loses to a literal `selected-tab`.** `afTabset.component.js`
-(6.20) binds `selected-tab` two-way (`=?`) and `$onInit` overwrites
+(6.19) binds `selected-tab` two-way (`=?`) and `$onInit` overwrites
 `selectedTab` with the URL's tab. A string literal cannot be assigned back, so
 the first digest's binding watch finds the child changed, resets it to the
 literal and throws `nonassign` (`initializeDirectiveBindings` in AngularJS
