@@ -1,0 +1,26 @@
+# Weekly, and by hand on the commit a release is tagged from: every supported minor at its
+# newest patch, the next release branch and core's master, the browser suite on each.
+name: Compat
+
+on:
+  schedule:
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compat:
+    uses: jfilter/civikitchen/.github/workflows/extension-ci.yml@v1
+    with:
+      bun: true
+      js_tests: true
+      playwright: true
+      matrix_playwright: true
+      # Supported minors at their newest patch; each must be on civikitchen's
+      # CK_STANDALONE_EXTRA_MINORS once its successor ships.
+      matrix_images: >-
+        ghcr.io/jfilter/civikitchen:standalone-6.19,
+        ghcr.io/jfilter/civikitchen:standalone-beta,
+        ghcr.io/jfilter/civikitchen:standalone-master

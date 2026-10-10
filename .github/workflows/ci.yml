@@ -41,3 +41,6 @@ jobs:
       bun: true
       js_tests: true
       playwright: true
+      # The floor in info.xml, frozen at its .0, beside the current release.
+      matrix_images: ghcr.io/jfilter/civikitchen:standalone-6.19.0
+      matrix_playwright: true
