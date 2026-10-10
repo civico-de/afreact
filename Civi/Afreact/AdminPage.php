@@ -52,7 +52,32 @@ final class AdminPage {
   public static function load(string $builder): void {
     Assets::load();
     \Civi::resources()->addModuleFile(E::LONG_NAME, 'dist/afreact-admin.js');
+    self::settings($builder);
+    Strings::add(Strings::DOMAINS[$builder] ?? NULL);
     \Civi::dispatcher()->dispatch('civi.afreact.assets', GenericHookEvent::create(['builder' => $builder]));
+  }
+
+  /**
+   * What core's builder modules get from their settingsFactory, and the permissions they declare.
+   */
+  private static function settings(string $builder): void {
+    $modules = match ($builder) {
+      'search_kit' => ['crmSearchAdmin' => 'searchAdmin'],
+      'afform' => ['afAdmin' => 'afAdmin', 'afGuiEditor' => 'afGuiEditor'],
+      default => [],
+    };
+    $angular = Afforms::angular();
+    $vars = [];
+    foreach ($modules as $module => $key) {
+      $definition = $angular->getModule($module);
+      $factory = $definition['settingsFactory'] ?? NULL;
+      $vars[$key] = is_callable($factory) ? $factory() : [];
+      \Civi::resources()->addPermissions(array_values(array_filter(
+        (array) ($definition['permissions'] ?? []),
+        'is_string',
+      )));
+    }
+    \Civi::resources()->addVars('afreactAdmin', $vars);
   }
 
 }

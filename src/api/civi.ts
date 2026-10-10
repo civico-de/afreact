@@ -1,3 +1,4 @@
+import type { AdminVars } from "../admin/vars";
 import type { AfreactVars } from "../afform/source";
 import type { Entities } from "./entities.gen";
 
@@ -59,7 +60,7 @@ declare global {
         formatDate: (input: unknown, format: string | null, time: boolean) => string;
       };
       /** Page variables from Civi::resources()->addVars(), by extension. */
-      vars?: { afreact?: AfreactVars };
+      vars?: { afreact?: AfreactVars; afreactAdmin?: AdminVars };
       /** localStorage under a "CRM" prefix, with an in-memory fallback (js/Common.js). */
       cache?: {
         get: (name: string, defaultValue?: unknown) => unknown;
@@ -67,6 +68,7 @@ declare global {
       };
       config?: {
         cid?: number;
+        lcMessages?: string;
         /** The quick-add forms the user may open (CRM_Core_Resources::getQuickAddForms). */
         quickAdd?: { path: string; entity: string; title: string; icon?: string | null }[];
       };

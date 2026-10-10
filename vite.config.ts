@@ -18,11 +18,48 @@ const entryImportedByNoChunk: Plugin = {
   },
 };
 
+const LITERAL = String.raw`"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'`;
+const TS_CALL = new RegExp(String.raw`\bts\(\s*(${LITERAL})|\bplural:\s*(${LITERAL})`, "g");
+
+/** A quoted source literal's text. */
+const unquote = (literal: string): string =>
+  literal.startsWith("'")
+    ? literal.slice(1, -1).replace(/\\(.)/g, "$1")
+    : String(JSON.parse(literal));
+
+/**
+ * dist/strings.json lists the ts() texts of the sources: the minifier turns them into template
+ * literals, which CiviCRM's string extraction does not read.
+ */
+const tsStrings = (): Plugin => {
+  const strings = new Set<string>();
+  return {
+    name: "afreact-ts-strings",
+    // The sources as written, before JSX and TypeScript are compiled.
+    enforce: "pre",
+    transform(code, id) {
+      if (!/\/src\/.*\.tsx?$/.test(id) || id.includes(".test.")) return null;
+      for (const match of code.matchAll(TS_CALL)) {
+        const literal = match[1] ?? match[2];
+        if (literal) strings.add(unquote(literal));
+      }
+      return null;
+    },
+    generateBundle() {
+      this.emitFile({
+        type: "asset",
+        fileName: "strings.json",
+        source: `${JSON.stringify([...strings].sort(), null, 1)}\n`,
+      });
+    },
+  };
+};
+
 // The entries and their stylesheets keep fixed names, which CiviCRM loads with its cache
 // code (?r=…); lazy chunks carry a content hash instead.
 export default defineConfig({
   // React Compiler (the oxc port) memoizes components and hooks at build time.
-  plugins: [react({ compiler: { logDiagnostics: true } }), entryImportedByNoChunk],
+  plugins: [react({ compiler: { logDiagnostics: true } }), entryImportedByNoChunk, tsStrings()],
   // Chunks resolve against the entry's URL under ext/afreact/dist/.
   base: "./",
   build: {

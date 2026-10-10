@@ -40,6 +40,7 @@ final class Assets {
       // CRM.checkPerm() for the batch display's link to all import batches.
       ->addPermissions(['administer queues']);
     ChartKit::addVars();
+    Strings::add();
     // What afCheckout's settingsFactory gives CRM.afCheckout, for CheckoutBlock fields.
     $checkout = \Civi::container()->has('civi.checkout.afform') ? \Civi::service('civi.checkout.afform') : NULL;
     if ($checkout instanceof \Civi\Checkout\Afform && $checkout->isActive()) {
