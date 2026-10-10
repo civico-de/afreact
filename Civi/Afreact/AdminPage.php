@@ -31,10 +31,11 @@ final class AdminPage {
     }
     self::load($builder);
     return Chrome::page(sprintf(
-      '<div id="bootstrap-theme" class="afreact-builder-page"><afreact-builder builder="%s" route="%s" classic="%s"></afreact-builder></div>',
+      '<div id="bootstrap-theme" class="afreact-builder-page"><afreact-builder builder="%s" route="%s" classic="%s" core-version="%s"></afreact-builder></div>',
       Chrome::escape($builder),
       Chrome::escape($route),
       Chrome::escape((string) \Civi::url('backend://' . $route . Builders::CLASSIC)),
+      Chrome::escape(\CRM_Utils_System::version()),
     ));
   }
 
