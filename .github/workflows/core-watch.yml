@@ -1,4 +1,4 @@
-# Weekly list of civicrm-core commits to the files the React renderer reproduces
+# Weekly list of civicrm-core commits to the files the React renderer and builders reproduce
 # (scripts/core-watch.sh). A failed run means there are commits to review.
 name: Core watch
 

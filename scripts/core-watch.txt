@@ -1,8 +1,11 @@
-# civicrm-core files whose behaviour or output the React renderer reproduces
+# civicrm-core files whose behaviour or output the React renderer and builders reproduce
 # (scripts/core-watch.sh). Paths are git pathspecs; `*` matches across `/`.
 
-# The civicrm-core commit reviewed up to, inclusive (master, 6.20 alpha).
-reviewed f95e45223cea98855b690b99dadbc38e0d44ebd2
+# Per branch, the civicrm-core commit reviewed up to, inclusive. Release branches start at
+# their .0 tag or where they left the reviewed master.
+reviewed master f95e45223cea98855b690b99dadbc38e0d44ebd2
+reviewed 6.19 3b031427f1e5cbe3dedf5a7ba46ef59d6751d101
+reviewed 6.20 f95e45223cea98855b690b99dadbc38e0d44ebd2
 
 # Afform runtime: directives, field templates, core blocks, placements, prefill and submit
 ext/afform/core/afform.php
@@ -29,3 +32,26 @@ Civi/Angular/ChangeSet.php
 Civi/Angular/Manager.php
 js/Common.js
 js/crm.ajax.js
+
+# Builders: the SearchKit admin and FormBuilder, their plugins and the widgets React rebuilds
+ext/search_kit/ang/crmSearchAdmin*
+ext/search_kit/ang/crmSearchPage*
+ext/search_kit/Civi/Search
+ext/search_kit/CRM/Search/Page
+ext/search_kit/managed/SearchDisplayType.mgd.php
+ext/afform/admin
+ext/chart_kit/ang/crmChartKitAdmin*
+ext/chart_kit/js/components
+ext/civi_case/ang/afCaseGuiEditor*
+ext/civi_case/Civi/Afform/Behavior
+ext/civi_contribute/ang/afCheckout/inputType
+ext/recaptcha/ang/afGuiRecaptcha2*
+ext/recaptcha/ang/crmRecaptcha2*
+ext/recaptcha/Civi/AfformReCaptcha2.php
+ext/civigrant/ang/civiGrantTasks*
+ext/message_admin/ang/crmMsgadmTasks*
+ang/crmMonaco*
+ang/crmEntityTags*
+js/jquery/jquery.crmIconPicker.js
+CRM/Utils/JS.php
+Civi/Angular/Coder.php
