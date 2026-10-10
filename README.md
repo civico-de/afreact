@@ -186,6 +186,7 @@ Angular table's first request. Forms come out within 40 ms of each other.
 | [docs/load-metrics.md](docs/load-metrics.md) | the measured load times of both renderers and the layout sources |
 | [docs/architecture.md](docs/architecture.md) | state, the first search, libraries and chunks, dashlets |
 | [docs/testing.md](docs/testing.md) | every browser spec, the sweep, the demo videos |
+| [docs/plan-builders.md](docs/plan-builders.md) | proposal: the SearchKit admin and FormBuilder in React, on CiviCRM 6.19 and later |
 
 ## Development
 
