@@ -31,7 +31,7 @@ class CoreShapeHeadlessTest extends TestCase implements HeadlessInterface, Trans
   public function setUpHeadless(): CiviEnvBuilder {
     return ck_headless()
       ->install(['civi_case', 'civi_campaign', 'org.civicrm.afform_admin', 'civicrm_admin_ui'])
-      ->callback([\CRM_Core_Menu::class, 'store'], 'afreact-menu')
+      ->callback(static fn () => \Civi::router()->clear()->rebuild(), 'afreact-menu')
       ->apply();
   }
 

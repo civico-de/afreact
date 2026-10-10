@@ -34,12 +34,12 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
 
   /**
    * afform_admin adds the gear menus getForm must strip. Angular module rebuilds look up
-   * routes, and an empty menu is rebuilt by TRUNCATE, which would commit the test transaction.
+   * routes; a menu filled up front keeps that rebuild out of the test transactions.
    */
   public static function builder(): CiviEnvBuilder {
     return ck_headless()
       ->install(['org.civicrm.afform_admin', 'civicrm_admin_ui', 'chart_kit'])
-      ->callback([\CRM_Core_Menu::class, 'store'], 'afreact-menu')
+      ->callback(static fn () => \Civi::router()->clear()->rebuild(), 'afreact-menu')
       ->apply();
   }
 

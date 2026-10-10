@@ -117,6 +117,7 @@ final class CoreSamples {
       ->setSavedSearch($node['search-name'])
       ->setDisplay($node['display-name'])
       ->setAfform($form)
+      ->setReturn('page:1')
       ->execute();
     $extras = [
       'toolbar' => $result->toolbar ?? NULL,

@@ -26,7 +26,7 @@ class SavedFormHeadlessTest extends TestCase implements HeadlessInterface {
 
   protected function tearDown(): void {
     // Later transactional tests must not find the menu empty.
-    \CRM_Core_Menu::store();
+    \Civi::router()->rebuild();
     parent::tearDown();
   }
 

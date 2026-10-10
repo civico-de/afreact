@@ -78,7 +78,7 @@ class FormPageTitleHeadlessTest extends TestCase implements HeadlessInterface {
     Afform::revert(checkPermissions: FALSE)->addWhere('name', '=', self::FORM)->execute();
     Navigation::delete(checkPermissions: FALSE)->addWhere('name', '=', self::PARENT)->execute();
     // Later transactional tests must not find the menu empty.
-    \CRM_Core_Menu::store();
+    \Civi::router()->rebuild();
     parent::tearDown();
   }
 

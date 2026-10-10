@@ -77,7 +77,7 @@ class ConfirmationMessageHeadlessTest extends TestCase implements HeadlessInterf
       ->setUseTrash(FALSE)
       ->execute();
     // Later transactional tests must not find the menu empty.
-    \CRM_Core_Menu::store();
+    \Civi::router()->rebuild();
     parent::tearDown();
   }
 
