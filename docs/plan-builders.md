@@ -18,8 +18,9 @@ stay installed and reachable.
 | Scope | everything afform and search_kit ship in Angular, plus the core extensions that plug into their builders (chart_kit, civi_case, civi_contribute, recaptcha) | also core's other Angular apps (table below), about 11,500 lines more, each better served by a plan of its own |
 | Order | SearchKit admin first, then FormBuilder | FormBuilder first; but its search forms place SearchKit displays, which admins make and edit in the SearchKit admin, so a React FormBuilder would keep sending them to the Angular one |
 | Core versions | 6.19.0 and every release after it, minor and patch, for the builders as for the runtime (`info.xml`), since sites run several side by side once the builders are released (see "Core versions") | the runtime on an older floor and the builders on 6.19: two support ranges and a floor check in the builder pages, while the runtime's tests already need 6.19 (`\Civi::router()`) |
-| Fallback | per page: the Angular builder stays at a route of its own, and React links a record there when it holds something React cannot edit | Angular islands inside the React builder (see "Why no Angular islands"; phase 0 tests one) |
+| Fallback | per page: the Angular builder stays at a route of its own, and React links a record there when it holds something React cannot edit; an extension's display type editor runs as an Angular island inside the React display page (see "Angular islands for display type editors") | islands for every builder part, which would run the Angular builder anyway (same section) |
 | Packages | no new runtime package | `@tanstack/react-virtual`, only if a measurement shows a slow list |
+| UI | free: the React builders save what core's save, but their screens need not copy core's layout or flow, and improve on it where core is awkward; accessibility, core's permissions and the warnings that prevent data loss stay | a copy of core's screens, which would carry its jQuery UI interactions and inaccessible parts into React |
 | Home | in afreact, as a second entry `afreact-admin.js` | a separate extension, which would copy or re-export the runtime's displays, widgets and API types |
 
 ## Scope
@@ -152,10 +153,15 @@ regardless.
   module with `*` loads on every page anyway and is left alone. Core caches
   the module list with the `basePages` the listener wrote, so a change to
   `afreact_builders` rebuilds the menu and clears that cache, as
-  `afreact_forms` does (`post_change`).
+  `afreact_forms` does (`post_change`). Measured on 6.19.0 with a throwaway
+  extension and a browser: with the takeover on, core's routes load none of
+  the builder modules and the classic routes load all of them, civi_case's
+  and recaptcha's included; switching either way needs no manual cache
+  flush.
 - **Per record.** Before opening a record, React checks it against what it
   can edit: display types, settings keys, elements, input types, behaviors
-  and entity options with a React editor or a plugin element (below). A part
+  and entity options with a React editor or a plugin element (below), and
+  display types whose Angular editor runs as an island. A part
   it cannot edit shows a notice in place, naming the part, with a link to the
   same record in the classic builder (the same hash route on the classic
   path). The rest of the record stays editable, and the part React does not
@@ -170,8 +176,9 @@ regardless.
 - **Always reachable.** Each React builder's header links to the classic
   builder.
 - **Support report.** The report at `civicrm/admin/afreact` gets a builders
-  section listing what React would hand to the classic builder: display types
-  without a React editor or plugin element; elements, entities, input types
+  section listing the display types whose editor runs as an island, and
+  what React would hand to the classic builder: display types without a
+  React editor, plugin element or Angular editor component; elements, entities, input types
   and behaviors with an `admin_tpl`, `options_tpl`, `admin_template` or
   `getTemplate()` that React neither builds nor finds a plugin element for;
   the builder modules' own partials that differ from their file on disk,
@@ -194,13 +201,39 @@ notice or the save stops with a message. On a supported core release (see
 "Core versions"), with only core's extensions, a notice in the builder or an
 entry in the report is a bug (see "Testing").
 
-### Why no Angular islands
+### Angular islands for display type editors
 
-An island would boot core's Angular builder code for one panel inside the
-React page. Builder plugins assume the whole Angular builder around them:
+A display type editor from another extension, such as chart_kit's
+`search-admin-display-chart-kit`, runs as an island: React loads its module
+through core's loader, boots it with `angular.bootstrap()` on an element of
+the display page, and compiles the editor there once `searchMeta.loadMetadata()`
+has resolved, as core's routes do before they render. Stand-ins stored as
+controller data on the island's root replace the controllers it `require`s:
+`$crmSearchAdminDisplayController` with `displayType` (icon, description),
+`savedSearch.name`, `isSuperAdmin`, `aclBypassHelp` and
+`crmSearchAdmin.displayIsViewable`, which core's shared display header
+reads, and an empty `$crmSearchAdminController`. These members are core
+internals, so the parity runs per core release cover the island.
 
-- chart_kit's display editor `require`s the controllers `^crmSearchAdmin`
-  and `^crmSearchAdminDisplay` and injects the `searchMeta` service;
+The display object exists once. React hands its object to the island's
+scope; a React change mutates it and runs `$rootScope.$apply()`, an editor
+change reaches React through a deep `$watch` on it. Undo hands in a
+restored object, which the editor shows at once. The editor derives its
+column list from the search's `select` in `$onInit` only, so React rebuilds
+the island when the search's columns change.
+
+Measured on 6.19.0 with a throwaway page (dev stack, assets not
+aggregated): the editor compiled with the stand-ins above and nothing else,
+both directions and undo showed on the other side without a second copy,
+and the browser reported no errors. Against the same page without the
+island, the page loaded 1.9 MB more in 132 more requests, and
+`DOMContentLoaded` came about 115 ms later; booting took 11 ms, the
+metadata request about 1.1 s with an empty cache, compiling 11 ms.
+
+Islands stop at display type editors. Other builder plugins assume the
+whole Angular builder around them, so a record that needs them opens in
+the classic builder:
+
 - civi_case appends its case-role settings to core's template
   `~/afGuiEditor/behaviors/autofillRelationshipBehavior.html` by rewriting
   the `angular-modules.json` asset (`ContactAutofillBasedOnCase`), and its
@@ -208,11 +241,6 @@ React page. Builder plugins assume the whole Angular builder around them:
 - preflight alters `~/crmSearchAdmin/crmSearchAdmin.html` and
   `~/afGuiEditor/afGuiEditor.html` with a ChangeSet; smartchart decorates
   `crmSearchAdminDirective`.
-
-An island would therefore run the Angular builder anyway, with the record's
-state held twice. The unit of fallback is the page. This is read from the
-source, not measured; phase 0 tests it with chart_kit's editor before
-anything builds on it.
 
 ## Plugin contract
 
@@ -288,6 +316,25 @@ Builder code loads only on builder pages: `afreact-admin.js` is a second
 entry, shared code sits in the `vendor` chunk, and the build check that no
 chunk imports an entry, which names `afreact.js` today, covers both entries.
 The runtime entry does not grow.
+
+### Canvas drag and drop
+
+The canvas extends the search tree's `TreeDnd` (`src/search/Sortable.tsx`):
+a drop lands after a field, or at a slot, and the arrow keys step through
+the targets in document order. A phase 0 prototype in a browser, with
+containers in containers, a row of fields side by side and an empty
+container, moved every item to every place by keyboard and by pointer once
+the canvas follows these rules:
+
+- Each container has two slots, first in it and after it, the second behind
+  its last child. A container's own box is no target, otherwise "after the
+  container" would come before its children in the key order.
+- The dragged item's subtree is no target, except its own place, where a
+  drop changes nothing; the arrow keys jump past the rest of it.
+- The arrow keys skip a target that would leave the layout as the previous
+  stop left it, so each press changes the result.
+- In a row, the pointer's half of an item decides: the left half is before
+  it, the right half after it. A slot in a row takes no width.
 
 ## Round trip
 
@@ -465,10 +512,8 @@ covers. A builder's takeover option arrives with its last phase.
 
 **0. Groundwork.**
 The React builder routes and pages; the `afreact_builders` setting with the
-classic routes and the `basePages` listener (verified in a throwaway stack
-before anything builds on it: core's route loads none of the builder's
-modules, the classic route all of them, plugins included, also right after
-the setting changes, without a manual cache flush); the
+classic routes and the `basePages` listener (verified on 6.19.0, see
+"Switching and fallback"); the
 `civi.afreact.assets` event; the version check per branch; the test runs
 per core release (see "Core versions"); metadata loading for both builders;
 shared widgets (pickers, icon picker, Monaco, tags, MD5); undo and redo;
@@ -477,29 +522,10 @@ support report's builders section with its registry of core's template
 changes and modules; the core-watch paths and release branches; the `ts()`
 question above.
 
-Phase 0 also runs a throwaway island attempt on a civikitchen stack, before
-phase 3 settles the fallback for display type editors. A test page boots
-chart_kit's display editor (`search-admin-display-chart-kit`) with
-`angular.bootstrap()` inside a React element, its module and `requires`
-loaded through core's loader. The attempt answers three questions:
-
-1. What must surround the editor before it compiles? It `require`s the
-   controllers `^crmSearchAdminDisplay` and `^crmSearchAdmin`, the shared
-   header it includes reads members of the first (`savedSearch`,
-   `displayType`, `isSuperAdmin`, …), and it injects `searchMeta`, which
-   needs the admin metadata. The attempt tries stand-ins stored as controller
-   data on the island's root.
-2. Can the display's settings live in one place? React hands its object in,
-   and a change on either side must show on the other without a second copy,
-   undo and the unsaved state included.
-3. What does the page load: bytes and time until the panel shows, with
-   `crmSearchAdmin` and AngularJS as dependencies.
-
-If a few stand-in members suffice and the settings flow both ways, an
-island becomes the fallback for other extensions' display type editors, and
-this plan gets a section for it before phase 3. Otherwise the page-level
-fallback stands, and the measured numbers go into "Why no Angular islands".
-The attempt's code is deleted either way.
+Phase 0 has run two throwaway prototypes, an island with chart_kit's
+display editor and a canvas with nested drag and drop; their results are
+in "Angular islands for display type editors" and "Canvas drag and drop",
+and their code is gone.
 
 **1. SearchKit listings and the display page.**
 `#/list` with its tabs, filters, sorting, in-place editing, links and the
@@ -510,8 +536,8 @@ displays, tags, scheduled communications) as React cells; import and
 export; the segments listing with its edit dialog and delete; the display
 page through `<afreact-search>`, with the search's default display when the
 URL names none, the display's label as page title and the edit link for
-users who may edit the search. Exit: the listing's rows, links and actions
-match core's.
+users who may edit the search. Exit: the listing offers core's rows, links and
+actions.
 
 **2. SearchKit search editor.**
 Entity, with its own API parameters (`ui_params`, such as the form whose
@@ -644,8 +670,8 @@ React does instead.
   supported releases adds a version check.
 - **Nested drag and drop.** dnd-kit's sortable preset covers lists; the
   canvas's nested containers need a collision strategy and keyboard
-  coordinates of their own. Phase 0 builds a canvas prototype with keyboard
-  moves before phase 5 commits to it.
+  coordinates of their own. A phase 0 prototype settled both (see "Canvas
+  drag and drop").
 - **Plugins.** Sites that depend on third-party builder plugins keep the
   classic builder for the affected records until those plugins adopt the
   contract.

@@ -2,21 +2,23 @@ import react from "@vitejs/plugin-react";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
-/** A chunk importing the entry would load it a second time, without ?r=, and define the elements twice. */
+const ENTRIES = ["afreact.js", "afreact-admin.js"];
+
+/** A chunk importing an entry would load it a second time, without ?r=, and define the elements twice. */
 const entryImportedByNoChunk: Plugin = {
   name: "afreact-entry-imported-by-no-chunk",
   generateBundle(_options, bundle) {
     for (const chunk of Object.values(bundle)) {
       if (
         chunk.type === "chunk" &&
-        [...chunk.imports, ...chunk.dynamicImports].includes("afreact.js")
+        [...chunk.imports, ...chunk.dynamicImports].some((name) => ENTRIES.includes(name))
       )
-        this.error(`${chunk.fileName} imports afreact.js; move what it shares into a chunk group`);
+        this.error(`${chunk.fileName} imports an entry; move what it shares into a chunk group`);
     }
   },
 };
 
-// The entry and its stylesheet keep fixed names, which CiviCRM loads with its cache
+// The entries and their stylesheets keep fixed names, which CiviCRM loads with its cache
 // code (?r=…); lazy chunks carry a content hash instead.
 export default defineConfig({
   // React Compiler (the oxc port) memoizes components and hooks at build time.
@@ -27,11 +29,12 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     rolldownOptions: {
-      input: "src/main.tsx",
+      // Builder code loads only on builder pages.
+      input: { afreact: "src/main.tsx", "afreact-admin": "src/admin/main.tsx" },
       output: {
-        entryFileNames: "afreact.js",
+        entryFileNames: "[name].js",
         chunkFileNames: "chunks/[name]-[hash].js",
-        assetFileNames: "afreact.[ext]",
+        assetFileNames: "[name].[ext]",
         // Libraries shared with lazy chunks live in a chunk of their own; Downshift and its
         // dependencies load only with the first EntityRef.
         codeSplitting: {

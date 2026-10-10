@@ -25,4 +25,23 @@ return [
     // Form pages are menu routes, swapped when the menu is rebuilt; dashlets are Angular partials.
     'post_change' => ['Civi\Afreact\Takeover::rebuildMenu', 'Civi\Afreact\Dashlets::clearAngular'],
   ],
+  'afreact_builders' => [
+    'name' => 'afreact_builders',
+    'type' => 'Array',
+    'html_type' => 'select',
+    'html_attributes' => [
+      'multiple' => 1,
+      'class' => 'crm-select2 huge',
+    ],
+    'default' => [],
+    'title' => E::ts('Builders opened with React'),
+    'description' => E::ts(
+      'Links to these builders open the React builder. Core\'s builder stays one link away at its classic address.',
+    ),
+    'is_domain' => 1,
+    'is_contact' => 0,
+    'pseudoconstant' => ['callback' => 'Civi\Afreact\Builders::options'],
+    'settings_pages' => ['afreact' => ['weight' => 20]],
+    'post_change' => ['Civi\Afreact\Builders::rebuild'],
+  ],
 ];

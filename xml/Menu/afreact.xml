@@ -36,4 +36,16 @@
     <title>React renderer settings</title>
     <access_arguments>administer CiviCRM</access_arguments>
   </item>
+  <item>
+    <path>civicrm/admin/afreact/search</path>
+    <page_callback>Civi\Afreact\AdminPage::render</page_callback>
+    <title>SearchKit (React)</title>
+    <access_arguments>administer CiviCRM data;manage own search_kit</access_arguments>
+  </item>
+  <item>
+    <path>civicrm/admin/afreact/afform</path>
+    <page_callback>Civi\Afreact\AdminPage::render</page_callback>
+    <title>FormBuilder (React)</title>
+    <access_arguments>manage own afform</access_arguments>
+  </item>
 </menu>

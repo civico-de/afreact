@@ -1,7 +1,4 @@
-import { QueryClientProvider } from "@tanstack/react-query";
 import { lazy, Suspense } from "react";
-import { createRoot, type Root } from "react-dom/client";
-import { dropUnobserved, queryClient } from "./api/query";
 import { AfreactForm } from "./afform/AfreactForm";
 import { placementOptions } from "./afform/model";
 import { popupLocation } from "./afform/popup";
@@ -10,38 +7,8 @@ import { comparedPages } from "./compare/pages";
 import { AfreactSearch } from "./search/AfreactSearch";
 import { AfreactSupport } from "./support/AfreactSupport";
 import { listedForms } from "./support/listed";
-import { isOnlyElement, storeFor, UrlState } from "./url/UrlState";
+import { ReactElement } from "./element";
 import "./afreact.css";
-
-/** Light-DOM custom element, so CiviCRM's theme styles the React output like any other markup. */
-abstract class ReactElement extends HTMLElement {
-  private root: Root | null = null;
-
-  connectedCallback() {
-    this.root = createRoot(this);
-    this.root.render(
-      <QueryClientProvider client={queryClient}>
-        <UrlState store={storeFor(this)} onlyElement={isOnlyElement(this)}>
-          {this.view()}
-        </UrlState>
-      </QueryClientProvider>,
-    );
-  }
-
-  disconnectedCallback() {
-    this.root?.unmount();
-    this.root = null;
-    dropUnobserved(queryClient);
-  }
-
-  protected required(attribute: string): string {
-    const value = this.getAttribute(attribute);
-    if (!value) throw new Error(`<${this.localName}> needs a ${attribute} attribute`);
-    return value;
-  }
-
-  protected abstract view(): React.ReactNode;
-}
 
 /**
  * <afreact-form name="afformName" source="api|page|bundle" options='{"contact_id": 5}'> renders a

@@ -1,0 +1,57 @@
+<?php
+
+declare(strict_types = 1);
+
+namespace Civi\Afreact;
+
+use Civi\Core\Event\GenericHookEvent;
+use CRM_Afreact_ExtensionUtil as E;
+
+/**
+ * The React builder pages: afreact's own routes, and core's routes of a builder taken over.
+ */
+final class AdminPage {
+
+  public const CALLBACK = 'Civi\Afreact\AdminPage::render';
+
+  /**
+   * afreact's own route of each builder => the core route whose screens it shows.
+   */
+  public const OWN = [
+    'civicrm/admin/afreact/search' => 'civicrm/admin/search',
+    'civicrm/admin/afreact/afform' => 'civicrm/admin/afform',
+  ];
+
+  public static function render(): string {
+    // The menu item, not the request path, which may run on below it.
+    $route = self::route(Record::string(\CRM_Core_Menu::get(\CRM_Utils_System::currentPath() ?? ''), 'path') ?? '');
+    $builder = Builders::builderOf($route);
+    if ($builder === NULL) {
+      throw new \CRM_Core_Exception('No React builder for this route.');
+    }
+    self::load($builder);
+    return Chrome::page(sprintf(
+      '<div id="bootstrap-theme" class="afreact-builder-page"><afreact-builder builder="%s" route="%s" classic="%s"></afreact-builder></div>',
+      Chrome::escape($builder),
+      Chrome::escape($route),
+      Chrome::escape((string) \Civi::url('backend://' . $route . Builders::CLASSIC)),
+    ));
+  }
+
+  /**
+   * The core route a request path shows: an own route's core route, or the path itself.
+   */
+  public static function route(string $path): string {
+    return self::OWN[$path] ?? $path;
+  }
+
+  /**
+   * The bundles, and what plugins add for `$builder` ('' outside a builder page).
+   */
+  public static function load(string $builder): void {
+    Assets::load();
+    \Civi::resources()->addModuleFile(E::LONG_NAME, 'dist/afreact-admin.js');
+    \Civi::dispatcher()->dispatch('civi.afreact.assets', GenericHookEvent::create(['builder' => $builder]));
+  }
+
+}
