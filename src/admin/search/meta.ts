@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api4 } from "../../api/civi";
 import { adminVars } from "../vars";
 
 /** `CRM.crmSearchAdmin` as `Civi\Search\Admin::getAdminSettings()` gives it. */
@@ -6,6 +7,7 @@ export interface SearchAdminSettings {
   defaultPagerSize: number;
   modules: Record<string, string>;
   cacheKey: string;
+  defaultDistanceUnit?: string;
   tags: {
     id: number;
     label: string;
@@ -102,3 +104,72 @@ export function useSearchMetadata() {
 
 export const entityOf = (metadata: SearchAdminMetadata, name: string) =>
   metadata.schema.find((entity) => entity.name === name);
+
+/** Re-reads the metadata after an import or a new entity, as `searchMeta.refreshMetadata()`. */
+export function useRefreshSearchMetadata() {
+  const client = useQueryClient();
+  return () =>
+    client.fetchQuery({
+      queryKey: ["afreact-admin", "searchMetadata"],
+      queryFn: () => loadSearchMetadata(true),
+      staleTime: 0,
+    });
+}
+
+/** getPrimaryAndSecondaryEntitySelect: primary entities, then the secondary ones under "More...". */
+export function entitySelect(
+  metadata: SearchAdminMetadata,
+): { id: string; label: string; icon?: string | null; group?: string }[] {
+  const of = (searchable: string) =>
+    metadata.schema.filter((entity) => entity.searchable === searchable && entity.fields.length);
+  return [
+    ...of("primary").map((entity) => ({
+      id: entity.name,
+      label: entity.title_plural,
+      icon: entity.icon,
+    })),
+    ...of("secondary").map((entity) => ({
+      id: entity.name,
+      label: entity.title_plural,
+      icon: entity.icon,
+      group: ts("More..."),
+    })),
+  ];
+}
+
+export interface FieldOption {
+  id: string | number;
+  name?: string;
+  label: string;
+  description?: string | null;
+  color?: string | null;
+  icon?: string | null;
+}
+
+/** loadFieldOptions: the option lists of an entity's fields that have a `:name` suffix. */
+export function useFieldOptions(entity: string | undefined) {
+  return useQuery({
+    queryKey: ["afreact-admin", "fieldOptions", entity],
+    queryFn: async () => {
+      const fields = await api4<{ name: string; options: FieldOption[] | false }>(
+        entity ?? "",
+        "getFields",
+        {
+          loadOptions: ["id", "name", "label", "description", "color", "icon"],
+          where: [
+            ["options", "!=", false],
+            ["suffixes", "CONTAINS", "name"],
+          ],
+          select: ["name", "options"],
+        },
+      );
+      return Object.fromEntries(
+        fields.flatMap((field) =>
+          Array.isArray(field.options) ? [[field.name, field.options]] : [],
+        ),
+      );
+    },
+    enabled: !!entity,
+    staleTime: Infinity,
+  });
+}

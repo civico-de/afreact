@@ -2,7 +2,7 @@ import { useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { cellText } from "./Cell";
 import type { InputProps } from "./EditableCell";
 
-type ListKind = "text" | "integer" | "float" | "date";
+export type ListKind = "text" | "integer" | "float" | "date";
 
 const items = (value: unknown): (string | number)[] =>
   Array.isArray(value)
@@ -26,7 +26,12 @@ function parse(kind: ListKind, text: string): string | number | null {
  * separator, crm-multi-select-date): each entry a chip, the input adds one with Enter or a
  * comma and keeps a date out twice.
  */
-export function ListInput({ kind, value, common, onChange }: InputProps & { kind: ListKind }) {
+export function ListInput({
+  kind,
+  value,
+  common,
+  onChange,
+}: Pick<InputProps, "value" | "common" | "onChange"> & { kind: ListKind }) {
   const [text, setText] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const list = items(value);

@@ -1,8 +1,14 @@
 import { ReactElement } from "../element";
 import { Builder, type BuilderName, type Screens } from "./Builder";
+import { SearchList } from "./search/SearchList";
 import { CoreVersion } from "./version";
 
-const SCREENS: Record<BuilderName, Screens> = { search_kit: {}, afform: {} };
+const SCREENS: Record<BuilderName, Screens> = {
+  search_kit: {
+    "civicrm/admin/search": { list: { pattern: "/list", render: () => <SearchList /> } },
+  },
+  afform: {},
+};
 
 function builderName(value: string): BuilderName {
   if (value === "search_kit" || value === "afform") return value;

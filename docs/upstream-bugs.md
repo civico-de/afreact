@@ -773,3 +773,26 @@ so the gap remains until the dashboard screen itself moves to React
 shaded rows of a striped table reach 4.2:1 (`#2c789b` on `#ededed`), and in
 dark mode white text on grey buttons reaches 3.1:1 (`#ffffff` on `#919297`);
 normal-size text needs 4.5:1. Measured with axe on CiviCRM 6.18.
+
+## SearchKit builder
+
+**Import reports calls as records.** The import dialog's success message
+counts the API calls of the bundle, not the records they save, so a bundle
+with one search and three displays reports two items. afreact counts the
+saved records.
+
+**Import checks only the first display.** Before importing, core looks up
+whether a display already exists only for the first SearchDisplay record's
+search; displays of further searches in the same bundle are not checked and
+collide on save. afreact checks every display record's search with one `IN`
+query.
+
+**Listing accessibility.** Core's saved-search listing nests the count badge
+links inside the tab links (`nested-interactive`), labels its filter inputs
+only by `title` (`label-title-only`), and leaves the actions column header
+empty (`empty-table-header`). afreact renders tabs as a `tablist` with arrow
+keys, visible filter labels and a named actions header.
+
+**Segment items reorder only by mouse.** The segment editor sorts items by
+drag and drop with no keyboard path. afreact adds move-up and move-down
+buttons per item.
