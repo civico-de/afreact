@@ -43,10 +43,14 @@ describe("useGuardedHashPath", () => {
     act(() => {
       result.current.setGuard(() => false);
     });
+    const entries = window.history.length;
     navigate("/list");
+    await tick();
     await tick();
     expect(result.current.path).toBe("/edit/3");
     expect(window.location.hash).toBe("#/edit/3");
+    // Stepping back keeps the earlier entries; the refused one stays only ahead.
+    expect(window.history.length).toBe(entries + 1);
     act(() => {
       result.current.setGuard(() => true);
     });

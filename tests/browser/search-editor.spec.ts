@@ -97,6 +97,43 @@ test.describe("SearchKit search editor", () => {
     await page.emulateMedia({ colorScheme: "light" });
   });
 
+  test("builds conditions and joins through the editor's controls", async ({ page }) => {
+    const params = {
+      version: 4,
+      select: ["id", "label"],
+      orderBy: {},
+      where: [],
+      join: [],
+      groupBy: [],
+      having: [],
+    };
+    await page.goto(
+      `/civicrm/admin/afreact/search#/create/Tag?label=${encodeURIComponent(`${LABEL} controls`)}&params=${encodeURIComponent(JSON.stringify(params))}`,
+    );
+    const editor = page.locator("afreact-builder");
+    await editor.getByRole("button", { name: "Filter Conditions" }).click();
+    const panel = editor.getByRole("region");
+    await panel.getByRole("combobox", { name: "Select field" }).first().fill("Label");
+    await page.getByRole("option", { name: "Tag Label" }).click();
+    const value = panel.getByRole("textbox").last();
+    await value.fill(TAGS[0] ?? "");
+    await value.blur();
+    expect(await axeFindings(page, "afreact-builder"), "conditions").toEqual([]);
+    await editor.getByRole("button", { name: "Search", exact: true }).click();
+    await expect(editor.getByRole("cell", { name: TAGS[0] })).toBeVisible();
+    await expect(editor.getByRole("cell", { name: TAGS[1] })).toHaveCount(0);
+
+    await editor.getByRole("button", { name: "Search For" }).click();
+    await panel.getByRole("combobox", { name: "Join Entity" }).fill("Tag");
+    await page.getByRole("listbox", { name: "Join Entity" }).getByRole("option").first().click();
+    expect(await axeFindings(page, "afreact-builder"), "join").toEqual([]);
+    await editor.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page).toHaveURL(/#\/edit\/\d+$/);
+    const record = await stored(page, Number(/#\/edit\/(\d+)$/.exec(page.url())?.[1]));
+    expect(record?.api_params.where).toEqual([["label", "=", TAGS[0]]]);
+    expect(record?.api_params.join).toHaveLength(1);
+  });
+
   test("saves an unchanged search back as it was, as core's editor does", async ({ page }) => {
     const [created] = await api<{ id: number }>(page, "SavedSearch", "create", {
       values: {
@@ -132,23 +169,36 @@ test.describe("SearchKit search editor", () => {
     expect({ ...after, label: before?.label }).toEqual(before);
   });
 
-  test("asks before leaving unsaved changes and stays when refused", async ({ page }) => {
-    await page.goto("/civicrm/admin/afreact/search#/create/Tag");
+  test("asks before leaving unsaved changes and keeps history intact when refused", async ({
+    page,
+  }) => {
+    await page.goto("/civicrm/admin/afreact/search#/list");
     const editor = page.locator("afreact-builder");
-    await editor.getByRole("textbox", { name: "Saved Search label" }).fill(`${LABEL} unsaved`);
+    await expect(editor.getByRole("searchbox", { name: "Filter by label" })).toBeVisible();
+    await page.evaluate(() => {
+      window.location.hash = "#/create/Tag";
+    });
+    const label = editor.getByRole("textbox", { name: "Saved Search label" });
+    await label.fill(`${LABEL} unsaved`);
     page.once("dialog", (dialog) => void dialog.dismiss());
     await page.evaluate(() => {
-      window.location.hash = "#/list";
+      window.location.hash = "#/list?tab=template";
     });
-    await expect(editor.getByRole("textbox", { name: "Saved Search label" })).toHaveValue(
-      `${LABEL} unsaved`,
-    );
+    await expect(label).toHaveValue(`${LABEL} unsaved`);
     expect(new URL(page.url()).hash).toMatch(/^#\/create\/Tag/);
+    page.once("dialog", (dialog) => void dialog.dismiss());
+    await page.evaluate(() => {
+      window.history.back();
+    });
+    await expect(label).toHaveValue(`${LABEL} unsaved`);
+    await expect.poll(() => new URL(page.url()).hash).toMatch(/^#\/create\/Tag/);
+    // The list the editor was opened from is still the entry before it.
     page.once("dialog", (dialog) => void dialog.accept());
     await page.evaluate(() => {
-      window.location.hash = "#/list";
+      window.history.back();
     });
     await expect(editor.getByRole("searchbox", { name: "Filter by label" })).toBeVisible();
+    expect(new URL(page.url()).hash).toBe("#/list");
   });
 });
 

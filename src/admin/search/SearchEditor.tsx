@@ -118,19 +118,26 @@ export function SearchEditor(route: EditorRoute) {
   return <Editor meta={meta.data} initial={loaded.data} create={route.mode === "create"} />;
 }
 
-/** Displays whose editor React lacks, which a change of entity, joins, columns or group by can break. */
+/**
+ * Saved displays a change can break: another entity, sets or grouping, or a column or join gone or
+ * renamed. Added or reordered columns and joins break none, so they ask nothing.
+ */
 export function structuralRisk(saved: EditorSearch, present: EditorSearch): EditorDisplay[] {
   if (!saved.id) return [];
-  const shape = (search: EditorSearch) =>
-    JSON.stringify([
-      search.api_entity,
-      search.api_params.join ?? [],
-      search.api_params.select,
-      search.api_params.groupBy ?? [],
-      search.api_params.sets ?? [],
-    ]);
-  if (shape(saved) === shape(present)) return [];
-  return present.displays.filter((display) => display.id && !display.trashed);
+  const json = (value: unknown) => JSON.stringify(value ?? []);
+  const alias = (col: string) => col.split(" AS ").at(-1) ?? col;
+  const joinAlias = (join: unknown) => (Array.isArray(join) ? String(join[0]) : json(join));
+  const gone = (before: string[], after: string[]) => before.some((item) => !after.includes(item));
+  const risky =
+    saved.api_entity !== present.api_entity ||
+    json(saved.api_params.sets) !== json(present.api_params.sets) ||
+    json(saved.api_params.groupBy) !== json(present.api_params.groupBy) ||
+    gone(saved.api_params.select.map(alias), present.api_params.select.map(alias)) ||
+    gone(
+      (saved.api_params.join ?? []).map(joinAlias),
+      (present.api_params.join ?? []).map(joinAlias),
+    );
+  return risky ? present.displays.filter((display) => display.id && !display.trashed) : [];
 }
 
 /** The entity's fields for the dynamic parameters' values, as core reloads them. */
@@ -183,6 +190,47 @@ async function persist(search: EditorSearch, groupExists: boolean) {
       (d): d is EditorDisplay =>
         isRecord(d) && typeof d.type === "string" && typeof d.label === "string",
     ),
+  };
+}
+
+/**
+ * What the server assigned, put into `state`: sent displays become the saved ones, deleted ones go,
+ * and displays or a group added or edited since the save started stay as they are.
+ */
+export function mergeSaved(
+  state: EditorSearch,
+  sent: EditorSearch,
+  sentGroup: boolean,
+  result: { id: number; name?: string; groupId?: number; displays: EditorDisplay[] },
+): EditorSearch {
+  const kept = sent.displays.filter((d) => !d.trashed);
+  const savedAs = new Map(kept.map((d, i) => [d, result.displays[i] ?? d]));
+  const deleted = new Set(sent.displays.filter((d) => d.trashed));
+  const sentFirst = sent.groups[0];
+  return {
+    ...state,
+    id: result.id,
+    name: result.name ?? state.name,
+    groups:
+      !sentGroup && Object.is(state.groups, sent.groups)
+        ? []
+        : state.groups.map((g, i) =>
+            i === 0 && sentGroup && result.groupId && (Object.is(g, sentFirst) || !g.id)
+              ? { ...g, id: result.groupId }
+              : g,
+          ),
+    // A display edited since keeps its edits and takes the id and name its sent version got.
+    displays: state.displays
+      .map((d, i) => {
+        const exact = savedAs.get(d);
+        if (exact) return exact;
+        const before = sent.displays[i];
+        const saved = before && savedAs.get(before);
+        return saved && before.id === d.id && before.type === d.type
+          ? { ...d, id: saved.id, name: saved.name }
+          : d;
+      })
+      .filter((d) => !deleted.has(d)),
   };
 }
 
@@ -253,14 +301,22 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
     window.history.replaceState(window.history.state, "", `#${path}?${params.toString()}`);
   }, [create, search.id, search.api_params, search.label]);
 
-  // A new search moves to its edit route once the unsaved-changes guard is gone.
+  // A new search moves to its edit route once the unsaved-changes guard is gone; edits made
+  // while it saved keep the screen, and only the address names the saved search, for reloads.
   useEffect(() => {
-    if (goto !== null && !changed) navigate(`/edit/${String(goto)}`);
+    if (goto === null) return;
+    if (!changed) navigate(`/edit/${String(goto)}`);
+    else window.history.replaceState(window.history.state, "", `#/edit/${String(goto)}`);
   }, [goto, changed]);
 
   const createRoute = (entity: string, params?: ApiParams, tab?: string) => {
-    const query = splitHash(window.location.hash).params;
-    query.delete("params");
+    // Only the create route's own keys carry over; the preview's sort and page belong to the old entity.
+    const current = splitHash(window.location.hash).params;
+    const query = new URLSearchParams();
+    for (const key of ["label", "is_template"]) {
+      const value = current.get(key);
+      if (value !== null) query.set(key, value);
+    }
     if (params) query.set("params", JSON.stringify(params));
     if (tab) query.set("tab", tab);
     setGuard(null);
@@ -436,17 +492,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
     const sentGroup = groupExists;
     persist(sent, sentGroup).then(
       (result) => {
-        const merge = (state: EditorSearch): EditorSearch => ({
-          ...state,
-          id: result.id,
-          name: result.name ?? state.name,
-          groups: sentGroup
-            ? state.groups.map((g, i) =>
-                i === 0 && result.groupId ? { ...g, id: result.groupId } : g,
-              )
-            : [],
-          displays: result.displays,
-        });
+        const merge = (state: EditorSearch) => mergeSaved(state, sent, sentGroup, result);
         dispatch({ type: "savedFrom", sent, merge });
         setSavedGroup(sentGroup);
         setSaving(false);
@@ -677,7 +723,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                         const exists = !groupExists;
                         setGroupExists(exists);
                         if (!exists && !group.id) change((state) => ({ ...state, groups: [] }));
-                        if (tab === "group") selectTab("for");
+                        if (tab === "group") selectTab(tabs[0]?.key ?? "for");
                       }}
                     >
                       <i
@@ -720,7 +766,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                           }));
                           if (restoring) selectTab(`display_${String(index)}`);
                           else if (!display.id || tab === `display_${String(index)}`)
-                            selectTab("for");
+                            selectTab(tabs[0]?.key ?? "for");
                           if (!restoring && display.id && display.name)
                             warnEmbedded(
                               forms.data ?? [],

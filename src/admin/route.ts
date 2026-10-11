@@ -43,8 +43,8 @@ export type LeaveGuard = () => boolean;
 export const LeaveGuardContext = createContext<(guard: LeaveGuard | null) => void>(() => undefined);
 
 /**
- * The hash path, held while the guard refuses a change: the refused URL is replaced by the one
- * left, so the screen and its unsaved state stay.
+ * The hash path, held while the guard refuses a change: history steps back to the entry left,
+ * so the screen, its unsaved state and the other history entries stay.
  */
 export function useGuardedHashPath(): {
   path: string;
@@ -52,15 +52,29 @@ export function useGuardedHashPath(): {
 } {
   const guard = useRef<LeaveGuard | null>(null);
   const [path, setPath] = useState(() => splitHash(window.location.hash).path);
+  // The entries this page visited, to tell Back, Forward and a new entry apart; other scripts
+  // on core's pages overwrite history.state, so it cannot carry the position.
+  const visited = useRef({ urls: [window.location.href], at: 0 });
+  const restoring = useRef(false);
   useEffect(() => {
     const onChange = (event: HashChangeEvent) => {
-      const next = splitHash(window.location.hash).path;
-      if (next === path) return;
-      if (guard.current && !guard.current()) {
-        window.history.replaceState(window.history.state, "", event.oldURL);
+      if (restoring.current) {
+        restoring.current = false;
         return;
       }
-      setPath(next);
+      const { urls, at } = visited.current;
+      const step = event.newURL === urls[at - 1] ? -1 : event.newURL === urls[at + 1] ? 1 : 0;
+      const next = splitHash(window.location.hash).path;
+      if (next !== path && guard.current && !guard.current()) {
+        restoring.current = true;
+        window.history.go(step === -1 ? 1 : -1);
+        return;
+      }
+      visited.current =
+        step === 0
+          ? { urls: [...urls.slice(0, at + 1), event.newURL], at: at + 1 }
+          : { urls, at: at + step };
+      if (next !== path) setPath(next);
     };
     window.addEventListener("hashchange", onChange);
     return () => {

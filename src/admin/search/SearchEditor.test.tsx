@@ -5,7 +5,7 @@ import { listParam, mockApi, recordParam, renderWithQuery } from "../../test/ren
 import { metadata } from "../../test/searchMetadata";
 import { splitHash } from "../../url/hash";
 import type { EditorSearch } from "./editor";
-import { SearchEditor, structuralRisk } from "./SearchEditor";
+import { mergeSaved, SearchEditor, structuralRisk } from "./SearchEditor";
 
 const stored = {
   id: 5,
@@ -118,7 +118,8 @@ it("counts a new smart group as saved once the save went through", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   expect(await screen.findByRole("button", { name: "Saved" })).toBeDisabled();
   const save = calls.find((c) => c.call === "SavedSearch.save");
-  expect(recordParam(save?.params.chain).groups).toBeDefined();
+  const groups = listParam(recordParam(save?.params.chain).groups);
+  expect(recordParam(groups[2]).records).toEqual([expect.objectContaining({ title: "G" })]);
 });
 
 describe("structuralRisk", () => {
@@ -138,13 +139,63 @@ describe("structuralRisk", () => {
     ],
   });
 
-  it("names the saved displays a column change can break", () => {
+  it("asks nothing when columns are only added or reordered", () => {
     expect(
-      structuralRisk(search(["id"]), search(["id", "display_name"])).map((d) => d.label),
+      structuralRisk(search(["id", "label"]), search(["label", "id", "display_name"])),
+    ).toEqual([]);
+  });
+
+  it("names the saved displays a removed column can break", () => {
+    expect(
+      structuralRisk(search(["id", "display_name"]), search(["id"])).map((d) => d.label),
     ).toEqual(["Kept"]);
   });
 
   it("stays quiet when only the label changed", () => {
     expect(structuralRisk(search(["id"]), { ...search(["id"]), label: "T" })).toEqual([]);
+  });
+});
+
+describe("mergeSaved", () => {
+  const base: EditorSearch = {
+    label: "S",
+    api_entity: "Contact",
+    api_params: { version: 4, select: ["id"] },
+    is_template: false,
+    form_values: { join: {} },
+    tag_id: [],
+    groups: [],
+    displays: [
+      { id: 1, name: "old", label: "Old", type: "table", trashed: true },
+      { label: "New", type: "list" },
+    ],
+  };
+  const result = {
+    id: 5,
+    name: "S",
+    displays: [{ id: 2, name: "new", label: "New", type: "list" }],
+  };
+
+  it("takes the saved displays and drops the deleted ones", () => {
+    expect(mergeSaved(base, base, false, result).displays).toEqual(result.displays);
+  });
+
+  it("keeps a display renamed or added while saving, with its new id", () => {
+    const [, sentNew] = base.displays;
+    const later = {
+      ...base,
+      displays: [
+        ...base.displays.slice(0, 1),
+        { ...sentNew, label: "Renamed", type: "list" },
+        { label: "Added", type: "grid" },
+      ],
+      groups: [{ title: "G", description: "", visibility: "", group_type: [] }],
+    };
+    const merged = mergeSaved(later, base, false, result);
+    expect(merged.displays).toEqual([
+      { label: "Renamed", type: "list", id: 2, name: "new" },
+      { label: "Added", type: "grid" },
+    ]);
+    expect(merged.groups).toHaveLength(1);
   });
 });

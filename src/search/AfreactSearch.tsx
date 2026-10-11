@@ -250,6 +250,14 @@ function ResultDisplay({
   // Core keeps the toolbar of the last run while the next page loads.
   const [shown, setShown] = useState<RunPage | undefined>(undefined);
   if (rows.data && rows.data !== shown) setShown(rows.data);
+  // An unsaved search that changes shows no results until its next run, as core's preview.
+  const inlineKey = inline ? JSON.stringify(inline.search) : null;
+  const [runInline, setRunInline] = useState(inlineKey);
+  if (inlineKey !== runInline) {
+    setRunInline(inlineKey);
+    setSubmitted(null);
+    setShown(undefined);
+  }
   // Before the first click of a search button nothing loads.
   const loading = rows.isFetching || (rows.isPending && enabled && runFilters !== null);
   const rowCount = rows.error ? null : (counted.data ?? null);

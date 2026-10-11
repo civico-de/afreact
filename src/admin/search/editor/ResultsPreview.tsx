@@ -15,7 +15,7 @@ interface ResultsPreviewProps {
   onDebug: (debug: RunDebug) => void;
 }
 
-/** The default display's settings for the columns being edited, plus the links menu column. */
+/** The default display's settings for the columns being edited plus the links menu column; null when invalid. */
 export function previewSettings(meta: SearchAdminMetadata, search: SearchInfo) {
   const defaults = meta.defaultDisplay.settings;
   const settings = {
@@ -35,8 +35,7 @@ export function previewSettings(meta: SearchAdminMetadata, search: SearchInfo) {
       },
     ],
   };
-  if (!isDisplaySettings(settings)) throw new Error(ts("The default display has no settings."));
-  return settings;
+  return isDisplaySettings(settings) ? settings : null;
 }
 
 /** crmSearchAdminResultsTable: runs the unsaved search on click, with column controls in the header. */
@@ -50,6 +49,12 @@ export function ResultsPreview({
   const id = useId();
   const select = search.api_params.select;
   const settings = previewSettings(meta, search);
+  if (!settings)
+    return (
+      <p className="crm-error" role="alert">
+        {ts("The default display has no valid settings, so the results cannot be previewed.")}
+      </p>
+    );
   const move = (from: number, to: number) => {
     const next = [...select];
     const [moved] = next.splice(from, 1);
@@ -61,9 +66,7 @@ export function ResultsPreview({
     search: { name: search.name, api_entity: search.api_entity, api_params: search.api_params },
   };
   return (
-    // Core clears the results whenever the search changes; the next Search click runs it again.
     <AfreactSearch
-      key={JSON.stringify(search.api_params)}
       search={search.name ?? ""}
       display={null}
       type="table"
