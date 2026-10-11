@@ -31,6 +31,18 @@ const stored = (page: Page, id: number) =>
     where: [["id", "=", id]],
   }).then((rows) => rows[0]);
 
+/** Findings on core's own conditions tab, whose clause badges Minetta colours below AA (upstream-bugs.md). */
+async function coreConditions(page: Page): Promise<string[]> {
+  const params = { version: 4, select: ["id", "label"], where: [["label", "LIKE", `${LABEL}%`]] };
+  await page.goto(
+    `/civicrm/admin/search#/create/Tag?label=${encodeURIComponent(LABEL)}&params=${encodeURIComponent(JSON.stringify(params))}`,
+  );
+  await expect(page.locator("#crm-saved-search-label")).toHaveValue(LABEL);
+  await page.locator("#bootstrap-theme").getByText("Filter Conditions").first().click();
+  await expect(page.locator(".api4-clause-badge .badge").first()).toBeVisible();
+  return axeFindings(page, "#bootstrap-theme");
+}
+
 test.describe("SearchKit search editor", () => {
   test.beforeEach(async ({ page }) => {
     await cleanUp(page);
@@ -43,6 +55,7 @@ test.describe("SearchKit search editor", () => {
   });
 
   test("creates a search, previews it and saves it as one record", async ({ page }) => {
+    const core = await coreConditions(page);
     const params = {
       version: 4,
       select: ["id", "label"],
@@ -64,7 +77,7 @@ test.describe("SearchKit search editor", () => {
         "aria-current",
         "true",
       );
-      expect(await axeFindings(page, "afreact-builder"), tab).toEqual([]);
+      expect(ownFindings(await axeFindings(page, "afreact-builder"), core), tab).toEqual([]);
     }
     await editor.getByRole("button", { name: "Add..." }).click();
     await editor.getByRole("menuitem", { name: "Table" }).click();
@@ -98,6 +111,7 @@ test.describe("SearchKit search editor", () => {
   });
 
   test("builds conditions and joins through the editor's controls", async ({ page }) => {
+    const core = await coreConditions(page);
     const params = {
       version: 4,
       select: ["id", "label"],
@@ -118,7 +132,7 @@ test.describe("SearchKit search editor", () => {
     const value = panel.getByRole("textbox").last();
     await value.fill(TAGS[0] ?? "");
     await value.blur();
-    expect(await axeFindings(page, "afreact-builder"), "conditions").toEqual([]);
+    expect(ownFindings(await axeFindings(page, "afreact-builder"), core), "conditions").toEqual([]);
     await editor.getByRole("button", { name: "Search", exact: true }).click();
     await expect(editor.getByRole("cell", { name: TAGS[0] })).toBeVisible();
     await expect(editor.getByRole("cell", { name: TAGS[1] })).toHaveCount(0);
@@ -126,7 +140,7 @@ test.describe("SearchKit search editor", () => {
     await editor.getByRole("button", { name: "Search For" }).click();
     await panel.getByRole("combobox", { name: "Join Entity" }).fill("Tag");
     await page.getByRole("listbox", { name: "Join Entity" }).getByRole("option").first().click();
-    expect(await axeFindings(page, "afreact-builder"), "join").toEqual([]);
+    expect(ownFindings(await axeFindings(page, "afreact-builder"), core), "join").toEqual([]);
     await editor.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page).toHaveURL(/#\/edit\/\d+$/);
     const record = await stored(page, Number(/#\/edit\/(\d+)$/.exec(page.url())?.[1]));

@@ -793,7 +793,11 @@ so the gap remains until the dashboard screen itself moves to React
 **Theme contrast below WCAG AA.** Riverlea (stream Minetta) links on the
 shaded rows of a striped table reach 4.2:1 (`#2c789b` on `#ededed`), and in
 dark mode white text on grey buttons reaches 3.1:1 (`#ffffff` on `#919297`);
-normal-size text needs 4.5:1. Measured with axe on CiviCRM 6.18.
+normal-size text needs 4.5:1. Measured with axe on CiviCRM 6.18. In light
+mode Minetta's badges (`.crm-container .badge`: `--crm-primary-text-color` on
+`--crm-primary-color`) reach about 2:1 (`#fafaf6` on `#afafab`), so the
+search builder's "Where" clause badges fail in core's editor and in React's,
+measured with axe on 6.19.0 (civikitchen image of 2026-10-11).
 
 ## SearchKit builder
 
