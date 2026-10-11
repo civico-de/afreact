@@ -8,11 +8,13 @@ import type { SearchInfo } from "../expr";
 import { useSearchTasks } from "./common";
 import { AutocompleteEditor } from "./AutocompleteEditor";
 import { AutocompletePreview } from "./AutocompletePreview";
+import { BatchEditor } from "./BatchEditor";
 import { EntityEditor, entityPreviewSettings } from "./EntityEditor";
 import { GridEditor, ListEditor, TreeEditor } from "./ItemsEditor";
 import {
   buildLinks,
   initAutocomplete,
+  initBatch,
   initEntity,
   initGrid,
   initList,
@@ -55,6 +57,10 @@ const EDITORS: Record<string, (ctx: DisplayContext, draft: Draft) => void> = {
   },
   entity: (ctx, draft) => {
     initEntity(ctx, draft);
+  },
+  batch: (ctx, draft) => {
+    initBatch(ctx, draft);
+    initPager(ctx, draft.settings);
   },
   tree: (ctx, draft) => {
     initTree(ctx, draft);
@@ -121,7 +127,7 @@ export function DisplayEditor(props: DisplayEditorProps) {
     onAdopt(copy);
   };
   const editing = { ctx, draft, edit };
-  const ownHeader = display.type === "autocomplete" || display.type === "entity";
+  const ownHeader = ["autocomplete", "entity", "batch"].includes(display.type);
   const links = { rowLinks, toolbarLinks: buildLinks(ctx, false) };
   return (
     <>
@@ -227,6 +233,7 @@ export function DisplayEditor(props: DisplayEditorProps) {
       )}
       {display.type === "autocomplete" && <AutocompleteEditor {...editing} />}
       {display.type === "entity" && <EntityEditor {...editing} adopt={adopt} />}
+      {display.type === "batch" && <BatchEditor {...editing} />}
       {display.type === "table" && <TableEditor {...editing} {...links} />}
       {display.type === "list" && <ListEditor {...editing} {...links} />}
       {display.type === "grid" && <GridEditor {...editing} {...links} />}

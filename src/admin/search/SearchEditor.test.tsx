@@ -133,10 +133,10 @@ describe("structuralRisk", () => {
     tag_id: [],
     groups: [],
     displays: [
-      { id: 1, label: "Kept", type: "batch" },
-      { id: 2, label: "Gone", type: "batch", trashed: true },
+      { id: 1, label: "Kept", type: "chart-kit" },
+      { id: 2, label: "Gone", type: "chart-kit", trashed: true },
       { id: 3, label: "Editable", type: "table" },
-      { label: "New", type: "batch" },
+      { label: "New", type: "chart-kit" },
     ],
   });
 

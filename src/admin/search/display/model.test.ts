@@ -7,6 +7,10 @@ import {
   getColumnIndex,
   createSqlName,
   initAutocomplete,
+  initBatch,
+  setBatchTallyFn,
+  toggleBatchTally,
+  toggleDefault,
   initColumns,
   initEntity,
   isFkColumn,
@@ -32,6 +36,7 @@ import {
   toggleRewrite,
   toggleTask,
   toggleTally,
+  type AdminColumn,
   type DisplayContext,
   type Draft,
 } from "./model";
@@ -315,5 +320,37 @@ describe("autocomplete and DB entity init", () => {
     expect(settings.entity_permission_operator).toBe("AND");
     setEntityPermission(settings, ["a"]);
     expect(settings).not.toHaveProperty("entity_permission_operator");
+  });
+});
+
+describe("data entry display", () => {
+  it("starts with core's classes, a pager and totals for numbers", () => {
+    const draft: Draft = { label: "D", type: "batch", settings: {} };
+    initBatch(ctx, draft);
+    expect(draft.settings).toMatchObject({
+      classes: ["table", "table-striped", "table-bordered", "crm-sticky-header"],
+      limit: 50,
+      pager: { hide_single: true },
+      tally: {},
+    });
+    expect(draft.settings.columns?.map((col) => col.tally)).toEqual([{ fn: "SUM" }, undefined]);
+  });
+
+  it("drops every column's totals with the footer", () => {
+    const draft: Draft = { label: "D", type: "batch", settings: {} };
+    initBatch(ctx, draft);
+    toggleBatchTally(ctx, draft.settings);
+    expect(draft.settings.tally).toBeUndefined();
+    expect(draft.settings.columns?.some((col) => "tally" in col)).toBe(false);
+  });
+
+  it("keeps a target only for sums and toggles a default value", () => {
+    const col: AdminColumn = { type: "field", key: "id", tally: { fn: "SUM", target: true } };
+    setBatchTallyFn(col, "AVG");
+    expect(col.tally).toEqual({ fn: "AVG" });
+    toggleDefault(col);
+    expect(col).toHaveProperty("default", null);
+    toggleDefault(col);
+    expect(col).not.toHaveProperty("default");
   });
 });

@@ -28,6 +28,8 @@ interface ColumnsProps extends Editing {
   typeFields?: boolean;
   /** The text of a column's summary, by default its label. */
   title?: (col: AdminColumn, index: number) => string;
+  /** Whether the summary marks the column as required. */
+  marked?: (col: AdminColumn) => boolean;
   /** What the display type configures per column before its type's own settings. */
   head: (
     col: AdminColumn,
@@ -45,7 +47,7 @@ interface ColumnsProps extends Editing {
 /** addColMenu and the column list every display type shares, in order with move buttons. */
 export function Columns(props: ColumnsProps) {
   const { ctx, draft, edit, links, defaults, isAllowed, head, tail } = props;
-  const { withTypes = true, typeFields = true, title } = props;
+  const { withTypes = true, typeFields = true, title, marked } = props;
   const columns = columnsOf(draft.settings);
   const dateFormats = ctx.meta.dateFormats;
   const editAt = (index: number) => (change: (col: AdminColumn, draft: Draft) => void) => {
@@ -165,7 +167,15 @@ export function Columns(props: ColumnsProps) {
                 </button>
               </div>
               <details>
-                <summary>{label}</summary>
+                <summary>
+                  {label}
+                  {marked?.(col) && (
+                    <span className="crm-marker" aria-hidden="true">
+                      {" "}
+                      *
+                    </span>
+                  )}
+                </summary>
                 <div className="crm-accordion-body">
                   {head(col, index, editCol)}
                   {typeFields && (

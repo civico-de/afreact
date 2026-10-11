@@ -806,12 +806,21 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                           if (restoring) selectTab(`display_${String(index)}`);
                           else if (!display.id || tab === `display_${String(index)}`)
                             selectTab(tabs[0]?.key ?? "for");
-                          if (!restoring && display.id && display.name)
-                            warnEmbedded(
-                              forms.data ?? [],
-                              `${String(search.name)}.${display.name}`,
-                              display.label,
+                          if (!restoring && display.id && display.name) {
+                            const key = `${String(search.name)}.${display.name}`;
+                            // A click before the forms have loaded waits for them.
+                            const loaded = forms.data
+                              ? Promise.resolve(forms.data)
+                              : forms.refetch({ throwOnError: true }).then((r) => r.data ?? []);
+                            loaded.then(
+                              (list) => {
+                                warnEmbedded(list, key, display.label);
+                              },
+                              (error: unknown) => {
+                                window.CRM.alert(errorMessage(error), ts("Error"), "error");
+                              },
                             );
+                          }
                         }}
                       >
                         <i

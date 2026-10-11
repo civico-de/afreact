@@ -947,3 +947,44 @@ export function setEntityPermission(settings: AdminSettings, permissions: string
   if (permissions.length > 1) settings.entity_permission_operator ??= "AND";
   else delete settings.entity_permission_operator;
 }
+
+// searchAdminDisplayBatch
+
+export function initBatch(ctx: DisplayContext, draft: Draft): void {
+  const fresh = isNew(draft.settings);
+  if (fresh)
+    draft.settings = {
+      classes: ["table", "table-striped", "table-bordered", "crm-sticky-header"],
+      limit: ctx.defaultPagerSize,
+      pager: { hide_single: true },
+    };
+  initColumns(ctx, draft, { label: true });
+  if (fresh) toggleBatchTally(ctx, draft.settings);
+}
+
+/** Totals in the footer: sums for numbers, counts for booleans, nothing for options or links. */
+export function toggleBatchTally(ctx: DisplayContext, settings: AdminSettings): void {
+  if (settings.tally) {
+    delete settings.tally;
+    for (const col of columnsOf(settings)) delete col.tally;
+    return;
+  }
+  settings.tally = {};
+  for (const col of columnsOf(settings)) {
+    const field = col.key ? parseExpr(ctx.meta, col.key, ctx.search).args[0]?.field : undefined;
+    if (!field || field.fk_entity || field.options) continue;
+    if (["Integer", "Float", "Money"].includes(field.data_type)) col.tally = { fn: "SUM" };
+    if (field.data_type === "Boolean") col.tally = { fn: "COUNT" };
+  }
+}
+
+export function toggleDefault(col: AdminColumn): void {
+  if ("default" in col) delete col.default;
+  else col.default = null;
+}
+
+export function setBatchTallyFn(col: AdminColumn, fn: string): void {
+  const tally = { ...col.tally, fn };
+  if (fn !== "SUM") delete tally.target;
+  col.tally = tally;
+}

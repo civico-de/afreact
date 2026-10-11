@@ -9,11 +9,13 @@ const params = {
   orderBy: {},
   where: [["label", "LIKE", `${LABEL}%`]],
 };
+const FORM = "afreactDisplayProbeForm";
 const pages = { angular: "/civicrm/admin/search", react: "/civicrm/admin/afreact/search" };
 
 async function cleanUp(page: Page) {
   await page.goto("/civicrm/admin/afreact/search#/list");
   await api(page, "Job", "delete", { where: [["api_entity", "LIKE", "SK_AfreactDisplayProbe%"]] });
+  await api(page, "Afform", "revert", { where: [["name", "=", FORM]] });
   await api(page, "SavedSearch", "delete", { where: [["label", "LIKE", `${LABEL}%`]] });
   await api(page, "Tag", "delete", { where: [["label", "IN", TAGS]] });
 }
@@ -92,7 +94,7 @@ test.describe("SearchKit table display editor", () => {
     await page.emulateMedia({ colorScheme: "light" });
   });
 
-  for (const type of ["Table", "List", "Grid", "Tree", "Autocomplete", "DB Entity"]) {
+  for (const type of ["Table", "List", "Grid", "Tree", "Autocomplete", "DB Entity", "Data Entry"]) {
     test(`a new ${type} display saves with the settings core's editor gives it`, async ({
       page,
     }) => {
@@ -187,6 +189,73 @@ test.describe("SearchKit table display editor", () => {
         return saved?.settings.columns[1]?.name;
       })
       .toBe("renamed");
+  });
+
+  test("a data entry display saves required columns, defaults and footer totals", async ({
+    page,
+  }) => {
+    await open(page, "react", LABEL, "Data Entry");
+    const editor = page.locator("afreact-builder");
+    const column = editor.locator("fieldset.crm-draggable").nth(1);
+    await column.locator("summary").click();
+    await column.getByRole("checkbox", { name: "Required" }).check();
+    await column.getByRole("checkbox", { name: "Default Value" }).check();
+    await column.getByRole("textbox", { name: /^Default value of / }).fill("Probe");
+    await column.getByRole("combobox", { name: "Aggregate" }).selectOption("COUNT");
+    await expect(column.locator("summary .crm-marker")).toBeVisible();
+    expect(await axeFindings(page, "afreact-builder")).toEqual([]);
+    await page.emulateMedia({ colorScheme: "dark" });
+    const react = await axeFindings(page, "afreact-builder");
+    await page.emulateMedia({ colorScheme: "light" });
+    const { id, display } = await save(page);
+    expect(display.settings).toMatchObject({
+      tally: {},
+      columns: [
+        { key: "id", tally: { fn: "SUM" } },
+        { key: "label", required: true, default: "Probe", tally: { fn: "COUNT" } },
+      ],
+    });
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.goto(`/civicrm/admin/search#/edit/${String(id)}`);
+    await page
+      .getByRole("link", { name: /Data Entry 1/ })
+      .first()
+      .click();
+    await expect(page.getByText("Show Totals in Footer")).toBeAttached();
+    expect(ownFindings(react, await axeFindings(page, "#bootstrap-theme"))).toEqual([]);
+    await page.emulateMedia({ colorScheme: "light" });
+  });
+
+  test("warns that removing a display deletes the form embedding it", async ({ page }) => {
+    const [search] = await api<{ id: number; name: string }>(page, "SavedSearch", "create", {
+      values: { label: LABEL, api_entity: "Tag", api_params: params },
+      chain: {
+        display: [
+          "SearchDisplay",
+          "create",
+          {
+            values: { saved_search_id: "$id", name: "Embedded", label: "Embedded", type: "table" },
+          },
+        ],
+      },
+    });
+    if (!search) throw new Error("The probe search was not created.");
+    await api(page, "Afform", "create", {
+      values: {
+        name: FORM,
+        title: "Display probe form",
+        type: "search",
+        layout: `<crm-search-display-table search-name="${search.name}" display-name="Embedded"></crm-search-display-table>`,
+      },
+    });
+    await page.goto(`${pages.react}#/edit/${String(search.id)}`);
+    // Clicked at once, before the forms using the search have loaded.
+    await page.locator("afreact-builder").getByRole("button", { name: "Delete Embedded" }).click();
+    await expect(
+      page.getByText(
+        'Form "Display probe form" will be deleted if the embedded display "Embedded" is deleted.',
+      ),
+    ).toBeVisible();
   });
 
   test("groups a list by a field, which leads the sort and drops the pager", async ({ page }) => {
