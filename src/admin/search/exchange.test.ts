@@ -67,6 +67,12 @@ describe("import", () => {
     expect(() =>
       parseImport('[["SavedSearch","save",{"records":[],"chain":{"a":1}}]]', false),
     ).toThrow('only "save"');
+    expect(() =>
+      parseImport(
+        '[["SavedSearch","save",{"records":[],"chain":[["Contact","delete",{}]]}]]',
+        false,
+      ),
+    ).toThrow('only "save"');
     expect(() => parseImport('[["Afform","save",{"records":[{"name":"f"}]}]]', false)).toThrow(
       'Unsupported API entity "Afform".',
     );
@@ -81,7 +87,7 @@ describe("import", () => {
     );
   });
 
-  it("counts existing displays across every search the records name", () => {
+  it("counts existing displays by their name within their own search", () => {
     const check = parseImport(
       JSON.stringify([
         [
@@ -100,8 +106,25 @@ describe("import", () => {
     expect(check.counts.SearchDisplay?.params).toEqual({
       select: ["row_count"],
       where: [
-        ["name", "IN", ["a", "b"]],
-        ["saved_search_id.name", "IN", ["s1", "s2"]],
+        [
+          "OR",
+          [
+            [
+              "AND",
+              [
+                ["name", "=", "a"],
+                ["saved_search_id.name", "=", "s1"],
+              ],
+            ],
+            [
+              "AND",
+              [
+                ["name", "=", "b"],
+                ["saved_search_id.name", "=", "s2"],
+              ],
+            ],
+          ],
+        ],
       ],
     });
   });

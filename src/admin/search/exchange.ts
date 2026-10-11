@@ -137,7 +137,8 @@ export function parseImport(text: string, afformEnabled: boolean): ImportCheck {
     if (!isSaveCall(call)) throw new Error(ts('Unsupported API action: only "save" is allowed.'));
     const [entity, action, params] = call;
     const chain = params.chain;
-    if (action !== "save" || (isRecord(chain) && Object.keys(chain).length))
+    const chained = typeof chain === "object" && chain !== null && Object.keys(chain).length > 0;
+    if (action !== "save" || chained)
       throw new Error(ts('Unsupported API action: only "save" is allowed.'));
     if (!allowed.includes(entity))
       throw new Error(ts('Unsupported API entity "%1".', { 1: entity }));
@@ -149,11 +150,22 @@ export function parseImport(text: string, afformEnabled: boolean): ImportCheck {
       typeof record.name === "string" ? [record.name] : [],
     );
     if (!names.length) continue;
-    const where: unknown[][] = [["name", "IN", names]];
-    if (entity === "SearchDisplay") {
-      const searches = [...new Set(records.map((record) => record["saved_search_id.name"]))];
-      where.push(["saved_search_id.name", "IN", searches]);
-    }
+    // A display's name is unique only within its search.
+    const pairs = records.flatMap((record) =>
+      typeof record.name === "string"
+        ? [
+            [
+              "AND",
+              [
+                ["name", "=", record.name],
+                ["saved_search_id.name", "=", record["saved_search_id.name"]],
+              ],
+            ],
+          ]
+        : [],
+    );
+    const where: unknown[][] =
+      entity === "SearchDisplay" ? [["OR", pairs]] : [["name", "IN", names]];
     counts[entity] = { names, params: { select: ["row_count"], where } };
   }
   if (!Object.keys(counts).length) throw new Error(ts("No records to import."));

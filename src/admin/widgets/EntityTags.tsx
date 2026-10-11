@@ -78,8 +78,11 @@ export function EntityTags({
 
   async function toggle(tag: TagRecord) {
     const has = tagIds.includes(tag.id);
-    onChange(has ? tagIds.filter((t) => t !== tag.id) : [...tagIds, tag.id]);
-    if (entityId === undefined) return;
+    const next = has ? tagIds.filter((t) => t !== tag.id) : [...tagIds, tag.id];
+    if (entityId === undefined) {
+      onChange(next);
+      return;
+    }
     const status = window.CRM.status({});
     try {
       if (has)
@@ -95,9 +98,9 @@ export function EntityTags({
           values: { entity_id: entityId, tag_id: tag.id, entity_table: entityTable },
         });
       status.resolve();
+      onChange(next);
     } catch (error) {
       status.reject();
-      onChange(tagIds);
       window.CRM.alert(errorMessage(error), ts("Error"), "error");
     }
   }

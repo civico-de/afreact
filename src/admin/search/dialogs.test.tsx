@@ -5,6 +5,7 @@ import { mockApi, renderWithQuery } from "../../test/render";
 import { ExportDialog } from "./ExportDialog";
 import { ImportDialog } from "./ImportDialog";
 import { SearchCondition } from "./SearchCondition";
+import { SearchInput } from "./SearchInput";
 import { SegmentDialog } from "./SegmentDialog";
 
 const counted = <T,>(rows: T[], countMatched: number) => Object.assign(rows, { countMatched });
@@ -225,5 +226,31 @@ describe("ExportDialog", () => {
       "href",
       `/civicrm/admin/search#/create/Contact?params=${encodeURIComponent('{"version":4}')}`,
     );
+  });
+});
+
+describe("SearchInput dates", () => {
+  it("follows a value that changes under it, as when items are reordered", () => {
+    const field = { name: "created_date", label: "Created", data_type: "Date" };
+    const { rerender } = renderWithQuery(
+      <SearchInput
+        id="d"
+        field={field}
+        op="="
+        value="now - 3 day"
+        onChange={vi.fn<(v: unknown) => void>()}
+      />,
+    );
+    expect(document.querySelector<HTMLSelectElement>("#d")?.value).toBe("now -");
+    rerender(
+      <SearchInput
+        id="d"
+        field={field}
+        op="="
+        value="2026-01-01"
+        onChange={vi.fn<(v: unknown) => void>()}
+      />,
+    );
+    expect(document.querySelector<HTMLSelectElement>("#d")?.value).toBe("fixed");
   });
 });

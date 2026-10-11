@@ -350,7 +350,7 @@ function DateInput({
   required,
 }: SearchInputProps & { required: boolean }) {
   const ranges = adminVars().searchTasks?.dateRanges ?? [];
-  const [type, setType] = useState<DateType>(() => dateTypeOf(value, ranges));
+  const type = dateTypeOf(value, ranges);
   const timestamp = field.data_type === "Timestamp";
   const current = text(value);
   const relative = relativeParts(current);
@@ -363,12 +363,11 @@ function DateInput({
         onChange={(event) => {
           const next = event.target.value;
           if (!isDateType(next)) return;
-          setType(next);
           onChange(dateTypeValue(next, ranges));
         }}
       >
         <option value="fixed">{ts("Pick Date")}</option>
-        <option value="range">{ts("Date Range")}</option>
+        {ranges.length > 0 && <option value="range">{ts("Date Range")}</option>}
         <option value="now">{ts("Now")}</option>
         <option value="now -">{ts("Before now")}</option>
         <option value="now +">{ts("After now")}</option>
