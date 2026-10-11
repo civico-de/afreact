@@ -17,8 +17,10 @@ foreach ($last as $i => $lastName) {
       'gender_id' => (($i + $j) % 3) + 1,
       'birth_date' => sprintf('19%02d-%02d-%02d', 50 + ($i * 9) + $j, $j + 1, $i + 10),
       'source' => 'Afreact seed',
+      'external_identifier' => "afreact-seed-{$i}-{$j}",
       'email_primary.email' => strtolower("{$firstName}.{$lastName}@example.org"),
     ];
   }
 }
-Individual::save(checkPermissions: FALSE)->setRecords($records)->execute();
+// Matched, so a hook re-run on an existing database (a recreated container) adds no duplicates.
+Individual::save(checkPermissions: FALSE)->setRecords($records)->setMatch(['external_identifier'])->execute();
