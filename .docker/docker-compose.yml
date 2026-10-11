@@ -53,6 +53,8 @@ services:
       # info.xml <requires> resolved. Mount siblings the same way; use
       # CIVIKITCHEN_ENABLE_EXTENSIONS only to order them or add non-mounts.
       - ..:/var/www/html/ext/afreact
+      # A display type with only an Angular editor, for the island tests.
+      - ./fixtures/afreactisland:/var/www/html/ext/afreactisland:ro
       # - ../../othersibling:/var/www/html/ext/othersibling
       # First-boot provisioning hooks (seed data, API users, settings) — run
       # after install + ext:enable, in lexical order. See init.d/README.md.

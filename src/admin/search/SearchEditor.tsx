@@ -32,6 +32,7 @@ import {
   type EditorDisplay,
   type EditorSearch,
 } from "./editor";
+import { AngularIsland, hasIslandEditor } from "./display/AngularIsland";
 import { DisplayEditor, hasDisplayEditor } from "./display/DisplayEditor";
 import {
   hasPluginEditor,
@@ -153,7 +154,8 @@ export function structuralRisk(saved: EditorSearch, present: EditorSearch): Edit
           display.id &&
           !display.trashed &&
           !hasDisplayEditor(display.type) &&
-          !hasPluginEditor(display.type),
+          !hasPluginEditor(display.type) &&
+          !hasIslandEditor(display.type),
       )
     : [];
 }
@@ -562,6 +564,9 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
   const displayPath = window.CRM.url("civicrm/search");
   const afformPath = window.CRM.url("civicrm/admin/afform");
   const typeOf = (type: string) => meta.displayTypes.find((t) => t.id === type);
+  // crmSearchAdmin's displayIsViewable.
+  const viewable = (d: EditorDisplay) =>
+    !!d.id && !!typeOf(d.type) && typeOf(d.type)?.grouping !== "non-viewable";
   const addable = meta.displayTypes.filter(
     (t) => t.id !== "entity" || window.CRM.checkPerm("all CiviCRM permissions and ACLs"),
   );
@@ -692,10 +697,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                       title: ts("View search results table"),
                     },
                     ...search.displays.flatMap((d) =>
-                      d.id &&
-                      d.name &&
-                      typeOf(d.type) &&
-                      typeOf(d.type)?.grouping !== "non-viewable"
+                      viewable(d) && d.name
                         ? [
                             d.acl_bypass
                               ? {
@@ -1002,7 +1004,29 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                 {displayIndex !== null &&
                   search.displays[displayIndex] &&
                   !hasDisplayEditor(search.displays[displayIndex].type) &&
-                  !hasPluginEditor(search.displays[displayIndex].type) && (
+                  !hasPluginEditor(search.displays[displayIndex].type) &&
+                  hasIslandEditor(search.displays[displayIndex].type) && (
+                    <AngularIsland
+                      key={displayIndex}
+                      type={search.displays[displayIndex].type}
+                      display={search.displays[displayIndex]}
+                      search={search}
+                      typeInfo={typeOf(search.displays[displayIndex].type)}
+                      viewable={viewable(search.displays[displayIndex])}
+                      searchDisplayPath={displayPath}
+                      onChange={(next) => {
+                        change((state) => ({
+                          ...state,
+                          displays: state.displays.map((d, i) => (i === displayIndex ? next : d)),
+                        }));
+                      }}
+                    />
+                  )}
+                {displayIndex !== null &&
+                  search.displays[displayIndex] &&
+                  !hasDisplayEditor(search.displays[displayIndex].type) &&
+                  !hasPluginEditor(search.displays[displayIndex].type) &&
+                  !hasIslandEditor(search.displays[displayIndex].type) && (
                     <DisplayTab
                       display={search.displays[displayIndex]}
                       typeLabel={typeOf(search.displays[displayIndex].type)?.label}

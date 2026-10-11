@@ -366,6 +366,57 @@ test.describe("SearchKit table display editor", () => {
     expect(display).toMatchObject({ type: "afreact-probe", settings: { mode: "b" } });
   });
 
+  test("another extension's Angular display editor runs as an island", async ({ page }) => {
+    const saved: Record<string, Record<string, unknown>> = {};
+    const findings: Record<string, string[]> = {};
+    const names: Record<string, string> = {};
+    for (const renderer of ["angular", "react"] as const) {
+      await open(page, renderer, `${LABEL} ${renderer}`, "Island");
+      await page.getByRole("textbox", { name: "Island note" }).fill("From Angular");
+      await page.getByRole("combobox", { name: "Island column" }).selectOption("label");
+      findings[renderer] = await axeFindings(page, "search-admin-display-afreact-island");
+      const { display } = await save(page);
+      saved[renderer] = display.settings;
+      names[renderer] = display.name;
+    }
+    expect(findings.react).toEqual(findings.angular);
+    expect(saved.react).toEqual(saved.angular);
+    expect(saved.react).toEqual({ note: "From Angular", column: "label", columns: [] });
+
+    const editor = page.locator("afreact-builder");
+    const column = editor.getByRole("combobox", { name: "Island column" });
+    const tab = editor.getByRole("button", { name: `${LABEL} react Island 1`, exact: true });
+    await tab.click();
+    // The save's id and name reach the island, whose header now links the display.
+    await expect(editor.getByRole("link", { name: "View Display" })).toHaveAttribute(
+      "href",
+      new RegExp(`#/display/[^/]+/${names.react ?? ""}$`),
+    );
+    await expect(column.getByRole("option")).toHaveText(["id", "label"]);
+    // The editor reads the columns once, so the island is rebuilt with the search's new ones.
+    await editor.getByRole("button", { name: "Select Fields" }).click();
+    await editor
+      .getByRole("group", { name: "Tag ID" })
+      .getByRole("button", { name: "Remove Tag ID" })
+      .click();
+    await tab.click();
+    await expect(column.getByRole("option")).toHaveText(["label"]);
+    await expect(editor.getByRole("textbox", { name: "Island note" })).toHaveValue("From Angular");
+    await editor.getByRole("button", { name: "Preview" }).click();
+    await expect(editor.locator(".afreact-island-note")).toHaveText("Island note: From Angular");
+    expect(await axeFindings(page, "afreact-builder")).toEqual([]);
+
+    // A display added to a saved search keeps its island through the save, which names it.
+    await editor.getByRole("button", { name: "Add..." }).click();
+    await page.getByRole("menuitem", { name: "Island", exact: true }).click();
+    await expect(editor.getByRole("link", { name: "View Display" })).toHaveCount(0);
+    await editor.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(editor.getByRole("link", { name: "View Display" })).toHaveAttribute(
+      "href",
+      /#\/display\/[^/]+\/[^/]+$/,
+    );
+  });
+
   test("groups a list by a field, which leads the sort and drops the pager", async ({ page }) => {
     await open(page, "react", LABEL, "List");
     const editor = page.locator("afreact-builder");

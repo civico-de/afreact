@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<extension key="afreactisland" type="module">
+  <file>afreactisland</file>
+  <name>afreact island fixture</name>
+  <description>A display type with only an Angular editor, for afreact's browser tests.</description>
+  <license>Proprietary</license>
+  <maintainer>
+    <author>civico GmbH</author>
+    <email>hi@jfilter.de</email>
+  </maintainer>
+  <releaseDate>2026-10-11</releaseDate>
+  <version>1.0</version>
+  <develStage>stable</develStage>
+  <compatibility>
+    <ver>6.9</ver>
+  </compatibility>
+  <requires>
+    <ext>org.civicrm.search_kit</ext>
+  </requires>
+  <mixins>
+    <mixin>mgd-php@1.0.0</mixin>
+  </mixins>
+</extension>

@@ -4,8 +4,10 @@ declare(strict_types = 1);
 
 namespace Civi\Afreact;
 
+use Civi\Core\Event\GenericHookEvent;
 use Civi\Test\CiviEnvBuilder;
 use Civi\Test\HeadlessInterface;
+use CRM_Afreact_ExtensionUtil as E;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -21,7 +23,13 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
     return GetFormHeadlessTest::builder();
   }
 
+  private ?\Closure $island = NULL;
+
   protected function tearDown(): void {
+    if ($this->island) {
+      \Civi::dispatcher()->removeListener('hook_civicrm_angularModules', $this->island);
+      Afforms::angular()->clear();
+    }
     \Civi::settings()->set(Builders::SETTING, []);
     parent::tearDown();
   }
@@ -57,6 +65,26 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
     $this->assertSame(['civicrm/admin/search'], self::basePages('crmSearchAdmin'));
   }
 
+  public function testIslandsAreOtherExtensionsSearchBuilderModulesWithAndWithoutTakeover(): void {
+    // Core's own and chart_kit's, which React edits itself, are no islands.
+    $this->assertSame([], Islands::modules());
+
+    $this->island = static function (GenericHookEvent $e): void {
+      $e->angularModules['afreactTestIsland'] = [
+        'ext' => E::LONG_NAME,
+        'js' => [],
+        'requires' => ['crmSearchAdmin'],
+        'basePages' => ['civicrm/admin/search'],
+      ];
+    };
+    \Civi::dispatcher()->addListener('hook_civicrm_angularModules', $this->island);
+    Afforms::angular()->clear();
+    $this->assertSame(['afreactTestIsland'], Islands::modules());
+    \Civi::settings()->set(Builders::SETTING, ['search_kit']);
+    Afforms::angular()->clear();
+    $this->assertSame(['afreactTestIsland'], Islands::modules());
+  }
+
   public function testFormBuilderTakeoverTakesItsModulesAndSubmissions(): void {
     \Civi::settings()->set(Builders::SETTING, ['afform']);
     $this->assertSame(AdminPage::CALLBACK, \CRM_Core_Menu::get('civicrm/admin/afform')['page_callback']);
@@ -77,7 +105,7 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
 
   public function testUnknownBuildersAreIgnored(): void {
     \Civi::settings()->set(Builders::SETTING, ['nope', 'search_kit']);
-    $this->assertSame(['search_kit'], Builders::builders());
+    $this->assertSame(['search_kit'], Builders::takenOver());
   }
 
   public function testOwnRoutesShowTheirCoreRoute(): void {

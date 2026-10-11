@@ -34,9 +34,13 @@ final class Builders {
    * @return list<string>
    *   The builders React takes over.
    */
-  public static function builders(): array {
+  public static function takenOver(): array {
     $builders = \Civi::settings()->get(self::SETTING);
-    return is_array($builders) ? array_values(array_intersect(array_keys(self::PATHS), $builders)) : [];
+    return (
+      is_array($builders)
+        ? array_values(array_intersect(array_keys(self::PATHS), array_filter($builders, 'is_string')))
+        : []
+    );
   }
 
   /**
@@ -45,7 +49,7 @@ final class Builders {
    */
   public static function moved(): array {
     $moved = [];
-    foreach (self::builders() as $builder) {
+    foreach (self::takenOver() as $builder) {
       foreach (self::PATHS[$builder] as $path) {
         $moved[$path] = $path . self::CLASSIC;
       }

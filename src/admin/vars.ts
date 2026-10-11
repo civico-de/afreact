@@ -9,6 +9,8 @@ export interface AdminVars {
   searchDisplay?: { viewableDisplayTypes?: Record<string, string>; [key: string]: unknown };
   afAdmin?: Record<string, unknown>;
   afGuiEditor?: Record<string, unknown>;
+  /** Other extensions' search builder modules, whose display editors run as islands. */
+  islandModules?: string[];
 }
 
 export function adminVars(): AdminVars {

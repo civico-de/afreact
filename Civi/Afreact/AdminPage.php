@@ -58,6 +58,11 @@ final class AdminPage {
    */
   public static function load(string $builder): void {
     Assets::load($builder);
+    $islands = $builder === 'search_kit' ? Islands::modules() : [];
+    if ($islands !== []) {
+      Chrome::angular()->addModules($islands);
+    }
+    \Civi::resources()->addVars('afreactAdmin', ['islandModules' => $islands]);
     \Civi::resources()->addModuleFile(E::LONG_NAME, 'dist/afreact-admin.js');
     self::settings($builder);
     Strings::add(Strings::DOMAINS[$builder] ?? NULL);
