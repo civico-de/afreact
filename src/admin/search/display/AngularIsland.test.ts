@@ -8,7 +8,11 @@ const queued = (method: string, ...args: unknown[]) => ["$compileProvider", meth
 const modules: Record<string, { requires: string[]; _invokeQueue: unknown[] }> = {
   islandAdmin: {
     requires: ["islandShared"],
-    _invokeQueue: [queued("component", "searchAdminDisplayChartPie", {}), ["$provide", "factory"]],
+    _invokeQueue: [
+      queued("component", "searchAdminDisplayChartPie", {}),
+      queued("component", "searchAdminDisplayHeatMap", {}),
+      ["$provide", "factory"],
+    ],
   },
   islandShared: {
     requires: ["islandAdmin"],
@@ -32,9 +36,12 @@ describe("island editors", () => {
     expect(hasIslandEditor("chart-pie")).toBe(true);
     expect(hasIslandEditor("map-pins")).toBe(true);
     expect(hasIslandEditor("table-x")).toBe(false);
+    // Angular joins the parts across underscores and runs of separators as well.
+    expect(hasIslandEditor("heat_map")).toBe(true);
+    expect(hasIslandEditor("heat--map")).toBe(true);
   });
 
-  it("asks nothing about a display whose island rebuilds with the new columns", () => {
+  it("asks about an island display, whose settings React cannot carry along", () => {
     const search = (select: string[]): EditorSearch => ({
       id: 5,
       label: "S",
@@ -50,6 +57,7 @@ describe("island editors", () => {
       ],
     });
     expect(structuralRisk(search(["id", "label"]), search(["id"])).map((d) => d.label)).toEqual([
+      "Island",
       "Unknown",
     ]);
   });

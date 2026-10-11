@@ -154,8 +154,7 @@ export function structuralRisk(saved: EditorSearch, present: EditorSearch): Edit
           display.id &&
           !display.trashed &&
           !hasDisplayEditor(display.type) &&
-          !hasPluginEditor(display.type) &&
-          !hasIslandEditor(display.type),
+          !hasPluginEditor(display.type),
       )
     : [];
 }
@@ -231,7 +230,12 @@ export function mergeSaved(
   state: EditorSearch,
   sent: EditorSearch,
   sentGroup: boolean,
-  result: { id: number; name?: string; groupId?: number; displays: EditorDisplay[] },
+  result: {
+    id: number;
+    name?: string;
+    groupId?: number;
+    displays: EditorDisplay[];
+  },
 ): EditorSearch {
   const kept = sent.displays.filter((d) => !d.trashed);
   const savedAs = new Map(kept.map((d, i) => [d, result.displays[i] ?? d]));
@@ -445,7 +449,11 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
             else
               change((state) => {
                 const next = toggleEntitySet(state);
-                return { ...state, api_entity: next.api_entity, api_params: next.api_params };
+                return {
+                  ...state,
+                  api_entity: next.api_entity,
+                  api_params: next.api_params,
+                };
               });
           }}
         />
@@ -471,7 +479,10 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
         ? state
         : {
             ...state,
-            api_params: { ...state.api_params, select: [...new Set(state.api_params.select)] },
+            api_params: {
+              ...state.api_params,
+              select: [...new Set(state.api_params.select)],
+            },
           },
     );
     setTab(key);
@@ -631,7 +642,10 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                     <>
                       <i className="crm-i fa-list-alt" role="img" aria-hidden="true" />{" "}
                       {forms.data
-                        ? ts("1 Form", { plural: "%count Forms", count: forms.data.length })
+                        ? ts("1 Form", {
+                            plural: "%count Forms",
+                            count: forms.data.length,
+                          })
                         : ts("Forms...")}
                     </>
                   }
@@ -652,7 +666,9 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                                     url: `${afformPath}#/create/search/${String(search.name)}.${d.name}`,
                                     target: "_blank",
                                     icon: "fa-plus",
-                                    text: ts("Create form for %1", { 1: d.label }),
+                                    text: ts("Create form for %1", {
+                                      1: d.label,
+                                    }),
                                   },
                                 ]
                               : [],
@@ -908,7 +924,10 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                       setTab("group");
                     } else if (link.task?.startsWith("display:")) {
                       const type = link.task.slice(8);
-                      change((state) => ({ ...state, displays: addDisplay(meta, state, type) }));
+                      change((state) => ({
+                        ...state,
+                        displays: addDisplay(meta, state, type),
+                      }));
                       setTab(`display_${String(search.displays.length)}`);
                     }
                   }}
@@ -930,7 +949,10 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                     meta={meta}
                     search={search}
                     onGroup={(next) => {
-                      change((state) => ({ ...state, groups: [next, ...state.groups.slice(1)] }));
+                      change((state) => ({
+                        ...state,
+                        groups: [next, ...state.groups.slice(1)],
+                      }));
                     }}
                     onSelect={(select) => {
                       change((state) => ({
@@ -1007,7 +1029,8 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                   !hasPluginEditor(search.displays[displayIndex].type) &&
                   hasIslandEditor(search.displays[displayIndex].type) && (
                     <AngularIsland
-                      key={displayIndex}
+                      // A save hands over new display objects, which core's editors get fresh.
+                      key={`${String(displayIndex)}:${search.displays[displayIndex].type}:${String(search.displays[displayIndex].id ?? "")}:${search.displays[displayIndex].name ?? ""}`}
                       type={search.displays[displayIndex].type}
                       display={search.displays[displayIndex]}
                       search={search}

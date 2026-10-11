@@ -121,7 +121,7 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
   }
 
   public function testBuilderPageDispatchesTheAssetsEvent(): void {
-    unset(\Civi::$statics[Assets::class]);
+    unset(\Civi::$statics[Assets::class . '::dispatched']);
     $seen = [];
     $listener = static function ($e) use (&$seen): void {
       $seen[] = $e->builder;
@@ -137,7 +137,7 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
   }
 
   public function testRuntimePagesDispatchTheAssetsEventOnce(): void {
-    unset(\Civi::$statics[Assets::class]);
+    unset(\Civi::$statics[Assets::class . '::dispatched']);
     $seen = [];
     $listener = static function ($e) use (&$seen): void {
       $seen[] = $e->builder;

@@ -10,13 +10,20 @@ const params = {
   where: [["label", "LIKE", `${LABEL}%`]],
 };
 const FORM = "afreactDisplayProbeForm";
-const pages = { angular: "/civicrm/admin/search", react: "/civicrm/admin/afreact/search" };
+const pages = {
+  angular: "/civicrm/admin/search",
+  react: "/civicrm/admin/afreact/search",
+};
 
 async function cleanUp(page: Page) {
   await page.goto("/civicrm/admin/afreact/search#/list");
-  await api(page, "Job", "delete", { where: [["api_entity", "LIKE", "SK_AfreactDisplayProbe%"]] });
+  await api(page, "Job", "delete", {
+    where: [["api_entity", "LIKE", "SK_AfreactDisplayProbe%"]],
+  });
   await api(page, "Afform", "revert", { where: [["name", "=", FORM]] });
-  await api(page, "SavedSearch", "delete", { where: [["label", "LIKE", `${LABEL}%`]] });
+  await api(page, "SavedSearch", "delete", {
+    where: [["label", "LIKE", `${LABEL}%`]],
+  });
   await api(page, "Tag", "delete", { where: [["label", "IN", TAGS]] });
   await api(page, "OptionValue", "delete", {
     where: [
@@ -33,7 +40,10 @@ async function open(page: Page, renderer: keyof typeof pages, label: string, typ
   await expect(page.locator("#crm-saved-search-label")).toHaveValue(label);
   await page.getByRole("button", { name: "Add..." }).click();
   await page
-    .getByRole(renderer === "react" ? "menuitem" : "link", { name: type, exact: true })
+    .getByRole(renderer === "react" ? "menuitem" : "link", {
+      name: type,
+      exact: true,
+    })
     .click();
 }
 
@@ -108,13 +118,21 @@ test.describe("SearchKit table display editor", () => {
       for (const renderer of ["angular", "react"] as const) {
         await open(page, renderer, `${LABEL} ${renderer}`, type);
         const { display } = await save(page);
-        built.push({ ...display, id: undefined, name: undefined, label: undefined });
+        built.push({
+          ...display,
+          id: undefined,
+          name: undefined,
+          label: undefined,
+        });
       }
       const [angular, react] = built;
       // Core adds description to the entity's metadata, so its new autocompletes search by it.
       if (type === "Autocomplete" && angular) {
         expect(angular.settings.searchFields).toEqual(["id", "label", "description"]);
-        angular.settings = { ...angular.settings, searchFields: ["id", "label"] };
+        angular.settings = {
+          ...angular.settings,
+          searchFields: ["id", "label"],
+        };
       }
       expect(react).toEqual(angular);
     });
@@ -186,12 +204,12 @@ test.describe("SearchKit table display editor", () => {
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect
       .poll(async () => {
-        const [saved] = await api<{ settings: { columns: { name?: string }[] } }>(
-          page,
-          "SearchDisplay",
-          "get",
-          { select: ["settings"], where: [["name", "=", name]] },
-        );
+        const [saved] = await api<{
+          settings: { columns: { name?: string }[] };
+        }>(page, "SearchDisplay", "get", {
+          select: ["settings"],
+          where: [["name", "=", name]],
+        });
         return saved?.settings.columns[1]?.name;
       })
       .toBe("renamed");
@@ -218,7 +236,12 @@ test.describe("SearchKit table display editor", () => {
       tally: {},
       columns: [
         { key: "id", tally: { fn: "SUM" } },
-        { key: "label", required: true, default: "Probe", tally: { fn: "COUNT" } },
+        {
+          key: "label",
+          required: true,
+          default: "Probe",
+          tally: { fn: "COUNT" },
+        },
       ],
     });
     await page.emulateMedia({ colorScheme: "dark" });
@@ -251,7 +274,10 @@ test.describe("SearchKit table display editor", () => {
     await expect(values.getByRole("button", { name: "Add field" })).toHaveCount(0);
     await expect(values.getByRole("button", { name: /^Remove/ })).toHaveCount(0);
     await values.getByRole("combobox", { name: /^Field/ }).selectOption("id");
-    const category = editor.getByRole("group", { name: "Category", exact: true });
+    const category = editor.getByRole("group", {
+      name: "Category",
+      exact: true,
+    });
     await category.getByRole("button", { name: "Add field" }).click();
     await category
       .getByRole("combobox", { name: /^Field/ })
@@ -275,7 +301,12 @@ test.describe("SearchKit table display editor", () => {
       columns: [
         { axis: "w", key: "id" },
         { axis: "y", key: "id" },
-        { axis: "w", key: "label", label: "Tag Label", scaleType: "categorical" },
+        {
+          axis: "w",
+          key: "label",
+          label: "Tag Label",
+          scaleType: "categorical",
+        },
       ],
     });
     await page.emulateMedia({ colorScheme: "dark" });
@@ -297,7 +328,12 @@ test.describe("SearchKit table display editor", () => {
           "SearchDisplay",
           "create",
           {
-            values: { saved_search_id: "$id", name: "Embedded", label: "Embedded", type: "table" },
+            values: {
+              saved_search_id: "$id",
+              name: "Embedded",
+              label: "Embedded",
+              type: "table",
+            },
           },
         ],
       },
@@ -363,17 +399,38 @@ test.describe("SearchKit table display editor", () => {
     await expect(editor.getByText("Choose a probe mode.")).toBeVisible();
     await editor.getByRole("combobox", { name: "Probe mode" }).selectOption("b");
     const { display } = await save(page);
-    expect(display).toMatchObject({ type: "afreact-probe", settings: { mode: "b" } });
+    expect(display).toMatchObject({
+      type: "afreact-probe",
+      settings: { mode: "b" },
+    });
   });
 
   test("another extension's Angular display editor runs as an island", async ({ page }) => {
     const saved: Record<string, Record<string, unknown>> = {};
     const findings: Record<string, string[]> = {};
     const names: Record<string, string> = {};
+    await page.addInitScript(() => {
+      window.addEventListener("hashchange", () => {
+        Reflect.set(
+          window,
+          "afreactHashChanges",
+          Number(Reflect.get(window, "afreactHashChanges") ?? 0) + 1,
+        );
+      });
+    });
     for (const renderer of ["angular", "react"] as const) {
       await open(page, renderer, `${LABEL} ${renderer}`, "Island");
       await page.getByRole("textbox", { name: "Island note" }).fill("From Angular");
       await page.getByRole("combobox", { name: "Island column" }).selectOption("label");
+      if (renderer === "react") {
+        // The island's ngRoute and $location leave the page's URL to React's own encoding.
+        expect(await page.evaluate((): unknown => Reflect.get(window, "afreactHashChanges"))).toBe(
+          undefined,
+        );
+        expect(page.url()).toContain(
+          `label=${encodeURIComponent(LABEL).replaceAll("%20", "+")}+react`,
+        );
+      }
       findings[renderer] = await axeFindings(page, "search-admin-display-afreact-island");
       const { display } = await save(page);
       saved[renderer] = display.settings;
@@ -381,11 +438,18 @@ test.describe("SearchKit table display editor", () => {
     }
     expect(findings.react).toEqual(findings.angular);
     expect(saved.react).toEqual(saved.angular);
-    expect(saved.react).toEqual({ note: "From Angular", column: "label", columns: [] });
+    expect(saved.react).toEqual({
+      note: "From Angular",
+      column: "label",
+      columns: [],
+    });
 
     const editor = page.locator("afreact-builder");
     const column = editor.getByRole("combobox", { name: "Island column" });
-    const tab = editor.getByRole("button", { name: `${LABEL} react Island 1`, exact: true });
+    const tab = editor.getByRole("button", {
+      name: `${LABEL} react Island 1`,
+      exact: true,
+    });
     await tab.click();
     // The save's id and name reach the island, whose header now links the display.
     await expect(editor.getByRole("link", { name: "View Display" })).toHaveAttribute(
@@ -410,7 +474,14 @@ test.describe("SearchKit table display editor", () => {
     await editor.getByRole("button", { name: "Add..." }).click();
     await page.getByRole("menuitem", { name: "Island", exact: true }).click();
     await expect(editor.getByRole("link", { name: "View Display" })).toHaveCount(0);
+    // The removed column may break the saved island display, whose settings React cannot carry.
+    const asked = page.waitForEvent("dialog").then(async (dialog) => {
+      const message = dialog.message();
+      await dialog.accept();
+      return message;
+    });
     await editor.getByRole("button", { name: "Save", exact: true }).click();
+    expect(await asked).toContain(`${LABEL} react Island 1`);
     await expect(editor.getByRole("link", { name: "View Display" })).toHaveAttribute(
       "href",
       /#\/display\/[^/]+\/[^/]+$/,

@@ -20,10 +20,12 @@ const islandModules = () => adminVars().islandModules ?? [];
 
 const angularOf = (): unknown => Reflect.get(window, "angular");
 
-const camel = (type: string) =>
-  type
-    .replace(/-(\w)/g, (_, letter: string) => letter.toUpperCase())
-    .replace(/^\w/, (c) => c.toUpperCase());
+/** The editor's element for a display type, and its directive name as Angular normalizes it. */
+const editorTag = (type: string) => `search-admin-display-${type}`;
+const directiveName = (tag: string) =>
+  tag.replace(/[:\-_]+(.)/g, (_, letter: string, offset: number) =>
+    offset ? letter.toUpperCase() : letter,
+  );
 
 /** Directives the island modules and the modules they require register, from AngularJS 1.8's queue. */
 function islandDirectives(): Set<string> {
@@ -57,15 +59,38 @@ let directives: Set<string> | undefined;
 export function hasIslandEditor(type: string): boolean {
   if (angularOf() === undefined || islandModules().length === 0) return false;
   directives ??= islandDirectives();
-  return directives.has(`searchAdminDisplay${camel(type)}`);
+  return directives.has(directiveName(editorTag(type)));
 }
 
-let boots = 0;
+/**
+ * The island's own module: the builder modules bring ngRoute and $location, which would rewrite
+ * the page's hash and run the builder's routes; their $browser sees a fixed URL without one.
+ */
+function islandModule(ng: unknown): string {
+  // A dotted name no extension module takes, as redefining a module replaces it.
+  const name = "afreact.islandHost";
+  const url = window.location.href.replace(/#.*$/, "");
+  const decorate = (browser: Record<string, unknown>) =>
+    Object.assign(browser, {
+      url: (next?: string) => (next === undefined ? url : browser),
+      state: () => null,
+      onUrlChange: () => browser,
+    });
+  call(call(ng, "module", name, islandModules()), "config", [
+    "$provide",
+    (provide: unknown) => call(provide, "decorator", "$browser", ["$delegate", decorate]),
+  ]);
+  return name;
+}
 
 interface AngularIslandProps {
   type: string;
   display: EditorDisplay;
-  search: { name?: string; api_entity: string; api_params: { select: string[] } };
+  search: {
+    name?: string;
+    api_entity: string;
+    api_params: { select: string[] };
+  };
   typeInfo: { name: string; description: string; icon: string } | undefined;
   viewable: boolean;
   searchDisplayPath: string;
@@ -82,6 +107,8 @@ export function AngularIsland(props: AngularIslandProps) {
   const [state, setState] = useState<"loading" | "ready" | Error>("loading");
   // The display as both sides last agreed on, so neither echoes the other's change back.
   const agreed = useRef("");
+  // The display as last handed to React, which may differ from the editor's (an empty label).
+  const forwarded = useRef("");
   const scope = useRef<unknown>(null);
   const preview = useRef<HTMLDivElement>(null);
   const injected = useRef<unknown>(null);
@@ -89,11 +116,18 @@ export function AngularIsland(props: AngularIslandProps) {
   const [previewScope, setPreviewScope] = useState<unknown>(null);
   const sent = useEffectEvent((json: string) => {
     if (json === agreed.current) return;
-    agreed.current = json;
     const next: unknown = JSON.parse(json);
-    if (!isRecord(next) || typeof next.type !== "string" || typeof next.label !== "string")
+    if (!isRecord(next) || typeof next.type !== "string")
       throw new TypeError(`The ${type} editor changed the display into something else.`);
-    onChange({ ...next, type: next.type, label: next.label });
+    agreed.current = json;
+    // ngModel leaves a required field empty as undefined; React's label check stops the save.
+    const edited = {
+      ...next,
+      type: next.type,
+      label: typeof next.label === "string" ? next.label : "",
+    };
+    forwarded.current = JSON.stringify(edited);
+    onChange(edited);
   });
   const boot = useEffectEvent(() => ({
     display: structuredClone(display),
@@ -145,77 +179,87 @@ export function AngularIsland(props: AngularIslandProps) {
         "$crmSearchAdminController",
         {},
       );
-      boots += 1;
-      const name = `afreactIsland${String(boots)}`;
-      call(ng, "module", name, islandModules());
-      const injector = call(ng, "bootstrap", root, [name]);
-      const compile = () => {
-        rootScope = call(injector, "get", "$rootScope");
-        const loaded = call(call(injector, "get", "searchMeta"), "loadMetadata");
-        call(
-          loaded,
-          "then",
-          () => {
-            if (disposed) return;
-            const child = call(rootScope, "$new");
-            Object.assign(Object(child), {
-              display: start.display,
-              apiEntity: start.search.api_entity,
-              apiParams: start.search.api_params,
-            });
-            scope.current = child;
-            injected.current = injector;
-            agreed.current = JSON.stringify(start.display);
-            const editor = document.createElement(`search-admin-display-${type}`);
-            editor.setAttribute("display", "display");
-            editor.setAttribute("api-entity", "apiEntity");
-            editor.setAttribute("api-params", "apiParams");
-            root.append(editor);
-            call(
-              call(call(injector, "get", "$compile"), "call", null, editor),
-              "call",
-              null,
-              child,
-            );
-            call(
-              child,
-              "$watch",
-              "display",
-              (value: unknown) => {
-                sent(String(call(ng, "toJson", value)));
-              },
-              true,
-            );
-            // $q runs this callback inside a digest, which then picks up the new watchers.
-            setState("ready");
-          },
-          fail,
-        );
-      };
-      if (call(injector, "has", `searchAdminDisplay${camel(type)}Directive`) !== true)
+      const injector = call(ng, "bootstrap", root, [islandModule(ng)]);
+      if (call(injector, "has", `${directiveName(editorTag(type))}Directive`) !== true)
         throw new Error(`No Angular editor for the ${type} display type.`);
-      compile();
+      rootScope = call(injector, "get", "$rootScope");
+      const link = () => {
+        const child = call(rootScope, "$new");
+        Object.assign(Object(child), {
+          display: start.display,
+          apiEntity: start.search.api_entity,
+          apiParams: start.search.api_params,
+        });
+        scope.current = child;
+        injected.current = injector;
+        agreed.current = JSON.stringify(start.display);
+        forwarded.current = agreed.current;
+        const editor = document.createElement(editorTag(type));
+        editor.setAttribute("display", "display");
+        editor.setAttribute("api-entity", "apiEntity");
+        editor.setAttribute("api-params", "apiParams");
+        root.append(editor);
+        call(call(call(injector, "get", "$compile"), "call", null, editor), "call", null, child);
+        call(
+          child,
+          "$watch",
+          "display",
+          (value: unknown) => {
+            sent(String(call(ng, "toJson", value)));
+          },
+          true,
+        );
+        // $q runs this callback inside a digest, which then picks up the new watchers.
+        setState("ready");
+      };
+      const loaded = call(call(injector, "get", "searchMeta"), "loadMetadata");
+      call(
+        loaded,
+        "then",
+        () => {
+          if (disposed) return;
+          // $q hands a throw in here only to $exceptionHandler, not to the rejection handler.
+          try {
+            link();
+          } catch (error) {
+            fail(error);
+          }
+        },
+        fail,
+      );
     } catch (error) {
       fail(error);
     }
     return () => {
       disposed = true;
       scope.current = null;
+      // A rebuild shows neither the old editor's state nor a preview from its injector.
+      injected.current = null;
+      preview.current?.replaceChildren();
+      setShown(null);
+      setPreviewScope(null);
+      setState("loading");
       if (rootScope) call(rootScope, "$destroy");
-      root.remove();
+      // jqLite's remove() runs the elements' $destroy handlers, which take down popups and widgets.
+      call(call(ng, "element", root), "remove");
     };
   }, [type, columns]);
 
   useEffect(() => {
-    live.current = { name: search.name, viewable: props.viewable, path: props.searchDisplayPath };
+    live.current = {
+      name: search.name,
+      viewable: props.viewable,
+      path: props.searchDisplayPath,
+    };
   });
 
   // A React change, such as the id and name a save gives the display, reaches the editor.
   useEffect(() => {
     const child = scope.current;
     const json = JSON.stringify(display);
-    if (!child || json === agreed.current) return;
+    if (!child || json === agreed.current || json === forwarded.current) return;
     agreed.current = json;
+    forwarded.current = json;
     Reflect.set(Object(child), "display", JSON.parse(json));
     call(child, "$apply");
   });
