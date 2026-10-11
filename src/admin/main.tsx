@@ -3,6 +3,7 @@ import { Builder, type BuilderName, type Screens } from "./Builder";
 import { DisplayPage } from "./search/DisplayPage";
 import { SearchEditor } from "./search/SearchEditor";
 import { SearchList } from "./search/SearchList";
+import { BuildersReport, parseFindings } from "./support/BuildersReport";
 import { CoreVersion } from "./version";
 
 const SCREENS: Record<BuilderName, Screens> = {
@@ -13,7 +14,10 @@ const SCREENS: Record<BuilderName, Screens> = {
         pattern: "/create/:entity",
         render: (p) => <SearchEditor mode="create" entity={p.entity ?? ""} />,
       },
-      edit: { pattern: "/edit/:id", render: (p) => <SearchEditor mode="edit" id={Number(p.id)} /> },
+      edit: {
+        pattern: "/edit/:id",
+        render: (p) => <SearchEditor mode="edit" id={Number(p.id)} />,
+      },
       clone: {
         pattern: "/clone/:id",
         render: (p) => <SearchEditor mode="clone" id={Number(p.id)} />,
@@ -54,3 +58,12 @@ class AfreactBuilderElement extends ReactElement {
 }
 
 customElements.define("afreact-builder", AfreactBuilderElement);
+
+/** <afreact-builders-report report="{…}"> lists what the SearchKit builder hands to the classic one. */
+class AfreactBuildersReportElement extends ReactElement {
+  protected view() {
+    return <BuildersReport findings={parseFindings(this.required("report"))} />;
+  }
+}
+
+customElements.define("afreact-builders-report", AfreactBuildersReportElement);

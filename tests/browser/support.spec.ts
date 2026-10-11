@@ -3,7 +3,7 @@
  * form, since both come from the same walk; and it must check every form but blocks.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, setReactForms } from "./harness";
+import { api, axeFindings, setReactForms } from "./harness";
 
 // Forms without af-if, so every flagged part renders whatever the data, and none placed only
 // inline: the preview renders without placement options.
@@ -117,4 +117,28 @@ test("the report lists what the rendered form flags", async ({ page }) => {
       name,
     ).toEqual(reported[name]);
   }
+});
+
+test("the builders section names the island display type and its modules", async ({ page }) => {
+  await page.goto("/civicrm/admin/afreact");
+  const section = page.getByRole("region", { name: "SearchKit builder" });
+  const list = (heading: string) =>
+    section
+      .getByRole("heading", { name: heading })
+      .locator("xpath=following-sibling::*[self::ul or self::p][1]");
+  // The dev stack mounts one foreign extension: a display type with only an Angular editor.
+  await expect(list("Display types whose Angular editor runs in the React builder")).toHaveText(
+    "Island (afreact-island)",
+  );
+  await expect(list("Display types React leaves to the classic builder")).toHaveText("None");
+  await expect(
+    section
+      .getByRole("heading", {
+        name: "Angular modules on the classic builder that React does not know",
+      })
+      .locator("xpath=following-sibling::ul[1]")
+      .getByRole("listitem"),
+  ).toHaveText(["afreactIsland", "afreactIslandAdmin"]);
+  await expect(list("Builder templates changed on this site")).toHaveText("None");
+  expect(await axeFindings(page, ".afreact-builders-report")).toEqual([]);
 });

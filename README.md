@@ -51,6 +51,7 @@ Needs CiviCRM 6.19 or later (`info.xml`).
   | `<afreact-search>` | `search`, `display` | a SearchKit table, list, grid, tree, batch or chart display |
   | `<afreact-compare>` | `pages` (JSON list of `{label, url}`) | the comparison page |
   | `<afreact-support>` | `listed` (JSON list of form names), `settings` (URL) | the support report |
+  | `<afreact-builders-report>` | `report` (JSON: display types, modules, partials) | the support report's builder section (admin bundle) |
 
 - **Data layer:** TanStack Query, one query per API call, keyed by its
   parameters. Search displays follow SearchKit's rules: placeholder rows while a
@@ -160,6 +161,17 @@ the setting and drops those with one; a listed form that is missing or whose
 check failed keeps its state. The button writes the list as the page saw it,
 over any edit made on the settings form meanwhile.
 
+Below the forms, the SearchKit builder section lists what the React builder
+would hand to the classic one: the display types whose Angular editor runs as
+an island, the display types with no React editor, plugin element or Angular
+editor, the Angular modules the classic builder page loads that afreact does
+not know (they may change more than a display editor), and the partials of
+core's builder modules that a ChangeSet or a `buildAsset` listener changed. A
+partial counts as changed only when it differs from its file both verbatim
+and re-encoded, since a ChangeSet re-encodes every partial it matches
+(`Civi/Afreact/BuilderReport.php`). With only core's extensions the section
+lists nothing.
+
 ## Pages
 
 | Route | Content |
@@ -168,7 +180,7 @@ over any edit made on the settings form meanwhile.
 | `civicrm/afreact/angular` | the same forms, Angular runtime |
 | `civicrm/afreact/compare` | loads every React variant and the Angular page in iframes and compares metrics |
 | `civicrm/afreact/render?name=…&renderer=react\|angular` | any form the user may open, with the renderer named (React with `source="page"`); `&options={…}` (a JSON object) stands for a placement's arguments |
-| `civicrm/admin/afreact` | support report: every form with what React cannot show, by kind |
+| `civicrm/admin/afreact` | support report: every form with what React cannot show, by kind, and what the React SearchKit builder hands to the classic one |
 | `civicrm/admin/setting/afreact` | the forms React renders |
 
 Both demo pages share one markup; only the elements that mount the forms
