@@ -43,7 +43,11 @@ const SEARCH_KIT: Shape = {
 
 const CHART_KIT: Shape = {
   ...any(
-    "barGap barWidth chartOrderDir chartType colorScaleMax colorScaleMin description maxSegments seriesDisplayType showDownloadLinks showLegend",
+    "barGap barWidth chartOrderColIndex chartOrderDir chartType colorScaleMax colorScaleMin description maxSegments seriesDisplayType showDownloadLinks showLegend",
+  ),
+  // What core's CiviSearchDisplay base, which chart_kit's element extends, reads.
+  ...any(
+    "actions button collapsible draggable editableRow headerCount limit pager placeholder sort tally toolbar",
   ),
   columns: any(
     "axis color dataLabelColumnPrefix dataLabelFormatter dataLabelType datePrecision index isOrder key label name reduceType scaleType seriesType sourceDataType useRightAxis",

@@ -189,14 +189,16 @@ test.describe("SearchKit builder for restricted users", () => {
     const viewer = await logIn(browser, baseURL, "viewer");
     await viewer.goto(`${pages.angular.display}#/display/${NAME}/probe_table`);
     const angularRows = viewer.locator("crm-search-display table tbody tr");
-    await expect(angularRows.first()).toBeVisible();
+    await expect(angularRows.first()).toHaveText(`${LABEL} tag`);
     const angular = await angularRows.allInnerTexts();
-    const angularEdit = await viewer.getByText("Edit in SearchKit").count();
+    expect(await viewer.getByText("Edit in SearchKit").count()).toBe(0);
     await viewer.goto(`${pages.react.display}#/display/${NAME}/probe_table`);
     const reactRows = viewer.locator("afreact-builder table tbody tr");
-    await expect(reactRows.first()).toHaveText(angular[0] ?? "");
+    await expect(reactRows.first()).toHaveText(`${LABEL} tag`);
     expect(await reactRows.allInnerTexts()).toEqual(angular);
-    expect(await viewer.getByText("Edit in SearchKit").count()).toBe(angularEdit);
+    // React's display page puts the edit link in its Configure menu, which the viewer lacks.
+    await expect(viewer.getByRole("button", { name: "Configure" })).toHaveCount(0);
+    expect(await viewer.getByText("Edit in SearchKit").count()).toBe(0);
     await viewer.context().close();
   });
 });

@@ -32,8 +32,8 @@ describe("unknownSettings", () => {
         chartType: "bar",
         columns: [{ key: "id", axis: "x", color: "#000" }],
         format: { padding: { top: 1, sideways: 2 } },
-        pager: {},
+        orbit: {},
       }),
-    ).toEqual(["format.padding.sideways", "pager"]);
+    ).toEqual(["format.padding.sideways", "orbit"]);
   });
 });

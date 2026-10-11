@@ -857,3 +857,10 @@ select the same number of columns and the union fails; removing such a join
 shifts that set's remaining columns into the wrong rows. afreact keeps each
 set's columns in their rows: a join adds no columns there, and a removed
 column leaves an empty cell.
+
+**An empty default on a number column becomes 0.** When the data entry
+editor renders a column's default value, `crm-search-input` converts it to
+the field's data type with `Number()`, so an empty default of an Integer or
+Float field that is not an ID or a reference turns into `0`, and text such
+as `abc` into `NaN`, which the save stores as `null`. afreact converts
+numeric text only and keeps an empty or non-numeric default as it is.
