@@ -13,9 +13,26 @@ test.describe("SearchKit listing", () => {
   test.beforeEach(async ({ page }) => {
     await cleanUp(page);
     await api(page, "SavedSearch", "create", {
-      values: { name: NAME, label: "Afreact list probe", api_entity: "Contact", api_params: { version: 4, select: ["id"] } },
+      values: {
+        name: NAME,
+        label: "Afreact list probe",
+        api_entity: "Contact",
+        api_params: { version: 4, select: ["id"] },
+      },
       chain: {
-        display: ["SearchDisplay", "create", { values: { saved_search_id: "$id", name: "probe_table", label: "Probe table", type: "table", settings: { columns: [] } } }],
+        display: [
+          "SearchDisplay",
+          "create",
+          {
+            values: {
+              saved_search_id: "$id",
+              name: "probe_table",
+              label: "Probe table",
+              type: "table",
+              settings: { columns: [] },
+            },
+          },
+        ],
       },
     });
   });
@@ -61,7 +78,9 @@ test.describe("SearchKit listing", () => {
     await page.getByRole("button", { name: "Import" }).click();
     const importDialog = page.getByRole("dialog", { name: "Import" });
     await importDialog.getByRole("textbox", { name: "Import" }).fill(output);
-    await expect(importDialog.getByText("1 new Saved Search will be created.", { exact: false })).toBeVisible();
+    await expect(
+      importDialog.getByText("1 new Saved Search will be created.", { exact: false }),
+    ).toBeVisible();
     await importDialog.getByRole("button", { name: "Import" }).click();
     await expect(importDialog).toBeHidden();
     await expect(page.getByRole("row", { name: /Afreact list probe/ })).toHaveCount(1);
@@ -73,7 +92,10 @@ test.describe("SearchKit listing", () => {
     const dialog = page.getByRole("dialog", { name: "New Search Segment" });
     await dialog.getByRole("textbox", { name: "Name *" }).fill("Afreact probe segment");
     await dialog.getByRole("combobox", { name: "For *" }).fill("Contacts");
-    await page.getByRole("option", { name: /^Contacts/ }).first().click();
+    await page
+      .getByRole("option", { name: /^Contacts/ })
+      .first()
+      .click();
     await dialog.getByRole("textbox", { name: "Label of item 1" }).fill("Any");
     await dialog.getByRole("button", { name: "Default Item" }).click();
     await dialog.getByRole("button", { name: "Remove Any" }).click();
@@ -84,7 +106,10 @@ test.describe("SearchKit listing", () => {
     const row = page.getByRole("row", { name: /Afreact probe segment/ });
     await expect(row.getByRole("cell", { name: "Rest" })).toBeVisible();
     await row.getByRole("button", { name: "Delete" }).click();
-    await page.getByRole("dialog", { name: "Delete Afreact probe segment" }).getByRole("button", { name: "Delete" }).click();
+    await page
+      .getByRole("dialog", { name: "Delete Afreact probe segment" })
+      .getByRole("button", { name: "Delete" })
+      .click();
     await expect(row).toHaveCount(0);
   });
 });
