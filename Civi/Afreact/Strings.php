@@ -14,13 +14,13 @@ use CRM_Afreact_ExtensionUtil as E;
 final class Strings {
 
   /**
-   * The text domain of each builder's strings in core.
-   */
-  /**
    * @var array<string, true>
    */
   private static array $added = [];
 
+  /**
+   * The text domain of each builder's strings in core.
+   */
   public const DOMAINS = [
     'search_kit' => 'org.civicrm.search_kit',
     'afform' => 'org.civicrm.afform_admin',
