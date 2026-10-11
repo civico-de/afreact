@@ -9,6 +9,7 @@ import { useSearchTasks } from "./common";
 import { AutocompleteEditor } from "./AutocompleteEditor";
 import { AutocompletePreview } from "./AutocompletePreview";
 import { BatchEditor } from "./BatchEditor";
+import { ChartKitEditor } from "./ChartKitEditor";
 import { EntityEditor, entityPreviewSettings } from "./EntityEditor";
 import { GridEditor, ListEditor, TreeEditor } from "./ItemsEditor";
 import {
@@ -67,9 +68,22 @@ const EDITORS: Record<string, (ctx: DisplayContext, draft: Draft) => void> = {
     initPlaceholder(draft.settings);
     initToolbar(draft.settings);
   },
+  // Its defaults come from chart_kit's script, so ChartKitEditor adopts them once loaded.
+  "chart-kit": () => undefined,
 };
 
 export const hasDisplayEditor = (type: string) => type in EDITORS;
+
+/** chart_kit stores columns of its own, by axis, which the shared draft leaves to its editor. */
+const ownColumns = (type: string) => type === "chart-kit";
+
+function withoutColumns(display: EditorDisplay): EditorDisplay {
+  if (!display.settings) return display;
+  return {
+    ...display,
+    settings: Object.fromEntries(Object.entries(display.settings).filter(([k]) => k !== "columns")),
+  };
+}
 
 /** A draft of the display, or null when its stored settings are not an object. */
 export function draftOf(display: EditorDisplay): Draft | null {
@@ -101,7 +115,8 @@ interface DisplayEditorProps {
 export function DisplayEditor(props: DisplayEditorProps) {
   const { ctx, search, display, typeInfo, onChange, onAdopt } = props;
   const id = useId();
-  const draft = draftOf(display);
+  const own = ownColumns(display.type);
+  const draft = draftOf(own ? withoutColumns(display) : display);
   const next = initialized(ctx, display);
   useEffect(() => {
     if (next !== display) onAdopt(next);
@@ -113,10 +128,14 @@ export function DisplayEditor(props: DisplayEditorProps) {
         {ts("The settings of this display are not an object, so they cannot be edited.")}
       </p>
     );
+  const restore = (d: Draft): EditorDisplay =>
+    own && display.settings && "columns" in display.settings
+      ? { ...d, settings: { ...d.settings, columns: display.settings.columns } }
+      : d;
   const edit = (change: (draft: Draft) => void) => {
     const copy = structuredClone(draft);
     change(copy);
-    onChange(copy);
+    onChange(restore(copy));
   };
   const superAdmin = window.CRM.checkPerm("all CiviCRM permissions and ACLs");
   const viewable = !!display.id && !!typeInfo && typeInfo.grouping !== "non-viewable";
@@ -124,7 +143,7 @@ export function DisplayEditor(props: DisplayEditorProps) {
   const adopt = (change: (draft: Draft) => void) => {
     const copy = structuredClone(draft);
     change(copy);
-    onAdopt(copy);
+    onAdopt(restore(copy));
   };
   const editing = { ctx, draft, edit };
   const ownHeader = ["autocomplete", "entity", "batch"].includes(display.type);
@@ -238,8 +257,25 @@ export function DisplayEditor(props: DisplayEditorProps) {
       {display.type === "list" && <ListEditor {...editing} {...links} />}
       {display.type === "grid" && <GridEditor {...editing} {...links} />}
       {display.type === "tree" && <TreeEditor {...editing} {...links} />}
+      {display.type === "chart-kit" && (
+        <ChartKitEditor
+          ctx={ctx}
+          display={display}
+          onSettings={(settings) => {
+            onChange({ ...display, settings });
+          }}
+          onAdoptSettings={(settings) => {
+            onAdopt({ ...display, settings });
+          }}
+        />
+      )}
       <hr />
-      <Preview search={search} draft={next === display ? draft : null} icon={typeInfo?.icon} />
+      <Preview
+        search={search}
+        draft={next === display ? draft : null}
+        display={next === display ? restore(draft) : null}
+        icon={typeInfo?.icon}
+      />
     </>
   );
 }
@@ -248,23 +284,28 @@ export function DisplayEditor(props: DisplayEditorProps) {
 function Preview({
   search,
   draft,
+  display,
   icon,
 }: {
   search: SearchInfo & { name?: string };
   draft: Draft | null;
+  display: EditorDisplay | null;
   icon: string | undefined;
 }) {
-  const [shown, setShown] = useState<{ key: string; draft: Draft } | null>(null);
-  const key = draft ? JSON.stringify([search.api_params, draft]) : null;
+  const [shown, setShown] = useState<{ key: string; draft: Draft; display: EditorDisplay } | null>(
+    null,
+  );
+  const key = draft && display ? JSON.stringify([search.api_params, display]) : null;
   const stale = !shown || shown.key !== key;
   return (
     <>
       <button
         type="button"
         className={`btn btn-${!stale ? "success" : shown ? "warning" : "primary"}`}
-        disabled={!stale || !draft || !key}
+        disabled={!stale || !key}
         onClick={() => {
-          if (draft && key) setShown({ key, draft: structuredClone(draft) });
+          if (draft && display && key)
+            setShown({ key, draft: structuredClone(draft), display: structuredClone(display) });
         }}
       >
         <i className={`crm-i ${icon ?? ""}`} role="img" aria-hidden="true" />{" "}
@@ -275,7 +316,12 @@ function Preview({
         <AutocompletePreview key={shown.key} search={search} draft={shown.draft} />
       )}
       {shown && shown.draft.type !== "autocomplete" && (
-        <PreviewDisplay key={shown.key} search={search} draft={shown.draft} />
+        <PreviewDisplay
+          key={shown.key}
+          search={search}
+          draft={shown.draft}
+          display={shown.display}
+        />
       )}
     </>
   );
@@ -284,9 +330,11 @@ function Preview({
 function PreviewDisplay({
   search,
   draft,
+  display,
 }: {
   search: SearchInfo & { name?: string };
   draft: Draft;
+  display: EditorDisplay;
 }) {
   const savedSearch = {
     name: search.name,
@@ -307,10 +355,12 @@ function PreviewDisplay({
     enabled: auto,
   });
   const columns =
-    auto && isDisplaySettings(defaults.data) ? defaults.data.columns : draft.settings.columns;
+    auto && isDisplaySettings(defaults.data) ? defaults.data.columns : display.settings?.columns;
   // crmSearchDisplayEntity previews a DB entity as a table of its first rows.
   const entity = draft.type === "entity";
-  const settings = entity ? entityPreviewSettings(draft.settings) : { ...draft.settings, columns };
+  const settings = entity
+    ? entityPreviewSettings(draft.settings)
+    : { ...display.settings, columns };
   const type = entity ? "table" : draft.type;
   if (auto && defaults.isPending) return <p role="status">{ts("Loading…")}</p>;
   if (defaults.error)
@@ -331,7 +381,7 @@ function PreviewDisplay({
       display={null}
       type={type}
       settings={settings}
-      inline={{ search: savedSearch, display: { ...draft, type, settings } }}
+      inline={{ search: savedSearch, display: { ...display, type, settings } }}
     />
   );
 }

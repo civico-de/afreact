@@ -56,3 +56,10 @@ crm-search-display-tree-branch:has(> ul > li.afreact-tree-slot:only-child) { fle
 .afreact-column-picker { display: inline-block; position: relative; }
 .afreact-column-picker > summary { list-style: none; font-weight: normal; }
 .afreact-column-picker-list { position: absolute; z-index: 10; min-width: 16rem; max-height: 20rem; overflow: auto; padding: 0.5rem; background: var(--crm-dropdown-bg, Canvas); color: var(--crm-text-color, CanvasText); border: 1px solid var(--crm-c-gray-300, GrayText); border-radius: 4px; }
+/* chart_kit's admin layout (crmChartKitAdmin.css), which loads only with its Angular module */
+.crm-chart-kit-admin, .crm-chart-kit-admin-columns, .crm-chart-kit-admin-presentation { display: flex; flex-flow: row wrap; align-items: flex-start; gap: 1rem; }
+@media (max-width: 40rem) { .crm-chart-kit-admin, .crm-chart-kit-admin-columns, .crm-chart-kit-admin-presentation { flex-direction: column; } }
+.crm-chart-kit-admin input { max-width: 40rem; }
+.crm-chart-kit-admin input[type='color'] { min-width: 3rem; }
+.crm-chart-kit-admin-chart-type { display: flex; flex-flow: row wrap; gap: 0.5rem; border: 0; margin: 0; padding: 0; }
+.crm-chart-kit-admin-chart-type label { padding: 2rem; border: 1px solid; font-weight: normal; }

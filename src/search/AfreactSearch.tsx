@@ -67,7 +67,10 @@ export function AfreactSearch(props: AfreactSearchProps) {
   const type = props.type ?? loaded.data?.type;
   if (type !== "batch" && type !== "chart-kit")
     return <ResultDisplay {...props} type={isResultType(props.type) ? props.type : undefined} />;
-  const display = props.display;
+  // chart_kit's element takes an unsaved search and display as JSON in place of their names.
+  const inlineChart = type === "chart-kit" ? props.inline : undefined;
+  const display =
+    props.display ?? (inlineChart?.display ? JSON.stringify(inlineChart.display) : null);
   if (display === null)
     return <Failure error={new Error(ts("A %1 display needs a name.", { 1: type }))} />;
   const settings = props.settings ?? loaded.data?.settings;
@@ -76,7 +79,7 @@ export function AfreactSearch(props: AfreactSearchProps) {
   if (type === "chart-kit")
     return (
       <ChartDisplay
-        search={props.search}
+        search={inlineChart ? JSON.stringify(inlineChart.search) : props.search}
         display={display}
         settings={settings}
         afform={props.afform}

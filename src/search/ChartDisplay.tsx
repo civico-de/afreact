@@ -98,7 +98,7 @@ export function ChartDisplay({
 export const chartKitMissing = () => ts("Charts need the chart_kit extension.");
 
 /** chart_kit's bundle, once per page: d3 and dc load only where a chart is drawn. */
-async function loadChartKit(): Promise<true> {
+export async function loadChartKit(): Promise<true> {
   if (customElements.get(TAG)) return true;
   const assets = window.CRM.vars?.afreact?.chartKit;
   if (!assets) throw new Error(chartKitMissing());

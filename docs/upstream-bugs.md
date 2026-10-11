@@ -727,6 +727,13 @@ and fires `hook_civicrm_alterBundle` again (read from the code, not run). The
 React renderer reads the bundle once per afreact element on a page, so the
 hook fires that often; it adds nothing of its own to the bundle.
 
+**"Add field" stays on a full single-column axis.** chart_kit's column editor
+shows the button when `axis.multiColumn || !$ctrl.getAxisColumnSlots(axisKey).length`,
+but the controller defines no `getAxisColumnSlots`, so Angular evaluates it as
+undefined and the button shows on every axis (`chartKitAdminColumns.html`). A
+second column on a single-column axis is saved but skipped by the editor and
+the chart. The React editor offers "Add field" only on a multi-column axis or one without a column.
+
 ## Accessibility and themes
 
 **Minetta's dark mode greys the primary button below contrast.** RiverLea's

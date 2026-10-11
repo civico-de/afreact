@@ -232,6 +232,63 @@ test.describe("SearchKit table display editor", () => {
     await page.emulateMedia({ colorScheme: "light" });
   });
 
+  test("a chart saves the same settings as core's editor and edits its columns and canvas", async ({
+    page,
+  }) => {
+    const saved: Record<string, Record<string, unknown>> = {};
+    for (const renderer of ["angular", "react"] as const) {
+      await open(page, renderer, `${LABEL} ${renderer}`, "Chart");
+      await page.getByRole("radio", { name: "Pie" }).check();
+      await expect(page.getByRole("group", { name: "Values", exact: true })).toBeVisible();
+      saved[renderer] = (await save(page)).display.settings;
+    }
+    expect(saved.react).toEqual(saved.angular);
+
+    await open(page, "react", LABEL, "Chart");
+    const editor = page.locator("afreact-builder");
+    await editor.getByRole("radio", { name: "Pie" }).check();
+    const values = editor.getByRole("group", { name: "Values", exact: true });
+    await expect(values.getByRole("button", { name: "Add field" })).toHaveCount(0);
+    await expect(values.getByRole("button", { name: "Remove field" })).toHaveCount(0);
+    await values.getByRole("combobox", { name: /^Field/ }).selectOption("id");
+    const category = editor.getByRole("group", { name: "Category", exact: true });
+    await category.getByRole("button", { name: "Add field" }).click();
+    await category
+      .getByRole("combobox", { name: /^Field/ })
+      .nth(1)
+      .selectOption("label");
+    await editor.getByRole("textbox", { name: "Title" }).fill("Probe chart");
+    await editor.getByRole("spinbutton", { name: "Max segments to show" }).fill("4");
+    await editor.getByRole("combobox", { name: "Show legend?" }).selectOption("right");
+    await editor.getByRole("button", { name: "Preview" }).click();
+    await expect(editor.locator("civi-search-display-chart-kit svg")).toBeVisible();
+    expect(await axeFindings(page, "afreact-builder")).toEqual([]);
+    await page.emulateMedia({ colorScheme: "dark" });
+    const react = await axeFindings(page, "afreact-builder");
+    await page.emulateMedia({ colorScheme: "light" });
+    const { id, display } = await save(page);
+    expect(display.settings).toMatchObject({
+      chartType: "pie",
+      maxSegments: 4,
+      showLegend: "right",
+      format: { title: "Probe chart" },
+      columns: [
+        { axis: "w", key: "id" },
+        { axis: "y", key: "id" },
+        { axis: "w", key: "label", label: "Tag Label", scaleType: "categorical" },
+      ],
+    });
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.goto(`/civicrm/admin/search#/edit/${String(id)}`);
+    await page
+      .getByRole("link", { name: /Chart 1/ })
+      .first()
+      .click();
+    await expect(page.getByText("Max segments to show")).toBeAttached();
+    expect(ownFindings(react, await axeFindings(page, "#bootstrap-theme"))).toEqual([]);
+    await page.emulateMedia({ colorScheme: "light" });
+  });
+
   test("warns that removing a display deletes the form embedding it", async ({ page }) => {
     const [search] = await api<{ id: number; name: string }>(page, "SavedSearch", "create", {
       values: { label: LABEL, api_entity: "Tag", api_params: params },
