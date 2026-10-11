@@ -26,12 +26,14 @@ final class BuilderRoutes extends AutoSubscriber {
       return;
     }
     foreach (Builders::moved() as $path => $classic) {
-      if (!is_array($items[$path] ?? NULL)) {
+      $item = $items[$path] ?? NULL;
+      if (!is_array($item)) {
         continue;
       }
-      $items[$classic] = $items[$path];
-      $items[$path]['page_callback'] = AdminPage::CALLBACK;
-      unset($items[$path]['page_arguments']);
+      $items[$classic] = $item;
+      $item['page_callback'] = AdminPage::CALLBACK;
+      unset($item['page_arguments']);
+      $items[$path] = $item;
     }
   }
 

@@ -55,7 +55,7 @@ final class ChartKit {
     usort($snippets, static fn (array $a, array $b): int => $a['weight'] <=> $b['weight']);
     $assets = [
       'scripts' => [],
-      'styles' => [self::url(\Civi::resources()->getUrl('chart_kit', 'ang/crmChartKit.css', TRUE))],
+      'styles' => [self::url(\Civi::resources()->getUrl('chart_kit', 'ang/crmChartKit.css', addCacheCode: TRUE))],
     ];
     foreach ($snippets as $snippet) {
       $type = is_string($snippet['type']) ? $snippet['type'] : '';

@@ -47,7 +47,7 @@ crm-search-display-tree-branch:has(> ul > li.afreact-tree-slot:only-child) { fle
 .afreact-builder #bootstrap-theme .nav-tabs > li > button { border-radius: 0; color: inherit; text-decoration: none; }
 .afreact-builder #bootstrap-theme .nav-tabs > li.active > button { font-weight: bold; }
 .afreact-builder #bootstrap-theme .nav-tabs .badge { background: transparent; color: inherit; border: 1px solid currentColor; }
-.afreact-tags-panel { position: absolute; z-index: 10; min-width: 14rem; max-height: 20rem; overflow: auto; padding: 0.5rem; background: var(--crm-dropdown-bg, Canvas); color: var(--crm-text-color, CanvasText); border: 1px solid var(--crm-c-gray-300, GrayText); border-radius: 4px; }
+.afreact-tags-panel { position: absolute; z-index: 10; min-width: 14rem; max-height: 20rem; overflow: auto; padding: 0.5rem; background: var(--crm-container-bg-color, Canvas); color: var(--crm-text-color, CanvasText); border: 1px solid var(--crm-c-gray-300, GrayText); border-radius: 4px; }
 .afreact-tags-panel .crm-entity-tags-tag-color { display: inline-block; width: 0.75em; height: 0.75em; margin-inline-end: 0.25em; border-radius: 2px; }
 .afreact-dialog.afreact-dialog-wide { width: min(60rem, calc(100vw - 2rem)); }
 .afreact-search-condition, .afreact-date-input, .afreact-location-input, .afreact-between, .afreact-entityref { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; }
@@ -55,7 +55,7 @@ crm-search-display-tree-branch:has(> ul > li.afreact-tree-slot:only-child) { fle
 .afreact-icon-grid .btn { min-height: 2.75rem; }
 .afreact-column-picker { display: inline-block; position: relative; }
 .afreact-column-picker > summary { list-style: none; font-weight: normal; }
-.afreact-column-picker-list { position: absolute; z-index: 10; min-width: 16rem; max-height: 20rem; overflow: auto; padding: 0.5rem; background: var(--crm-dropdown-bg, Canvas); color: var(--crm-text-color, CanvasText); border: 1px solid var(--crm-c-gray-300, GrayText); border-radius: 4px; }
+.afreact-column-picker-list { position: absolute; z-index: 10; min-width: 16rem; max-height: 20rem; overflow: auto; padding: 0.5rem; background: var(--crm-container-bg-color, Canvas); color: var(--crm-text-color, CanvasText); border: 1px solid var(--crm-c-gray-300, GrayText); border-radius: 4px; }
 /* chart_kit's admin layout (crmChartKitAdmin.css), which loads only with its Angular module */
 .crm-chart-kit-admin, .crm-chart-kit-admin-columns, .crm-chart-kit-admin-presentation { display: flex; flex-flow: row wrap; align-items: flex-start; gap: 1rem; }
 @media (max-width: 40rem) { .crm-chart-kit-admin, .crm-chart-kit-admin-columns, .crm-chart-kit-admin-presentation { flex-direction: column; } }

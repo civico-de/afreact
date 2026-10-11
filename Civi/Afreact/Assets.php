@@ -46,8 +46,8 @@ final class Assets {
       ->addPermissions(['administer queues']);
     ChartKit::addVars();
     Strings::add();
-    if (empty(\Civi::$statics[self::class]['dispatched'])) {
-      \Civi::$statics[self::class]['dispatched'] = TRUE;
+    if (empty(\Civi::$statics[self::class . '::dispatched'])) {
+      \Civi::$statics[self::class . '::dispatched'] = TRUE;
       \Civi::dispatcher()->dispatch('civi.afreact.assets', GenericHookEvent::create(['builder' => $builder]));
     }
     // What afCheckout's settingsFactory gives CRM.afCheckout, for CheckoutBlock fields.
