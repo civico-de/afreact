@@ -25,6 +25,8 @@ interface PickerProps {
   className?: string;
   /** One value: choosing replaces it. */
   single?: boolean;
+  /** Names the input with an sr-only label, for pickers without a visible one. */
+  hiddenLabel?: boolean;
 }
 
 const itemOf = (option: PickerOption): AutocompleteItem => ({
@@ -45,6 +47,7 @@ export function Picker({
   onChange,
   className,
   single = false,
+  hiddenLabel = false,
 }: PickerProps) {
   const byId = new Map(options.map((option) => [String(option.id), option]));
   const selected = value.flatMap((v) => {
@@ -52,45 +55,52 @@ export function Picker({
     return option ? [itemOf(option)] : [];
   });
   return (
-    <Suspense
-      fallback={<input id={id} className="form-control" disabled placeholder={placeholder} />}
-    >
-      <Combobox
-        id={id}
-        label={label}
-        placeholder={placeholder}
-        describedBy={undefined}
-        className={className}
-        disabled={false}
-        required={false}
-        multiple={!single}
-        minLength={0}
-        selected={selected}
-        resolving={false}
-        itemText={(item) => item.label}
-        load={(input) => {
-          const term = input.trim().toLowerCase();
-          const items = options
-            .filter(
-              (o) =>
-                !term ||
-                o.label.toLowerCase().includes(term) ||
-                (o.group ?? "").toLowerCase().includes(term),
-            )
-            .map(itemOf);
-          return Promise.resolve({
-            items,
-            more: false,
-            context: { searchField: null, searchFields: [], previousIds: [] },
-          });
-        }}
-        onSelect={(item) => {
-          onChange(single ? [item.id] : [...value, item.id]);
-        }}
-        onRemove={(item) => {
-          onChange(value.filter((v) => String(v) !== String(item.id)));
-        }}
-      />
-    </Suspense>
+    <>
+      {hiddenLabel && (
+        <label htmlFor={id} className="sr-only">
+          {label}
+        </label>
+      )}
+      <Suspense
+        fallback={<input id={id} className="form-control" disabled placeholder={placeholder} />}
+      >
+        <Combobox
+          id={id}
+          label={label}
+          placeholder={placeholder}
+          describedBy={undefined}
+          className={className}
+          disabled={false}
+          required={false}
+          multiple={!single}
+          minLength={0}
+          selected={selected}
+          resolving={false}
+          itemText={(item) => item.label}
+          load={(input) => {
+            const term = input.trim().toLowerCase();
+            const items = options
+              .filter(
+                (o) =>
+                  !term ||
+                  o.label.toLowerCase().includes(term) ||
+                  (o.group ?? "").toLowerCase().includes(term),
+              )
+              .map(itemOf);
+            return Promise.resolve({
+              items,
+              more: false,
+              context: { searchField: null, searchFields: [], previousIds: [] },
+            });
+          }}
+          onSelect={(item) => {
+            onChange(single ? [item.id] : [...value, item.id]);
+          }}
+          onRemove={(item) => {
+            onChange(value.filter((v) => String(v) !== String(item.id)));
+          }}
+        />
+      </Suspense>
+    </>
   );
 }

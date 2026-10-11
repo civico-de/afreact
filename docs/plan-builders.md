@@ -544,7 +544,7 @@ Entity, with its own API parameters (`ui_params`, such as the form whose
 submissions `AfformSubmissionData` searches) and the fields reloaded when
 one that controls them changes; joins, including bridge joins; conditions
 with nested groups and functions; group by; columns with functions and
-flags; subsearches; entity sets; the results preview with its column
+flags; entity sets; the results preview with its column
 actions; smart group and tags; the settings tab (description, expiry date,
 timeout); Query Info (API parameters, request time, and the SQL for
 `view debug output`); the Forms menu with the forms that use the search
@@ -557,7 +557,7 @@ any search on the dev stack.
 
 **3. SearchKit display editors.**
 Table, list, grid, tree, autocomplete, DB entity and data entry: columns and
-their types, links and link groups, styles and conditional styles, sorting,
+their types (subsearch columns among them), links and link groups, styles and conditional styles, sorting,
 pager, toolbar, tasks, in-place editing, tally, placeholders; live preview
 through the runtime displays, and core's own previews for autocomplete and
 DB entity; the DB entity display's refresh job, refresh date and its

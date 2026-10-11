@@ -130,6 +130,15 @@ export const metadata: SearchAdminMetadata = {
         field("Activity", "activity_date_time", "Date", "Timestamp"),
       ],
     },
+    {
+      name: "EntitySet",
+      title: "Entity Set",
+      title_plural: "Entity Sets",
+      primary_key: [],
+      searchable: "none",
+      params: ["select", "where", "having", "groupBy", "orderBy", "sets"],
+      fields: [],
+    },
   ],
   joins: {
     Contact: [
@@ -273,6 +282,7 @@ export const metadata: SearchAdminMetadata = {
       params: [{ max_expr: 1, min_expr: 1, must_be: ["SqlField"], label: "Date" }],
     },
   ],
+  setOperations: { "UNION ALL": "Combine With Duplicates", UNION: "Combine Without Duplicates" },
   optionAttributes: { label: "Label", name: "Machine Name", color: "Color" },
   displayTypes: [
     { id: 1, name: "table", label: "Table", description: "A table of results", icon: "fa-table" },

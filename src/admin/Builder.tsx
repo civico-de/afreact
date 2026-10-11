@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
-import { firstMatch, useHashPath, type Pattern } from "./route";
+import { Fragment, type ReactNode } from "react";
+import { ClassicContext } from "./search/SearchEditor";
+import { firstMatch, LeaveGuardContext, useGuardedHashPath, type Pattern } from "./route";
 
 export type BuilderName = "search_kit" | "afform";
 
@@ -27,7 +28,7 @@ interface BuilderProps {
 
 /** A React builder page: the screen for the hash, and a link to the same screen in core's builder. */
 export function Builder({ route, classic, screens }: BuilderProps) {
-  const hashPath = useHashPath();
+  const { path: hashPath, setGuard } = useGuardedHashPath();
   const path = hashPath !== "" ? hashPath : (DEFAULT_PATH[route] ?? "/");
   const routed = screens[route] ?? {};
   const match = firstMatch(
@@ -44,7 +45,12 @@ export function Builder({ route, classic, screens }: BuilderProps) {
         </a>
       </p>
       {match ? (
-        (routed[match.name]?.render(match.params) ?? null)
+        <ClassicContext value={classic}>
+          <LeaveGuardContext value={setGuard}>
+            {/* A new route is a new screen, so no state carries over between them. */}
+            <Fragment key={path}>{routed[match.name]?.render(match.params) ?? null}</Fragment>
+          </LeaveGuardContext>
+        </ClassicContext>
       ) : (
         <div className="messages status no-popup" role="status">
           <i className="crm-i fa-info-circle" role="img" aria-hidden="true" />{" "}

@@ -34,3 +34,19 @@ describe("historyReducer", () => {
     expect(historyReducer(h, { type: "reset", state: 9 })).toEqual(initialHistory(9));
   });
 });
+
+describe("savedFrom", () => {
+  it("marks the sent state saved and keeps edits made while saving unsaved", () => {
+    const start = initialHistory({ label: "a", id: 0 });
+    const sent = historyReducer(start, { type: "change", update: (s) => ({ ...s, label: "b" }) });
+    const merge = (s: { label: string; id: number }) => ({ ...s, id: 7 });
+    const quiet = historyReducer(sent, { type: "savedFrom", sent: sent.present, merge });
+    expect(quiet.present).toEqual({ label: "b", id: 7 });
+    expect(isDirty(quiet)).toBe(false);
+    const edited = historyReducer(sent, { type: "change", update: (s) => ({ ...s, label: "c" }) });
+    const busy = historyReducer(edited, { type: "savedFrom", sent: sent.present, merge });
+    expect(busy.present).toEqual({ label: "c", id: 7 });
+    expect(busy.saved).toEqual({ label: "b", id: 7 });
+    expect(isDirty(busy)).toBe(true);
+  });
+});

@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { firstMatch, matchRoute, navigate, useHashPath } from "./route";
+import { firstMatch, matchRoute, navigate, useGuardedHashPath } from "./route";
 
 describe("matchRoute", () => {
   it("reads named segments and refuses other lengths or literals", () => {
@@ -20,17 +20,38 @@ describe("matchRoute", () => {
   });
 });
 
-describe("useHashPath", () => {
+const tick = () =>
+  act(async () => {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
+  });
+
+describe("useGuardedHashPath", () => {
   it("follows the hash without its parameters", async () => {
     window.location.hash = "#/list?tab=custom";
-    const { result } = renderHook(() => useHashPath());
-    expect(result.current).toBe("/list");
-    await act(async () => {
-      navigate("/edit/3");
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 0);
-      });
+    const { result } = renderHook(() => useGuardedHashPath());
+    expect(result.current.path).toBe("/list");
+    navigate("/edit/3");
+    await tick();
+    expect(result.current.path).toBe("/edit/3");
+  });
+
+  it("keeps the screen and its address when the guard refuses", async () => {
+    window.location.hash = "#/edit/3";
+    const { result } = renderHook(() => useGuardedHashPath());
+    act(() => {
+      result.current.setGuard(() => false);
     });
-    expect(result.current).toBe("/edit/3");
+    navigate("/list");
+    await tick();
+    expect(result.current.path).toBe("/edit/3");
+    expect(window.location.hash).toBe("#/edit/3");
+    act(() => {
+      result.current.setGuard(() => true);
+    });
+    navigate("/list");
+    await tick();
+    expect(result.current.path).toBe("/list");
   });
 });

@@ -13,6 +13,8 @@ export type HistoryAction<T> =
   | { type: "undo" }
   | { type: "redo" }
   | { type: "saved"; state?: T }
+  /** A save of `sent` finished; `merge` adds what the server assigned, and later edits stay unsaved. */
+  | { type: "savedFrom"; sent: T; merge: (state: T) => T }
   | { type: "reset"; state: T };
 
 /** Snapshots kept for undo; core's FormBuilder keeps 20 states, the present included. */
@@ -48,6 +50,13 @@ export function historyReducer<T>(history: History<T>, action: HistoryAction<T>)
     case "saved": {
       const state = action.state ?? history.present;
       return { ...history, present: state, saved: state };
+    }
+    case "savedFrom": {
+      const saved = action.merge(action.sent);
+      const present = Object.is(history.present, action.sent)
+        ? saved
+        : action.merge(history.present);
+      return { ...history, present, saved };
     }
     default:
       return { past: [], present: action.state, future: [], saved: action.state };

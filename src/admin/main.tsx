@@ -1,12 +1,24 @@
 import { ReactElement } from "../element";
 import { Builder, type BuilderName, type Screens } from "./Builder";
 import { DisplayPage } from "./search/DisplayPage";
+import { SearchEditor } from "./search/SearchEditor";
 import { SearchList } from "./search/SearchList";
 import { CoreVersion } from "./version";
 
 const SCREENS: Record<BuilderName, Screens> = {
   search_kit: {
-    "civicrm/admin/search": { list: { pattern: "/list", render: () => <SearchList /> } },
+    "civicrm/admin/search": {
+      list: { pattern: "/list", render: () => <SearchList /> },
+      create: {
+        pattern: "/create/:entity",
+        render: (p) => <SearchEditor mode="create" entity={p.entity ?? ""} />,
+      },
+      edit: { pattern: "/edit/:id", render: (p) => <SearchEditor mode="edit" id={Number(p.id)} /> },
+      clone: {
+        pattern: "/clone/:id",
+        render: (p) => <SearchEditor mode="clone" id={Number(p.id)} />,
+      },
+    },
     "civicrm/search": {
       display: {
         pattern: "/display/:search/:display",

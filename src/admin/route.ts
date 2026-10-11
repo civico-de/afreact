@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { splitHash } from "../url/hash";
 
 /** A route pattern such as `/edit/:id`; its `:name` parts match one path segment each. */
@@ -32,19 +32,63 @@ export function firstMatch(
   return null;
 }
 
-const subscribe = (listener: () => void) => {
-  window.addEventListener("hashchange", listener);
-  return () => {
-    window.removeEventListener("hashchange", listener);
-  };
-};
-
-/** The route path of the page's hash (`#/edit/5?x=1` gives `/edit/5`). */
-export function useHashPath(): string {
-  return useSyncExternalStore(subscribe, () => splitHash(window.location.hash).path);
-}
-
 /** Opens `path` as a new history entry, as core's builders' links do. */
 export function navigate(path: Pattern): void {
   window.location.hash = path;
+}
+
+/** Asked before the screen changes; false keeps it. */
+export type LeaveGuard = () => boolean;
+
+export const LeaveGuardContext = createContext<(guard: LeaveGuard | null) => void>(() => undefined);
+
+/**
+ * The hash path, held while the guard refuses a change: the refused URL is replaced by the one
+ * left, so the screen and its unsaved state stay.
+ */
+export function useGuardedHashPath(): {
+  path: string;
+  setGuard: (guard: LeaveGuard | null) => void;
+} {
+  const guard = useRef<LeaveGuard | null>(null);
+  const [path, setPath] = useState(() => splitHash(window.location.hash).path);
+  useEffect(() => {
+    const onChange = (event: HashChangeEvent) => {
+      const next = splitHash(window.location.hash).path;
+      if (next === path) return;
+      if (guard.current && !guard.current()) {
+        window.history.replaceState(window.history.state, "", event.oldURL);
+        return;
+      }
+      setPath(next);
+    };
+    window.addEventListener("hashchange", onChange);
+    return () => {
+      window.removeEventListener("hashchange", onChange);
+    };
+  }, [path]);
+  const [setGuard] = useState(() => (next: LeaveGuard | null) => {
+    guard.current = next;
+  });
+  return { path, setGuard };
+}
+
+/** Unsaved changes: leaving the page or the screen asks first. */
+export function useLeaveGuard(dirty: boolean): void {
+  const setGuard = useContext(LeaveGuardContext);
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (dirty) event.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    setGuard(
+      dirty
+        ? () => window.confirm(ts("You have unsaved changes. Leave this screen anyway?"))
+        : null,
+    );
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+      setGuard(null);
+    };
+  }, [dirty, setGuard]);
 }

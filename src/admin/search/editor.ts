@@ -6,7 +6,8 @@ export interface SmartGroup {
   title: string;
   description: string;
   visibility: string;
-  group_type: string[];
+  /** APIv4 may answer with numbers or numeric strings. */
+  group_type: (string | number)[];
   [key: string]: unknown;
 }
 
@@ -99,13 +100,14 @@ export function normalize(raw: Record<string, unknown>): EditorSearch {
     throw new Error(ts("The saved search has no entity or no select clause."));
   const formValues = isRecord(record.form_values) ? record.form_values : {};
   const join = isRecord(formValues.join) ? formValues.join : {};
-  const displays = (Array.isArray(record.displays) ? record.displays : [])
-    .filter(isDisplay)
-    .map((display) => {
-      const settings = display.settings;
-      if (settings && Array.isArray(settings.pager)) settings.pager = {};
-      return display;
-    });
+  // Dropping a malformed display would delete it on save, so it stops the load instead.
+  const displays = (Array.isArray(record.displays) ? record.displays : []).map((display, index) => {
+    if (!isDisplay(display))
+      throw new Error(ts("Display %1 of the saved search is malformed.", { 1: index + 1 }));
+    const settings = display.settings;
+    if (settings && Array.isArray(settings.pager)) settings.pager = {};
+    return display;
+  });
   const tags = Array.isArray(record.tag_id) ? record.tag_id.map(Number) : [];
   return {
     ...record,
@@ -118,7 +120,10 @@ export function normalize(raw: Record<string, unknown>): EditorSearch {
       join: Object.fromEntries(Object.entries(join).map(([k, v]) => [k, String(v)])),
     },
     tag_id: tags,
-    groups: Array.isArray(record.groups) ? record.groups.filter(isGroup) : [],
+    groups: (Array.isArray(record.groups) ? record.groups : []).map((group) => {
+      if (!isGroup(group)) throw new Error(ts("The smart group of the saved search is malformed."));
+      return group;
+    }),
     displays,
   };
 }

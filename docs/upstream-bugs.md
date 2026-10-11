@@ -807,3 +807,11 @@ prunes both when a column goes.
 `disabledIf` callback without a `return`, so fields already in the select
 are never disabled; picking one does nothing because `addParam()` skips
 duplicates. afreact leaves selected columns out of the list.
+
+**A join inside a combined search breaks the union.** In a search that
+combines several entities, adding a join to one set appends the joined
+entity's search fields to that set's columns only, so the sets no longer
+select the same number of columns and the union fails; removing such a join
+shifts that set's remaining columns into the wrong rows. afreact keeps each
+set's columns in their rows: a join adds no columns there, and a removed
+column leaves an empty cell.
