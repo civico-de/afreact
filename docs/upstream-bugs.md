@@ -776,6 +776,11 @@ normal-size text needs 4.5:1. Measured with axe on CiviCRM 6.18.
 
 ## SearchKit builder
 
+**Changing a subsearch filter removes it.** The subsearch column editor
+should remove a filter when its field is cleared, but `onChangeFilter()` tests
+`filter.field` while filters store `subsearch_field`, so every change of the
+field deletes the row. afreact removes a filter only when its field is cleared.
+
 **Import reports calls as records.** The import dialog's success message
 counts the API calls of the bundle, not the records they save, so a bundle
 with one search and three displays reports two items. afreact counts the

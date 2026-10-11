@@ -70,7 +70,11 @@ final class AdminPage {
    */
   private static function settings(string $builder): void {
     $modules = match ($builder) {
-      'search_kit' => ['crmSearchAdmin' => 'searchAdmin', 'crmSearchTasks' => 'searchTasks'],
+      'search_kit' => [
+        'crmSearchAdmin' => 'searchAdmin',
+        'crmSearchTasks' => 'searchTasks',
+        'crmSearchDisplay' => 'searchDisplay',
+      ],
       'afform' => ['afAdmin' => 'afAdmin', 'afGuiEditor' => 'afGuiEditor'],
       default => [],
     };

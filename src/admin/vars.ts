@@ -5,6 +5,8 @@ export interface AdminVars {
   searchAdmin?: SearchAdminSettings;
   /** `CRM.crmSearchTasks` (`Civi\Search\Actions::getActionSettings()`). */
   searchTasks?: { dateRanges?: { id: string; text: string }[]; [key: string]: unknown };
+  /** `CRM.crmSearchDisplay` (`Civi\Search\Display::getModuleSettings()`). */
+  searchDisplay?: { viewableDisplayTypes?: Record<string, string>; [key: string]: unknown };
   afAdmin?: Record<string, unknown>;
   afGuiEditor?: Record<string, unknown>;
 }

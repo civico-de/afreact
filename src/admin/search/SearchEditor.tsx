@@ -30,6 +30,7 @@ import {
   type EditorDisplay,
   type EditorSearch,
 } from "./editor";
+import { DisplayEditor, hasDisplayEditor } from "./display/DisplayEditor";
 import { ConditionsTab } from "./editor/ConditionsTab";
 import { EntitySetQueryTab, EntitySetsTab } from "./editor/EntitySetTabs";
 import { FieldsTab } from "./editor/FieldsTab";
@@ -508,9 +509,9 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
   const status = saving ? "saving" : dirty ? "unsaved" : "saved";
   const displayPath = window.CRM.url("civicrm/search");
   const afformPath = window.CRM.url("civicrm/admin/afform");
-  const typeOf = (type: string) => meta.displayTypes.find((t) => t.name === type);
+  const typeOf = (type: string) => meta.displayTypes.find((t) => t.id === type);
   const addable = meta.displayTypes.filter(
-    (t) => t.name !== "entity" || window.CRM.checkPerm("all CiviCRM permissions and ACLs"),
+    (t) => t.id !== "entity" || window.CRM.checkPerm("all CiviCRM permissions and ACLs"),
   );
   const group = search.groups[0];
   const panelId = `${id}-panel`;
@@ -830,7 +831,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                         ]
                       : []),
                     ...addable.map((t) => ({
-                      task: `display:${t.name}`,
+                      task: `display:${t.id}`,
                       icon: t.icon,
                       text: t.label,
                       title: t.description,
@@ -876,22 +877,54 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                     }}
                   />
                 )}
-                {displayIndex !== null && search.displays[displayIndex] && (
-                  <DisplayTab
-                    display={search.displays[displayIndex]}
-                    typeLabel={typeOf(search.displays[displayIndex].type)?.label}
-                    classic={classic}
-                    searchId={search.id}
-                    onLabel={(label) => {
-                      change((state) => ({
-                        ...state,
-                        displays: state.displays.map((d, i) =>
-                          i === displayIndex ? { ...d, label } : d,
-                        ),
-                      }));
-                    }}
-                  />
-                )}
+                {displayIndex !== null &&
+                  search.displays[displayIndex] &&
+                  hasDisplayEditor(search.displays[displayIndex].type) && (
+                    <DisplayEditor
+                      ctx={{ meta, search, defaultPagerSize: settings.defaultPagerSize }}
+                      search={search}
+                      display={search.displays[displayIndex]}
+                      typeInfo={typeOf(search.displays[displayIndex].type)}
+                      searchDisplayPath={displayPath}
+                      onChange={(display) => {
+                        change((state) => ({
+                          ...state,
+                          displays: state.displays.map((d, i) =>
+                            i === displayIndex ? display : d,
+                          ),
+                        }));
+                      }}
+                      onAdopt={(display) => {
+                        dispatch({
+                          type: "adopt",
+                          update: (state) => ({
+                            ...state,
+                            displays: state.displays.map((d, i) =>
+                              i === displayIndex ? display : d,
+                            ),
+                          }),
+                        });
+                      }}
+                    />
+                  )}
+                {displayIndex !== null &&
+                  search.displays[displayIndex] &&
+                  !hasDisplayEditor(search.displays[displayIndex].type) && (
+                    <DisplayTab
+                      display={search.displays[displayIndex]}
+                      typeLabel={typeOf(search.displays[displayIndex].type)?.label}
+                      classic={classic}
+                      searchId={search.id}
+                      onLabel={(label) => {
+                        change((state) => ({
+                          ...state,
+                          displays: state.displays.map((d, i) =>
+                            i === displayIndex ? { ...d, label } : d,
+                          ),
+                        }));
+                      }}
+                    />
+                  )}
               </div>
             </div>
           </div>

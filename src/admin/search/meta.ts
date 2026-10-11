@@ -123,7 +123,8 @@ export interface SearchAdminMetadata {
   functions: SqlFunction[];
   optionAttributes: Record<string, string>;
   displayTypes: {
-    id: number;
+    /** The option value, which a display stores as its type. */
+    id: string;
     name: string;
     label: string;
     description: string;
@@ -132,6 +133,8 @@ export interface SearchAdminMetadata {
   }[];
   styles: { key: string; value: string }[];
   defaultDisplay: Record<string, unknown>;
+  dateFormats: Record<string, string>;
+  numberAttributes: Record<string, string>;
   [key: string]: unknown;
 }
 

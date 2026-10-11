@@ -271,7 +271,7 @@ export function addDisplay(
   search: EditorSearch,
   type: string,
 ): EditorDisplay[] {
-  const typeLabel = meta.displayTypes.find((t) => t.name === type)?.label;
+  const typeLabel = meta.displayTypes.find((t) => t.id === type)?.label;
   if (!typeLabel) throw new Error(ts("Unknown display type %1.", { 1: type }));
   const count = search.displays.filter((d) => d.type === type).length;
   const searchLabel =

@@ -285,8 +285,16 @@ export const metadata: SearchAdminMetadata = {
   setOperations: { "UNION ALL": "Combine With Duplicates", UNION: "Combine Without Duplicates" },
   optionAttributes: { label: "Label", name: "Machine Name", color: "Color" },
   displayTypes: [
-    { id: 1, name: "table", label: "Table", description: "A table of results", icon: "fa-table" },
+    {
+      id: "table",
+      name: "crm-search-display-table",
+      label: "Table",
+      description: "A table of results",
+      icon: "fa-table",
+    },
   ],
   styles: [],
   defaultDisplay: { settings: { classes: ["table", "table-striped"], limit: 50, pager: {} } },
+  dateFormats: { "%B %E%f, %Y": "Full date", "%m/%d/%Y": "Numeric date" },
+  numberAttributes: { 6: "Max Decimal Places", 7: "Min Decimal Places" },
 };

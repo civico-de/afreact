@@ -68,7 +68,7 @@ test.describe("SearchKit search editor", () => {
     }
     await editor.getByRole("button", { name: "Add..." }).click();
     await editor.getByRole("menuitem", { name: "Table" }).click();
-    await expect(editor.getByRole("textbox", { name: "Display Label" })).toHaveValue(
+    await expect(editor.getByRole("textbox", { name: "Name", exact: true })).toHaveValue(
       `${LABEL} Table 1`,
     );
     expect(await axeFindings(page, "afreact-builder"), "display").toEqual([]);
