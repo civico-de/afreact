@@ -297,4 +297,8 @@ export const metadata: SearchAdminMetadata = {
   defaultDisplay: { settings: { classes: ["table", "table-striped"], limit: 50, pager: {} } },
   dateFormats: { "%B %E%f, %Y": "Full date", "%m/%d/%Y": "Numeric date" },
   numberAttributes: { 6: "Max Decimal Places", 7: "Min Decimal Places" },
+  jobFrequency: [
+    { id: "Hourly", label: "Hourly" },
+    { id: "Daily", label: "Daily" },
+  ],
 };

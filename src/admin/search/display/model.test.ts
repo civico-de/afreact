@@ -5,7 +5,13 @@ import {
   addCssRule,
   changeLimit,
   getColumnIndex,
+  createSqlName,
+  initAutocomplete,
   initColumns,
+  initEntity,
+  isFkColumn,
+  pascalCase,
+  setEntityPermission,
   initGrid,
   initList,
   initTree,
@@ -34,6 +40,7 @@ const ctx: DisplayContext = {
   meta,
   search: { api_entity: "Contact", api_params: { version: 4, select: ["id", "display_name"] } },
   defaultPagerSize: 50,
+  entityIndex: true,
 };
 const table = (settings: Draft["settings"] = {}): Draft => ({
   label: "T",
@@ -227,5 +234,86 @@ describe("list, grid and tree init", () => {
       ["id", "ASC"],
       ["display_name", "DESC"],
     ]);
+  });
+});
+
+describe("autocomplete and DB entity init", () => {
+  it("shows the entity's search fields and searches by id and them", () => {
+    const draft = table();
+    draft.type = "autocomplete";
+    initAutocomplete(ctx, draft);
+    expect(draft.settings.columns?.map((c) => c.key)).toEqual(["display_name"]);
+    expect(draft.settings.searchFields).toEqual(["id", "display_name"]);
+  });
+
+  it("keeps stored search fields, without duplicates", () => {
+    const draft = table({ searchFields: ["display_name", "display_name"], columns: [] });
+    initAutocomplete(ctx, draft);
+    expect(draft.settings.searchFields).toEqual(["display_name"]);
+  });
+
+  it("always bypasses ACLs, names itself from the label and indexes key columns", () => {
+    const draft: Draft = { label: "my members", type: "entity", settings: {} };
+    initEntity(ctx, draft);
+    expect(draft).toMatchObject({
+      acl_bypass: true,
+      name: "MyMembers",
+      _job: { parameters: "version=4", is_active: false, run_frequency: "Hourly" },
+    });
+    expect(draft.settings.columns).toEqual([
+      expect.objectContaining({ key: "id", index: true, label: "Contact ID" }),
+      expect.objectContaining({ key: "display_name", index: true }),
+    ]);
+  });
+
+  it("leaves the index out on a core without it", () => {
+    const draft: Draft = { label: "L", type: "entity", settings: {} };
+    initEntity({ ...ctx, entityIndex: false }, draft);
+    expect(draft.settings.columns?.map((col) => "index" in col)).toEqual([false, false]);
+  });
+
+  it("forces the index on key columns and drops pseudo fields", () => {
+    const draft: Draft = {
+      id: 3,
+      name: "Kept",
+      label: "L",
+      type: "entity",
+      settings: {
+        columns: [
+          { type: "field", key: "id", index: false },
+          { type: "field", key: "display_name", index: false },
+          { type: "field", key: "result_row_num" },
+        ],
+      },
+    };
+    initEntity(ctx, draft);
+    expect(draft.name).toBe("Kept");
+    expect(draft._job).toBeUndefined();
+    expect(draft.settings.columns?.map((c) => [c.key, c.index])).toEqual([
+      ["id", true],
+      ["display_name", false],
+    ]);
+    expect(isFkColumn(ctx, { type: "field", key: "display_name" })).toBe(false);
+  });
+
+  it("previews SQL names as core does, hashing long keys", () => {
+    expect(createSqlName("Contact_Email.email:label")).toBe("Contact_Email_email");
+    const long = "a".repeat(60);
+    expect(createSqlName(long)).toMatch(/^a{42}[0-9a-f]{16}$/);
+  });
+
+  it("pascal-cases names as core's master does, folding accents", () => {
+    expect(pascalCase("my members")).toBe("MyMembers");
+    expect(pascalCase("contribution_recur")).toBe("ContributionRecur");
+    expect(pascalCase("LKvt Übersicht")).toBe("LkVtUbersicht");
+    expect(pascalCase("Straße 2")).toBe("Strasse2");
+  });
+
+  it("needs an operator only for several permissions", () => {
+    const settings: Draft["settings"] = {};
+    setEntityPermission(settings, ["a", "b"]);
+    expect(settings.entity_permission_operator).toBe("AND");
+    setEntityPermission(settings, ["a"]);
+    expect(settings).not.toHaveProperty("entity_permission_operator");
   });
 });

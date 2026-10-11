@@ -24,6 +24,10 @@ interface ColumnsProps extends Editing {
   isAllowed?: (expr: string) => boolean;
   /** Without it, only field columns (addColMenu without getColTypes). */
   withTypes?: boolean;
+  /** Whether each column shows its type's own settings (colType templates). */
+  typeFields?: boolean;
+  /** The text of a column's summary, by default its label. */
+  title?: (col: AdminColumn, index: number) => string;
   /** What the display type configures per column before its type's own settings. */
   head: (
     col: AdminColumn,
@@ -40,7 +44,8 @@ interface ColumnsProps extends Editing {
 
 /** addColMenu and the column list every display type shares, in order with move buttons. */
 export function Columns(props: ColumnsProps) {
-  const { ctx, draft, edit, links, defaults, isAllowed, withTypes = true, head, tail } = props;
+  const { ctx, draft, edit, links, defaults, isAllowed, head, tail } = props;
+  const { withTypes = true, typeFields = true, title } = props;
   const columns = columnsOf(draft.settings);
   const dateFormats = ctx.meta.dateFormats;
   const editAt = (index: number) => (change: (col: AdminColumn, draft: Draft) => void) => {
@@ -114,7 +119,7 @@ export function Columns(props: ColumnsProps) {
       <fieldset className="crm-search-admin-edit-columns">
         <legend className="sr-only">{ts("Columns")}</legend>
         {columns.map((col, index) => {
-          const label = colLabel(ctx, col);
+          const label = title?.(col, index) ?? colLabel(ctx, col);
           const editCol = editAt(index);
           return (
             <fieldset
@@ -163,17 +168,19 @@ export function Columns(props: ColumnsProps) {
                 <summary>{label}</summary>
                 <div className="crm-accordion-body">
                   {head(col, index, editCol)}
-                  <ColumnTypeFields
-                    ctx={ctx}
-                    col={col}
-                    links={links}
-                    dateFormats={dateFormats}
-                    editCol={(change) => {
-                      editCol((c) => {
-                        change(c);
-                      });
-                    }}
-                  />
+                  {typeFields && (
+                    <ColumnTypeFields
+                      ctx={ctx}
+                      col={col}
+                      links={links}
+                      dateFormats={dateFormats}
+                      editCol={(change) => {
+                        editCol((c) => {
+                          change(c);
+                        });
+                      }}
+                    />
+                  )}
                   {tail?.(col, index, editCol)}
                 </div>
               </details>

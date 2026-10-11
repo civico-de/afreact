@@ -135,6 +135,7 @@ export interface SearchAdminMetadata {
   defaultDisplay: Record<string, unknown>;
   dateFormats: Record<string, string>;
   numberAttributes: Record<string, string>;
+  jobFrequency: { id: string; label: string }[];
   [key: string]: unknown;
 }
 

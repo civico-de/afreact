@@ -5,6 +5,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -14,6 +15,7 @@ import type { RunDebug } from "../../search/types";
 import { splitHash } from "../../url/hash";
 import { isDirty, useHistory } from "../history";
 import { LeaveGuardContext, navigate, useLeaveGuard } from "../route";
+import { useCoreHas } from "../version";
 import {
   addDisplay,
   cloneDisplay,
@@ -42,8 +44,10 @@ import { SettingsTab } from "./editor/SettingsTab";
 import { withEntitySetFields } from "./entitySets";
 import { ExportDialog } from "./ExportDialog";
 import { getEntity, type ApiParams } from "./expr";
+import { displayChanges, findCriticalChanges, postSaveDisplay, preSaveDisplay } from "./saveHooks";
 import {
   searchAdminSettings,
+  useRefreshSearchMetadata,
   useSearchMetadata,
   type SchemaField,
   type SearchAdminMetadata,
@@ -138,7 +142,11 @@ export function structuralRisk(saved: EditorSearch, present: EditorSearch): Edit
       (saved.api_params.join ?? []).map(joinAlias),
       (present.api_params.join ?? []).map(joinAlias),
     );
-  return risky ? present.displays.filter((display) => display.id && !display.trashed) : [];
+  return risky
+    ? present.displays.filter(
+        (display) => display.id && !display.trashed && !hasDisplayEditor(display.type),
+      )
+    : [];
 }
 
 /** The entity's fields for the dynamic parameters' values, as core reloads them. */
@@ -172,25 +180,35 @@ function useDynamicFields(meta: SearchAdminMetadata, entityName: string, params:
 }
 
 /** Sends save()'s calls in core's order and reads back what the server assigned. */
-async function persist(search: EditorSearch, groupExists: boolean) {
+async function persist(search: EditorSearch, groupExists: boolean, target: EventTarget) {
   let saved: Record<string, unknown> | undefined;
-  for (const [key, call] of Object.entries(savePayload(search, groupExists))) {
-    const [entity, action, params] = call;
+  const results: Record<string, unknown> = {};
+  const calls = savePayload(search, groupExists, (displays, apiCalls) => {
+    preSaveDisplay(target, displays, apiCalls);
+  });
+  for (const [key, call] of Object.entries(calls)) {
+    const [entity, action, params, index] = call;
     if (typeof entity !== "string" || typeof action !== "string" || !isRecord(params))
       throw new Error(ts("Malformed save call %1.", { 1: key }));
     const rows = await api4<Record<string, unknown>>(entity, action, params);
+    results[key] = index === 0 ? rows[0] : rows;
     if (key === "saved") saved = rows[0];
   }
   if (!saved || typeof saved.id !== "number") throw new Error(ts("The search was not saved."));
   const groups = Array.isArray(saved.groups) ? saved.groups : [];
+  const displays = (Array.isArray(saved.displays) ? saved.displays : []).filter(
+    (d): d is EditorDisplay =>
+      isRecord(d) && typeof d.type === "string" && typeof d.label === "string",
+  );
+  const after = Array.isArray(saved.displays)
+    ? postSaveDisplay(target, displays, results)
+    : { reloadMetadata: false, refreshes: [] };
   return {
     id: saved.id,
     name: typeof saved.name === "string" ? saved.name : undefined,
     groupId: isRecord(groups[0]) && typeof groups[0].id === "number" ? groups[0].id : undefined,
-    displays: (Array.isArray(saved.displays) ? saved.displays : []).filter(
-      (d): d is EditorDisplay =>
-        isRecord(d) && typeof d.type === "string" && typeof d.label === "string",
-    ),
+    displays,
+    ...after,
   };
 }
 
@@ -253,6 +271,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
   const classic = useContext(ClassicContext);
   const setGuard = useContext(LeaveGuardContext);
   const settings = searchAdminSettings();
+  const entityIndex = useCoreHas({ "6.20": "6.20.alpha1" });
   const afformEnabled = "org.civicrm.afform" in settings.modules;
   const afformAdmin =
     window.CRM.checkPerm("manage own afform") && "org.civicrm.afform_admin" in settings.modules;
@@ -261,6 +280,8 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
   const [groupExists, setGroupExists] = useState(initial.groups.length > 0);
   const [savedGroup, setSavedGroup] = useState(groupExists);
   const [saving, setSaving] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const refreshMetadata = useRefreshSearchMetadata();
   const [errors, setErrors] = useState<string[]>([]);
   const [debug, setDebug] = useState<RunDebug | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -488,11 +509,28 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
       )
     )
       return;
+    const target = root.current ?? document;
+    const critical = findCriticalChanges(
+      target,
+      displayChanges(history.saved.displays, search.displays),
+    );
+    if (
+      critical.length &&
+      !window.confirm(
+        `${ts("The following change(s) may affect other customizations:")}\n\n${critical.join("\n")}`,
+      )
+    )
+      return;
     setSaving(true);
     const sent = search;
     const sentGroup = groupExists;
-    persist(sent, sentGroup).then(
+    persist(sent, sentGroup, target).then(
       (result) => {
+        const report = (failure: unknown) => {
+          window.CRM.alert(errorMessage(failure), ts("Error"), "error");
+        };
+        if (result.reloadMetadata) refreshMetadata().catch(report);
+        for (const refresh of result.refreshes) refresh.catch(report);
         const merge = (state: EditorSearch) => mergeSaved(state, sent, sentGroup, result);
         dispatch({ type: "savedFrom", sent, merge });
         setSavedGroup(sentGroup);
@@ -517,7 +555,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
   const panelId = `${id}-panel`;
 
   return (
-    <div id="bootstrap-theme" className="crm-search">
+    <div id="bootstrap-theme" className="crm-search" ref={root}>
       <h2 className="sr-only">
         {(search.is_template ? ts("Search Template") : ts("Saved Search")) + ": " + search.label}
       </h2>
@@ -881,7 +919,12 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                   search.displays[displayIndex] &&
                   hasDisplayEditor(search.displays[displayIndex].type) && (
                     <DisplayEditor
-                      ctx={{ meta, search, defaultPagerSize: settings.defaultPagerSize }}
+                      ctx={{
+                        meta,
+                        search,
+                        defaultPagerSize: settings.defaultPagerSize,
+                        entityIndex,
+                      }}
                       search={search}
                       display={search.displays[displayIndex]}
                       typeInfo={typeOf(search.displays[displayIndex].type)}

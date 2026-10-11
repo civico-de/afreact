@@ -58,6 +58,8 @@ declare global {
         colorContrast: (color: string) => string;
         /** A date in the site's input format, with the time when `time` is true (js/Common.js). */
         formatDate: (input: unknown, format: string | null, time: boolean) => string;
+        /** Runs of other characters become `char`, cut to `len` (js/Common.js). */
+        munge: (name: string, char?: string, len?: number) => string;
       };
       /** Page variables from Civi::resources()->addVars(), by extension. */
       vars?: { afreact?: AfreactVars; afreactAdmin?: AdminVars };

@@ -4,6 +4,8 @@ import {
   getDefaultAggregateFn,
   getDefaultLabel,
   getEntity,
+  getField,
+  getFieldAndJoin,
   getJoin,
   mustAggregate,
   parseExpr,
@@ -12,6 +14,7 @@ import {
   type SearchInfo,
 } from "../expr";
 import type { EntityLink, SearchAdminMetadata } from "../meta";
+import { md5 } from "./md5";
 
 /**
  * crmSearchAdminDisplay and the display type editors as functions over a copy of the display:
@@ -67,6 +70,9 @@ export interface AdminColumn {
   tally?: { fn?: string | null; label?: string; rewrite?: string; target?: boolean };
   break?: boolean;
   forceLabel?: boolean;
+  name?: string;
+  index?: boolean;
+  spec?: { entity_reference?: { entity?: string } };
   [key: string]: unknown;
 }
 
@@ -100,13 +106,30 @@ export interface AdminSettings {
   section_group_by?: string;
   header_tag?: string;
   parent_field?: unknown;
+  searchFields?: string[];
+  data_mode?: string;
+  entity_permission?: string[];
+  entity_permission_operator?: string;
+  [key: string]: unknown;
+}
+
+/** The scheduled job that refreshes a DB entity display's table. */
+export interface EntityJob {
+  id?: number;
+  parameters?: string;
+  is_active?: boolean;
+  run_frequency?: string;
   [key: string]: unknown;
 }
 
 export interface Draft {
+  id?: number;
+  name?: string;
   label: string;
   type: string;
   acl_bypass?: boolean;
+  is_autocomplete_default?: boolean;
+  _job?: EntityJob;
   settings: AdminSettings;
   [key: string]: unknown;
 }
@@ -132,6 +155,8 @@ export interface DisplayContext {
   meta: SearchAdminMetadata;
   search: SearchInfo;
   defaultPagerSize: number;
+  /** DB entity columns carry a search index (core 3ede57c349). */
+  entityIndex: boolean;
 }
 
 export const colTypes = (): Record<
@@ -826,3 +851,99 @@ export const listSymbols = (): Record<string, { char: string; label: string }[]>
     { char: "upper-roman", label: ts("Roman (I. II. III.)") },
   ],
 });
+
+// searchAdminDisplayAutocomplete
+
+export function initAutocomplete(ctx: DisplayContext, draft: Draft): void {
+  const entity = getEntity(ctx.meta, ctx.search.api_entity);
+  if (isNew(draft.settings)) {
+    const shown = [...(entity?.search_fields ?? []), "description"];
+    draft.settings = {
+      sort: defaultSort(ctx),
+      columns: shown
+        .filter((field) => ctx.search.api_params.select.includes(field))
+        .map((field) => toColumn(ctx, field, {})),
+    };
+  }
+  initColumns(ctx, draft, {});
+  const fields = [...(draft.settings.searchFields ?? [])];
+  if (!fields.length) {
+    if (getField(ctx.meta, "id", ctx.search)) fields.push("id");
+    fields.push(...(entity?.search_fields ?? []));
+  }
+  draft.settings.searchFields = [...new Set(fields)];
+}
+
+// searchAdminDisplayEntity
+
+/** Core's preview of the SQL column name the server derives from a column key. */
+export function createSqlName(key: string): string {
+  const name = key.split(":")[0] ?? "";
+  return name.length <= 58
+    ? window.CRM.utils.munge(name, "_")
+    : window.CRM.utils.munge(name, "_", 42) + md5(name).substring(0, 16);
+}
+
+// Latin-1 letters that fold to more than one ASCII letter, as in core's js/Common.js.
+const DEBURRED: Record<string, string> = {
+  "\u00c6": "Ae",
+  "\u00e6": "ae",
+  "\u00d0": "D",
+  "\u00f0": "d",
+  "\u00d8": "O",
+  "\u00f8": "o",
+  "\u00de": "Th",
+  "\u00fe": "th",
+  "\u00df": "ss",
+};
+
+/** CRM.utils.pascalCase: 'my members' or 'my_members' => 'MyMembers'. */
+export function pascalCase(text: string): string {
+  const words =
+    text
+      .replace(
+        /[\u00c0-\u00ff]/g,
+        (chr) => DEBURRED[chr] ?? chr.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+      )
+      .match(/[A-Z]{2,}(?=[A-Z][a-z]+)|[A-Z]?[a-z]+|[A-Z]+|[0-9]+/g) ?? [];
+  return words.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join("");
+}
+
+export const defaultJob = (): EntityJob => ({
+  parameters: "version=4",
+  is_active: false,
+  run_frequency: "Hourly",
+});
+
+/** Pseudo fields cannot be stored as columns. */
+export const isEntityColumnAllowed = (ctx: DisplayContext, key: string | undefined) =>
+  !!key && !ctx.meta.pseudoFields.some((field) => field.name === key);
+
+/** Foreign key and primary key columns are always indexed. */
+export function isFkColumn(ctx: DisplayContext, col: AdminColumn): boolean {
+  if (col.spec?.entity_reference?.entity) return true;
+  const { field, baseEntity } = getFieldAndJoin(ctx.meta, col.key ?? "", ctx.search);
+  if (!field) return false;
+  if (field.fk_entity) return true;
+  return !!getEntity(ctx.meta, baseEntity)?.primary_key.includes(field.name);
+}
+
+export function initEntity(ctx: DisplayContext, draft: Draft): void {
+  if (isNew(draft.settings)) draft.settings = { sort: defaultSort(ctx) };
+  draft.acl_bypass = true;
+  if (!draft.id && !draft._job) draft._job = defaultJob();
+  if ((draft.name ?? "") === "") draft.name = pascalCase(draft.label);
+  initColumns(ctx, draft, ctx.entityIndex ? { label: true, index: true } : { label: true });
+  draft.settings.columns = columnsOf(draft.settings).filter((col) =>
+    isEntityColumnAllowed(ctx, col.key),
+  );
+  if (!ctx.entityIndex) return;
+  for (const col of draft.settings.columns)
+    if (!("index" in col) || isFkColumn(ctx, col)) col.index = true;
+}
+
+export function setEntityPermission(settings: AdminSettings, permissions: string[]): void {
+  settings.entity_permission = permissions;
+  if (permissions.length > 1) settings.entity_permission_operator ??= "AND";
+  else delete settings.entity_permission_operator;
+}

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { vi } from "vitest";
 import type { ApiError } from "../api/civi";
 import { createQueryClient } from "../api/query";
+import { CoreVersion } from "../admin/version";
 import { memoryStore, type ParamStore } from "../url/hash";
 import { UrlState } from "../url/UrlState";
 
@@ -22,9 +23,11 @@ export function renderWithQuery(
     container,
     wrapper: ({ children }) => (
       <QueryClientProvider client={client}>
-        <UrlState store={store} onlyElement={onlyElement}>
-          {children}
-        </UrlState>
+        <CoreVersion value="6.20.0">
+          <UrlState store={store} onlyElement={onlyElement}>
+            {children}
+          </UrlState>
+        </CoreVersion>
       </QueryClientProvider>
     ),
   });

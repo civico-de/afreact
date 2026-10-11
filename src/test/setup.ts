@@ -26,6 +26,11 @@ window.CRM = {
   utils: {
     colorContrast: () => "white",
     formatDate: (input, _format, time) => `${String(input)} as ${time ? "date and time" : "date"}`,
+    munge: (name, char = "_", len = 63) =>
+      name
+        .trim()
+        .replace(/[^a-zA-Z0-9]+/g, char)
+        .substring(0, len),
   },
 };
 installPopover();

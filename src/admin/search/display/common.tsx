@@ -946,7 +946,7 @@ export function LinkConditions({
 }
 
 /** CRM_Core_Permission::getPermissionList's select2 groups as picker options. */
-function permissionOptions(groups: unknown[]): PickerOption[] {
+export function permissionOptions(groups: unknown[]): PickerOption[] {
   const isRecord = (v: unknown): v is Record<string, unknown> =>
     typeof v === "object" && v !== null;
   return groups.filter(isRecord).flatMap((group) =>

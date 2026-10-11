@@ -6,9 +6,14 @@ import { isDisplaySettings, isDisplayType } from "../../../search/types";
 import type { EditorDisplay } from "../editor";
 import type { SearchInfo } from "../expr";
 import { useSearchTasks } from "./common";
+import { AutocompleteEditor } from "./AutocompleteEditor";
+import { AutocompletePreview } from "./AutocompletePreview";
+import { EntityEditor, entityPreviewSettings } from "./EntityEditor";
 import { GridEditor, ListEditor, TreeEditor } from "./ItemsEditor";
 import {
   buildLinks,
+  initAutocomplete,
+  initEntity,
   initGrid,
   initList,
   initPager,
@@ -44,6 +49,12 @@ const EDITORS: Record<string, (ctx: DisplayContext, draft: Draft) => void> = {
     initPager(ctx, draft.settings, !!draft.settings.section_group_by);
     initPlaceholder(draft.settings);
     initToolbar(draft.settings);
+  },
+  autocomplete: (ctx, draft) => {
+    initAutocomplete(ctx, draft);
+  },
+  entity: (ctx, draft) => {
+    initEntity(ctx, draft);
   },
   tree: (ctx, draft) => {
     initTree(ctx, draft);
@@ -104,104 +115,118 @@ export function DisplayEditor(props: DisplayEditorProps) {
   const superAdmin = window.CRM.checkPerm("all CiviCRM permissions and ACLs");
   const viewable = !!display.id && !!typeInfo && typeInfo.grouping !== "non-viewable";
   const rowLinks = [...buildLinks(ctx, true), ...taskLinks(tasks.data ?? [])];
+  const adopt = (change: (draft: Draft) => void) => {
+    const copy = structuredClone(draft);
+    change(copy);
+    onAdopt(copy);
+  };
   const editing = { ctx, draft, edit };
+  const ownHeader = display.type === "autocomplete" || display.type === "entity";
   const links = { rowLinks, toolbarLinks: buildLinks(ctx, false) };
   return (
     <>
-      <div className="crm-search-admin-flex-row">
-        <div className="help-block">
-          <i className={`crm-i ${typeInfo?.icon ?? ""}`} role="img" aria-hidden="true" />{" "}
-          {typeInfo?.description}
-        </div>
-        {viewable && search.name && display.name && (
-          <div className="btn-group crm-search-admin-display-header-links">
-            <a
-              href={`${props.searchDisplayPath}#/display/${search.name}/${display.name}`}
-              target="_blank"
-              rel="noreferrer"
-              className="btn btn-primary-outline"
-              title={ts("View search display on its own page")}
-            >
-              <i className="crm-i fa-external-link" role="img" aria-hidden="true" />{" "}
-              {ts("View Display")}
-            </a>
-          </div>
-        )}
-      </div>
-      <fieldset className="crm-search-admin-display-header">
-        <legend className="sr-only">{ts("Display")}</legend>
-        <div className="form-inline">
-          <label htmlFor={`${id}-label`}>
-            {ts("Name")}{" "}
-            <span className="crm-marker" aria-hidden="true">
-              *
-            </span>
-          </label>{" "}
-          <input
-            id={`${id}-label`}
-            type="text"
-            className="form-control"
-            required
-            placeholder={ts("Untitled")}
-            value={display.label}
-            onChange={(event) => {
-              const label = event.target.value;
-              edit((d) => {
-                d.label = label;
-              });
-            }}
-          />{" "}
-          <label
-            className={`form-control${superAdmin ? "" : " disabled"}`}
-            title={ts(
-              'Only users with "all CiviCRM permissions and ACLs" can disable permission checks.',
+      {!ownHeader && (
+        <>
+          <div className="crm-search-admin-flex-row">
+            <div className="help-block">
+              <i className={`crm-i ${typeInfo?.icon ?? ""}`} role="img" aria-hidden="true" />{" "}
+              {typeInfo?.description}
+            </div>
+            {viewable && search.name && display.name && (
+              <div className="btn-group crm-search-admin-display-header-links">
+                <a
+                  href={`${props.searchDisplayPath}#/display/${search.name}/${display.name}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-primary-outline"
+                  title={ts("View search display on its own page")}
+                >
+                  <i className="crm-i fa-external-link" role="img" aria-hidden="true" />{" "}
+                  {ts("View Display")}
+                </a>
+              </div>
             )}
-          >
-            <input
-              type="checkbox"
-              className="sr-only"
-              disabled={!superAdmin}
-              checked={!!display.acl_bypass}
-              onChange={() => {
-                edit((d) => {
-                  d.acl_bypass = !d.acl_bypass;
-                });
-              }}
-            />
-            <i
-              className={`crm-i ${display.acl_bypass ? "fa-unlock text-danger" : "fa-lock text-success"}`}
-              role="img"
-              aria-hidden="true"
-            />{" "}
-            <span>{display.acl_bypass ? ts("Bypass Permissions") : ts("Enforce Permissions")}</span>
-          </label>
-          {display.acl_bypass && (
-            <div className="help-block bg-warning">
-              <i className="crm-i fa-unlock" role="img" aria-hidden="true" />{" "}
-              {ts(
-                "Anyone who can view this display will be able to see all results, regardless of their permission level.",
+          </div>
+          <fieldset className="crm-search-admin-display-header">
+            <legend className="sr-only">{ts("Display")}</legend>
+            <div className="form-inline">
+              <label htmlFor={`${id}-label`}>
+                {ts("Name")}{" "}
+                <span className="crm-marker" aria-hidden="true">
+                  *
+                </span>
+              </label>{" "}
+              <input
+                id={`${id}-label`}
+                type="text"
+                className="form-control"
+                required
+                placeholder={ts("Untitled")}
+                value={display.label}
+                onChange={(event) => {
+                  const label = event.target.value;
+                  edit((d) => {
+                    d.label = label;
+                  });
+                }}
+              />{" "}
+              <label
+                className={`form-control${superAdmin ? "" : " disabled"}`}
+                title={ts(
+                  'Only users with "all CiviCRM permissions and ACLs" can disable permission checks.',
+                )}
+              >
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  disabled={!superAdmin}
+                  checked={!!display.acl_bypass}
+                  onChange={() => {
+                    edit((d) => {
+                      d.acl_bypass = !d.acl_bypass;
+                    });
+                  }}
+                />
+                <i
+                  className={`crm-i ${display.acl_bypass ? "fa-unlock text-danger" : "fa-lock text-success"}`}
+                  role="img"
+                  aria-hidden="true"
+                />{" "}
+                <span>
+                  {display.acl_bypass ? ts("Bypass Permissions") : ts("Enforce Permissions")}
+                </span>
+              </label>
+              {display.acl_bypass && (
+                <div className="help-block bg-warning">
+                  <i className="crm-i fa-unlock" role="img" aria-hidden="true" />{" "}
+                  {ts(
+                    "Anyone who can view this display will be able to see all results, regardless of their permission level.",
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
-        <div>
-          <label htmlFor={`${id}-description`} className="sr-only">
-            {ts("Description (shown above)")}
-          </label>
-          <textarea
-            id={`${id}-description`}
-            className="form-control"
-            placeholder={ts("Description (shown above)")}
-            value={draft.settings.description ?? ""}
-            onChange={(event) => {
-              const value = event.target.value;
-              edit((d) => {
-                d.settings.description = value;
-              });
-            }}
-          />
-        </div>
-      </fieldset>
+            <div>
+              <label htmlFor={`${id}-description`} className="sr-only">
+                {ts("Description (shown above)")}
+              </label>
+              <textarea
+                id={`${id}-description`}
+                className="form-control"
+                placeholder={ts("Description (shown above)")}
+                value={draft.settings.description ?? ""}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  edit((d) => {
+                    d.settings.description = value;
+                  });
+                }}
+              />
+            </div>
+          </fieldset>
+        </>
+      )}
+      {display.type === "autocomplete" && <AutocompleteEditor {...editing} />}
+      {display.type === "entity" && <EntityEditor {...editing} adopt={adopt} />}
       {display.type === "table" && <TableEditor {...editing} {...links} />}
       {display.type === "list" && <ListEditor {...editing} {...links} />}
       {display.type === "grid" && <GridEditor {...editing} {...links} />}
@@ -239,7 +264,12 @@ function Preview({
         {shown && stale ? ts("Refresh") : ts("Preview")}
       </button>
       <hr />
-      {shown && <PreviewDisplay key={shown.key} search={search} draft={shown.draft} />}
+      {shown?.draft.type === "autocomplete" && (
+        <AutocompletePreview key={shown.key} search={search} draft={shown.draft} />
+      )}
+      {shown && shown.draft.type !== "autocomplete" && (
+        <PreviewDisplay key={shown.key} search={search} draft={shown.draft} />
+      )}
     </>
   );
 }
@@ -271,7 +301,10 @@ function PreviewDisplay({
   });
   const columns =
     auto && isDisplaySettings(defaults.data) ? defaults.data.columns : draft.settings.columns;
-  const settings = { ...draft.settings, columns };
+  // crmSearchDisplayEntity previews a DB entity as a table of its first rows.
+  const entity = draft.type === "entity";
+  const settings = entity ? entityPreviewSettings(draft.settings) : { ...draft.settings, columns };
+  const type = entity ? "table" : draft.type;
   if (auto && defaults.isPending) return <p role="status">{ts("Loading…")}</p>;
   if (defaults.error)
     return (
@@ -279,7 +312,7 @@ function PreviewDisplay({
         {defaults.error.message}
       </p>
     );
-  if (!isDisplaySettings(settings) || !isDisplayType(draft.type))
+  if (!isDisplaySettings(settings) || !isDisplayType(type))
     return (
       <p className="crm-error" role="alert">
         {ts("This display cannot be previewed.")}
@@ -289,9 +322,9 @@ function PreviewDisplay({
     <AfreactSearch
       search={search.name ?? ""}
       display={null}
-      type={draft.type}
+      type={type}
       settings={settings}
-      inline={{ search: savedSearch, display: { ...draft, settings } }}
+      inline={{ search: savedSearch, display: { ...draft, type, settings } }}
     />
   );
 }

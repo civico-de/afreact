@@ -13,6 +13,7 @@ const pages = { angular: "/civicrm/admin/search", react: "/civicrm/admin/afreact
 
 async function cleanUp(page: Page) {
   await page.goto("/civicrm/admin/afreact/search#/list");
+  await api(page, "Job", "delete", { where: [["api_entity", "LIKE", "SK_AfreactDisplayProbe%"]] });
   await api(page, "SavedSearch", "delete", { where: [["label", "LIKE", `${LABEL}%`]] });
   await api(page, "Tag", "delete", { where: [["label", "IN", TAGS]] });
 }
@@ -34,11 +35,13 @@ async function save(page: Page) {
   const id = Number(/#\/edit\/(\d+)$/.exec(page.url())?.[1]);
   const [display] = await api<{
     id: number;
+    name: string;
     type: string;
     label: string;
+    acl_bypass: boolean;
     settings: Record<string, unknown>;
   }>(page, "SearchDisplay", "get", {
-    select: ["type", "label", "settings"],
+    select: ["name", "type", "label", "acl_bypass", "settings"],
     where: [["saved_search_id", "=", id]],
   });
   if (!display) throw new Error(`Search ${String(id)} saved without a display.`);
@@ -89,19 +92,102 @@ test.describe("SearchKit table display editor", () => {
     await page.emulateMedia({ colorScheme: "light" });
   });
 
-  for (const type of ["Table", "List", "Grid", "Tree"]) {
+  for (const type of ["Table", "List", "Grid", "Tree", "Autocomplete", "DB Entity"]) {
     test(`a new ${type} display saves with the settings core's editor gives it`, async ({
       page,
     }) => {
-      const built: Record<string, unknown> = {};
+      const built = [];
       for (const renderer of ["angular", "react"] as const) {
         await open(page, renderer, `${LABEL} ${renderer}`, type);
         const { display } = await save(page);
-        built[renderer] = { ...display, id: undefined, label: undefined };
+        built.push({ ...display, id: undefined, name: undefined, label: undefined });
       }
-      expect(built.react).toEqual(built.angular);
+      const [angular, react] = built;
+      // Core adds description to the entity's metadata, so its new autocompletes search by it.
+      if (type === "Autocomplete" && angular) {
+        expect(angular.settings.searchFields).toEqual(["id", "label", "description"]);
+        angular.settings = { ...angular.settings, searchFields: ["id", "label"] };
+      }
+      expect(react).toEqual(angular);
     });
   }
+
+  test("a DB entity saves its refresh job, refreshes, and confirms renaming a column", async ({
+    page,
+  }) => {
+    await open(page, "react", LABEL, "DB Entity");
+    const editor = page.locator("afreact-builder");
+    const name = "AfreactDisplayProbeDbEntity1";
+    await expect(editor.getByRole("textbox", { name: "API Name" })).toHaveValue(name);
+    await editor.getByRole("checkbox", { name: "Auto-Refresh" }).check();
+    await editor.getByRole("combobox", { name: "Refresh frequency" }).selectOption("Daily");
+    expect(await axeFindings(page, "afreact-builder")).toEqual([]);
+    await page.emulateMedia({ colorScheme: "dark" });
+    const react = await axeFindings(page, "afreact-builder");
+    await page.emulateMedia({ colorScheme: "light" });
+    const { id, display } = await save(page);
+    expect(display.name).toBe(name);
+    expect(display.settings).not.toHaveProperty("limit");
+    const jobs = await api<{ is_active: boolean; run_frequency: string }>(page, "Job", "get", {
+      select: ["is_active", "run_frequency"],
+      where: [
+        ["api_entity", "=", `SK_${name}`],
+        ["api_action", "=", "refresh"],
+      ],
+    });
+    expect(jobs).toEqual([expect.objectContaining({ is_active: true, run_frequency: "Daily" })]);
+    await expect
+      .poll(async () => (await api(page, `SK_${name}`, "get", { select: ["label"] })).length)
+      .toBeGreaterThanOrEqual(TAGS.length);
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.goto(`/civicrm/admin/search#/edit/${String(id)}`);
+    await page
+      .getByRole("link", { name: /DB Entity 1/ })
+      .first()
+      .click();
+    await expect(page.getByText("API Name")).toBeVisible();
+    expect(ownFindings(react, await axeFindings(page, "#bootstrap-theme"))).toEqual([]);
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.goto(`/civicrm/admin/afreact/search#/edit/${String(id)}`);
+
+    await editor.getByRole("button", { name: `${LABEL} DB Entity 1`, exact: true }).click();
+    await expect(editor.getByText(/^Last refreshed: /)).toBeVisible();
+    const column = editor.locator("fieldset.crm-draggable").nth(1);
+    await column.locator("summary").click();
+    await column.getByRole("textbox", { name: "Name" }).fill("renamed");
+    const messages: string[] = [];
+    page.once("dialog", (dialog) => {
+      messages.push(dialog.message());
+      void dialog.dismiss();
+    });
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect.poll(() => messages.length).toBe(1);
+    expect(messages[0]).toContain(
+      `In entity "${LABEL} DB Entity 1", rename column "label" to "renamed".`,
+    );
+    const [kept] = await api<{ settings: { columns: { name?: string }[] } }>(
+      page,
+      "SearchDisplay",
+      "get",
+      { select: ["settings"], where: [["name", "=", name]] },
+    );
+    expect(kept?.settings.columns[1]?.name).not.toBe("renamed");
+
+    page.once("dialog", (dialog) => void dialog.accept());
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect
+      .poll(async () => {
+        const [saved] = await api<{ settings: { columns: { name?: string }[] } }>(
+          page,
+          "SearchDisplay",
+          "get",
+          { select: ["settings"], where: [["name", "=", name]] },
+        );
+        return saved?.settings.columns[1]?.name;
+      })
+      .toBe("renamed");
+  });
 
   test("groups a list by a field, which leads the sort and drops the pager", async ({ page }) => {
     await open(page, "react", LABEL, "List");

@@ -776,6 +776,18 @@ normal-size text needs 4.5:1. Measured with axe on CiviCRM 6.18.
 
 ## SearchKit builder
 
+**A new autocomplete display searches by description.** When it sets up a
+new autocomplete display, core adds `description` to the entity's
+`search_fields` array in the admin metadata instead of to a copy, so the
+default search fields of that display and of every later one on the page
+include `description`, even for entities without such a field. afreact
+searches by `id` and the entity's own search fields.
+
+**DB entity names lose their word breaks.** Before 6.20 the DB entity editor
+derives the API name with `_.capitalize(_.camelCase())`, which lowercases all
+but the first letter ("my members" becomes `Mymembers`). afreact derives it as
+core's later `CRM.utils.pascalCase()` does (`MyMembers`).
+
 **Changing a subsearch filter removes it.** The subsearch column editor
 should remove a filter when its field is cleared, but `onChangeFilter()` tests
 `filter.field` while filters store `subsearch_field`, so every change of the

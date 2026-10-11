@@ -193,7 +193,11 @@ export function validate(search: EditorSearch, groupExists: boolean): EditorErro
 }
 
 /** save(): the API calls core sends, keyed as in its batch. */
-export function savePayload(search: EditorSearch, groupExists: boolean): Record<string, unknown[]> {
+export function savePayload(
+  search: EditorSearch,
+  groupExists: boolean,
+  preSave?: (displays: EditorDisplay[], calls: Record<string, unknown[]>) => void,
+): Record<string, unknown[]> {
   const { groups, displays, tag_id: tags, ...record } = structuredClone(search);
   const calls: Record<string, unknown[]> = {};
   const chain: Record<string, unknown[]> = {};
@@ -202,6 +206,7 @@ export function savePayload(search: EditorSearch, groupExists: boolean): Record<
   else if (record.id)
     calls.deleteGroup = ["Group", "delete", { where: [["saved_search_id", "=", record.id]] }];
   const kept = displays.filter((display) => !display.trashed);
+  if (kept.length) preSave?.(kept, calls);
   if (kept.length)
     chain.displays = [
       "SearchDisplay",

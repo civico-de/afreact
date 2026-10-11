@@ -133,9 +133,10 @@ describe("structuralRisk", () => {
     tag_id: [],
     groups: [],
     displays: [
-      { id: 1, label: "Kept", type: "table" },
-      { id: 2, label: "Gone", type: "table", trashed: true },
-      { label: "New", type: "table" },
+      { id: 1, label: "Kept", type: "batch" },
+      { id: 2, label: "Gone", type: "batch", trashed: true },
+      { id: 3, label: "Editable", type: "table" },
+      { label: "New", type: "batch" },
     ],
   });
 
@@ -145,7 +146,7 @@ describe("structuralRisk", () => {
     ).toEqual([]);
   });
 
-  it("names the saved displays a removed column can break", () => {
+  it("names the saved displays without a React editor that a removed column can break", () => {
     expect(
       structuralRisk(search(["id", "display_name"]), search(["id"])).map((d) => d.label),
     ).toEqual(["Kept"]);

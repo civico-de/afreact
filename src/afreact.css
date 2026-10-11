@@ -54,5 +54,5 @@ crm-search-display-tree-branch:has(> ul > li.afreact-tree-slot:only-child) { fle
 .afreact-icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.75rem, 1fr)); gap: 0.25rem; max-height: 50vh; overflow: auto; margin-top: 0.5rem; }
 .afreact-icon-grid .btn { min-height: 2.75rem; }
 .afreact-column-picker { display: inline-block; position: relative; }
-.afreact-column-picker > summary { list-style: none; }
+.afreact-column-picker > summary { list-style: none; font-weight: normal; }
 .afreact-column-picker-list { position: absolute; z-index: 10; min-width: 16rem; max-height: 20rem; overflow: auto; padding: 0.5rem; background: var(--crm-dropdown-bg, Canvas); color: var(--crm-text-color, CanvasText); border: 1px solid var(--crm-c-gray-300, GrayText); border-radius: 4px; }

@@ -170,15 +170,11 @@ export async function axeFindings(page: Page, scope: string): Promise<string[]> 
   );
 }
 
-/** React's findings that Angular does not share as theme contrast. */
+/** React's findings other than theme contrast pairs that the Angular page shows too. */
 export function ownFindings(react: string[], angular: string[]): string[] {
-  const unmatched = [...angular];
-  return react.filter((finding) => {
-    const index = unmatched.indexOf(finding);
-    if (index === -1 || !finding.startsWith("color-contrast:")) return true;
-    unmatched.splice(index, 1);
-    return false;
-  });
+  return react.filter(
+    (finding) => !finding.startsWith("color-contrast:") || !angular.includes(finding),
+  );
 }
 
 /**
