@@ -12,7 +12,7 @@ test.describe("builder pages", () => {
   test("the own route links each screen to the classic builder", async ({ page }) => {
     await page.goto("/civicrm/admin/afreact/search#/edit/1");
     const classic = page.getByRole("link", { name: "Open in the classic builder" });
-    await expect(classic).toHaveAttribute("href", /\/civicrm\/admin\/search\/classic#\/edit\/1$/);
+    await expect(classic).toHaveAttribute("href", /\/civicrm\/admin\/search#\/edit\/1$/);
     expect(await axeFindings(page, "afreact-builder")).toEqual([]);
   });
 
@@ -28,5 +28,10 @@ test.describe("builder pages", () => {
       page.locator("crm-search-admin-search-listing, [ng-view] .ng-scope").first(),
     ).toBeVisible();
     await expect(page.locator("afreact-builder")).toHaveCount(0);
+    await page.goto("/civicrm/admin/search#/list");
+    await expect(page.getByRole("link", { name: "Open in the classic builder" })).toHaveAttribute(
+      "href",
+      /\/civicrm\/admin\/search\/classic#\/list$/,
+    );
   });
 });

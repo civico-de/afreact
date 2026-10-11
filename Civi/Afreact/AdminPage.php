@@ -20,6 +20,7 @@ final class AdminPage {
   public const OWN = [
     'civicrm/admin/afreact/search' => 'civicrm/admin/search',
     'civicrm/admin/afreact/afform' => 'civicrm/admin/afform',
+    'civicrm/afreact/search' => 'civicrm/search',
   ];
 
   public static function render(): string {
@@ -34,9 +35,16 @@ final class AdminPage {
       '<div id="bootstrap-theme" class="afreact-builder-page"><afreact-builder builder="%s" route="%s" classic="%s" core-version="%s"></afreact-builder></div>',
       Chrome::escape($builder),
       Chrome::escape($route),
-      Chrome::escape((string) \Civi::url('backend://' . $route . Builders::CLASSIC)),
+      Chrome::escape((string) \Civi::url('backend://' . self::classic($route))),
       Chrome::escape(\CRM_Utils_System::version()),
     ));
+  }
+
+  /**
+   * Where core's page for `$route` runs: its classic route when taken over, else the route itself.
+   */
+  public static function classic(string $route): string {
+    return Builders::moved()[$route] ?? $route;
   }
 
   /**

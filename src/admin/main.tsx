@@ -1,11 +1,22 @@
 import { ReactElement } from "../element";
 import { Builder, type BuilderName, type Screens } from "./Builder";
+import { DisplayPage } from "./search/DisplayPage";
 import { SearchList } from "./search/SearchList";
 import { CoreVersion } from "./version";
 
 const SCREENS: Record<BuilderName, Screens> = {
   search_kit: {
     "civicrm/admin/search": { list: { pattern: "/list", render: () => <SearchList /> } },
+    "civicrm/search": {
+      display: {
+        pattern: "/display/:search/:display",
+        render: (p) => <DisplayPage search={p.search ?? ""} display={p.display ?? null} />,
+      },
+      defaultDisplay: {
+        pattern: "/display/:search",
+        render: (p) => <DisplayPage search={p.search ?? ""} display={null} />,
+      },
+    },
   },
   afform: {},
 };

@@ -742,7 +742,7 @@ export function taskData(
   task: SearchTask,
   ids: Key[],
   list: TaskList | null,
-  names: { search: string; display: string },
+  names: { search: string; display: string | null },
   isLink: boolean,
 ): Record<string, unknown> {
   return {

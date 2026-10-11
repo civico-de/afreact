@@ -37,8 +37,10 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
   public function testSearchKitTakeoverMovesPagesAndTheirModules(): void {
     $this->assertSame('CRM_Search_Page_Admin', \CRM_Core_Menu::get('civicrm/admin/search')['page_callback']);
     $this->assertContains('civicrm/admin/search', self::basePages('crmSearchAdmin'));
+    $this->assertSame('civicrm/search', AdminPage::classic('civicrm/search'));
 
     \Civi::settings()->set(Builders::SETTING, ['search_kit']);
+    $this->assertSame('civicrm/search/classic', AdminPage::classic('civicrm/search'));
     $this->assertSame(AdminPage::CALLBACK, \CRM_Core_Menu::get('civicrm/admin/search')['page_callback']);
     $this->assertSame(AdminPage::CALLBACK, \CRM_Core_Menu::get('civicrm/search')['page_callback']);
     $this->assertSame('CRM_Search_Page_Admin', \CRM_Core_Menu::get('civicrm/admin/search/classic')['page_callback']);

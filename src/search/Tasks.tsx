@@ -55,7 +55,7 @@ import type { DisplaySettings, Link, Row, RunPage } from "./types";
 
 interface TasksOptions {
   search: string;
-  display: string;
+  display: string | null;
   settings: DisplaySettings;
   /** The page on screen; undefined while a run loads. */
   page: RunPage | undefined;

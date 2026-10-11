@@ -29,7 +29,8 @@ import { displayKeys, positiveInteger, sortParser, sortText, type Sort } from ".
 
 interface AfreactSearchProps {
   search: string;
-  display: string;
+  /** Null for the search's default display, as SearchDisplay.getDefault builds it. */
+  display: string | null;
   /** The display type of the layout's element; loaded with the settings when absent. */
   type?: DisplayType;
   /** Settings Afform already compiled into the layout; loaded via the API when absent. */
@@ -55,10 +56,13 @@ const NO_FILTERS = {};
  * the results itself.
  */
 export function AfreactSearch(props: AfreactSearchProps) {
-  const loaded = useDisplay(props.search, props.display, !props.settings);
+  const loaded = useSearchDisplay(props.search, props.display, !props.settings);
   const type = props.type ?? loaded.data?.type;
   if (type !== "batch" && type !== "chart-kit")
     return <ResultDisplay {...props} type={isResultType(props.type) ? props.type : undefined} />;
+  const display = props.display;
+  if (display === null)
+    return <Failure error={new Error(ts("A %1 display needs a name.", { 1: type }))} />;
   const settings = props.settings ?? loaded.data?.settings;
   if (loaded.error) return <Failure error={loaded.error} />;
   if (!settings) return <p role="status">{ts("Loading…")}</p>;
@@ -66,7 +70,7 @@ export function AfreactSearch(props: AfreactSearchProps) {
     return (
       <ChartDisplay
         search={props.search}
-        display={props.display}
+        display={display}
         settings={settings}
         afform={props.afform}
         filters={props.filters ?? NO_FILTERS}
@@ -76,7 +80,7 @@ export function AfreactSearch(props: AfreactSearchProps) {
   return (
     <BatchDisplay
       search={props.search}
-      display={props.display}
+      display={display}
       settings={settingsOf(settings, "batch")}
       notes={unsupportedFeatures(settings, undefined, "batch")}
       afform={props.afform}
@@ -89,22 +93,30 @@ type ResultType = Exclude<DisplayType, "batch" | "chart-kit">;
 const isResultType = (type: unknown): type is ResultType =>
   isDisplayType(type) && type !== "batch" && type !== "chart-kit";
 
-function useDisplay(search: string, display: string, enabled: boolean) {
+export function useSearchDisplay(search: string, display: string | null, enabled: boolean) {
   return useQuery({
     queryKey: ["SearchDisplay", "get", search, display],
     queryFn: async () => {
-      const [found] = await get("SearchDisplay", {
-        select: ["label", "type", "settings"],
-        where: [
-          ["name", "=", display],
-          ["saved_search_id.name", "=", search],
-        ],
-      });
-      if (!found)
-        throw new Error(ts("Search display %1 not found.", { 1: `${search}.${display}` }));
+      const name = `${search}.${display ?? ""}`;
+      const select: ("label" | "type" | "settings")[] = ["label", "type", "settings"];
+      const [found] =
+        display === null
+          ? await api4<{ label?: string; type?: string; settings?: unknown }>(
+              "SearchDisplay",
+              "getDefault",
+              { savedSearch: search, select },
+            )
+          : await get("SearchDisplay", {
+              select,
+              where: [
+                ["name", "=", display],
+                ["saved_search_id.name", "=", search],
+              ],
+            });
+      if (!found) throw new Error(ts("Search display %1 not found.", { 1: name }));
       const settings = await withAutoColumns(search, found.settings);
       if (!isDisplaySettings(settings))
-        throw new Error(ts("Search display %1 has no columns.", { 1: `${search}.${display}` }));
+        throw new Error(ts("Search display %1 has no columns.", { 1: name }));
       return { label: found.label ?? "", type: found.type, settings };
     },
     enabled,
@@ -124,14 +136,14 @@ function ResultDisplay({
   onLabels,
 }: AfreactSearchProps & { type?: ResultType }) {
   const client = useQueryClient();
-  const loaded = useDisplay(search, display, !given);
+  const loaded = useSearchDisplay(search, display, !given);
   const loadedType = loaded.data?.type;
   const type = givenType ?? (isResultType(loadedType) ? loadedType : "table");
   const stored = given ?? loaded.data?.settings;
   const settings = useMemo(() => stored && settingsOf(stored, type), [stored, type]);
   const [url, setUrl] = useQueryStates(
     { sort: sortParser, page: positiveInteger, limit: positiveInteger },
-    { urlKeys: displayKeys(useUrlPrefix(display)) },
+    { urlKeys: displayKeys(useUrlPrefix(display ?? "")) },
   );
   // With a search button the filters apply on its click (onClickSearchButton), not as they change.
   const [submitted, setSubmitted] = useState<{
