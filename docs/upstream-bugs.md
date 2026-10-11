@@ -784,8 +784,8 @@ saved records.
 **Import checks only the first display.** Before importing, core looks up
 whether a display already exists only for the first SearchDisplay record's
 search; displays of further searches in the same bundle are not checked and
-collide on save. afreact checks every display record's search with one `IN`
-query.
+collide on save. afreact checks every display against its own search, matching
+exact search and display name pairs.
 
 **Listing accessibility.** Core's saved-search listing nests the count badge
 links inside the tab links (`nested-interactive`), labels its filter inputs
@@ -796,3 +796,14 @@ keys, visible filter labels and a named actions header.
 **Segment items reorder only by mouse.** The segment editor sorts items by
 drag and drop with no keyboard path. afreact adds move-up and move-down
 buttons per item.
+
+**Removing a column leaves its sort and having behind.** The editor's
+`onChangeSelect()` should drop a removed column from `orderBy` and `having`,
+but the watcher calls it without the old and new select, so nothing is pruned
+and the next run sorts or filters by a column that no longer exists. afreact
+prunes both when a column goes.
+
+**Selected columns stay selectable.** `fieldsForSelect()` passes a
+`disabledIf` callback without a `return`, so fields already in the select
+are never disabled; picking one does nothing because `addParam()` skips
+duplicates. afreact leaves selected columns out of the list.

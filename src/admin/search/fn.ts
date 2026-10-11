@@ -1,6 +1,5 @@
 import type { PickerOption } from "../widgets/Picker";
 import {
-  createSqlName,
   getEntity,
   mustAggregate,
   parseExpr,
@@ -8,6 +7,7 @@ import {
   type ExprArg,
   type SearchInfo,
 } from "./expr";
+import { createSqlName } from "./sqlName";
 import type { FunctionParam, SearchAdminMetadata, SqlFunction } from "./meta";
 
 /** Where an expression is edited: a column, a group-by or a condition. */

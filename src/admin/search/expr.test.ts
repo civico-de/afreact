@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { metadata as meta } from "../../test/searchMetadata";
+import { createSqlName } from "./sqlName";
 import {
-  createSqlName,
   fieldToColumn,
   getAllFields,
   getDefaultLabel,

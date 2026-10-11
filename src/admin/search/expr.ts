@@ -1,4 +1,3 @@
-import { md5 } from "../md5";
 import type { PickerOption } from "../widgets/Picker";
 import type {
   FunctionParam,
@@ -323,24 +322,6 @@ export function fieldToColumn(
     if (colorField) values.colors = [{ field: colorField }];
   }
   return values;
-}
-
-/** CRM.utils.munge, the port of CRM_Utils_String::munge(). */
-export function munge(name: string, char = "_", len = 63): string {
-  let munged = name.trim().replace(/[^a-zA-Z0-9]+/g, char);
-  if (!munged.replace(/_/, "").length)
-    munged = Array.from({ length: len }, () =>
-      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".charAt(
-        Math.floor(Math.random() * 62),
-      ),
-    ).join("");
-  return len ? munged.slice(0, len) : munged;
-}
-
-/** createSqlName: the SQL column name the server derives from a key (Civi\Search\Meta). */
-export function createSqlName(key: string): string {
-  const name = key.split(":")[0] ?? "";
-  return name.length <= 58 ? munge(name, "_") : munge(name, "_", 42) + md5(name).slice(0, 16);
 }
 
 /** getDefaultAggregateFn: the group-by's own function on the field, else by data type. */
