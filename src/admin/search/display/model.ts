@@ -13,6 +13,7 @@ import {
   type ExprInfo,
   type SearchInfo,
 } from "../expr";
+import { formatValue } from "../condition";
 import type { EntityLink, SearchAdminMetadata } from "../meta";
 import { md5 } from "./md5";
 
@@ -716,6 +717,18 @@ export function initLinkGroup(group: LinkItem[], links: LinkItem[]): LinkItem[] 
   return defaults.length ? defaults.map(newLinkItem) : [newLinkItem(defaultLinkItem())];
 }
 
+/**
+ * What the link groups core's editor renders do on $onInit: the columns' of type links, buttons and
+ * menu, and the toolbar's; they render after the display editor's own $onInit ran.
+ */
+export function initLinkGroups(ctx: DisplayContext, draft: Draft): void {
+  for (const col of columnsOf(draft.settings))
+    if ((col.type === "links" || col.type === "buttons" || col.type === "menu") && col.links)
+      col.links = initLinkGroup(col.links, buildLinks(ctx, true));
+  if (draft.settings.toolbar)
+    draft.settings.toolbar = initLinkGroup(draft.settings.toolbar, buildLinks(ctx, false));
+}
+
 export function changeLinkItem(item: LinkItem, next: LinkItem): void {
   linkItemDefaults(item, next.path === "civicrm/" ? defaultLinkItem() : next);
 }
@@ -960,6 +973,15 @@ export function initBatch(ctx: DisplayContext, draft: Draft): void {
     };
   initColumns(ctx, draft, { label: true });
   if (fresh) toggleBatchTally(ctx, draft.settings);
+  // Each default's crm-search-input stores it as its field's data type once it renders.
+  for (const col of columnsOf(draft.settings))
+    if ("default" in col && col.key)
+      col.default = formatValue(
+        getField(ctx.meta, col.key, ctx.search),
+        undefined,
+        undefined,
+        col.default,
+      );
 }
 
 /** Totals in the footer: sums for numbers, counts for booleans, nothing for options or links. */

@@ -18,6 +18,7 @@ import {
   initBatch,
   initEntity,
   initGrid,
+  initLinkGroups,
   initList,
   initPager,
   initPlaceholder,
@@ -40,18 +41,21 @@ const EDITORS: Record<string, (ctx: DisplayContext, draft: Draft) => void> = {
     initPager(ctx, draft.settings);
     initTasks(draft.settings);
     initToolbar(draft.settings);
+    initLinkGroups(ctx, draft);
   },
   list: (ctx, draft) => {
     initList(ctx, draft);
     initPager(ctx, draft.settings, !!draft.settings.section_group_by);
     initPlaceholder(draft.settings);
     initToolbar(draft.settings);
+    initLinkGroups(ctx, draft);
   },
   grid: (ctx, draft) => {
     initGrid(ctx, draft);
     initPager(ctx, draft.settings, !!draft.settings.section_group_by);
     initPlaceholder(draft.settings);
     initToolbar(draft.settings);
+    initLinkGroups(ctx, draft);
   },
   autocomplete: (ctx, draft) => {
     initAutocomplete(ctx, draft);
@@ -67,6 +71,7 @@ const EDITORS: Record<string, (ctx: DisplayContext, draft: Draft) => void> = {
     initTree(ctx, draft);
     initPlaceholder(draft.settings);
     initToolbar(draft.settings);
+    initLinkGroups(ctx, draft);
   },
   // Its defaults come from chart_kit's script, so ChartKitEditor adopts them once loaded.
   "chart-kit": () => undefined,

@@ -17,6 +17,7 @@ import {
   pascalCase,
   setEntityPermission,
   initGrid,
+  initLinkGroups,
   initList,
   initTree,
   initPager,
@@ -344,6 +345,19 @@ describe("data entry display", () => {
     expect(draft.settings.columns?.some((col) => "tally" in col)).toBe(false);
   });
 
+  it("stores each default as its field's data type, as core's input does on render", () => {
+    const columns: AdminColumn[] = [
+      { type: "field", key: "gender_id:label", default: "1" },
+      { type: "field", key: "employer_id", default: "abc" },
+      { type: "field", key: "display_name", default: "1" },
+      { type: "field", key: "id", default: null },
+    ];
+    const draft: Draft = { label: "D", type: "batch", settings: { columns } };
+    const select = ["gender_id:label", "employer_id", "display_name", "id"];
+    initBatch({ ...ctx, search: { ...ctx.search, api_params: { version: 4, select } } }, draft);
+    expect(draft.settings.columns?.map((col) => col.default)).toEqual([1, "abc", "1", null]);
+  });
+
   it("keeps a target only for sums and toggles a default value", () => {
     const col: AdminColumn = { type: "field", key: "id", tally: { fn: "SUM", target: true } };
     setBatchTallyFn(col, "AVG");
@@ -352,5 +366,42 @@ describe("data entry display", () => {
     expect(col).toHaveProperty("default", null);
     toggleDefault(col);
     expect(col).not.toHaveProperty("default");
+  });
+});
+
+describe("link groups on open", () => {
+  it("gives every link of a links, buttons or menu column and the toolbar core's keys", () => {
+    const draft = table({
+      columns: [
+        {
+          type: "menu",
+          links: [{ entity: "Contact", action: "update", text: "Edit", condition: [] }],
+        },
+        { type: "buttons", links: [{ task: "delete", text: "Delete", condition: ["id", "=", 1] }] },
+        { type: "field", key: "id", link: { path: "civicrm/x" } },
+      ],
+      toolbar: [{ path: "civicrm/new", text: "New" }],
+    });
+    initLinkGroups(ctx, draft);
+    const keys = (link: object) => Object.keys(link).sort();
+    const all = [
+      "action",
+      "conditions",
+      "entity",
+      "icon",
+      "join",
+      "path",
+      "style",
+      "target",
+      "task",
+      "text",
+    ];
+    const [menu, buttons, field] = draft.settings.columns ?? [];
+    // An empty legacy condition stays beside the new conditions, as in core.
+    expect(keys(menu?.links?.[0] ?? {})).toEqual([...all, "condition"].sort());
+    expect(buttons?.links?.[0]).toMatchObject({ conditions: [["id", "=", 1]], task: "delete" });
+    expect(buttons?.links?.[0]).not.toHaveProperty("condition");
+    expect(field).toEqual({ type: "field", key: "id", link: { path: "civicrm/x" } });
+    expect(keys(draft.settings.toolbar?.[0] ?? {})).toEqual(all);
   });
 });
