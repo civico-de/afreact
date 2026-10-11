@@ -27,7 +27,69 @@ export interface SchemaField {
   options?: boolean | unknown[];
   suffixes?: string[] | null;
   type?: string;
+  description?: string | null;
+  /** The entity a joined or custom field belongs to. */
+  entity?: string;
+  fieldName?: string;
   [key: string]: unknown;
+}
+
+/** A link core offers for an entity's rows or for the entity as a whole. */
+export interface EntityLink {
+  action: string;
+  entity: string;
+  text: string;
+  icon?: string | null;
+  path?: string;
+  target?: string;
+  [key: string]: unknown;
+}
+
+/** A join core knows from one entity to another (`Civi\Search\Admin::getJoins()`). */
+export interface JoinDefinition {
+  label: string;
+  description?: string;
+  entity: string;
+  /** Clauses, after the bridge entity's name for a bridge join. */
+  conditions: unknown[];
+  defaults: unknown[];
+  alias: string;
+  multi?: boolean;
+  bridge?: string;
+}
+
+/** A parameter of a SQL function as `Civi\Api4\Query\SqlFunction::getParams()` lists it. */
+export interface FunctionParam {
+  name?: string;
+  label?: string;
+  flag_before?: Record<string, string>;
+  flag_after?: Record<string, string>;
+  min_expr?: number;
+  max_expr?: number;
+  must_be?: string[];
+  optional?: boolean;
+  can_be_empty?: boolean;
+  api_default?: unknown;
+}
+
+export interface SqlFunction {
+  name: string;
+  title: string;
+  description?: string;
+  params: FunctionParam[];
+  category: string;
+  options: boolean | unknown[];
+  data_type: string | null;
+}
+
+export interface UiParam {
+  name: string;
+  title: string;
+  description?: string;
+  required?: boolean;
+  default?: unknown;
+  dynamicFieldControl?: boolean;
+  options?: { id: string | number; label: string }[] | false;
 }
 
 export interface SchemaEntity {
@@ -39,6 +101,14 @@ export interface SchemaEntity {
   primary_key: string[];
   label_field?: string | null;
   searchable?: string;
+  description?: string | null;
+  params?: string[];
+  search_fields?: string[];
+  default_columns?: string[];
+  bridge?: unknown;
+  bridge_title?: string;
+  links?: EntityLink[];
+  ui_params?: UiParam[];
   fields: SchemaField[];
   [key: string]: unknown;
 }
@@ -46,11 +116,12 @@ export interface SchemaEntity {
 /** What `civicrm/ajax/admin/search` answers (`Civi\Search\Admin::getAdminMetadata()`). */
 export interface SearchAdminMetadata {
   schema: SchemaEntity[];
-  joins: Record<string, unknown[]>;
+  joins: Record<string, JoinDefinition[]>;
   pseudoFields: SchemaField[];
   operators: { key: string; value: string }[];
   permissions: unknown[];
-  functions: { name: string; title: string; category: string; [key: string]: unknown }[];
+  functions: SqlFunction[];
+  optionAttributes: Record<string, string>;
   displayTypes: {
     id: number;
     name: string;
