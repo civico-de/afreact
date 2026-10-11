@@ -2,8 +2,8 @@
 
 Renders FormBuilder (Afform) forms and SearchKit displays with React. The form
 and search definitions, the APIs and the permission checks stay those of core;
-only the browser side changes. The builders (FormBuilder, SearchKit admin) stay
-Angular.
+only the browser side changes. The builders stay Angular by default; a React
+SearchKit admin sits next to core's (see [below](#the-searchkit-builder-in-react)).
 
 Status: alpha. Forms with blocks, joins, repeats, live rules, drafts and the
 checkout block; table, list, grid and tree displays with filters, in-place
@@ -171,6 +171,19 @@ partial counts as changed only when it differs from its file both verbatim
 and re-encoded, since a ChangeSet re-encodes every partial it matches
 (`Civi/Afreact/BuilderReport.php`). With only core's extensions the section
 lists nothing.
+
+## The SearchKit builder in React
+
+`civicrm/admin/afreact/search` rebuilds core's SearchKit admin in React: the
+listing, the search editor and the display editors, saving the same records as
+core's builder. A display type without a React editor runs another
+extension's editor element, or its Angular editor as an island; otherwise its
+tab links to the classic builder. A display whose settings hold keys its
+editor does not know names their paths above the editor, with a link to the
+classic builder, and a save keeps them unchanged; the keys core's own
+editors, runtime and packaged displays use count as known
+(`src/admin/search/display/knownSettings.ts`). The setting `afreact_builders`
+will let React take over core's route; no builder is selectable yet.
 
 ## Pages
 

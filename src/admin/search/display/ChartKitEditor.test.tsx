@@ -26,6 +26,7 @@ function renderEditor(display: EditorDisplay) {
       display={display}
       typeInfo={typeInfo}
       searchDisplayPath="/civicrm/search"
+      classic="/civicrm/admin/search"
       onChange={onChange}
       onAdopt={onAdopt}
     />,

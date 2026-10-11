@@ -976,6 +976,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                       display={search.displays[displayIndex]}
                       typeInfo={typeOf(search.displays[displayIndex].type)}
                       searchDisplayPath={displayPath}
+                      classic={classic}
                       onChange={(display) => {
                         change((state) => ({
                           ...state,

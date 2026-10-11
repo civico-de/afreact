@@ -31,6 +31,7 @@ import {
   type DisplayContext,
   type Draft,
 } from "./model";
+import { unknownSettings } from "./knownSettings";
 import { TableEditor } from "./TableEditor";
 
 /** The display types whose settings this editor knows, with what each one's $onInit normalizes. */
@@ -112,6 +113,8 @@ interface DisplayEditorProps {
   display: EditorDisplay;
   typeInfo: { label: string; description: string; icon: string; grouping?: string } | undefined;
   searchDisplayPath: string;
+  /** The classic builder's address, without hash. */
+  classic: string;
   onChange: (display: EditorDisplay) => void;
   onAdopt: (display: EditorDisplay) => void;
 }
@@ -255,6 +258,10 @@ export function DisplayEditor(props: DisplayEditorProps) {
           </fieldset>
         </>
       )}
+      <UnknownSettings
+        paths={unknownSettings(display.type, display.settings)}
+        classic={search.id && display.id ? `${props.classic}#/edit/${String(search.id)}` : null}
+      />
       {display.type === "autocomplete" && <AutocompleteEditor {...editing} />}
       {display.type === "entity" && <EntityEditor {...editing} adopt={adopt} />}
       {display.type === "batch" && <BatchEditor {...editing} />}
@@ -282,6 +289,29 @@ export function DisplayEditor(props: DisplayEditorProps) {
         icon={typeInfo?.icon}
       />
     </>
+  );
+}
+
+/** Settings React's editor does not know, which a save hands back unchanged. */
+function UnknownSettings({ paths, classic }: { paths: string[]; classic: string | null }) {
+  if (!paths.length) return null;
+  return (
+    <div className="messages status no-popup" role="status">
+      <i className="crm-i fa-info-circle" role="img" aria-hidden="true" />{" "}
+      {ts("This display has settings the React builder cannot edit; saving keeps them unchanged.")}{" "}
+      {classic ? (
+        <a href={classic}>{ts("Edit them in the classic builder.")}</a>
+      ) : (
+        ts("Save the search to edit them in the classic builder.")
+      )}
+      <ul>
+        {paths.map((path) => (
+          <li key={path}>
+            <code>{path}</code>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

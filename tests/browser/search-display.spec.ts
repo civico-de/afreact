@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { unknownSettings } from "../../src/admin/search/display/knownSettings";
 import { api, axeFindings, ownFindings } from "./harness";
 
 const LABEL = "Afreact display probe";
@@ -318,6 +319,80 @@ test.describe("SearchKit table display editor", () => {
     await expect(page.getByText("Max segments to show")).toBeAttached();
     expect(ownFindings(react, await axeFindings(page, "#bootstrap-theme"))).toEqual([]);
     await page.emulateMedia({ colorScheme: "light" });
+  });
+
+  test("no display on the site has settings its React editor would name as unknown", async ({
+    page,
+  }) => {
+    await page.goto("/civicrm/admin/afreact/search#/list");
+    const displays = await api<{ name: string; type: string; settings: unknown }>(
+      page,
+      "SearchDisplay",
+      "get",
+      {
+        select: ["name", "type", "settings"],
+        where: [
+          [
+            "type",
+            "IN",
+            ["table", "list", "grid", "tree", "batch", "autocomplete", "entity", "chart-kit"],
+          ],
+        ],
+      },
+    );
+    expect(displays.length).toBeGreaterThan(0);
+    const found = displays.flatMap(({ name, type, settings }) =>
+      unknownSettings(type, settings).map((path) => `${name}: ${path}`),
+    );
+    expect(found).toEqual([]);
+  });
+
+  test("names settings it cannot edit, links the classic builder and saves them back", async ({
+    page,
+  }) => {
+    const settings = {
+      columns: [{ type: "field", key: "label", label: "Label", sortable: true, ribbon: "red" }],
+      mystery: { kept: 1 },
+    };
+    const [search] = await api<{ id: number }>(page, "SavedSearch", "create", {
+      values: { label: LABEL, api_entity: "Tag", api_params: params },
+      chain: {
+        display: [
+          "SearchDisplay",
+          "create",
+          {
+            values: {
+              saved_search_id: "$id",
+              name: "Foreign",
+              label: "Foreign",
+              type: "table",
+              settings,
+            },
+          },
+        ],
+      },
+    });
+    if (!search) throw new Error("The probe search was not created.");
+    await page.goto(`${pages.react}#/edit/${String(search.id)}`);
+    await page.locator('button[id$="-tab-display_0"]').click();
+    const notice = page.getByRole("status").filter({ hasText: "cannot edit" });
+    await expect(notice.locator("code")).toHaveText(["columns[0].ribbon", "mystery"]);
+    await expect(
+      notice.getByRole("link", { name: "Edit them in the classic builder." }),
+    ).toHaveAttribute("href", `${pages.angular}#/edit/${String(search.id)}`);
+    expect(await axeFindings(page, ".messages")).toEqual([]);
+    await page.getByRole("textbox", { name: "Name", exact: true }).fill("Foreign kept");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect
+      .poll(async () =>
+        (
+          await api<{ label: string; settings: typeof settings }>(page, "SearchDisplay", "get", {
+            select: ["label", "settings"],
+            where: [["saved_search_id", "=", search.id]],
+          })
+        ).map((d) => [d.label, d.settings.mystery, d.settings.columns[0]?.ribbon]),
+      )
+      .toEqual([["Foreign kept", { kept: 1 }, "red"]]);
   });
 
   test("warns that removing a display deletes the form embedding it", async ({ page }) => {
