@@ -75,6 +75,19 @@ class BuilderReportHeadlessTest extends TestCase implements HeadlessInterface {
       ],
       BuilderReport::check('search_kit'),
     );
+    AdminPage::load('search_kit');
+    $this->assertSame(
+      ['~/crmChartKitAdmin/afreactAdded.html', '~/crmSearchAdmin/crmSearch-fields.html'],
+      \Civi::resources()->getSettings()['vars']['afreactAdmin']['changedPartials'] ?? NULL,
+    );
+  }
+
+  public function testBuilderModuleTheSiteLacksIsLeftOut(): void {
+    $this->listen('hook_civicrm_angularModules', static function (GenericHookEvent $e): void {
+      unset($e->angularModules['crmChartKitAdmin']);
+    });
+    Afforms::angular()->clear();
+    $this->assertSame([], BuilderReport::partials('search_kit'));
   }
 
 }

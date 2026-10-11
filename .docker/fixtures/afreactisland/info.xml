@@ -2,7 +2,7 @@
 <extension key="afreactisland" type="module">
   <file>afreactisland</file>
   <name>afreact island fixture</name>
-  <description>A display type with only an Angular editor, for afreact's browser tests.</description>
+  <description>A display type with only an Angular editor and a builder panel, for afreact's browser tests.</description>
   <license>Proprietary</license>
   <maintainer>
     <author>civico GmbH</author>

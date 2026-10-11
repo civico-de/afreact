@@ -48,7 +48,14 @@ final class Assets {
     Strings::add();
     if (empty(\Civi::$statics[self::class . '::dispatched'])) {
       \Civi::$statics[self::class . '::dispatched'] = TRUE;
-      \Civi::dispatcher()->dispatch('civi.afreact.assets', GenericHookEvent::create(['builder' => $builder]));
+      $panels = [];
+      $replaces = [];
+      \Civi::dispatcher()->dispatch('civi.afreact.assets', GenericHookEvent::create([
+        'builder' => $builder,
+        'panels' => &$panels,
+        'replaces' => &$replaces,
+      ]));
+      BuilderPanels::add($builder, $panels, $replaces);
     }
     // What afCheckout's settingsFactory gives CRM.afCheckout, for CheckoutBlock fields.
     $checkout = \Civi::container()->has('civi.checkout.afform') ? \Civi::service('civi.checkout.afform') : NULL;

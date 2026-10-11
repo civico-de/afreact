@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useId, type ReactNode } from "react";
-import { loadChartKit } from "../../../search/ChartDisplay";
+import { loadChartKit } from "../../../search/ElementDisplay";
 import type { EditorDisplay } from "../editor";
 import {
   addColumn,

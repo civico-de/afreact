@@ -153,4 +153,66 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
     $this->assertSame([''], $seen);
   }
 
+  /**
+   * @param list<mixed> $named
+   * @param list<string> $replaces
+   * @return mixed
+   *   The panels the page hands the builder.
+   */
+  private function panelsAfter(string $builder, array $named, array $replaces = []): mixed {
+    unset(\Civi::$statics[Assets::class . '::dispatched']);
+    $listener = static function ($e) use ($named, $replaces): void {
+      foreach ($named as $name) {
+        $e->panels[] = $name;
+      }
+      $e->replaces = $replaces;
+    };
+    \Civi::dispatcher()->addListener('civi.afreact.assets', $listener);
+    try {
+      Assets::load($builder);
+    }
+    finally {
+      \Civi::dispatcher()->removeListener('civi.afreact.assets', $listener);
+    }
+    return \Civi::resources()->getSettings()['vars']['afreactAdmin']['panels'] ?? NULL;
+  }
+
+  public function testBuilderPageHandsOverTheNamedPanelsOnce(): void {
+    $this->assertSame(
+      ['afreact-probe-panel', 'afreact-probe-other'],
+      $this->panelsAfter('search_kit', ['afreact-probe-panel', 'afreact-probe-other', 'afreact-probe-panel']),
+    );
+  }
+
+  public function testRuntimePageLeavesPanelsOut(): void {
+    $this->assertNotContains('afreact-probe-runtime', (array) $this->panelsAfter('', ['afreact-probe-runtime']));
+  }
+
+  public function testPanelThatIsNoCustomElementNameIsRefused(): void {
+    $this->expectException(\CRM_Core_Exception::class);
+    $this->expectExceptionMessage('A builder panel is not a custom element name');
+    $this->panelsAfter('search_kit', ['Panel']);
+  }
+
+  public function testModuleAPluginsElementsReplaceIsNoIsland(): void {
+    $module = static function ($e): void {
+      $e->angularModules['afreactTestReplaced'] = [
+        'ext' => 'afreact',
+        'js' => [],
+        'basePages' => ['civicrm/admin/search'],
+      ];
+    };
+    \Civi::dispatcher()->addListener('hook_civicrm_angularModules', $module);
+    Afforms::angular()->clear();
+    try {
+      $this->assertContains('afreactTestReplaced', Islands::modules());
+      $this->panelsAfter('search_kit', [], ['afreactTestReplaced']);
+      $this->assertNotContains('afreactTestReplaced', Islands::modules());
+    }
+    finally {
+      \Civi::dispatcher()->removeListener('hook_civicrm_angularModules', $module);
+      Afforms::angular()->clear();
+    }
+  }
+
 }

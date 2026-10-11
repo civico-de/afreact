@@ -53,6 +53,23 @@ function islandDirectives(): Set<string> {
   return names;
 }
 
+/**
+ * The island modules that also decorate services or run config or run blocks, which reach into
+ * core's builder rather than adding an editor; AngularJS 1.8 queues those apart from directives.
+ */
+export function modulesChangingBuilder(): string[] {
+  const ng = angularOf();
+  if (ng === undefined) return [];
+  return islandModules().filter((name) => {
+    const module: unknown = call(ng, "module", name);
+    const config: unknown = Reflect.get(Object(module), "_configBlocks");
+    const run: unknown = Reflect.get(Object(module), "_runBlocks");
+    if (!Array.isArray(config) || !Array.isArray(run))
+      throw new TypeError(`Angular module ${name} has no config or run blocks.`);
+    return config.length > 0 || run.length > 0;
+  });
+}
+
 let directives: Set<string> | undefined;
 
 /** Whether an island module on the page has an Angular editor for the display type. */

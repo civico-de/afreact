@@ -71,8 +71,17 @@ final class BuilderReport {
     sort($unknown);
     return [
       'modules' => $unknown,
-      'partials' => self::changedPartials(self::BUILDER_MODULES[$builder] ?? []),
+      'partials' => self::partials($builder),
     ];
+  }
+
+  /**
+   * The builder modules' partials other extensions changed, which the React builder does not run.
+   *
+   * @return list<string>
+   */
+  public static function partials(string $builder): array {
+    return self::changedPartials(self::BUILDER_MODULES[$builder] ?? []);
   }
 
   /**
@@ -83,10 +92,12 @@ final class BuilderReport {
    * @return list<string>
    */
   private static function changedPartials(array $modules): array {
+    $angular = Afforms::angular();
+    // chart_kit's module exists only while chart_kit is enabled.
+    $modules = array_values(array_intersect($modules, array_keys($angular->getModules())));
     if ($modules === []) {
       return [];
     }
-    $angular = Afforms::angular();
     $assets = \Civi::service('asset_builder');
     if (!$assets instanceof AssetBuilder) {
       throw new \CRM_Core_Exception('The asset builder service is not available.');

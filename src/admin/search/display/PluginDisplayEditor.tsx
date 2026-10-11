@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useId, useRef } from "react";
-import { getDefaultLabel, parseExpr, type SearchInfo } from "../expr";
+import { getDefaultLabel, getField, parseExpr, type SearchInfo } from "../expr";
 import type { SearchAdminMetadata } from "../meta";
 import type { EditorDisplay } from "../editor";
 
@@ -24,9 +24,36 @@ export function pluginColumns(meta: SearchAdminMetadata, search: SearchInfo) {
   });
 }
 
-/** The validation messages of the plugin editors open under `root`. */
+/** core's getSearchInfo: a record, an entity name, or nothing, which has no fields. */
+function searchInfo(savedSearch: unknown): SearchInfo {
+  if (typeof savedSearch === "string")
+    return { api_entity: savedSearch, api_params: { select: [] } };
+  if (isRecord(savedSearch) && typeof savedSearch.api_entity === "string")
+    return {
+      api_entity: savedSearch.api_entity,
+      api_params: isRecord(savedSearch.api_params)
+        ? { select: [], ...savedSearch.api_params }
+        : { select: [] },
+      form_values: isRecord(savedSearch.form_values) ? savedSearch.form_values : undefined,
+    };
+  return { api_entity: "", api_params: { select: [] } };
+}
+
+/** The part of core's searchMeta service plugins call, on React's metadata. */
+export function pluginSearchMeta(meta: SearchAdminMetadata) {
+  return {
+    parseExpr: (expr: string, savedSearch?: unknown) =>
+      expr ? parseExpr(meta, expr, searchInfo(savedSearch)) : undefined,
+    getDefaultLabel: (expr: string, savedSearch?: unknown) =>
+      getDefaultLabel(meta, expr, searchInfo(savedSearch)),
+    getField: (fieldName: string, savedSearch?: unknown) =>
+      getField(meta, fieldName, searchInfo(savedSearch)),
+  };
+}
+
+/** The validation messages of the plugin editors and panels under `root`. */
 export function pluginValidationMessages(root: ParentNode): string[] {
-  return [...root.querySelectorAll("[data-afreact-display-editor]")].flatMap((element) => {
+  return [...root.querySelectorAll("[data-afreact-plugin]")].flatMap((element) => {
     const message: unknown = Reflect.get(element, "validationMessage");
     return typeof message === "string" && message !== "" ? [message] : [];
   });
@@ -56,7 +83,7 @@ export function PluginDisplayEditor({
 
   useEffect(() => {
     const created = document.createElement(tag);
-    created.setAttribute("data-afreact-display-editor", "");
+    created.setAttribute("data-afreact-plugin", "");
     const listener = (event: Event) => {
       if (event instanceof CustomEvent && event.target === created) {
         const detail: unknown = event.detail;
@@ -85,6 +112,7 @@ export function PluginDisplayEditor({
       api_params: search.api_params,
     });
     Reflect.set(current, "columns", pluginColumns(meta, search));
+    Reflect.set(current, "searchMeta", pluginSearchMeta(meta));
     Reflect.set(current, "display", structuredClone(display));
   });
 

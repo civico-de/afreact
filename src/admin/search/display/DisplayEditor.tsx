@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { api4 } from "../../../api/civi";
 import { AfreactSearch } from "../../../search/AfreactSearch";
-import { isDisplaySettings, isDisplayType } from "../../../search/types";
+import { isDisplaySettings } from "../../../search/types";
 import type { EditorDisplay } from "../editor";
 import type { SearchInfo } from "../expr";
 import { useSearchTasks } from "./common";
@@ -315,6 +315,15 @@ function UnknownSettings({ paths, classic }: { paths: string[]; classic: string 
   );
 }
 
+/** The preview of a display whose editor is another extension's element. */
+export function PluginPreview(props: {
+  search: SearchInfo & { name?: string };
+  display: EditorDisplay;
+  icon: string | undefined;
+}) {
+  return <Preview {...props} draft={draftOf(props.display)} />;
+}
+
 /** The preview button and the runtime display with the settings as they were when clicked. */
 function Preview({
   search,
@@ -404,7 +413,7 @@ function PreviewDisplay({
         {defaults.error.message}
       </p>
     );
-  if (!isDisplaySettings(settings) || !isDisplayType(type))
+  if (!isDisplaySettings(settings))
     return (
       <p className="crm-error" role="alert">
         {ts("This display cannot be previewed.")}

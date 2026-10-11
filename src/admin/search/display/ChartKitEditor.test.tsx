@@ -6,7 +6,7 @@ import { metadata } from "../../../test/searchMetadata";
 import type { EditorDisplay } from "../editor";
 import { DisplayEditor } from "./DisplayEditor";
 
-vi.mock("../../../search/ChartDisplay", () => ({ loadChartKit: () => Promise.resolve(true) }));
+vi.mock("../../../search/ElementDisplay", () => ({ loadChartKit: () => Promise.resolve(true) }));
 
 const search = {
   name: "S",

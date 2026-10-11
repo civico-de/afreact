@@ -127,6 +127,7 @@ test.describe("SearchKit table display editor", () => {
         });
       }
       const [angular, react] = built;
+      expect(unknownSettings(angular?.type ?? "", angular?.settings)).toEqual([]);
       // Core adds description to the entity's metadata, so its new autocompletes search by it.
       if (type === "Autocomplete" && angular) {
         expect(angular.settings.searchFields).toEqual(["id", "label", "description"]);
@@ -321,6 +322,33 @@ test.describe("SearchKit table display editor", () => {
     await page.emulateMedia({ colorScheme: "light" });
   });
 
+  test("a chart of each type saves without settings its React editor would name as unknown", async ({
+    page,
+  }) => {
+    await open(page, "react", LABEL, "Chart");
+    const types = page.locator("afreact-builder").getByRole("radio");
+    await expect(types.first()).toBeVisible();
+    const names = await types.evaluateAll((radios) =>
+      radios.map(
+        (radio) =>
+          radio.getAttribute("aria-label") ?? radio.closest("label")?.textContent?.trim() ?? "",
+      ),
+    );
+    expect(names.length).toBeGreaterThan(3);
+    const found: string[] = [];
+    for (const name of names) {
+      // A new document each time: a hash change alone keeps the editor's unsaved search.
+      await page.goto("about:blank");
+      await open(page, "react", `${LABEL} ${name}`, "Chart");
+      await page.getByRole("radio", { name, exact: true }).check();
+      const { display } = await save(page);
+      found.push(
+        ...unknownSettings("chart-kit", display.settings).map((path) => `${name}: ${path}`),
+      );
+    }
+    expect(found).toEqual([]);
+  });
+
   test("no display on the site has settings its React editor would name as unknown", async ({
     page,
   }) => {
@@ -452,7 +480,9 @@ test.describe("SearchKit table display editor", () => {
           for (const mode of ["", "a", "b"]) this.select.add(new Option(mode || "none", mode));
           this.select.addEventListener("change", () => {
             this.dispatchEvent(
-              new CustomEvent("change", { detail: { settings: { mode: this.select.value } } }),
+              new CustomEvent("change", {
+                detail: { settings: { mode: this.select.value, columns: [] } },
+              }),
             );
           });
           this.append(this.select);
@@ -465,6 +495,16 @@ test.describe("SearchKit table display editor", () => {
         }
       }
       customElements.define("afreact-search-admin-display-afreact-probe", ProbeEditor);
+      // Its renderer: names the search it was given (by name or as JSON) and the mode.
+      class ProbeDisplay extends HTMLElement {
+        connectedCallback() {
+          const search = this.getAttribute("search") ?? "";
+          const entity = search.startsWith("{") ? JSON.parse(search).api_entity : search;
+          const mode = JSON.parse(this.getAttribute("settings") ?? "{}").mode;
+          this.textContent = "Probe of " + entity + " in mode " + mode;
+        }
+      }
+      customElements.define("civi-search-display-afreact-probe", ProbeDisplay);
     `);
     // A new document, so that the script runs: open() alone may only change the hash.
     await page.goto("about:blank");
@@ -473,11 +513,86 @@ test.describe("SearchKit table display editor", () => {
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(editor.getByText("Choose a probe mode.")).toBeVisible();
     await editor.getByRole("combobox", { name: "Probe mode" }).selectOption("b");
-    const { display } = await save(page);
+    await editor.getByRole("button", { name: "Preview" }).click();
+    await expect(editor.locator("civi-search-display-afreact-probe")).toHaveText(
+      "Probe of Tag in mode b",
+    );
+    const { id, display } = await save(page);
     expect(display).toMatchObject({
       type: "afreact-probe",
       settings: { mode: "b" },
     });
+    const [search] = await api<{ name: string }>(page, "SavedSearch", "get", {
+      select: ["name"],
+      where: [["id", "=", id]],
+    });
+    await page.goto(`/civicrm/afreact/search#/display/${search?.name ?? ""}/${display.name}`);
+    await expect(page.locator("civi-search-display-afreact-probe")).toHaveText(
+      `Probe of ${search?.name ?? ""} in mode b`,
+    );
+  });
+
+  test("another extension's builder panel follows the search and blocks saving", async ({
+    page,
+  }) => {
+    // afreactisland names its panel in civi.afreact.assets; a "[block]" label blocks saving.
+    await open(page, "react", LABEL);
+    const panel = page.locator("afreact-island-panel");
+    const seen = () =>
+      panel.evaluate((element) => {
+        const search: unknown = Reflect.get(element, "record");
+        return search && typeof search === "object" && "label" in search ? search.label : null;
+      });
+    await expect.poll(seen).toBe(LABEL);
+    const label = page.locator("#crm-saved-search-label");
+    await label.fill(`${LABEL} [block]`);
+    await expect(panel).toHaveText("The island panel blocks this label.");
+    let writes = 0;
+    page.on("request", (request) => {
+      if (/SavedSearch|SearchDisplay/.test(request.postData() ?? request.url())) writes++;
+    });
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.locator("afreact-builder .messages.error")).toContainText(
+      "The island panel blocks this label.",
+    );
+    expect(writes).toBe(0);
+    await label.fill(LABEL);
+    await expect(panel).toHaveText("");
+    const { display } = await save(page);
+    expect(display.type).toBe("table");
+  });
+
+  test("an extension decorating core's builder sends saving to the classic builder", async ({
+    page,
+  }) => {
+    const NOTICE = "Other extensions change the classic search builder";
+    await open(page, "react", LABEL);
+    await expect(
+      page.locator("afreact-builder").getByRole("status").filter({ hasText: NOTICE }),
+    ).toHaveCount(0);
+    // The island fixture's module, decorating core's builder directive as smartchart's does.
+    await page.route("**/afreactisland/ang/afreactIslandAdmin.js*", async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        body: `${await response.text()}\nangular.module("afreactIslandAdmin").decorator("crmSearchAdminDirective", ["$delegate", (d) => d]);`,
+      });
+    });
+    await page.goto("about:blank");
+    await open(page, "react", LABEL);
+    const notice = page.locator("afreact-builder").getByRole("status").filter({ hasText: NOTICE });
+    await expect(notice.getByRole("listitem")).toHaveText(["afreactIslandAdmin"]);
+    await expect(notice.getByRole("link", { name: "Open the classic builder." })).toHaveAttribute(
+      "href",
+      /\/civicrm\/admin\/search#\/list$/,
+    );
+    let writes = 0;
+    page.on("request", (request) => {
+      if (/SavedSearch|SearchDisplay/.test(request.postData() ?? request.url())) writes++;
+    });
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.locator("afreact-builder .messages.error")).toContainText(NOTICE);
+    expect(writes).toBe(0);
   });
 
   test("another extension's Angular display editor runs as an island", async ({ page }) => {

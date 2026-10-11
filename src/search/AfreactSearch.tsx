@@ -9,7 +9,12 @@ import { useInlineEdit } from "./inlineEdit";
 import { ItemList, TreeView } from "./Items";
 import { useKeptFocus } from "./keptFocus";
 import { BatchDisplay } from "./BatchDisplay";
-import { ChartDisplay } from "./ChartDisplay";
+import {
+  ElementDisplay,
+  loadChartKit,
+  loadPluginElement,
+  pluginDisplayTag,
+} from "./ElementDisplay";
 import { useAutoOpen, useFormSuccess } from "./links";
 import { Pager, SearchButton } from "./Pager";
 import { useReorder } from "./Reorder";
@@ -33,7 +38,7 @@ interface AfreactSearchProps {
   /** Null for the search's default display, as SearchDisplay.getDefault builds it. */
   display: string | null;
   /** The display type of the layout's element; loaded with the settings when absent. */
-  type?: DisplayType;
+  type?: string;
   /** Settings Afform already compiled into the layout; loaded via the API when absent. */
   settings?: DisplaySettings;
   /** Embedding Afform, so SearchDisplay.run applies the form's access rules as in Angular. */
@@ -59,27 +64,30 @@ interface AfreactSearchProps {
 const NO_FILTERS = {};
 
 /**
- * A batch display edits import rows and a chart is core's own element; every other type shows
- * the results itself.
+ * A batch display edits import rows, a chart and another extension's display type are elements
+ * that draw themselves; every other type shows the results itself.
  */
 export function AfreactSearch(props: AfreactSearchProps) {
   const loaded = useSearchDisplay(props.search, props.display, !props.settings);
   const type = props.type ?? loaded.data?.type;
-  if (type !== "batch" && type !== "chart-kit")
+  const element = type === "chart-kit" || (type !== undefined && !isDisplayType(type));
+  if (type !== "batch" && !element)
     return <ResultDisplay {...props} type={isResultType(props.type) ? props.type : undefined} />;
-  // chart_kit's element takes an unsaved search and display as JSON in place of their names.
-  const inlineChart = type === "chart-kit" ? props.inline : undefined;
-  const display =
-    props.display ?? (inlineChart?.display ? JSON.stringify(inlineChart.display) : null);
+  // An element takes an unsaved search and display as JSON in place of their names.
+  const inline = element ? props.inline : undefined;
+  const display = props.display ?? (inline?.display ? JSON.stringify(inline.display) : null);
   if (display === null)
     return <Failure error={new Error(ts("A %1 display needs a name.", { 1: type }))} />;
   const settings = props.settings ?? loaded.data?.settings;
   if (loaded.error) return <Failure error={loaded.error} />;
   if (!settings) return <p role="status">{ts("Loading…")}</p>;
-  if (type === "chart-kit")
+  if (element) {
+    const tag = pluginDisplayTag(type);
     return (
-      <ChartDisplay
-        search={inlineChart ? JSON.stringify(inlineChart.search) : props.search}
+      <ElementDisplay
+        tag={tag}
+        load={type === "chart-kit" ? loadChartKit : () => loadPluginElement(tag)}
+        search={inline ? JSON.stringify(inline.search) : props.search}
         display={display}
         settings={settings}
         afform={props.afform}
@@ -87,6 +95,7 @@ export function AfreactSearch(props: AfreactSearchProps) {
         enabled={props.enabled ?? true}
       />
     );
+  }
   return (
     <BatchDisplay
       search={props.search}

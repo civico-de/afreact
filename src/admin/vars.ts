@@ -11,6 +11,10 @@ export interface AdminVars {
   afGuiEditor?: Record<string, unknown>;
   /** Other extensions' search builder modules, whose display editors run as islands. */
   islandModules?: string[];
+  /** Core's builder partials other extensions changed (BuilderReport::partials()). */
+  changedPartials?: string[];
+  /** The panel elements other extensions name in the civi.afreact.assets event. */
+  panels?: string[];
 }
 
 export function adminVars(): AdminVars {

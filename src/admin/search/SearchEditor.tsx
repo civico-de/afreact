@@ -32,11 +32,12 @@ import {
   type EditorDisplay,
   type EditorSearch,
 } from "./editor";
-import { AngularIsland, hasIslandEditor } from "./display/AngularIsland";
-import { DisplayEditor, hasDisplayEditor } from "./display/DisplayEditor";
+import { AngularIsland, hasIslandEditor, modulesChangingBuilder } from "./display/AngularIsland";
+import { DisplayEditor, hasDisplayEditor, PluginPreview } from "./display/DisplayEditor";
 import {
   hasPluginEditor,
   PluginDisplayEditor,
+  pluginSearchMeta,
   pluginValidationMessages,
 } from "./display/PluginDisplayEditor";
 import { ConditionsTab } from "./editor/ConditionsTab";
@@ -49,6 +50,8 @@ import { ResultsPreview } from "./editor/ResultsPreview";
 import { SettingsTab } from "./editor/SettingsTab";
 import { withEntitySetFields } from "./entitySets";
 import { ExportDialog } from "./ExportDialog";
+import { BuilderPanels } from "../BuilderPanels";
+import { adminVars } from "../vars";
 import { getEntity, type ApiParams } from "./expr";
 import { displayChanges, findCriticalChanges, postSaveDisplay, preSaveDisplay } from "./saveHooks";
 import {
@@ -284,6 +287,7 @@ interface EditorProps {
 function Editor({ meta: baseMeta, initial, create }: EditorProps) {
   const id = useId();
   const classic = useContext(ClassicContext);
+  const [changedBuilder] = useState(classicOnlyChanges);
   const setGuard = useContext(LeaveGuardContext);
   const settings = searchAdminSettings();
   const entityIndex = useCoreHas({ "6.20": "6.20.alpha1" });
@@ -521,6 +525,10 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
       if (first?.tab) setTab(first.tab);
       return;
     }
+    if (changedBuilder.length) {
+      setErrors([classicOnly()]);
+      return;
+    }
     const invalid = root.current ? pluginValidationMessages(root.current) : [];
     if (invalid.length) {
       setErrors(invalid);
@@ -749,6 +757,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
             </div>
           </div>
         </div>
+        <ClassicOnly changes={changedBuilder} classic={classic} id={search.id} />
         {errors.length > 0 && (
           <div className="messages error no-popup" role="alert">
             <ul>
@@ -1027,6 +1036,16 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                 {displayIndex !== null &&
                   search.displays[displayIndex] &&
                   !hasDisplayEditor(search.displays[displayIndex].type) &&
+                  hasPluginEditor(search.displays[displayIndex].type) && (
+                    <PluginPreview
+                      search={search}
+                      display={search.displays[displayIndex]}
+                      icon={typeOf(search.displays[displayIndex].type)?.icon}
+                    />
+                  )}
+                {displayIndex !== null &&
+                  search.displays[displayIndex] &&
+                  !hasDisplayEditor(search.displays[displayIndex].type) &&
                   !hasPluginEditor(search.displays[displayIndex].type) &&
                   hasIslandEditor(search.displays[displayIndex].type) && (
                     <AngularIsland
@@ -1071,6 +1090,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
           </div>
         </div>
 
+        <BuilderPanels record={search} services={{ searchMeta: pluginSearchMeta(meta) }} />
         {displayIndex === null && (
           <ResultsPreview
             meta={meta}
@@ -1120,6 +1140,48 @@ function warnEmbedded(
           2: label,
         });
   window.CRM.alert(message, ts("Display embedded"), "alert");
+}
+
+const classicOnly = () =>
+  ts(
+    "Other extensions change the classic search builder in ways this builder does not run, so searches are saved there.",
+  );
+
+/** What other extensions add to core's builder beyond display editors: modules and templates. */
+const classicOnlyChanges = () => [
+  ...modulesChangingBuilder(),
+  ...(adminVars().changedPartials ?? []),
+];
+
+function ClassicOnly({
+  changes,
+  classic,
+  id,
+}: {
+  changes: string[];
+  classic: string;
+  id?: number;
+}) {
+  if (!changes.length) return null;
+  return (
+    <div className="messages warning no-popup" role="status">
+      <i className="crm-i fa-exclamation-triangle" role="img" aria-hidden="true" /> {classicOnly()}{" "}
+      {id ? (
+        <a href={`${classic}#/edit/${String(id)}`}>
+          {ts("Edit this search in the classic builder.")}
+        </a>
+      ) : (
+        <a href={`${classic}#/list`}>{ts("Open the classic builder.")}</a>
+      )}
+      <ul>
+        {changes.map((change) => (
+          <li key={change}>
+            <code>{change}</code>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 interface TabItemProps {

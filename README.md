@@ -178,7 +178,21 @@ lists nothing.
 listing, the search editor and the display editors, saving the same records as
 core's builder. A display type without a React editor runs another
 extension's editor element, or its Angular editor as an island; otherwise its
-tab links to the classic builder. A display whose settings hold keys its
+tab links to the classic builder. An extension's `civi-search-display-<type>`
+element, on core's `CiviSearchDisplay` base as chart_kit's, renders its type in
+the preview and on the display page. An extension adds a panel to the
+builder by naming its custom element in the `civi.afreact.assets` event when
+`$event->builder` is `search_kit` (`$event->panels[] = 'my-panel';`); React
+mounts it below the editor, sets its `record` property to the search with its
+displays on every change, and refuses to save while its `validationMessage` is
+not empty. Editor and panel elements also get `searchMeta` with core's
+`parseExpr`, `getDefaultLabel` and `getField`, answered from React's metadata.
+An extension that changes core's builder beyond a display editor, with a
+ChangeSet on its templates or an Angular decorator, `config()` or `run()`
+block in its builder module, keeps its searches in the classic builder:
+React names the changes and does not save. An extension whose elements and
+panels take over such a module names it in the same event
+(`$event->replaces[] = 'myBuilderModule';`), and React leaves it out. A display whose settings hold keys its
 editor does not know names their paths above the editor, with a link to the
 classic builder, and a save keeps them unchanged; the keys core's own
 editors, runtime and packaged displays use count as known

@@ -347,12 +347,29 @@ describe("loaded display type", () => {
     );
   });
 
-  it("names a type it does not render", async () => {
+  it("names the element a type it does not render needs from another extension", async () => {
     mockApi({
       "SearchDisplay.get": () => [{ label: "Map", type: "map", settings: { columns } }],
     });
     renderWithQuery(<AfreactSearch search="S" display="D" />);
-    expect(await screen.findByRole("note")).toHaveTextContent("display type map");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "No extension defines the element civi-search-display-map.",
+    );
+  });
+
+  it("hands a type another extension renders to its element", async () => {
+    customElements.define("civi-search-display-afreact-test", class extends HTMLElement {});
+    mockApi({
+      "SearchDisplay.get": () => [{ label: "T", type: "afreact-test", settings: { columns } }],
+    });
+    const { container } = renderWithQuery(<AfreactSearch search="S" display="D" />);
+    await waitFor(() => {
+      expect(container.querySelector("civi-search-display-afreact-test")).not.toBeNull();
+    });
+    const element = container.querySelector("civi-search-display-afreact-test");
+    expect(element?.getAttribute("search")).toBe("S");
+    expect(element?.getAttribute("display")).toBe("D");
+    expect(JSON.parse(element?.getAttribute("settings") ?? "null")).toEqual({ columns });
   });
 });
 

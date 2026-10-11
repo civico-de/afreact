@@ -15,7 +15,7 @@ final class Islands {
   private const REACT_EDITED = ['crmChartKitAdmin'];
 
   /**
-   * Other extensions' Angular modules for core's search builder.
+   * Other extensions' Angular modules for core's search builder, but those their elements replace.
    *
    * @return list<string>
    */
@@ -26,7 +26,7 @@ final class Islands {
       static fn (mixed $module, int|string $name): bool => (
         in_array($builderPage, Record::array($module, 'basePages'), TRUE)
         && Record::string($module, 'ext') !== 'org.civicrm.search_kit'
-        && !in_array($name, self::REACT_EDITED, TRUE)
+        && !in_array($name, [...self::REACT_EDITED, ...BuilderPanels::replaced()], TRUE)
       ),
       ARRAY_FILTER_USE_BOTH,
     );

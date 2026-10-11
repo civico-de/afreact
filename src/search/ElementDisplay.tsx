@@ -5,14 +5,20 @@ import type { DisplaySettings } from "./types";
 
 const TAG = "civi-search-display-chart-kit";
 
-/** The timers of core's element, which its disconnectedCallback leaves running. */
-interface ChartElement extends HTMLElement {
+/** The element another extension defines to render its display type, as chart_kit does. */
+export const pluginDisplayTag = (type: string) => `civi-search-display-${type}`;
+
+/** The timers of core's CiviSearchDisplay base, which its disconnectedCallback leaves running. */
+interface DisplayElement extends HTMLElement {
   nextRun?: number;
   nextReload?: number;
   filterChangeTimeout?: number;
 }
 
-interface ChartDisplayProps {
+interface ElementDisplayProps {
+  tag: string;
+  /** Defines the element, once per page. */
+  load: () => Promise<true>;
   search: string;
   display: string;
   settings: DisplaySettings;
@@ -23,19 +29,21 @@ interface ChartDisplayProps {
   enabled: boolean;
 }
 
-/** crmSearchDisplayChartKit: core's <civi-search-display-chart-kit>, which draws the chart itself. */
-export function ChartDisplay({
+/** A display element on core's CiviSearchDisplay base, such as chart_kit's, which draws itself. */
+export function ElementDisplay({
+  tag,
+  load,
   search,
   display,
   settings,
   afform,
   filters,
   enabled,
-}: ChartDisplayProps) {
+}: ElementDisplayProps) {
   const container = useRef<HTMLDivElement>(null);
   const loaded = useQuery({
-    queryKey: ["chart_kit"],
-    queryFn: loadChartKit,
+    queryKey: ["displayElement", tag],
+    queryFn: load,
     staleTime: Infinity,
     enabled,
   });
@@ -51,7 +59,7 @@ export function ChartDisplay({
 
   useEffect(() => {
     const parent = container.current;
-    const chart: ChartElement | null = ready && parent ? document.createElement(TAG) : null;
+    const chart: DisplayElement | null = ready && parent ? document.createElement(tag) : null;
     if (chart && parent) {
       // civi-search-display asks an Angular afFieldset controller for the form's name; the
       // form's values arrive in `filters`.
@@ -66,12 +74,12 @@ export function ChartDisplay({
     return () => {
       if (!chart) return;
       chart.remove();
-      // A removed chart would still run its search and draw into the void (see upstream bugs).
+      // A removed element would still run its search and draw into the void (see upstream bugs).
       clearTimeout(chart.nextRun);
       clearTimeout(chart.nextReload);
       clearTimeout(chart.filterChangeTimeout);
     };
-  }, [ready, search, display, afform]);
+  }, [ready, tag, search, display, afform]);
 
   // The element reruns on a changed attribute, so only a real change is written.
   useEffect(() => {
@@ -93,6 +101,17 @@ export function ChartDisplay({
       <div ref={container} />
     </>
   );
+}
+
+/** Another extension's element, defined by its scripts once the page has loaded. */
+export async function loadPluginElement(tag: string): Promise<true> {
+  if (document.readyState !== "complete")
+    await new Promise((resolve) => {
+      window.addEventListener("load", resolve, { once: true });
+    });
+  if (!customElements.get(tag))
+    throw new Error(ts("No extension defines the element %1.", { 1: tag }));
+  return true;
 }
 
 export const chartKitMissing = () => ts("Charts need the chart_kit extension.");

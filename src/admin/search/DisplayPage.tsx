@@ -4,7 +4,6 @@ import { api4, errorMessage } from "../../api/civi";
 import { replacePageTitle } from "../../afform/pageTitle";
 import { AfreactSearch, useSearchDisplay } from "../../search/AfreactSearch";
 import { Menu } from "../../search/Menu";
-import { isDisplayType } from "../../search/types";
 import { displayKeys } from "../../search/urlKeys";
 import { useHashParams } from "../../url/UrlState";
 
@@ -66,7 +65,7 @@ export function DisplayPage({ search, display }: { search: string; display: stri
       <AfreactSearch
         search={search}
         display={display}
-        type={isDisplayType(loaded.data.type) ? loaded.data.type : undefined}
+        type={loaded.data.type}
         settings={loaded.data.settings}
         filters={filters}
       />

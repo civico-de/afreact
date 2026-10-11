@@ -5,6 +5,7 @@ import {
   hasPluginEditor,
   PluginDisplayEditor,
   pluginColumns,
+  pluginSearchMeta,
   pluginValidationMessages,
 } from "./PluginDisplayEditor";
 
@@ -12,6 +13,7 @@ class ProbeEditor extends HTMLElement {
   display: unknown;
   savedSearch: unknown;
   columns: unknown;
+  searchMeta: unknown;
   validationMessage = "";
 }
 customElements.define("afreact-search-admin-display-probe", ProbeEditor);
@@ -44,6 +46,7 @@ describe("plugin display editor", () => {
     if (!(element instanceof ProbeEditor)) throw new Error("The editor element is missing.");
     expect(element.display).toEqual(display);
     expect(element.savedSearch).toEqual(search);
+    expect(element.searchMeta).toHaveProperty("parseExpr");
     expect(element.columns).toEqual([
       { key: "id", label: "Contact ID", data_type: "Integer" },
       { key: "display_name", label: "Display Name", data_type: "String" },
@@ -55,6 +58,18 @@ describe("plugin display editor", () => {
     expect(pluginValidationMessages(container)).toEqual([]);
     element.validationMessage = "Choose a chart type.";
     expect(pluginValidationMessages(container)).toEqual(["Choose a chart type."]);
+  });
+
+  it("answers core's searchMeta calls for the record, or the entity, they are given", () => {
+    const searchMeta = pluginSearchMeta(metadata);
+    expect(searchMeta.parseExpr("COUNT(id) AS COUNT_id", search)).toMatchObject({
+      alias: "COUNT_id",
+      fn: { name: "COUNT" },
+    });
+    expect(searchMeta.parseExpr("", search)).toBeUndefined();
+    expect(searchMeta.getDefaultLabel("display_name", search)).toBe("Display Name");
+    expect(searchMeta.getField("display_name", "Contact")).toMatchObject({ data_type: "String" });
+    expect(searchMeta.getField("display_name")).toBeUndefined();
   });
 
   it("lists the columns with their labels and types", () => {

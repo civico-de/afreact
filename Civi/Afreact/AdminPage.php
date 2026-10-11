@@ -62,7 +62,10 @@ final class AdminPage {
     if ($islands !== []) {
       Chrome::angular()->addModules($islands);
     }
-    \Civi::resources()->addVars('afreactAdmin', ['islandModules' => $islands]);
+    \Civi::resources()->addVars('afreactAdmin', [
+      'islandModules' => $islands,
+      'changedPartials' => BuilderReport::partials($builder),
+    ]);
     \Civi::resources()->addModuleFile(E::LONG_NAME, 'dist/afreact-admin.js');
     self::settings($builder);
     Strings::add(Strings::DOMAINS[$builder] ?? NULL);

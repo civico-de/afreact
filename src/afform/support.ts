@@ -1,4 +1,4 @@
-import { chartKitMissing } from "../search/ChartDisplay";
+import { chartKitMissing } from "../search/ElementDisplay";
 import { parseFiltersAttribute, readsOptions, type DisplayFilters } from "../search/displayFilters";
 import { columnNote, settingsOf, unsupportedFeatures } from "../search/rows";
 import { referencedTasks } from "../search/searchTasks";
