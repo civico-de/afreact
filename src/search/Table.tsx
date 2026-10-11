@@ -28,6 +28,15 @@ interface TableViewProps {
   onLinkClick: (link: Link, key: Row["key"], event: MouseEvent<HTMLAnchorElement>) => void;
   inlineEdit: InlineEdit;
   reorder: Reorder;
+  headerTools?: HeaderTools;
+}
+
+/** Controls an editor adds to the header: per column, and in a cell after the last one. */
+export interface HeaderTools {
+  column: (index: number) => ReactNode;
+  end: ReactNode;
+  /** Names the extra header cell, whose controls are no header text. */
+  endLabel: string;
 }
 
 /** crmSearchDisplayTable.html: the header with sort controls, the rows and the totals. */
@@ -100,9 +109,16 @@ export function TableView(props: TableViewProps) {
                   {column.label}
                 </span>
                 {unlabelled && <span className="sr-only">{unlabelled}</span>}
+                {props.headerTools?.column(index)}
               </th>
             );
           })}
+          {props.headerTools && (
+            <th scope="col" className="form-inline text-right">
+              <span className="sr-only">{props.headerTools.endLabel}</span>
+              {props.headerTools.end}
+            </th>
+          )}
         </tr>
         {tally && tally.header && tallyRow}
       </thead>

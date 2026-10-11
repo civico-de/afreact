@@ -123,6 +123,13 @@ export interface RunPage {
   editable: Record<string, EditableInfo>;
   /** Labels of the values the display's own filters select, for the page title (addFilterLabel). */
   labels: string[];
+  /** The run's debug output (SQL, timing) when it was asked for and the user may see it. */
+  debug?: RunDebug;
+}
+
+export interface RunDebug {
+  sql?: string[];
+  timeIndex?: number;
 }
 
 export interface DisplaySettings {

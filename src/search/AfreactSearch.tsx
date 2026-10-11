@@ -14,7 +14,7 @@ import { useAutoOpen, useFormSuccess } from "./links";
 import { Pager, SearchButton } from "./Pager";
 import { useReorder } from "./Reorder";
 import { runPage, settingsOf, unsupportedFeatures } from "./rows";
-import { TableView } from "./Table";
+import { TableView, type HeaderTools } from "./Table";
 import { useTasks } from "./Tasks";
 import { DisplayHeader } from "./Toolbar";
 import {
@@ -23,6 +23,7 @@ import {
   type DisplaySettings,
   type DisplayType,
   type Row,
+  type RunDebug,
   type RunPage,
 } from "./types";
 import { displayKeys, positiveInteger, sortParser, sortText, type Sort } from "./urlKeys";
@@ -47,6 +48,12 @@ interface AfreactSearchProps {
   savedColumns?: Record<string, string>;
   /** Takes the labels of each run's own filters, which core puts before the page title. */
   onLabels?: (labels: string[]) => void;
+  /** An unsaved search run as an object, with an unsaved display or the search's default one. */
+  inline?: { search: Record<string, unknown>; display?: Record<string, unknown> };
+  /** Asks each run for its debug output (SQL, timing) and passes it on. */
+  onDebug?: (debug: RunDebug) => void;
+  /** A table's header controls for an editor. */
+  headerTools?: HeaderTools;
 }
 
 const NO_FILTERS = {};
@@ -134,6 +141,9 @@ function ResultDisplay({
   enabled = true,
   savedColumns,
   onLabels,
+  inline,
+  onDebug,
+  headerTools,
 }: AfreactSearchProps & { type?: ResultType }) {
   const client = useQueryClient();
   const loaded = useSearchDisplay(search, display, !given);
@@ -166,7 +176,15 @@ function ResultDisplay({
   const activeSort = url.sort ?? settings?.sort ?? [];
   const limit = url.limit ?? settings?.limit ?? 0;
   const page = filtersChanged ? 1 : (url.page ?? 1);
-  const params = { savedSearch: search, display, seed, afform, filters: runFilters ?? {} };
+  const runSearch = inline?.search ?? search;
+  const runDisplay = inline?.display ?? display;
+  const params = {
+    savedSearch: runSearch,
+    display: runDisplay,
+    seed,
+    afform,
+    filters: runFilters ?? {},
+  };
   const toggles = useColumnToggles(
     settings?.columns,
     savedColumns,
@@ -185,6 +203,7 @@ function ResultDisplay({
         limit,
         sort: activeSort,
         return: `page:${page}`,
+        ...(onDebug ? { debug: true } : {}),
       });
       // Same rule as searchDisplayBaseTrait: a short first page is the whole result, no count call needed.
       if (page === 1 && (!limit || result.length < limit))
@@ -225,6 +244,9 @@ function ResultDisplay({
   useEffect(() => {
     if (rows.data) onLabels?.(rows.data.labels);
   }, [rows.data, onLabels]);
+  useEffect(() => {
+    if (rows.data?.debug) onDebug?.(rows.data.debug);
+  }, [rows.data, onDebug]);
   // Core keeps the toolbar of the last run while the next page loads.
   const [shown, setShown] = useState<RunPage | undefined>(undefined);
   if (rows.data && rows.data !== shown) setShown(rows.data);
@@ -232,8 +254,8 @@ function ResultDisplay({
   const loading = rows.isFetching || (rows.isPending && enabled && runFilters !== null);
   const rowCount = rows.error ? null : (counted.data ?? null);
   const tasks = useTasks({
-    search,
-    display,
+    search: runSearch,
+    display: runDisplay,
     settings: settings ?? { columns: [] },
     page: loading || rows.error ? undefined : rows.data,
     loading,
@@ -357,6 +379,7 @@ function ResultDisplay({
           selectAll={tasks.header}
           select={tasks.rowSelect}
           reorder={reorder}
+          headerTools={headerTools}
         />
       ) : (
         <ItemList type={type} {...view} />

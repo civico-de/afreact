@@ -5,6 +5,7 @@ import type {
   DisplayType,
   EditableInfo,
   Row,
+  RunDebug,
   RunPage,
   SubsearchDisplay,
   ToolbarLink,
@@ -245,13 +246,25 @@ export function runPage(result: Row[]): RunPage {
   const toolbar = property("toolbar");
   const subsearch = property("subsearch");
   const labels = property("labels");
+  const debug = property("debug");
   return {
     rows: [...result],
     toolbar: isLinks(toolbar) ? toolbar : [],
     subsearch: isSubsearchDisplays(subsearch) ? subsearch : {},
     editable: editableOf(result),
     labels: Array.isArray(labels) ? labels.filter((label) => typeof label === "string") : [],
+    ...(isRunDebug(debug) ? { debug } : {}),
   };
+}
+
+function isRunDebug(value: unknown): value is RunDebug {
+  if (typeof value !== "object" || value === null) return false;
+  const sql: unknown = Object.getOwnPropertyDescriptor(value, "sql")?.value;
+  const time: unknown = Object.getOwnPropertyDescriptor(value, "timeIndex")?.value;
+  return (
+    (sql === undefined || (Array.isArray(sql) && sql.every((q) => typeof q === "string"))) &&
+    (time === undefined || typeof time === "number")
+  );
 }
 
 /** getFieldClass() of searchDisplayBaseTrait: a column follows inline unless it breaks the line. */

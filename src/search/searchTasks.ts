@@ -738,11 +738,14 @@ export function dispositionFileName(header: string | null): string | null {
 }
 
 /** The data doTask() hands to a task's expressions. */
+/** A saved search or display by name, or inline as the search editor runs an unsaved one. */
+export type SearchRef = string | Record<string, unknown>;
+
 export function taskData(
   task: SearchTask,
   ids: Key[],
   list: TaskList | null,
-  names: { search: string; display: string | null },
+  names: { search: SearchRef; display: SearchRef | null },
   isLink: boolean,
 ): Record<string, unknown> {
   return {

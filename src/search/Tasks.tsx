@@ -48,14 +48,15 @@ import {
   type ApiBatch,
   type DownloadFormat,
   type Key,
+  type SearchRef,
   type SearchTask,
   type TaskList,
 } from "./searchTasks";
 import type { DisplaySettings, Link, Row, RunPage } from "./types";
 
 interface TasksOptions {
-  search: string;
-  display: string | null;
+  search: SearchRef;
+  display: SearchRef | null;
   settings: DisplaySettings;
   /** The page on screen; undefined while a run loads. */
   page: RunPage | undefined;
