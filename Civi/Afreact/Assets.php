@@ -8,6 +8,7 @@ use Civi\Api4\Afform;
 use Civi\Api4\Afreact;
 use Civi\API\Exception\UnauthorizedException;
 use Civi\Core\AssetBuilder;
+use Civi\Core\Event\GenericHookEvent;
 use CRM_Afreact_ExtensionUtil as E;
 
 /**
@@ -21,7 +22,11 @@ final class Assets {
    */
   public const SOURCES = ['api', 'page', 'bundle'];
 
-  public static function load(): void {
+  /**
+   * Adds the bundle and lets plugins add theirs once per request, for `$builder` on a builder
+   * page and '' elsewhere.
+   */
+  public static function load(string $builder = ''): void {
     // Fixed file names: CiviCRM's resource cache code busts browser caches after flushes and upgrades.
     \Civi::resources()
       ->addModuleFile(E::LONG_NAME, 'dist/afreact.js')
@@ -41,6 +46,10 @@ final class Assets {
       ->addPermissions(['administer queues']);
     ChartKit::addVars();
     Strings::add();
+    if (empty(\Civi::$statics[self::class]['dispatched'])) {
+      \Civi::$statics[self::class]['dispatched'] = TRUE;
+      \Civi::dispatcher()->dispatch('civi.afreact.assets', GenericHookEvent::create(['builder' => $builder]));
+    }
     // What afCheckout's settingsFactory gives CRM.afCheckout, for CheckoutBlock fields.
     $checkout = \Civi::container()->has('civi.checkout.afform') ? \Civi::service('civi.checkout.afform') : NULL;
     if ($checkout instanceof \Civi\Checkout\Afform && $checkout->isActive()) {

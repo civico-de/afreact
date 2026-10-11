@@ -93,6 +93,7 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
   }
 
   public function testBuilderPageDispatchesTheAssetsEvent(): void {
+    unset(\Civi::$statics[Assets::class]);
     $seen = [];
     $listener = static function ($e) use (&$seen): void {
       $seen[] = $e->builder;
@@ -105,6 +106,23 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
       \Civi::dispatcher()->removeListener('civi.afreact.assets', $listener);
     }
     $this->assertSame(['search_kit'], $seen);
+  }
+
+  public function testRuntimePagesDispatchTheAssetsEventOnce(): void {
+    unset(\Civi::$statics[Assets::class]);
+    $seen = [];
+    $listener = static function ($e) use (&$seen): void {
+      $seen[] = $e->builder;
+    };
+    \Civi::dispatcher()->addListener('civi.afreact.assets', $listener);
+    try {
+      Assets::load();
+      Assets::load();
+    }
+    finally {
+      \Civi::dispatcher()->removeListener('civi.afreact.assets', $listener);
+    }
+    $this->assertSame([''], $seen);
   }
 
 }

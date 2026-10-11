@@ -4,7 +4,6 @@ declare(strict_types = 1);
 
 namespace Civi\Afreact;
 
-use Civi\Core\Event\GenericHookEvent;
 use CRM_Afreact_ExtensionUtil as E;
 
 /**
@@ -58,11 +57,10 @@ final class AdminPage {
    * The bundles, and what plugins add for `$builder` ('' outside a builder page).
    */
   public static function load(string $builder): void {
-    Assets::load();
+    Assets::load($builder);
     \Civi::resources()->addModuleFile(E::LONG_NAME, 'dist/afreact-admin.js');
     self::settings($builder);
     Strings::add(Strings::DOMAINS[$builder] ?? NULL);
-    \Civi::dispatcher()->dispatch('civi.afreact.assets', GenericHookEvent::create(['builder' => $builder]));
   }
 
   /**

@@ -18,6 +18,12 @@ async function cleanUp(page: Page) {
   await api(page, "Afform", "revert", { where: [["name", "=", FORM]] });
   await api(page, "SavedSearch", "delete", { where: [["label", "LIKE", `${LABEL}%`]] });
   await api(page, "Tag", "delete", { where: [["label", "IN", TAGS]] });
+  await api(page, "OptionValue", "delete", {
+    where: [
+      ["option_group_id:name", "=", "search_display_type"],
+      ["value", "=", "afreact-probe"],
+    ],
+  });
 }
 
 async function open(page: Page, renderer: keyof typeof pages, label: string, type = "Table") {
@@ -256,6 +262,51 @@ test.describe("SearchKit table display editor", () => {
         'Form "Display probe form" will be deleted if the embedded display "Embedded" is deleted.',
       ),
     ).toBeVisible();
+  });
+
+  test("another extension's editor element edits its display type's settings", async ({ page }) => {
+    await api(page, "OptionValue", "create", {
+      values: {
+        "option_group_id:name": "search_display_type",
+        value: "afreact-probe",
+        name: "crm-search-display-afreact-probe",
+        label: "Probe",
+        icon: "fa-flask",
+      },
+    });
+    // A plugin's element: a select bound to settings.mode; no mode blocks saving.
+    // As a string: the test runner's transpiler would add helpers the page lacks to a class.
+    await page.addInitScript(`
+      class ProbeEditor extends HTMLElement {
+        select = document.createElement("select");
+        connectedCallback() {
+          this.select.setAttribute("aria-label", "Probe mode");
+          for (const mode of ["", "a", "b"]) this.select.add(new Option(mode || "none", mode));
+          this.select.addEventListener("change", () => {
+            this.dispatchEvent(
+              new CustomEvent("change", { detail: { settings: { mode: this.select.value } } }),
+            );
+          });
+          this.append(this.select);
+        }
+        set display(display) {
+          this.select.value = display.settings?.mode ?? "";
+        }
+        get validationMessage() {
+          return this.select.value ? "" : "Choose a probe mode.";
+        }
+      }
+      customElements.define("afreact-search-admin-display-afreact-probe", ProbeEditor);
+    `);
+    // A new document, so that the script runs: open() alone may only change the hash.
+    await page.goto("about:blank");
+    await open(page, "react", LABEL, "Probe");
+    const editor = page.locator("afreact-builder");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(editor.getByText("Choose a probe mode.")).toBeVisible();
+    await editor.getByRole("combobox", { name: "Probe mode" }).selectOption("b");
+    const { display } = await save(page);
+    expect(display).toMatchObject({ type: "afreact-probe", settings: { mode: "b" } });
   });
 
   test("groups a list by a field, which leads the sort and drops the pager", async ({ page }) => {

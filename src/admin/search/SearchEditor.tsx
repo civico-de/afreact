@@ -33,6 +33,11 @@ import {
   type EditorSearch,
 } from "./editor";
 import { DisplayEditor, hasDisplayEditor } from "./display/DisplayEditor";
+import {
+  hasPluginEditor,
+  PluginDisplayEditor,
+  pluginValidationMessages,
+} from "./display/PluginDisplayEditor";
 import { ConditionsTab } from "./editor/ConditionsTab";
 import { EntitySetQueryTab, EntitySetsTab } from "./editor/EntitySetTabs";
 import { FieldsTab } from "./editor/FieldsTab";
@@ -144,7 +149,11 @@ export function structuralRisk(saved: EditorSearch, present: EditorSearch): Edit
     );
   return risky
     ? present.displays.filter(
-        (display) => display.id && !display.trashed && !hasDisplayEditor(display.type),
+        (display) =>
+          display.id &&
+          !display.trashed &&
+          !hasDisplayEditor(display.type) &&
+          !hasPluginEditor(display.type),
       )
     : [];
 }
@@ -497,6 +506,11 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
     if (problems.length) {
       const first = problems.find((p) => p.tab);
       if (first?.tab) setTab(first.tab);
+      return;
+    }
+    const invalid = root.current ? pluginValidationMessages(root.current) : [];
+    if (invalid.length) {
+      setErrors(invalid);
       return;
     }
     const risky = structuralRisk(history.saved, search);
@@ -961,7 +975,34 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                   )}
                 {displayIndex !== null &&
                   search.displays[displayIndex] &&
-                  !hasDisplayEditor(search.displays[displayIndex].type) && (
+                  !hasDisplayEditor(search.displays[displayIndex].type) &&
+                  hasPluginEditor(search.displays[displayIndex].type) && (
+                    <PluginDisplayEditor
+                      meta={meta}
+                      search={search}
+                      display={search.displays[displayIndex]}
+                      onLabel={(label) => {
+                        change((state) => ({
+                          ...state,
+                          displays: state.displays.map((d, i) =>
+                            i === displayIndex ? { ...d, label } : d,
+                          ),
+                        }));
+                      }}
+                      onSettings={(sent) => {
+                        change((state) => ({
+                          ...state,
+                          displays: state.displays.map((d, i) =>
+                            i === displayIndex ? { ...d, settings: sent } : d,
+                          ),
+                        }));
+                      }}
+                    />
+                  )}
+                {displayIndex !== null &&
+                  search.displays[displayIndex] &&
+                  !hasDisplayEditor(search.displays[displayIndex].type) &&
+                  !hasPluginEditor(search.displays[displayIndex].type) && (
                     <DisplayTab
                       display={search.displays[displayIndex]}
                       typeLabel={typeOf(search.displays[displayIndex].type)?.label}
