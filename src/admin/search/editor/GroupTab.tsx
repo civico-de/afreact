@@ -66,6 +66,7 @@ export function GroupTab({ meta, search, onGroup, onSelect }: GroupTabProps) {
         <label htmlFor={`${id}-column`}>{ts("Contact Column")}</label>{" "}
         <Picker
           id={`${id}-column`}
+          externalLabel
           label={ts("Contact Column")}
           placeholder=" "
           single

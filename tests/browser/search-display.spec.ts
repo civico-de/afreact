@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { api, axeFindings, ownFindings } from "./harness";
 
 const LABEL = "Afreact display probe";
-const TAGS = ["Afreact display probe A", "Afreact display probe B"];
+const TAGS = ["Afreact display probe A", "Afreact display probe B"] as const;
 const params = {
   version: 4,
   select: ["id", "label"],
@@ -17,13 +17,15 @@ async function cleanUp(page: Page) {
   await api(page, "Tag", "delete", { where: [["label", "IN", TAGS]] });
 }
 
-async function open(page: Page, renderer: keyof typeof pages, label: string) {
+async function open(page: Page, renderer: keyof typeof pages, label: string, type = "Table") {
   await page.goto(
     `${pages[renderer]}#/create/Tag?label=${encodeURIComponent(label)}&params=${encodeURIComponent(JSON.stringify(params))}`,
   );
   await expect(page.locator("#crm-saved-search-label")).toHaveValue(label);
   await page.getByRole("button", { name: "Add..." }).click();
-  await page.getByRole(renderer === "react" ? "menuitem" : "link", { name: "Table" }).click();
+  await page
+    .getByRole(renderer === "react" ? "menuitem" : "link", { name: type, exact: true })
+    .click();
 }
 
 async function save(page: Page) {
@@ -87,14 +89,43 @@ test.describe("SearchKit table display editor", () => {
     await page.emulateMedia({ colorScheme: "light" });
   });
 
-  test("a new table display saves with the settings core's editor gives it", async ({ page }) => {
-    const built: Record<string, unknown> = {};
-    for (const renderer of ["angular", "react"] as const) {
-      const label = `${LABEL} ${renderer}`;
-      await open(page, renderer, label);
-      const { display } = await save(page);
-      built[renderer] = { ...display, id: undefined, label: undefined };
-    }
-    expect(built.react).toEqual(built.angular);
+  for (const type of ["Table", "List", "Grid", "Tree"]) {
+    test(`a new ${type} display saves with the settings core's editor gives it`, async ({
+      page,
+    }) => {
+      const built: Record<string, unknown> = {};
+      for (const renderer of ["angular", "react"] as const) {
+        await open(page, renderer, `${LABEL} ${renderer}`, type);
+        const { display } = await save(page);
+        built[renderer] = { ...display, id: undefined, label: undefined };
+      }
+      expect(built.react).toEqual(built.angular);
+    });
+  }
+
+  test("groups a list by a field, which leads the sort and drops the pager", async ({ page }) => {
+    await open(page, "react", LABEL, "List");
+    const editor = page.locator("afreact-builder");
+    await editor.getByText("Settings", { exact: true }).last().click();
+    await editor
+      .getByRole("group", { name: "Group Sections By" })
+      .getByRole("combobox")
+      .fill("Label");
+    await page.getByRole("option", { name: "Label" }).first().click();
+    const tag = editor.getByRole("combobox", { name: "Header Tag" });
+    await expect(tag).toHaveValue("h4");
+    // Under the editor's h2, the group headers keep the heading order at h3.
+    await tag.selectOption("h3");
+    await expect(editor.getByText("Pager is unavailable while grouping")).toBeVisible();
+    await editor.getByRole("button", { name: "Preview" }).click();
+    await expect(editor.getByText(TAGS[0]).first()).toBeVisible();
+    expect(await axeFindings(page, "afreact-builder")).toEqual([]);
+    const { display } = await save(page);
+    expect(display.settings).toMatchObject({
+      section_group_by: "label",
+      header_tag: "h3",
+      pager: false,
+      sort: [["label", "ASC"]],
+    });
   });
 });

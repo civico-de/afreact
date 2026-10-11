@@ -6,13 +6,17 @@ import { isDisplaySettings, isDisplayType } from "../../../search/types";
 import type { EditorDisplay } from "../editor";
 import type { SearchInfo } from "../expr";
 import { useSearchTasks } from "./common";
+import { GridEditor, ListEditor, TreeEditor } from "./ItemsEditor";
 import {
   buildLinks,
+  initGrid,
+  initList,
   initPager,
   initPlaceholder,
   initTable,
   initTasks,
   initToolbar,
+  initTree,
   isAdminSettings,
   taskLinks,
   type DisplayContext,
@@ -27,6 +31,23 @@ const EDITORS: Record<string, (ctx: DisplayContext, draft: Draft) => void> = {
     initPlaceholder(draft.settings);
     initPager(ctx, draft.settings);
     initTasks(draft.settings);
+    initToolbar(draft.settings);
+  },
+  list: (ctx, draft) => {
+    initList(ctx, draft);
+    initPager(ctx, draft.settings, !!draft.settings.section_group_by);
+    initPlaceholder(draft.settings);
+    initToolbar(draft.settings);
+  },
+  grid: (ctx, draft) => {
+    initGrid(ctx, draft);
+    initPager(ctx, draft.settings, !!draft.settings.section_group_by);
+    initPlaceholder(draft.settings);
+    initToolbar(draft.settings);
+  },
+  tree: (ctx, draft) => {
+    initTree(ctx, draft);
+    initPlaceholder(draft.settings);
     initToolbar(draft.settings);
   },
 };
@@ -84,6 +105,7 @@ export function DisplayEditor(props: DisplayEditorProps) {
   const viewable = !!display.id && !!typeInfo && typeInfo.grouping !== "non-viewable";
   const rowLinks = [...buildLinks(ctx, true), ...taskLinks(tasks.data ?? [])];
   const editing = { ctx, draft, edit };
+  const links = { rowLinks, toolbarLinks: buildLinks(ctx, false) };
   return (
     <>
       <div className="crm-search-admin-flex-row">
@@ -180,9 +202,10 @@ export function DisplayEditor(props: DisplayEditorProps) {
           />
         </div>
       </fieldset>
-      {display.type === "table" && (
-        <TableEditor {...editing} rowLinks={rowLinks} toolbarLinks={buildLinks(ctx, false)} />
-      )}
+      {display.type === "table" && <TableEditor {...editing} {...links} />}
+      {display.type === "list" && <ListEditor {...editing} {...links} />}
+      {display.type === "grid" && <GridEditor {...editing} {...links} />}
+      {display.type === "tree" && <TreeEditor {...editing} {...links} />}
       <hr />
       <Preview search={search} draft={next === display ? draft : null} icon={typeInfo?.icon} />
     </>

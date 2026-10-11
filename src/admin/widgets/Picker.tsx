@@ -27,6 +27,8 @@ interface PickerProps {
   single?: boolean;
   /** Names the input with an sr-only label, for pickers without a visible one. */
   hiddenLabel?: boolean;
+  /** The caller renders its own <label htmlFor={id}>. */
+  externalLabel?: boolean;
 }
 
 const itemOf = (option: PickerOption): AutocompleteItem => ({
@@ -48,6 +50,7 @@ export function Picker({
   className,
   single = false,
   hiddenLabel = false,
+  externalLabel = false,
 }: PickerProps) {
   const byId = new Map(options.map((option) => [String(option.id), option]));
   const selected = value.flatMap((v) => {
@@ -56,10 +59,12 @@ export function Picker({
   });
   return (
     <>
-      {hiddenLabel && (
-        <label htmlFor={id} className="sr-only">
-          {label}
-        </label>
+      {!externalLabel && (
+        <>
+          <label htmlFor={id} className={hiddenLabel ? "sr-only" : undefined}>
+            {label}
+          </label>{" "}
+        </>
       )}
       <Suspense
         fallback={<input id={id} className="form-control" disabled placeholder={placeholder} />}

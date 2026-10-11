@@ -42,7 +42,7 @@ export interface IconItem {
 export interface AdminColumn {
   type: string;
   key?: string;
-  label?: string;
+  label?: string | null;
   alignment?: string;
   sortable?: boolean;
   nowrap?: boolean;
@@ -66,6 +66,7 @@ export interface AdminColumn {
   subsearch?: { filters: unknown[]; subsearch_mode: string; [key: string]: unknown };
   tally?: { fn?: string | null; label?: string; rewrite?: string; target?: boolean };
   break?: boolean;
+  forceLabel?: boolean;
   [key: string]: unknown;
 }
 
@@ -93,6 +94,12 @@ export interface AdminSettings {
   hierarchical?: boolean;
   collapsible?: string;
   description?: string;
+  style?: string;
+  symbol?: string;
+  colno?: string;
+  section_group_by?: string;
+  header_tag?: string;
+  parent_field?: unknown;
   [key: string]: unknown;
 }
 
@@ -758,3 +765,64 @@ export function setIconClass(icon: IconItem, value: string): void {
   delete icon.field;
   icon.if = icon.if ?? [];
 }
+
+// searchAdminDisplayList, searchAdminDisplayGrid, searchAdminDisplayTree
+
+const isNew = (settings: unknown) => !isRecord(settings) || Object.keys(settings).length === 0;
+
+export function initList(ctx: DisplayContext, draft: Draft): void {
+  if (isNew(draft.settings))
+    draft.settings = {
+      style: "ul",
+      limit: ctx.defaultPagerSize,
+      sort: defaultSort(ctx),
+      pager: {},
+    };
+  if (draft.settings.section_group_by) draft.settings.header_tag ??= "h4";
+  initColumns(ctx, draft, {});
+}
+
+export function initGrid(ctx: DisplayContext, draft: Draft): void {
+  if (isNew(draft.settings))
+    draft.settings = { colno: "3", limit: ctx.defaultPagerSize, sort: defaultSort(ctx), pager: {} };
+  if (draft.settings.section_group_by) draft.settings.header_tag ??= "h4";
+  initColumns(ctx, draft, {});
+}
+
+export function initTree(ctx: DisplayContext, draft: Draft): void {
+  if (isNew(draft.settings)) {
+    draft.settings = {
+      parent_field: getEntity(ctx.meta, ctx.search.api_entity)?.parent_field,
+      collapsible: "closed",
+      sort: defaultSort(ctx),
+    };
+    if (entityHasType(ctx, "SortableEntity")) toggleDraggable(ctx, draft.settings);
+  }
+  initColumns(ctx, draft, { break: false });
+}
+
+/** Grouping runs over sorted rows on one page, so the field leads the sort and the pager goes. */
+export function setSectionGroupBy(settings: AdminSettings, field: string): void {
+  settings.section_group_by = field;
+  settings.sort = (settings.sort ?? []).filter(([key]) => key !== field);
+  if (field) {
+    settings.sort.unshift([field, "ASC"]);
+    settings.pager = false;
+    settings.header_tag ??= "h4";
+  }
+}
+
+export const listSymbols = (): Record<string, { char: string; label: string }[]> => ({
+  ul: [
+    { char: "", label: ts("Default") },
+    { char: "circle", label: ts("Circles") },
+    { char: "square", label: ts("Squares") },
+    { char: "none", label: ts("None") },
+  ],
+  ol: [
+    { char: "", label: ts("Default (1. 2. 3.)") },
+    { char: "upper-latin", label: ts("Uppercase (A. B. C.)") },
+    { char: "lower-latin", label: ts("Lowercase (a. b. c.)") },
+    { char: "upper-roman", label: ts("Roman (I. II. III.)") },
+  ],
+});

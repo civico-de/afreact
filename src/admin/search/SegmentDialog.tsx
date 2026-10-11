@@ -153,6 +153,7 @@ export function SegmentDialog({ id, entity, onClose }: SegmentDialogProps) {
               </label>
               <Picker
                 id={`${titleId}-entity`}
+                externalLabel
                 label={ts("For")}
                 placeholder={ts("Entity")}
                 single

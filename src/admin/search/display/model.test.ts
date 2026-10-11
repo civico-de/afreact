@@ -6,6 +6,9 @@ import {
   changeLimit,
   getColumnIndex,
   initColumns,
+  initGrid,
+  initList,
+  initTree,
   initPager,
   initPlaceholder,
   initTable,
@@ -13,6 +16,7 @@ import {
   initToolbar,
   removeCol,
   setColumnMode,
+  setSectionGroupBy,
   taskEnabled,
   toggleActions,
   toggleColumn,
@@ -169,5 +173,59 @@ describe("helpers", () => {
     addCssRule(ctx, item, "bg-danger", "id");
     addCssRule(ctx, item, "bg-info", "no_such_field");
     expect(item.cssRules).toEqual([["bg-danger", "id", "="], ["bg-info"]]);
+  });
+});
+
+describe("list, grid and tree init", () => {
+  it("gives new lists and grids their defaults and one field per selected column", () => {
+    const list = table();
+    list.type = "list";
+    initList(ctx, list);
+    expect(list.settings).toMatchObject({ style: "ul", limit: 50, pager: {} });
+    expect(list.settings.columns?.map((c) => c.key)).toEqual(["id", "display_name"]);
+    const grid = table();
+    grid.type = "grid";
+    initGrid(ctx, grid);
+    expect(grid.settings).toMatchObject({ colno: "3", limit: 50, pager: {} });
+  });
+
+  it("starts a tree collapsed, without a pager and with fields on one line", () => {
+    const tree = table();
+    tree.type = "tree";
+    initTree(ctx, tree);
+    expect(tree.settings).toMatchObject({ collapsible: "closed" });
+    expect(tree.settings).not.toHaveProperty("pager");
+    expect(tree.settings.columns?.[0]).toMatchObject({ break: false });
+  });
+
+  it("keeps a stored list as it is apart from a missing header tag", () => {
+    const list = table({ style: "ol", section_group_by: "id", columns: [] });
+    list.type = "list";
+    initList(ctx, list);
+    expect(list.settings).toMatchObject({ style: "ol", header_tag: "h4", columns: [] });
+  });
+
+  it("puts the grouping field first in the sort and turns the pager off", () => {
+    const settings: Draft["settings"] = {
+      sort: [
+        ["display_name", "DESC"],
+        ["id", "ASC"],
+      ],
+      pager: { show_count: true },
+    };
+    setSectionGroupBy(settings, "id");
+    expect(settings).toMatchObject({
+      sort: [
+        ["id", "ASC"],
+        ["display_name", "DESC"],
+      ],
+      pager: false,
+      header_tag: "h4",
+    });
+    setSectionGroupBy(settings, "");
+    expect(settings.sort).toEqual([
+      ["id", "ASC"],
+      ["display_name", "DESC"],
+    ]);
   });
 });

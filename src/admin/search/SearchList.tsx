@@ -482,6 +482,7 @@ function ListingTab({ tab }: { tab: SearchTab }) {
             </label>
             <Picker
               id={`${id}-package`}
+              externalLabel
               label={ts("Filter by package")}
               placeholder={ts("Filter by package...")}
               options={moduleOptions}
@@ -498,6 +499,7 @@ function ListingTab({ tab }: { tab: SearchTab }) {
           </label>
           <Picker
             id={`${id}-entity`}
+            externalLabel
             label={ts("Filter by entity")}
             placeholder={ts("Filter by entity...")}
             options={entityOptions}
@@ -514,6 +516,7 @@ function ListingTab({ tab }: { tab: SearchTab }) {
             </label>
             <Picker
               id={`${id}-tags`}
+              externalLabel
               label={ts("Filter by tags")}
               placeholder={ts("Filter by tags...")}
               options={tagOptions}

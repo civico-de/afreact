@@ -115,6 +115,7 @@ export function SearchCondition(props: SearchConditionProps) {
           </label>
           <Picker
             id={`${id}-field`}
+            externalLabel
             label={ts("Field")}
             placeholder={ts("Field")}
             options={fields}
