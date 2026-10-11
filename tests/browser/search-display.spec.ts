@@ -249,7 +249,7 @@ test.describe("SearchKit table display editor", () => {
     await editor.getByRole("radio", { name: "Pie" }).check();
     const values = editor.getByRole("group", { name: "Values", exact: true });
     await expect(values.getByRole("button", { name: "Add field" })).toHaveCount(0);
-    await expect(values.getByRole("button", { name: "Remove field" })).toHaveCount(0);
+    await expect(values.getByRole("button", { name: /^Remove/ })).toHaveCount(0);
     await values.getByRole("combobox", { name: /^Field/ }).selectOption("id");
     const category = editor.getByRole("group", { name: "Category", exact: true });
     await category.getByRole("button", { name: "Add field" }).click();

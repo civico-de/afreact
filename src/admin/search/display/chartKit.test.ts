@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { rawKit } from "../../../test/chartKit";
 import { metadata } from "../../../test/searchMetadata";
 import {
   addColumn,
@@ -12,51 +13,10 @@ import {
   searchColumnOptions,
   searchColumns,
   setOrderColumn,
+  settleColumnOptions,
   type ChartContext,
   type ChartSettings,
 } from "./chartKit";
-
-const options = (...keys: string[]) => keys.map((key) => ({ key, label: key.toUpperCase() }));
-
-/** chart_kit's global as its bundle leaves it, cut down to a pie and a series chart. */
-const rawKit = () => ({
-  chartTypes: [
-    { key: "pie", label: "Pie", icon: "fa-pie-chart", backend: "pie" },
-    { key: "line", label: "Line", icon: "fa-line-chart", backend: "series" },
-  ],
-  typeBackends: {
-    pie: {
-      getAxes: () => ({
-        w: { label: "Category", reduceTypes: ["list"] },
-        y: { label: "Value", sourceDataTypes: ["Integer", "Money"] },
-      }),
-      getInitialDisplaySettings: () => ({ showLegend: "left", maxSegments: 6 }),
-      hasCoordinateGrid: () => false,
-    },
-    series: {
-      getAxes: () => ({
-        x: { label: "X" },
-        y: { label: "Y", multiColumn: true, colorType: "one-per-column" },
-        z: { label: "Group", prepopulate: false },
-      }),
-      getInitialDisplaySettings: () => ({ format: { height: 300 } }),
-      hasCoordinateGrid: () => true,
-    },
-  },
-  columnOptions: {
-    scaleType: options("numeric", "integer", "categorical", "date"),
-    datePrecision: options("year", "month"),
-    reduceType: options("sum", "count", "list"),
-    seriesType: options("line", "bar"),
-    dataLabelType: options("none", "title"),
-    dataLabelFormatter: options("none", "round", "formatMoney"),
-  },
-  utils: {
-    legacySettingsAdaptor(settings: ChartSettings) {
-      return settings.chartType === "old" ? { ...settings, chartType: "line" } : settings;
-    },
-  },
-});
 
 const kit = readChartKit(rawKit());
 const search = {
@@ -216,5 +176,60 @@ describe("chart_kit admin model", () => {
     };
     setOrderColumn(settings, 1);
     expect(settings.columns?.map((c) => c.isOrder)).toEqual([false, true]);
+  });
+
+  it("refuses an axis that is not an object", () => {
+    const broken = rawKit();
+    Reflect.set(broken.typeBackends.pie, "getAxes", () => ({ w: 1 }));
+    expect(() => readChartKit(broken).typeBackends.pie?.getAxes()).toThrow('axis "w"');
+  });
+
+  it("formats money, categories, whole numbers and dates as core does", () => {
+    const ctx = contextFor("series");
+    const money: ChartContext = {
+      ...ctx,
+      columns: [...columns, { key: "total", label: "Total", dataType: "Money" }],
+    };
+    expect(configOptions(money, { axis: "y", key: "total" }, "dataLabelFormatter")).toEqual([
+      "formatMoney",
+      "round",
+      "none",
+    ]);
+    expect(
+      configOptions(ctx, { axis: "y", key: "id", scaleType: "categorical" }, "dataLabelFormatter"),
+    ).toEqual(["none", "round", "formatMoney"]);
+    expect(
+      configOptions(ctx, { axis: "x", key: "birth_date", scaleType: "date" }, "dataLabelFormatter"),
+    ).toEqual(["none"]);
+    expect(
+      configOptions(ctx, { axis: "y", key: "id", scaleType: "numeric" }, "dataLabelFormatter"),
+    ).toEqual(["none", "round", "formatMoney"]);
+  });
+
+  it("re-picks a setting the column no longer offers and keeps one it does", () => {
+    const settings: ChartSettings = {
+      columns: [
+        { axis: "y", key: "id", scaleType: "categorical", reduceType: "sum", seriesType: "x" },
+      ],
+    };
+    settleColumnOptions(contextFor("series"), settings);
+    expect(settings.columns?.[0]).toMatchObject({ reduceType: "count", scaleType: "categorical" });
+    // no series types on this axis: nothing to offer, nothing changed
+    expect(settings.columns?.[0]?.seriesType).toBe("x");
+  });
+
+  it("hands the legacy adaptor a column list and no order index past the columns", () => {
+    const seen: unknown[] = [];
+    const watching = readChartKit({
+      ...rawKit(),
+      utils: {
+        legacySettingsAdaptor(settings: ChartSettings) {
+          seen.push(structuredClone(settings));
+          return settings;
+        },
+      },
+    });
+    initChart(watching, columns, { chartType: "pie", chartOrderColIndex: 3 });
+    expect(seen).toEqual([{ chartType: "pie", columns: [] }]);
   });
 });

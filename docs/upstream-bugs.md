@@ -734,6 +734,20 @@ undefined and the button shows on every axis (`chartKitAdminColumns.html`). A
 second column on a single-column axis is saved but skipped by the editor and
 the chart. The React editor offers "Add field" only on a multi-column axis or one without a column.
 
+**A changed scale type keeps settings it no longer offers.** chart_kit's column
+editor picks the first option of each setting only when the field changes;
+switching the scale type to categorical narrows Stat Type to count and list
+but leaves a stored `sum`, which Angular shows as a blank option and the chart
+still applies. The React editor re-picks every setting whose stored value the
+column no longer offers.
+
+**Old chart settings crash the editor.** `legacySettingsAdaptor()` calls
+`settings.columns.find()` on pie and row charts and indexes `columns` with
+`chartOrderColIndex` unchecked, so a pie stored without columns, or an order
+index past the last column, throws a TypeError and the editor stays empty
+(read from the code, not run). The React editor hands the adaptor an empty
+column list and drops an order index that names no column.
+
 ## Accessibility and themes
 
 **Minetta's dark mode greys the primary button below contrast.** RiverLea's

@@ -4,6 +4,7 @@ import { loadChartKit } from "../../../search/ChartDisplay";
 import type { EditorDisplay } from "../editor";
 import {
   addColumn,
+  settleColumnOptions,
   applyChartType,
   axesOf,
   backendOf,
@@ -27,14 +28,17 @@ import type { DisplayContext } from "./model";
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-/** Stored settings as chart settings: columns are chart columns with an axis. */
-function chartSettings(stored: Record<string, unknown> | undefined): ChartSettings {
+/** Stored settings as chart settings, or null when a column is not a chart column with an axis. */
+function chartSettings(stored: Record<string, unknown> | undefined): ChartSettings | null {
   const { columns, ...rest } = structuredClone(stored ?? {});
   const settings: ChartSettings = rest;
-  if (Array.isArray(columns))
-    settings.columns = columns.flatMap((col: unknown) =>
-      isRecord(col) && typeof col.axis === "string" ? [{ ...col, axis: col.axis }] : [],
-    );
+  if (columns === undefined) return settings;
+  if (!Array.isArray(columns)) return null;
+  const valid = columns.flatMap((col: unknown) =>
+    isRecord(col) && typeof col.axis === "string" ? [{ ...col, axis: col.axis }] : [],
+  );
+  if (valid.length !== columns.length) return null;
+  settings.columns = valid;
   return settings;
 }
 
@@ -256,7 +260,8 @@ function AxisColumns({
           <fieldset key={axisKey}>
             <legend>{axis.label}</legend>
             {onAxis.map((col, position) => {
-              const index = col.index ?? 0;
+              const index = col.index;
+              if (index === undefined) throw new Error("chartColumns numbers every column.");
               const editCol = editAt(index);
               const prefix = `${id}-${String(index)}`;
               return (
@@ -283,7 +288,9 @@ function AxisColumns({
                         });
                       }}
                     >
-                      {!col.key && <option value="">{ts("- select -")}</option>}
+                      {!searchColumnOptions(ctx, col).some((c) => c.key === col.key) && (
+                        <option value="">{ts("- select -")}</option>
+                      )}
                       {searchColumnOptions(ctx, col).map((option) => (
                         <option key={option.key} value={option.key}>
                           {option.label}
@@ -420,6 +427,7 @@ function AxisColumns({
                     <button
                       type="button"
                       className="btn btn-sm btn-secondary-outline"
+                      aria-label={ts("Remove %1 field %2", { 1: axis.label, 2: position + 1 })}
                       onClick={() => {
                         edit((s) => {
                           s.columns = (s.columns ?? []).filter((_, i) => i !== index);
@@ -610,7 +618,9 @@ function Legend({ settings, edit }: { settings: ChartSettings; edit: EditChart }
           });
         }}
       >
-        {settings.showLegend === undefined && <option value="">{ts("- select -")}</option>}
+        {!["none", "left", "right"].includes(str(settings.showLegend)) && (
+          <option value="">{ts("- select -")}</option>
+        )}
         <option value="none">{ts("None")}</option>
         <option value="left">{ts("Left")}</option>
         <option value="right">{ts("Right")}</option>
@@ -740,7 +750,7 @@ function TypeOptions({
             <option value="">{ts("- select -")}</option>
             {columns.map((col) => (
               <option key={col.index} value={String(col.index)}>
-                {col.label}
+                {col.label === undefined || col.label === "" ? col.key : col.label}
               </option>
             ))}
           </select>
@@ -755,7 +765,9 @@ function TypeOptions({
               set("chartOrderDir")(event.target.value);
             }}
           >
-            {settings.chartOrderDir === undefined && <option value="">{ts("- select -")}</option>}
+            {!["ASC", "DESC"].includes(str(settings.chartOrderDir)) && (
+              <option value="">{ts("- select -")}</option>
+            )}
             <option value="ASC">{ts("Ascending")}</option>
             <option value="DESC">{ts("Descending")}</option>
           </select>
@@ -777,7 +789,7 @@ function TypeOptions({
               set("seriesDisplayType")(event.target.value);
             }}
           >
-            {settings.seriesDisplayType === undefined && (
+            {!["line", "bar"].includes(str(settings.seriesDisplayType)) && (
               <option value="">{ts("- select -")}</option>
             )}
             <option value="line">{ts("Lines")}</option>
@@ -810,10 +822,12 @@ interface ChartKitEditorProps {
 function Editor({ kit, props }: { kit: ChartKit; props: ChartKitEditorProps }) {
   const { ctx, display, onSettings, onAdoptSettings } = props;
   const columns = searchColumns(ctx.meta, ctx.search);
-  const settings = chartSettings(display.settings);
+  const stored = chartSettings(display.settings);
+  const settings = stored ?? {};
   const backend = backendOf(kit, settings);
   const chart: ChartContext = { kit, axes: backend ? axesOf(kit, backend) : {}, columns };
   const settle = useEffectEvent(() => {
+    if (!stored) return;
     const raw = display.settings === undefined ? undefined : structuredClone(display.settings);
     const settled = initChart(kit, columns, raw);
     if (JSON.stringify(settled) !== JSON.stringify(raw ?? {})) onAdoptSettings(settled);
@@ -822,10 +836,16 @@ function Editor({ kit, props }: { kit: ChartKit; props: ChartKitEditorProps }) {
   useEffect(() => {
     settle();
   }, [kit, display.id, display.name]);
+  if (!stored)
+    return (
+      <p className="crm-error" role="alert">
+        {ts("A column of this chart has no axis, so the chart cannot be edited.")}
+      </p>
+    );
   const editChart: EditChart = (change) => {
-    const next = chartSettings(display.settings);
+    const next = structuredClone(stored);
     change(next);
-    chartColumns(next, chart.axes);
+    settleColumnOptions(chart, next);
     onSettings(next);
   };
   return (
@@ -841,7 +861,7 @@ function Editor({ kit, props }: { kit: ChartKit; props: ChartKitEditorProps }) {
               onChange={() => {
                 onSettings(
                   applyChartType(kit, columns, {
-                    ...chartSettings(display.settings),
+                    ...structuredClone(stored),
                     chartType: type.key,
                   }),
                 );

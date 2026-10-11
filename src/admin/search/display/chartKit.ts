@@ -103,23 +103,26 @@ export function readChartKit(value: unknown): ChartKit {
         const axes: unknown = Reflect.apply(getAxes, backend, []);
         if (!isRecord(axes)) throw fail(`axes for "${key}"`);
         return Object.fromEntries(
-          Object.entries(axes).map(([k, axis]) => [k, isRecord(axis) ? axis : {}]),
+          Object.entries(axes).map(([k, axis]) => {
+            if (!isRecord(axis)) throw fail(`axis "${k}" for "${key}"`);
+            return [k, axis];
+          }),
         );
       },
       getInitialDisplaySettings: () => {
         const settings: unknown = Reflect.apply(getInitialDisplaySettings, backend, []);
-        return isRecord(settings) ? settings : {};
+        if (!isRecord(settings)) throw fail(`initial settings for "${key}"`);
+        return settings;
       },
       hasCoordinateGrid: () => Reflect.apply(hasCoordinateGrid, backend, []) === true,
     };
   }
   if (!isRecord(columnOptions)) throw fail("column options");
-  const options: Partial<Record<ColumnConfig, ChartOption[]>> = {};
-  for (const config of COLUMN_CONFIGS) {
+  const optionList = (config: ColumnConfig) => {
     const list = columnOptions[config];
     if (!isOptions(list)) throw fail(`${config} options`);
-    options[config] = list;
-  }
+    return list;
+  };
   if (!isRecord(utils) || typeof utils.legacySettingsAdaptor !== "function")
     throw fail("legacy settings adaptor");
   const adaptor = utils.legacySettingsAdaptor;
@@ -128,16 +131,16 @@ export function readChartKit(value: unknown): ChartKit {
       key: t.key,
       label: t.label,
       icon: isRecord(t) && typeof t.icon === "string" ? t.icon : "",
-      backend: isRecord(t) && typeof t.backend === "string" ? t.backend : "",
+      backend: String(Reflect.get(t, "backend")),
     })),
     typeBackends: backends,
     columnOptions: {
-      scaleType: options.scaleType ?? [],
-      datePrecision: options.datePrecision ?? [],
-      reduceType: options.reduceType ?? [],
-      seriesType: options.seriesType ?? [],
-      dataLabelType: options.dataLabelType ?? [],
-      dataLabelFormatter: options.dataLabelFormatter ?? [],
+      scaleType: optionList("scaleType"),
+      datePrecision: optionList("datePrecision"),
+      reduceType: optionList("reduceType"),
+      seriesType: optionList("seriesType"),
+      dataLabelType: optionList("dataLabelType"),
+      dataLabelFormatter: optionList("dataLabelFormatter"),
     },
     legacySettingsAdaptor: (settings) => {
       const adapted: unknown = Reflect.apply(adaptor, utils, [settings]);
@@ -289,10 +292,19 @@ const BASE_SETTINGS = () => ({
   },
 });
 
+/** What the legacy adaptor dereferences without a check: the column list and the order index. */
+function adaptable(settings: ChartSettings): ChartSettings {
+  const columns = Array.isArray(settings.columns) ? settings.columns : [];
+  const order = settings.chartOrderColIndex;
+  if (typeof order === "number" && !columns[order])
+    Reflect.deleteProperty(settings, "chartOrderColIndex");
+  return { ...settings, columns };
+}
+
 /** $onInit and the chart type watch: defaults under the stored settings, a column per axis. */
 export function initChart(kit: ChartKit, columns: SearchColumn[], raw: unknown): ChartSettings {
   const settings: ChartSettings = isRecord(raw)
-    ? kit.legacySettingsAdaptor(structuredClone(raw))
+    ? kit.legacySettingsAdaptor(adaptable(structuredClone(raw)))
     : { chartType: null };
   return applyChartType(kit, columns, settings);
 }
@@ -325,4 +337,13 @@ export function setOrderColumn(settings: ChartSettings, index: number): void {
   for (const col of settings.columns ?? []) col.isOrder = false;
   const col = settings.columns?.[index];
   if (col) col.isOrder = true;
+}
+
+/** The first option of each setting whose stored value its column's type no longer offers. */
+export function settleColumnOptions(ctx: ChartContext, settings: ChartSettings): void {
+  for (const col of chartColumns(settings, ctx.axes))
+    for (const config of COLUMN_CONFIGS) {
+      const options = configOptions(ctx, col, config);
+      if (options.length && !options.some((o) => o === col[config])) col[config] = options[0];
+    }
 }
