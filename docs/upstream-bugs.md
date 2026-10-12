@@ -472,6 +472,18 @@ its filters to the title of a search page (`searchDisplayBaseTrait`, afCore's
 `addTitle`), but only when there are any, so clearing the filter keeps the old
 labels in the title. The React renderer shows the plain title again. `deviation:title-labels-cleared`
 
+**A display outside the search fieldset runs without its form.** The display
+names its form only through the enclosing `af-fieldset`
+(`searchDisplayBaseTrait`: `afform: this.afFieldset ? … : null`), although
+`SearchDisplay.run` looks for the display on the whole form when it is in no
+fieldset. Without the form the server ignores the `filters` attribute in the
+markup for fields the display does not select, so a table placed under the
+fieldset with `filters="{'status_id.is_current_member': true}"` counts every
+membership. Read from the source, not run: `AbstractRunAction::_run()` also
+refuses such a display with `acl_bypass` to everyone without "all CiviCRM
+permissions and ACLs". Present on 6.19 and on `master` as of 2026-10-12.
+React names the form for every display on it. `deviation:display-outside-fieldset-form`
+
 **Grouped rows are selectable and draggable.** `SearchDisplay.run` gives
 the rows of a grouped search no `key`, but the display editor offers bulk
 actions, drag sorting and the tree for such searches as well. Read from the

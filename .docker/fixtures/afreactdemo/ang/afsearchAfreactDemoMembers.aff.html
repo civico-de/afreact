@@ -1,0 +1,11 @@
+<div af-fieldset="">
+  <div class="af-container af-layout-inline">
+    <af-field name="membership_type_id" defn="{required: false, input_attrs: {multiple: true}}" />
+    <af-field name="status_id" defn="{required: false, input_attrs: {multiple: true}}" />
+    <af-field name="start_date" defn="{search_range: true}" />
+    <af-field name="Afreact_Demo_Fee.Reduced" />
+  </div>
+  <crm-search-display-table search-name="Afreact_Demo_Members" display-name="Afreact_Demo_Members_Table"></crm-search-display-table>
+</div>
+<h2>{{:: ts('Current members by type and status') }}</h2>
+<crm-search-display-table search-name="Afreact_Demo_Members_By_Type" display-name="Afreact_Demo_Members_By_Type_Table" filters="{'status_id.is_current_member': true}"></crm-search-display-table>

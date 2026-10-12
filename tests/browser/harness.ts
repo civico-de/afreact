@@ -51,8 +51,12 @@ export interface Driver {
   selected(name: string): Promise<string>;
 }
 
-export function driver(page: Page, renderer: Renderer): Driver {
-  const form = page.locator(".afreact-demo section").first();
+/** `form` narrows the fields to one part of the page, the demo page's form by default. */
+export function driver(
+  page: Page,
+  renderer: Renderer,
+  form: Locator = page.locator(".afreact-demo section").first(),
+): Driver {
   const field = (name: string) => form.locator(`af-field[name="${name}"]`).first();
   return {
     field,

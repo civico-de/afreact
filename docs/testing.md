@@ -19,6 +19,8 @@ CIVICRM_BASE_URL=http://localhost:8080 bun run test:e2e
 | `tests/browser/sources.spec.ts` | every layout source renders the demo page to the same DOM; `page` and `bundle` never call `getForm`; the edit menus offer an admin the links core's runtime offers |
 | `tests/browser/visual.spec.ts` | the React page matches the Angular page part by part in position, size and main styles; differences by design are listed with a reason |
 | `tests/browser/rules.spec.ts` | the rules form on both renderers: expressions, `af-if` (and the values it drops), `af-required`, `af-disabled`, a token default |
+| `tests/browser/membership.spec.ts` | the membership sign-up on both renderers: a conditional employer and relationship, a reduced fee whose reason appears and turns required, an email, an address, a note and a newsletter subscription save the same records |
+| `tests/browser/members.spec.ts` | the members page on both renderers: the same rows, muted expired memberships, a fee column rewritten by condition, a radio filter, and a count table outside the fieldset whose own filter only React applies |
 | `tests/browser/details.spec.ts` | the finer points of a form on both renderers: HTML in labels and help, a live token in a content block, hash values, a display-only date, a text area's character count, a required checkbox list, a container's style, the primary flag in repeated joins and an extra field in the submission |
 | `tests/browser/fields.spec.ts` | every field type of the fields demo saves the same record on both renderers, and the search ranges send `SearchDisplay.run` the same filters |
 | `tests/browser/tabs.spec.ts` | a tab set with fields in two tabs, a Toggle and a display whose row count is the tab's badge, on both renderers |
@@ -67,7 +69,8 @@ submits nothing. `SWEEP_FORMS=name1,name2` limits it to those forms. Per form,
 `test-results/sweep.md` and `sweep.json` give the status (identical, differs,
 "Not supported" note, error), the differences, the notes, the axe findings and
 what the form would read from the URL; cell and field values appear only as
-their length.
+their length. Displays that differ by a documented deviation are listed in
+`DEVIATING_DISPLAYS` and pinned by a spec of their own.
 
 `compare.spec.ts` switches `debug_enabled` off for the measurement, so all
 pages load as in production, and restores the previous value afterwards.

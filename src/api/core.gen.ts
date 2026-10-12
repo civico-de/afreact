@@ -6,6 +6,7 @@ export type DirectiveAttribute =
   | "af-entity actions"
   | "af-entity contact-dedupe"
   | "af-entity data"
+  | "af-entity group-subscription"
   | "af-entity label"
   | "af-entity name"
   | "af-entity security"
@@ -62,11 +63,15 @@ export type HtmlTag =
   | "div"
   | "em"
   | "fieldset"
+  | "h2"
   | "h3"
   | "hr"
   | "i"
+  | "li"
   | "p"
-  | "strong";
+  | "span"
+  | "strong"
+  | "ul";
 
 export type FieldDefn = {
   afform_default?: boolean | string;
@@ -116,6 +121,7 @@ export type FieldDefn = {
   search_operator?: string;
   search_range?: boolean;
   serialize?: number | null;
+  suffix?: string;
   template?: string;
 };
 
@@ -377,7 +383,7 @@ export type TableSettings = {
     };
     tally?: {
       fn: string;
-      label: string;
+      label?: string;
     };
     text?: string;
     title?: string | null;

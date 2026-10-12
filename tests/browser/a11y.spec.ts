@@ -11,6 +11,8 @@ import { axeFindings, ownFindings, setReactForms } from "./harness";
 const render = (name: string) => (renderer: string) =>
   `/civicrm/afreact/render?name=${name}&renderer=${renderer}`;
 const rules = render("afformAfreactDemoRules");
+const membership = render("afformAfreactDemoMembership");
+const members = render("afsearchAfreactDemoMembers");
 const features = render("afsearchAfreactDemoFeatures");
 const types = render("afsearchAfreactDemoContactTypes");
 const editable = render("afsearchAfreactDemoEditable");
@@ -57,6 +59,20 @@ const PAIRS: Pair[] = [
     angular: rules("angular"),
     scope: ".afreact-render",
     ready: `!!document.querySelector(".afreact-render af-field input")`,
+  },
+  {
+    name: "membership form",
+    react: membership("react"),
+    angular: membership("angular"),
+    scope: ".afreact-render",
+    ready: `!!document.querySelector(".afreact-render af-field[name=first_name] input")`,
+  },
+  {
+    name: "members page",
+    react: members("react"),
+    angular: members("angular"),
+    scope: ".afreact-render",
+    ready: tableReady,
   },
   {
     name: "table features",

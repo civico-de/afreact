@@ -66,6 +66,8 @@ interface Result {
   /** What the form would read from the URL or its placement, left empty here. */
   renderedEmpty: string[];
   differences: string[];
+  /** Differences of displays in DEVIATING_DISPLAYS, with the reason. */
+  deviating: string[];
   notes: string[];
   axe: { react: string[]; angular: string[]; reactOnly: string[]; excused: string[] };
   errors: string[];
@@ -530,6 +532,36 @@ const SHARED_CONTENT: Record<string, { rule: string; reason: string }[]> = {
   ],
 };
 
+/**
+ * Displays whose rows differ by a documented deviation, which a spec of its own pins. An entry
+ * that excuses nothing fails.
+ */
+const DEVIATING_DISPLAYS: Record<string, { display: number; reason: string }[]> = {
+  // deviation:display-outside-fieldset-form
+  afsearchAfreactDemoMembers: [
+    {
+      display: 2,
+      reason: "core drops the filter of a display outside the fieldset; members.spec.ts",
+    },
+  ],
+};
+
+function deviatingDisplays(name: string, found: string[]) {
+  const entries = DEVIATING_DISPLAYS[name] ?? [];
+  // Row counts and rows only; the headers are still compared.
+  const of = (display: number) => (line: string) =>
+    line.startsWith(`display ${display}:`) || line.startsWith(`display ${display} row `);
+  const excuse = (line: string) => entries.find(({ display }) => of(display)(line));
+  return {
+    rest: found.filter((line) => !excuse(line)),
+    excused: found.flatMap((line) => {
+      const entry = excuse(line);
+      return entry ? [`${line} (${entry.reason})`] : [];
+    }),
+    stale: entries.filter(({ display }) => !found.some(of(display))).map(({ display }) => display),
+  };
+}
+
 const ruleOf = (finding: string) => finding.slice(0, finding.indexOf(":"));
 
 function sharedContent(name: string, reactOnly: string[], ng: string[]) {
@@ -572,10 +604,13 @@ async function sweepForm(
   else if ("error" in reported) errors.push(`support report: ${reported.error}`);
   const supported = !!reported && "problems" in reported && reported.problems.length === 0;
   const notes = (react.observed?.notes ?? []).map((note) => note.replace(NOTE_PREFIX, ""));
-  const found =
+  const deviating = deviatingDisplays(
+    row.name,
     react.observed && angularLoad.observed
       ? differences(react.observed, angularLoad.observed, row.submit_currently_open === false)
-      : [];
+      : [],
+  );
+  const found = deviating.rest;
   const shared =
     react.observed && angularLoad.observed
       ? sharedContent(row.name, ownFindings(react.axe, angularLoad.axe), angularLoad.axe)
@@ -598,6 +633,9 @@ async function sweepForm(
         ]
       : []),
     ...stale.map((rule) => `SHARED_CONTENT excuses no ${rule} finding any more`),
+    ...deviating.stale.map(
+      (display) => `DEVIATING_DISPLAYS excuses no difference in display ${display} any more`,
+    ),
   ];
   return {
     name: row.name,
@@ -609,6 +647,7 @@ async function sweepForm(
     urls,
     renderedEmpty,
     differences: found,
+    deviating: deviating.excused,
     notes: [...new Set(notes)],
     axe: { react: react.axe, angular: angularLoad.axe, reactOnly, excused: shared.excused },
     errors,
@@ -647,6 +686,7 @@ function markdown(results: Result[], total: number): string {
       ["Rendered without", result.renderedEmpty],
       ["Errors", result.errors],
       ["Differences (React against Angular)", result.differences],
+      ["Documented deviations (DEVIATING_DISPLAYS)", result.deviating],
       ['"Not supported" notes shown', result.notes],
       ["The support report lists", result.reported],
       ["axe on React only", result.axe.reactOnly],
@@ -690,6 +730,10 @@ test("every form renders alike on both renderers", async ({ page }, testInfo) =>
   expect(unknown, "names in SWEEP_FORMS that are no form or a block").toEqual([]);
   const gone = Object.keys(SHARED_CONTENT).filter((name) => !forms.some((f) => f.name === name));
   expect(gone, "forms in SHARED_CONTENT that are no form or a block").toEqual([]);
+  const goneDisplays = Object.keys(DEVIATING_DISPLAYS).filter(
+    (name) => !forms.some((f) => f.name === name),
+  );
+  expect(goneDisplays, "forms in DEVIATING_DISPLAYS that are no form or a block").toEqual([]);
   const swept = only.length ? forms.filter((form) => only.includes(form.name)) : forms;
   expect(swept.length, "forms to sweep").toBeGreaterThan(0);
   test.setTimeout(300_000 + swept.length * 4 * LOAD_MS);

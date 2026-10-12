@@ -1,0 +1,10 @@
+{
+  "type": "form",
+  "title": "Become a member",
+  "description": "A large demo form: contact with repeated email, phone and address, an employer shown on demand, a membership with a conditional reduced fee, a note and a newsletter subscription.",
+  "server_route": "civicrm/afreact/demo/join",
+  "permission": ["access CiviCRM"],
+  "create_submission": true,
+  "confirmation_type": "show_confirmation_message",
+  "confirmation_message": "Welcome! Your membership has been recorded."
+}

@@ -1,0 +1,55 @@
+<af-form ctrl="afform">
+  <af-entity data="{contact_type: 'Individual', source: 'Afreact demo membership'}" type="Contact" name="Individual1" label="Member" actions="{create: true, update: true}" security="RBAC" url-autofill="1" />
+  <af-entity data="{contact_id: 'Individual1', source: 'Afreact demo membership'}" type="Membership" name="Membership1" label="Membership" actions="{create: true, update: false}" security="RBAC" />
+  <af-entity data="{contact_type: 'Organization', source: 'Afreact demo membership'}" type="Contact" name="Organization1" label="Employer" actions="{create: true, update: false}" security="RBAC" />
+  <af-entity data="{contact_id_a: 'Individual1', contact_id_b: 'Organization1'}" type="Relationship" name="Relationship1" label="Employment" actions="{create: true, update: false}" security="RBAC" />
+  <af-entity data="{contact_id: 'Individual1'}" type="GroupSubscription" name="GroupSubscription1" label="Newsletter" actions="{create: true, update: true}" security="RBAC" group-subscription="no-confirm" />
+  <div class="af-markup"><p>{{:: ts('Members support the association and vote at the general meeting. Fields marked with an asterisk are required.') }}</p></div>
+  <fieldset af-fieldset="Individual1" class="af-container" af-title="About you">
+    <div class="af-container af-layout-inline">
+      <af-field name="prefix_id" />
+      <af-field name="first_name" defn="{required: true}" />
+      <af-field name="last_name" defn="{required: true}" />
+    </div>
+    <af-field name="birth_date" />
+    <div af-join="Email" af-repeat="Add" af-copy="Copy" min="1" max="3">
+      <afblock-contact-email></afblock-contact-email>
+    </div>
+    <div af-join="Phone" af-repeat="Add phone" max="3">
+      <div class="af-container af-layout-inline">
+        <af-field name="phone" defn="{required: false}" />
+        <af-field name="phone_type_id" />
+      </div>
+    </div>
+    <div af-join="Address" af-repeat="Add" af-copy="Copy" min="1" max="2">
+      <afblock-contact-address></afblock-contact-address>
+    </div>
+    <af-field name="job_title" defn="{help_post: 'Tell us where you work and we link your membership to your employer.'}" />
+  </fieldset>
+  <div class="af-container" af-if="([[&quot;Individual1[0][fields][job_title]&quot;,&quot;IS NOT EMPTY&quot;,&quot;&quot;]])">
+    <fieldset af-fieldset="Organization1" class="af-container" af-title="Employer">
+      <af-field name="organization_name" />
+    </fieldset>
+    <fieldset af-fieldset="Relationship1" class="af-container" af-title="Your position there">
+      <af-field name="relationship_type_id" />
+      <af-field name="start_date" />
+    </fieldset>
+  </div>
+  <fieldset af-fieldset="Membership1" class="af-container" af-title="Membership">
+    <af-field name="membership_type_id" defn="{required: true, input_type: 'Radio'}" />
+    <af-field name="start_date" defn="{required: true}" />
+    <af-field name="Afreact_Demo_Fee.Reduced" />
+    <div class="af-container" af-if="([[&quot;Membership1[0][fields][Afreact_Demo_Fee.Reduced]&quot;,&quot;=&quot;,&quot;true&quot;]])">
+      <af-field name="Afreact_Demo_Fee.Reason" af-required="([[&quot;Membership1[0][fields][Afreact_Demo_Fee.Reduced]&quot;,&quot;=&quot;,&quot;true&quot;]])" />
+    </div>
+  </fieldset>
+  <fieldset af-fieldset="Individual1" class="af-container" af-title="Anything else">
+    <div af-join="Note" min="1" max="1">
+      <af-field name="note" defn="{label: 'Message to the board', input_type: 'TextArea', required: false}" />
+    </div>
+  </fieldset>
+  <fieldset af-fieldset="GroupSubscription1" class="af-container" af-title="Stay informed">
+    <af-field name="Afreact_Demo_Newsletter" />
+  </fieldset>
+  <button class="af-button btn btn-primary" crm-icon="fa-check" ng-click="afform.submit()">{{:: ts('Become a member') }}</button>
+</af-form>

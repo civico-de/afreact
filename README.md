@@ -173,7 +173,8 @@ The dev and CI stacks add demo pages from the `afreactdemo` fixture (see
 Development): `civicrm/afreact/demo` renders its forms and tables with React
 (`?source=page` or `?source=bundle` picks the layout source),
 `civicrm/afreact/angular` the same with the Angular runtime; both share one
-markup (`PagesHeadlessTest`).
+markup (`PagesHeadlessTest`). `civicrm/afreact/demo/join` and `…/demo/members`
+are a membership sign-up and a members page built from core parts only.
 
 ## Documentation
 
@@ -192,7 +193,7 @@ markup (`PagesHeadlessTest`).
 
 The dev stack is civikitchen (CiviCRM standalone, MariaDB, maildev); see the
 header of `.docker/docker-compose.yml`. First-boot hooks in `.docker/init.d/`
-seed synthetic contacts, contact sub-types and the extensions
+seed synthetic contacts, memberships, contact sub-types and the extensions
 some specs need. Two extensions under `.docker/fixtures/` are mounted in the dev and CI
 stacks and never released: `afreactdemo` holds the demo forms, searches and
 pages the browser tests use, `afreactisland` exercises the builder plugin

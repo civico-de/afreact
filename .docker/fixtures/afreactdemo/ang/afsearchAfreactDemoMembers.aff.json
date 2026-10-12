@@ -1,0 +1,6 @@
+{
+  "type": "search",
+  "title": "Afreact demo members",
+  "server_route": "civicrm/afreact/demo/members",
+  "permission": ["access CiviCRM"]
+}
