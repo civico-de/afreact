@@ -74,6 +74,10 @@ import { Unsupported } from "./Unsupported";
 export interface FormState {
   data: FormData;
   update: (change: (data: FormData) => FormData) => void;
+  /** update() for a change the user makes, which counts in `edits`. */
+  edit: (change: (data: FormData) => FormData) => void;
+  /** Counts the user's changes, the saves and the prefill: an item's undo lasts while it stands. */
+  edits: number;
   disabled: boolean;
   /** Also enabled while the saved form only retries its failed uploads. */
   submitDisabled: boolean;
@@ -411,7 +415,10 @@ interface RepeatProps {
  * A stable key per item of a repeated array, as ng-repeat tracks items by identity: removing
  * an item keeps the state of the items after it, in every repeat over the same array.
  */
-function useItemKeys(id: string, count: number): [number[], (position: number) => void] {
+function useItemKeys(
+  id: string,
+  count: number,
+): [number[], (position: number) => void, (keys: number[]) => void] {
   const { itemKeys } = useForm();
   let keys = itemKeys.get(id) ?? [];
   if (keys.length !== count) {
@@ -425,7 +432,22 @@ function useItemKeys(id: string, count: number): [number[], (position: number) =
       keys.filter((_, index) => index !== position),
     );
   };
-  return [keys, remove];
+  const restore = (saved: number[]) => {
+    itemKeys.set(id, saved);
+  };
+  return [keys, remove, restore];
+}
+
+/**
+ * A removed item, which Undo brings back until the next edit, save or prefill; updates that
+ * follow from the removal (an af-if it flips) return with it.
+ */
+interface Removal {
+  position: number;
+  key: number;
+  keys: number[];
+  before: FormData;
+  edits: number;
 }
 
 /** af-repeat in afRepeat.html's markup: one copy of the children per item, with add/copy/remove inside the min/max bounds. */
@@ -433,7 +455,21 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
   const form = useForm();
   const path = useContext(ItemPathContext);
   const id = scope.join === undefined ? scope.entity : `${path}/${scope.join}`;
-  const [keys, removeKey] = useItemKeys(id, count);
+  const [keys, removeKey, restoreKeys] = useItemKeys(id, count);
+  // deviation:repeat-remove-undo
+  // Undo stands in the removed item's place until the next change to the form.
+  const [removal, setRemoval] = useState<Removal | null>(null);
+  const [restored, setRestored] = useState<{ key: number } | null>(null);
+  const undoButton = useRef<HTMLButtonElement>(null);
+  const undoNote = useId();
+  const restoredButton = useRef<HTMLButtonElement>(null);
+  if (removal && removal.edits !== form.edits) setRemoval(null);
+  useEffect(() => {
+    if (removal) undoButton.current?.focus();
+  }, [removal]);
+  useEffect(() => {
+    if (restored) restoredButton.current?.focus();
+  }, [restored]);
   // Same bounds as afRepeat's canAdd/canRemove: no min means every item can go.
   const min = Number(node.min ?? 0);
   const max = Number(node.max ?? 0);
@@ -463,9 +499,11 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
           type="button"
           className="btn btn-xs af-repeat-remove-btn"
           disabled={form.disabled}
+          ref={key === restored?.key ? restoredButton : undefined}
           onClick={() => {
+            setRemoval({ position, key, keys, before: form.data, edits: form.edits + 1 });
             removeKey(position);
-            form.update((data) => primaryKept(removeRepeatItem(data, scope, position)));
+            form.edit((data) => primaryKept(removeRepeatItem(data, scope, position)));
           }}
         >
           <i className="crm-i fa-ban" aria-hidden="true" />
@@ -474,6 +512,29 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
       )}
     </div>
   ));
+  if (removal)
+    items.splice(
+      removal.position,
+      0,
+      <p className="afreact-repeat-undo" key="undo">
+        <span id={undoNote}>{ts("Removed.")}</span>{" "}
+        <button
+          type="button"
+          className="btn btn-sm"
+          ref={undoButton}
+          aria-describedby={undoNote}
+          disabled={form.disabled}
+          onClick={() => {
+            restoreKeys(removal.keys);
+            setRestored({ key: removal.key });
+            setRemoval(null);
+            form.update(() => removal.before);
+          }}
+        >
+          <i className="crm-i fa-undo" aria-hidden="true" /> {ts("Undo")}
+        </button>
+      </p>,
+    );
   return (
     <Element node={node}>
       {items}
@@ -483,7 +544,7 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
           className="btn btn-sm af-repeat-add-btn"
           disabled={form.disabled}
           onClick={() => {
-            form.update((data) => initialiseLast(addRepeatItem(data, scope)));
+            form.edit((data) => initialiseLast(addRepeatItem(data, scope)));
           }}
         >
           <i className={`crm-i ${text("add-icon") || "fa-plus"}`} aria-hidden="true" />
@@ -499,7 +560,7 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
           className="btn btn-sm af-repeat-copy-btn"
           disabled={form.disabled}
           onClick={() => {
-            form.update((data) => initialiseLast(copyRepeatItem(data, scope)));
+            form.edit((data) => initialiseLast(copyRepeatItem(data, scope)));
           }}
         >
           <i className={`crm-i ${text("copy-icon") || "fa-copy"}`} aria-hidden="true" />{" "}
@@ -688,10 +749,10 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
         checked={value === true}
         disabled={form.disabled || conditionallyDisabled}
         onSelect={() => {
-          form.update((data) => setPrimary(data, scope));
+          form.edit((data) => setPrimary(data, scope));
         }}
         onClear={() => {
-          form.update((data) => ensurePrimary(setValue(data, scope, name, null), scope));
+          form.edit((data) => ensurePrimary(setValue(data, scope, name, null), scope));
         }}
       />
     ) : (
@@ -701,7 +762,7 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
           value={value}
           disabled={form.disabled || readonly || conditionallyDisabled}
           onChange={(next) => {
-            form.update((data) => setValue(data, scope, name, next));
+            form.edit((data) => setValue(data, scope, name, next));
           }}
         />
       </FieldEnvContext.Provider>
@@ -732,7 +793,7 @@ function fieldEnv(
     joinIndex: scope.join === undefined ? undefined : (scope.joinIndex ?? 0),
     onSelect: autofill
       ? async (id) => {
-          form.update(await loadSelected(form.formName, scope, name, id, form.entities));
+          form.edit(await loadSelected(form.formName, scope, name, id, form.entities));
         }
       : undefined,
   };

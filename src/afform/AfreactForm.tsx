@@ -318,6 +318,7 @@ interface LoadedFormProps extends Loaded {
 function LoadedForm(props: LoadedFormProps) {
   const { name, form, args, params, initial, pageTitle, onReset } = props;
   const [data, setData] = useState(initial);
+  const [edits, setEdits] = useState(0);
   // What the form holds by the time the prefill lands, for the async callback below.
   const latest = useRef(data);
   useEffect(() => {
@@ -438,6 +439,7 @@ function LoadedForm(props: LoadedFormProps) {
     onSuccess: (records) => {
       const filled = prefilledData(form, latest.current, records, params);
       setData(filled);
+      setEdits((count) => count + 1);
       setDraftSaved(JSON.stringify([filled, 0]));
       setPrefilled(true);
     },
@@ -484,6 +486,11 @@ function LoadedForm(props: LoadedFormProps) {
   const state: FormState = {
     data,
     update: setData,
+    edit: (change) => {
+      setData(change);
+      setEdits((count) => count + 1);
+    },
+    edits,
     // deviation:closed-form-locked
     disabled: busy || closed !== null || reset.isPending || !!retry,
     // deviation:draft-save-holds-submit
@@ -569,6 +576,7 @@ function LoadedForm(props: LoadedFormProps) {
       return;
     }
     setFailure(null);
+    setEdits((count) => count + 1);
     const response = recaptchaResponse.current;
     save.mutate({
       values: submission(data, response === null ? {} : { recaptcha2: response }),

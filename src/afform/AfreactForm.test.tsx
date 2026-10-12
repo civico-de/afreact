@@ -424,6 +424,40 @@ describe("AfreactForm", () => {
     expect(added).not.toBeChecked();
   });
 
+  // deviation:repeat-remove-undo
+  it("offers to undo a removed item in its place until the next edit", async () => {
+    renderForm(() => [{}], "");
+    await screen.findByRole("form");
+    await userEvent.click(screen.getByRole("button", { name: "Add email" }));
+    const [first, second] = screen.getAllByRole("textbox", { name: "Email" });
+    await userEvent.type(first!, "a@example.org");
+    await userEvent.type(second!, "b@example.org");
+
+    // The primary record goes, so the flag moves to the one left; Undo moves it back.
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
+    const undo = screen.getByRole("button", { name: "Undo" });
+    expect(undo).toHaveFocus();
+    expect(undo).toHaveAccessibleDescription("Removed.");
+    expect(screen.getAllByRole("textbox", { name: "Email" })).toHaveLength(1);
+    expect(screen.getByRole("textbox", { name: "Email" })).toHaveValue("b@example.org");
+    expect(screen.getByRole("radio", { name: "Primary" })).toBeChecked();
+
+    await userEvent.click(undo);
+    expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
+    const [restored, kept] = screen.getAllByRole("textbox", { name: "Email" });
+    expect(restored).toHaveValue("a@example.org");
+    expect(kept).toHaveValue("b@example.org");
+    const [primary, other] = screen.getAllByRole("radio", { name: "Primary" });
+    expect(primary).toBeChecked();
+    expect(other).not.toBeChecked();
+    expect(screen.getAllByRole("button", { name: "Remove" })[0]).toHaveFocus();
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[1]!);
+    expect(screen.getByRole("button", { name: "Undo" })).toHaveFocus();
+    await userEvent.type(screen.getByRole("textbox", { name: "Email" }), "x");
+    expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
+  });
+
   it("reports a form that cannot be loaded", async () => {
     mockApi({
       "Afreact.getForm": () =>

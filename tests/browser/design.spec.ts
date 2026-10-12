@@ -1,8 +1,10 @@
 /**
  * React's form layout over the theme (css/afreact-form.css), on the large demo form: blocks keep
- * a gap, a repeat item's controls sit at its fields, a legend heads its fieldset.
+ * a gap, a repeat item's controls sit at its fields, a legend heads its fieldset; the undo for a
+ * removed item has no axe finding.
  */
 import { expect, test, type Locator } from "@playwright/test";
+import { axeFindings } from "./harness";
 
 const FORM = "/civicrm/afreact/render?name=afformAfreactDemoMembership&renderer=react";
 const LOAD = { timeout: 30_000 };
@@ -193,3 +195,18 @@ test("a repeat item's remove button and block menu sit apart", async ({ page }) 
     menu.bottom <= remove.y;
   expect(apart).toBe(true);
 });
+
+for (const colorScheme of ["light", "dark"] as const)
+  // deviation:repeat-remove-undo
+  test(`the undo for a removed item has no axe finding (${colorScheme})`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.emulateMedia({ colorScheme });
+    await page.goto(FORM);
+    const about = page.getByRole("group", { name: "About you" });
+    await expect(about).toBeVisible(LOAD);
+    await expect(page.locator(".afreact-form")).toHaveAttribute("aria-busy", "false", LOAD);
+    await about.getByRole("button", { name: "Add phone" }).click();
+    await about.getByRole("button", { name: "Remove" }).first().click();
+    await expect(about.getByRole("button", { name: "Undo" })).toBeFocused();
+    expect(await axeFindings(page, ".afreact-repeat-undo")).toEqual([]);
+  });
