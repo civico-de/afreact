@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useLayoutEffect, useRef } from "react";
 import { IconPicker } from "../../widgets/IconPicker";
 import { InlineEdit } from "../../widgets/InlineEdit";
 import { useEditor, type EditorApi } from "../context";
@@ -268,6 +268,7 @@ export function ButtonElement({ path, node, handle, label }: ElementProps) {
 /** Core's `<civi-rich-text-input>` (js/wysiwyg/crm.wysiwyg.js). */
 export interface RichTextElement extends HTMLElement {
   value: string;
+  input: HTMLTextAreaElement;
   openEditor: () => void;
   closeEditor: () => void;
   saveAndCloseEditor: () => void;
@@ -303,7 +304,8 @@ export function RichTextInput({
   useEffect(() => {
     latest.current = { value, onChange, tokens };
   });
-  useEffect(() => {
+  // A layout effect, so the element is closed or parked before React detaches its host.
+  useLayoutEffect(() => {
     const element = document.createElement("civi-rich-text-input");
     if (!isRichText(element)) throw new Error("civi-rich-text-input is not defined on this page.");
     element.setAttribute("token-picker", "");
@@ -316,15 +318,39 @@ export function RichTextInput({
         latest.current.onChange(element.value);
     };
     element.addEventListener("change", onElementChange);
+    // CKEditor 4 marks the textarea once its scripts have loaded and it starts; opened before
+    // that, a start is pending. deviation:rich-text-starting-removed
+    const enabled = () => element.input.classList.contains("crm-wysiwyg-enabled");
+    let pending = false;
+    let parked = false;
+    const close = () => {
+      element.closeEditor();
+      element.remove();
+    };
+    new MutationObserver(() => {
+      if (!enabled()) return;
+      pending = false;
+      if (parked) close();
+    }).observe(element.input, { attributeFilter: ["class"] });
+    const onOpen = (event: Event) => {
+      if (event.target === element && !enabled()) pending = true;
+    };
+    element.addEventListener("load", onOpen);
     host.current?.append(element);
     elementRef.current = element;
     // A new, empty element opens straight away.
     if (!latest.current.value) element.openEditor();
     return () => {
       element.removeEventListener("change", onElementChange);
-      if (element.hasAttribute("editing")) element.closeEditor();
-      element.remove();
+      element.removeEventListener("load", onOpen);
       elementRef.current = null;
+      // Removed while loading, the editor would start on a detached textarea and throw; it cannot
+      // be called off, so the element waits hidden on the page until it has started.
+      parked = pending && !!window.CRM.config?.CKEditorCustomConfig;
+      if (parked) {
+        element.style.display = "none";
+        document.body.append(element);
+      } else close();
     };
   }, [elementRef]);
   useEffect(() => {

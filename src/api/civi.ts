@@ -77,6 +77,8 @@ declare global {
         lcMessages?: string;
         /** URL of civicrm-core's files, ending in a slash. */
         resourceBase?: string;
+        /** CKEditor 4's configuration URL, set only where it is the site's rich text editor. */
+        CKEditorCustomConfig?: string;
         /** The quick-add forms the user may open (CRM_Core_Resources::getQuickAddForms). */
         quickAdd?: { path: string; entity: string; title: string; icon?: string | null }[];
       };

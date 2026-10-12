@@ -991,6 +991,20 @@ run). React shows the search's label alone. `deviation:search-display-label-null
 `SavedSearch.get` fails the menu keeps its spinner (6.19, read from the
 code, not run). React shows the error and loads again on the next opening. `deviation:search-choices-load-error`
 
+**A rich text block removed while its editor loads throws.**
+`civi-rich-text-input` opens an empty block's editor at once
+(`js/wysiwyg/crm.wysiwyg.js`), and the editor's scripts load before it
+attaches to the textarea. `closeEditor()` cannot call that off, so a block
+removed in the meantime, by opening another form or deleting the block, gets
+an editor started on a detached textarea: CKEditor 4 throws "Cannot read
+properties of null (reading 'unselectable')" and keeps a dead instance (6.19;
+seen in React's builder with the CPU slowed six times, which uses core's
+element; core's own builder read from the code, not run). A block closed
+before it is removed does the same. With CKEditor 4, React keeps such a block
+hidden on the page until its editor has started, then closes and removes it;
+a script that never loads leaves one hidden, empty element behind.
+`deviation:rich-text-starting-removed`
+
 **An unknown form shows an empty submissions page.**
 `CRM_AfformAdmin_Page_Submissions` reads the title of the form that `name`
 names without checking that one was found, so a misspelt name, or a form
