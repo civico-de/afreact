@@ -6,7 +6,7 @@ declare(strict_types = 1);
  * Table displays that use every table feature the React renderer draws, for the browser
  * tests that compare it with Angular: link and button columns, a row menu, a subsearch,
  * style rules, totals, a toolbar, and a collapsible hierarchy of contact types (the dev stack
- * seeds sub-types in .docker/init.d). A subsearch filters only on fields its own search selects,
+ * seeds sub-types in its profile, .docker/profiles/dev). A subsearch filters only on fields its own search selects,
  * so the emails select contact_id.
  */
 $view = 'civicrm/contact/view?reset=1&cid=[id]';

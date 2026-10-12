@@ -1,0 +1,14 @@
+{
+  "description": "Dev and CI data for afreact: dependencies, config, seed records, scripts and API users applied at first boot.",
+  "dependencies": [
+    { "name": "batch_entry", "enable": true },
+    { "name": "chart_kit", "enable": true },
+    { "name": "civigrant", "enable": true }
+  ],
+  "config": {
+    "settings": {
+      "contribute_enable_afform_contributions": true
+    }
+  },
+  "scripts": ["demo-contacts.php", "demo-contact-types.php", "demo-memberships.php"]
+}

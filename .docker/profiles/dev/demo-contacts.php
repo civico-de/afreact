@@ -22,5 +22,5 @@ foreach ($last as $i => $lastName) {
     ];
   }
 }
-// Matched, so a hook re-run on an existing database (a recreated container) adds no duplicates.
+// Matched, so a re-run on an existing database (a recreated container) adds no duplicates.
 Individual::save(checkPermissions: FALSE)->setRecords($records)->setMatch(['external_identifier'])->execute();
