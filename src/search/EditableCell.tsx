@@ -290,8 +290,9 @@ function CellEditor({
  */
 export function RowEditButtons({ edit, row }: { edit: InlineEdit | null; row: Row }) {
   const group = useRef<HTMLDivElement>(null);
-  if (!edit?.full || edit.editing?.rowKey !== row.key) return null;
-  const failed = edit.editing.error;
+  const editing = edit?.full ? edit.editing : null;
+  if (!edit || !editing || editing.rowKey !== row.key) return null;
+  const failed = editing.error;
   return (
     <>
       <div

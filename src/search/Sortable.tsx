@@ -22,17 +22,17 @@ import {
 } from "@dnd-kit/sortable";
 import { createContext, useContext, useRef, type ReactNode } from "react";
 // Type imports only: a value import from the entry would make this lazy chunk load it twice.
-import type { Row } from "./types";
+import type { RowKey } from "./types";
 
 interface SortableRowsProps {
   /** The keys of the rows shown, in their order. */
-  keys: Row["key"][];
+  keys: RowKey[];
   nameOf: (key: UniqueIdentifier) => string;
   /** The position the row would take after a drop on `over`, or null where it stays. */
   landing: (active: UniqueIdentifier, over: UniqueIdentifier) => number | null;
   /** While a move is saved, the weights on the page are not final. */
   disabled: boolean;
-  onMove: (active: Row["key"], over: Row["key"]) => void;
+  onMove: (active: RowKey, over: RowKey) => void;
   children: ReactNode;
 }
 
@@ -118,7 +118,7 @@ type Activator = Pick<
 const SortableHandle = createContext<Activator | null>(null);
 
 /** A table row that moves while dragged; its handle is a DragHandle inside it. */
-export function SortableRow({ rowKey, children }: { rowKey: Row["key"]; children: ReactNode }) {
+export function SortableRow({ rowKey, children }: { rowKey: RowKey; children: ReactNode }) {
   const sortable = useSortable({ id: rowKey, attributes: { roleDescription: ts("movable row") } });
   const { setNodeRef, transform, transition, isDragging, isOver } = sortable;
   return (
@@ -161,7 +161,7 @@ interface TreeDndProps {
   /** Where `active` would go after a drop on `over`, as text, or null where it cannot. */
   placeOf: (active: UniqueIdentifier, over: UniqueIdentifier) => string | null;
   disabled: boolean;
-  onMove: (active: Row["key"], over: string | number) => void;
+  onMove: (active: RowKey, over: string | number) => void;
   children: ReactNode;
 }
 
@@ -301,7 +301,7 @@ export function TreeDnd({ nameOf, placeOf, disabled, onMove, children }: TreeDnd
 }
 
 interface TreeItemProps {
-  rowKey: Row["key"];
+  rowKey: RowKey;
   className?: string;
   disabled: boolean;
   /** The branch under the item is left out while it is dragged. */

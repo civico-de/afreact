@@ -94,6 +94,16 @@ describe("AfreactSearch drag to reorder", () => {
     expect(screen.getAllByRole("columnheader")).toHaveLength(2);
   });
 
+  // deviation:keyless-rows
+  it("offers no handles on grouped rows, which have no record to move", async () => {
+    const grouped = (label: string): Row => ({ columns: [{ val: label }, { val: 1 }] });
+    serve(() => ({}), [grouped("Full"), grouped("Reduced")]);
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+    await screen.findByText("Reduced");
+    expect(screen.queryByRole("button", { name: /^Move / })).not.toBeInTheDocument();
+    expect(shownOrder()).toEqual(["", ""]);
+  });
+
   // deviation:keyboard-row-reorder
   it("moves a row by keyboard, saves the displaced row's weight, takes the answer", async () => {
     let answer: (weights: unknown) => void = () => undefined;

@@ -1,6 +1,6 @@
 import { keyText } from "./rows";
 import { FIRST, isSlot } from "./treeSlot";
-import type { Row } from "./types";
+import type { Row, RowKey } from "./types";
 
 export interface TreeMove {
   rows: Row[];
@@ -11,7 +11,7 @@ export interface TreeMove {
 const parentOf = (row: Row, parentField: string) => keyText(row.data?.[parentField]);
 
 /** The keys of the row's descendants, through the parent field. */
-function under(rows: Row[], key: Row["key"], parentField: string): Set<string> {
+function under(rows: Row[], key: RowKey, parentField: string): Set<string> {
   const keys = new Set([String(key)]);
   let grown = true;
   while (grown) {
@@ -43,7 +43,7 @@ function weightOf(row: Row, weightField: string): number {
 // deviation:tree-drag-keyboard
 export function treeMove(
   rows: Row[],
-  active: Row["key"],
+  active: RowKey,
   over: string | number,
   weightField: string,
   parentField: string,

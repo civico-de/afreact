@@ -1,5 +1,5 @@
 import { descendents, rowDepth } from "./rows";
-import type { Column, DisplaySettings, Row } from "./types";
+import type { Column, DisplaySettings, Row, RowKey } from "./types";
 
 /** The weight field rows are dragged by, or null. */
 export function dragField(settings: DisplaySettings): string | null {
@@ -27,8 +27,8 @@ function parentOf(rows: Row[], index: number): number {
  */
 export function moveRow(
   rows: Row[],
-  active: Row["key"],
-  over: Row["key"],
+  active: RowKey,
+  over: RowKey,
   weightField: string,
   hierarchical = false,
 ): { rows: Row[]; weight: unknown } | null {

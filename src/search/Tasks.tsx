@@ -74,8 +74,8 @@ interface TasksOptions {
 
 /** What Body needs for the checkbox of each row. */
 export interface RowSelect {
-  isSelected: (row: Row) => boolean;
-  toggle: (row: Row, shift: boolean) => void;
+  isSelected: (key: Key) => boolean;
+  toggle: (key: Key, shift: boolean) => void;
   disabled: boolean;
   label: (row: Row) => string;
 }
@@ -155,7 +155,8 @@ export function useTasks(options: TasksOptions) {
     );
     if (next.keys.length) setRequested(true);
   };
-  const pageKeys = page?.rows.map((row) => row.key) ?? [];
+  // Rows of a grouped search have no key and nothing a task could act on. deviation:keyless-rows
+  const pageKeys = page?.rows.flatMap((row) => (row.key === undefined ? [] : [row.key])) ?? [];
   const ready = !loading && !!page?.rows.length;
 
   const selectAllPages = async () => {
@@ -234,10 +235,14 @@ export function useTasks(options: TasksOptions) {
   };
 
   /** A row's task link (onClickLink): its task on that row, once the tasks are loaded. */
-  const onRowLink = (link: Link, key: Key, event: MouseEvent<HTMLAnchorElement>) => {
+  const onRowLink = (link: Link, key: Row["key"], event: MouseEvent<HTMLAnchorElement>) => {
     onLinkClick(link, event);
     const name = link.task;
     if (!name) return;
+    if (key === undefined) {
+      notSupported(`task ${name} (a grouped row has no record to act on)`);
+      return;
+    }
     const opener = event.currentTarget;
     client
       .fetchQuery({ queryKey, queryFn: loadTasks })
@@ -384,9 +389,9 @@ export function useTasks(options: TasksOptions) {
 
   const rowSelect: RowSelect | undefined = actions
     ? {
-        isSelected: (row) => isSelected(selection, row.key),
-        toggle: (row, shift) => {
-          select(toggleRow(selection, pageKeys, row.key, shift, rowCount));
+        isSelected: (key) => isSelected(selection, key),
+        toggle: (key, shift) => {
+          select(toggleRow(selection, pageKeys, key, shift, rowCount));
         },
         disabled: loadingAll,
         // deviation:row-checkbox-label

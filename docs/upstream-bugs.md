@@ -472,6 +472,15 @@ its filters to the title of a search page (`searchDisplayBaseTrait`, afCore's
 `addTitle`), but only when there are any, so clearing the filter keeps the old
 labels in the title. The React renderer shows the plain title again. `deviation:title-labels-cleared`
 
+**Grouped rows are selectable and draggable.** `SearchDisplay.run` gives
+the rows of a grouped search no `key`, but the display editor offers bulk
+actions, drag sorting and the tree for such searches as well. Read from the
+source, not run: `searchDisplayTasksTrait` selects by `row.key`, so ticking
+one row ticks them all and a task gets no ids; a drop sends
+`draggableWeight` with no `rowKey` (`updateDraggableWeights()`). React shows
+neither checkboxes nor drag handles on rows without a key, and a task link
+in such a row notes that it has no record. `deviation:keyless-rows`
+
 **"Column undefined" in the column picker.** `getColumnToggleLabel()` numbers
 a column without label or key with `col.index`, which nothing sets
 (`crmSearchDisplayTable.component.js:187`), so such a column is listed as

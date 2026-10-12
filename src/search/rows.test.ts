@@ -294,11 +294,18 @@ describe("display types", () => {
     expect(keys(buildTree(rows, undefined))).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 
+  it("keeps every grouped row of a tree at the top, in result order", () => {
+    const grouped = (kind: string): Row => ({ columns: [], data: { kind, parent_id: null } });
+    const rows = [grouped("a"), grouped("b"), grouped("c")];
+    const kinds = buildTree(rows, "parent_id").map((item) => item.row.data?.kind);
+    expect(kinds).toEqual(["a", "b", "c"]);
+  });
+
   // deviation:section-lists-by-content
   it("starts a section wherever the value changes, comparing lists by content", () => {
     const at = (key: number, kind: unknown): Row => ({ key, columns: [], data: { kind } });
     const rows = [at(1, ["a"]), at(2, ["a"]), at(3, null), at(4, undefined), at(5, "b")];
-    expect([...sectionStarts(rows, "kind")]).toEqual([
+    expect([...sectionStarts(rows, "kind")].map(([start, value]) => [start.key, value])).toEqual([
       [1, ["a"]],
       [3, null],
       [5, "b"],

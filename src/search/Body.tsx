@@ -9,11 +9,12 @@ import {
   descendents,
   hasControlColumn,
   hiddenRows,
+  keyOf,
   rowClass,
   startsCollapsed,
 } from "./rows";
 import type { RowSelect } from "./Tasks";
-import type { DisplaySettings, Link, Row, SubsearchDisplay } from "./types";
+import type { DisplaySettings, Link, Row, RowKey, SubsearchDisplay } from "./types";
 
 interface BodyRowsProps {
   rows: Row[];
@@ -69,88 +70,106 @@ export function BodyRows({
 }: BodyRowsProps) {
   const edit = useInlineEditContext();
   const control = hasControlColumn(settings);
-  const Tr = drag?.Row ?? PlainRow;
   return rows
     .filter((row) => !collapse.hidden.has(row.key))
-    .map((row) => (
-      <Tr key={row.key} rowKey={row.key}>
-        {control && (
-          <td
-            className={["crm-search-ctrl-column", rowClass(row, settings), row.cssClass ?? ""]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            {drag?.handle(row)}
-            {select && (
-              <input
-                type="checkbox"
-                className="crm-search-ctrl-select-row"
-                aria-label={select.label(row)}
-                checked={select.isSelected(row)}
-                disabled={select.disabled}
-                onChange={(event) => {
-                  const click = event.nativeEvent;
-                  select.toggle(row, click instanceof MouseEvent && click.shiftKey);
-                }}
-              />
-            )}
-            {settings.collapsible && (
-              <ToggleCollapse
-                count={descendents(row)}
-                collapsed={collapse.isCollapsed(row)}
-                onToggle={() => {
-                  collapse.toggle(row);
-                }}
-              />
-            )}
-            <RowEditButtons edit={edit} row={row} />
-          </td>
-        )}
-        {row.columns.map((cell, index) => {
-          if (hiddenColumns.has(index)) return null;
-          const column = settings.columns[index];
-          const target = { rowKey: row.key, colIndex: index };
-          // deviation:full-row-editing-class
-          const editing = cell?.edit ? editingClass(edit, target) : "";
-          return (
+    .map((row, position) => {
+      const cells = (
+        <>
+          {control && (
             <td
-              key={index}
-              className={[cellClass(column, row, settings, cell?.cssClass), editing]
+              className={["crm-search-ctrl-column", rowClass(row, settings), row.cssClass ?? ""]
                 .filter(Boolean)
                 .join(" ")}
-              title={cell?.title}
-              data-field-name={column?.key}
             >
-              {cell && (
-                <EditableCell
-                  edit={edit}
-                  row={row}
-                  column={column}
-                  colIndex={index}
-                  settings={settings}
-                >
-                  <Cell
-                    column={column}
-                    cell={cell}
-                    data={row.data}
-                    colIndex={index}
-                    subsearch={subsearch}
-                    afform={afform}
-                    onLinkClick={(link, event) => {
-                      onLinkClick(link, row.key, event);
-                    }}
-                  />
-                </EditableCell>
+              {drag?.handle(row)}
+              {select && row.key !== undefined && (
+                <SelectRow select={select} row={row} rowKey={row.key} />
               )}
+              {settings.collapsible && (
+                <ToggleCollapse
+                  count={descendents(row)}
+                  collapsed={collapse.isCollapsed(row)}
+                  onToggle={() => {
+                    collapse.toggle(row);
+                  }}
+                />
+              )}
+              <RowEditButtons edit={edit} row={row} />
             </td>
-          );
-        })}
-      </Tr>
-    ));
+          )}
+          {row.columns.map((cell, index) => {
+            if (hiddenColumns.has(index)) return null;
+            const column = settings.columns[index];
+            const target = { rowKey: row.key, colIndex: index };
+            // deviation:full-row-editing-class
+            const editing = cell?.edit ? editingClass(edit, target) : "";
+            return (
+              <td
+                key={index}
+                className={[cellClass(column, row, settings, cell?.cssClass), editing]
+                  .filter(Boolean)
+                  .join(" ")}
+                title={cell?.title}
+                data-field-name={column?.key}
+              >
+                {cell && (
+                  <EditableCell
+                    edit={edit}
+                    row={row}
+                    column={column}
+                    colIndex={index}
+                    settings={settings}
+                  >
+                    <Cell
+                      column={column}
+                      cell={cell}
+                      data={row.data}
+                      colIndex={index}
+                      subsearch={subsearch}
+                      afform={afform}
+                      onLinkClick={(link, event) => {
+                        onLinkClick(link, row.key, event);
+                      }}
+                    />
+                  </EditableCell>
+                )}
+              </td>
+            );
+          })}
+        </>
+      );
+      // Grouped rows have no key; their order is all that tells them apart.
+      return drag ? (
+        <drag.Row key={keyOf(row.key)} rowKey={keyOf(row.key)}>
+          {cells}
+        </drag.Row>
+      ) : (
+        <PlainRow key={row.key ?? position} rowKey={row.key}>
+          {cells}
+        </PlainRow>
+      );
+    });
+}
+
+function SelectRow({ select, row, rowKey }: { select: RowSelect; row: Row; rowKey: RowKey }) {
+  return (
+    <input
+      type="checkbox"
+      className="crm-search-ctrl-select-row"
+      aria-label={select.label(row)}
+      checked={select.isSelected(rowKey)}
+      disabled={select.disabled}
+      onChange={(event) => {
+        const click = event.nativeEvent;
+        select.toggle(rowKey, click instanceof MouseEvent && click.shiftKey);
+      }}
+    />
+  );
 }
 
 function PlainRow({ rowKey, children }: { rowKey: Row["key"]; children: ReactNode }) {
-  return <tr data-entity-id={rowKey}>{children}</tr>;
+  // An empty id on grouped rows, as core's `{{:: row.key }}` writes it.
+  return <tr data-entity-id={rowKey ?? ""}>{children}</tr>;
 }
 
 interface ToggleCollapseProps {

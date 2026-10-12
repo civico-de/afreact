@@ -2,15 +2,16 @@ import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { Suspense, use, useState, type ComponentType, type ReactNode } from "react";
 import { dragField, moveRow, withWeights } from "./dragOrder";
 import { asHtml } from "../html";
+import { allKeyed, keyOf } from "./rows";
 import type * as SortableModule from "./Sortable";
 import { rowName } from "./Tasks";
 import { treeMove } from "./treeDrag";
 import { writePage } from "./inlineEdit";
-import type { DisplaySettings, DisplayType, Row, RunPage } from "./types";
+import type { DisplaySettings, DisplayType, Row, RowKey, RunPage } from "./types";
 
 /** What Body needs to render draggable rows. */
 export interface RowDrag {
-  Row: ComponentType<{ rowKey: Row["key"]; children: ReactNode }>;
+  Row: ComponentType<{ rowKey: RowKey; children: ReactNode }>;
   handle: (row: Row) => ReactNode;
 }
 
@@ -28,9 +29,9 @@ export interface Reorder {
   saving: boolean;
   error: unknown;
   /** `over` is a row's key, or in a tree one of its FIRST targets. */
-  move: (active: Row["key"], over: string | number) => void;
+  move: (active: RowKey, over: string | number) => void;
   /** The position `active` would take among the rows shown after a drop on `over`, or null. */
-  landing: (rows: Row[], shown: Row[], active: Row["key"], over: Row["key"]) => number | null;
+  landing: (rows: Row[], shown: Row[], active: RowKey, over: RowKey) => number | null;
 }
 
 interface Move {
@@ -43,7 +44,7 @@ function plan(
   type: DisplayType,
   settings: DisplaySettings,
   rows: Row[],
-  active: Row["key"],
+  active: RowKey,
   over: string | number,
   field: string,
 ): Move | null {
@@ -66,7 +67,7 @@ export function useReorder({ type, settings, runKey, runParams }: ReorderOptions
   const [error, setError] = useState<unknown>(null);
   const weightField = settings ? dragField(settings) : null;
 
-  const save = async (page: RunPage, active: Row["key"], over: string | number, field: string) => {
+  const save = async (page: RunPage, active: RowKey, over: string | number, field: string) => {
     if (!settings) return;
     const moved = plan(type, settings, page.rows, active, over, field);
     if (!moved) {
@@ -95,7 +96,7 @@ export function useReorder({ type, settings, runKey, runParams }: ReorderOptions
     window.CRM.status(ts("Saved"));
   };
 
-  const move = (active: Row["key"], over: string | number) => {
+  const move = (active: RowKey, over: string | number) => {
     const page = client.getQueryData<RunPage>(runKey);
     if (!page || !weightField) return;
     if (active === over) return;
@@ -128,7 +129,7 @@ export function useReorder({ type, settings, runKey, runParams }: ReorderOptions
       });
   };
 
-  const landing = (rows: Row[], shown: Row[], active: Row["key"], over: Row["key"]) => {
+  const landing = (rows: Row[], shown: Row[], active: RowKey, over: RowKey) => {
     if (!weightField) return null;
     const moved = moveRow(rows, active, over, weightField, !!settings?.hierarchical);
     if (!moved) return null;
@@ -155,7 +156,8 @@ interface ReorderRowsProps {
 
 /** The table's rows, draggable when the display has a weight field. */
 export function ReorderRows({ reorder, rows, shown, children }: ReorderRowsProps) {
-  if (!reorder.weightField) return children(undefined);
+  // Grouped rows have no record whose weight could change. deviation:keyless-rows
+  if (!reorder.weightField || !allKeyed(rows)) return children(undefined);
   return (
     <Suspense fallback={children(undefined)}>
       <Draggable reorder={reorder} rows={rows} shown={shown}>
@@ -170,7 +172,7 @@ function Draggable({ reorder, rows, shown, children }: ReorderRowsProps) {
   const names = new Map(rows.map((row) => [row.key, rowName(row)]));
   return (
     <SortableRows
-      keys={shown.map((row) => row.key)}
+      keys={shown.map((row) => keyOf(row.key))}
       nameOf={(key) => names.get(key) ?? String(key)}
       landing={(active, over) => reorder.landing(rows, shown, active, over)}
       disabled={reorder.saving}

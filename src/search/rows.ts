@@ -6,6 +6,7 @@ import type {
   DisplayType,
   EditableInfo,
   Row,
+  RowKey,
   RunDebug,
   RunPage,
   SubsearchDisplay,
@@ -42,6 +43,15 @@ export function unlabelledHeader(column: Column, index: number): string | null {
 function depth(row: Row, key: "_depth" | "_descendents"): number {
   const value = Number(row.data?.[key] ?? 0);
   return Number.isNaN(value) ? 0 : value;
+}
+
+/** Whether every row has a key; rows of a grouped search have none. */
+export const allKeyed = (rows: Row[]) => rows.every((row) => row.key !== undefined);
+
+/** A dragged row's key; a display is draggable only where allKeyed() holds. */
+export function keyOf(key: Row["key"]): RowKey {
+  if (key === undefined) throw new Error("A draggable display has a row without a key.");
+  return key;
 }
 
 /** Sub-rows of a hierarchical row, counted before the page limit; a page may cut them off. */
@@ -292,13 +302,14 @@ export function keyText(value: unknown): string | null {
  * deviation:tree-orphans-top-level
  */
 export function buildTree(rows: Row[], parentField: string | undefined): TreeItem[] {
-  const items = new Map<string, TreeItem>(
-    rows.map((row) => [String(row.key), { row, children: [] }]),
+  const items: TreeItem[] = rows.map((row) => ({ row, children: [] }));
+  const byKey = new Map(
+    items.flatMap((item) => (item.row.key === undefined ? [] : [[String(item.row.key), item]])),
   );
   const roots: TreeItem[] = [];
-  for (const item of items.values()) {
+  for (const item of items) {
     const parentKey = parentField ? keyText(item.row.data?.[parentField]) : null;
-    const parent = parentKey === null ? undefined : items.get(parentKey);
+    const parent = parentKey === null ? undefined : byKey.get(parentKey);
     (parent && parent !== item ? parent.children : roots).push(item);
   }
   return roots;
@@ -309,14 +320,14 @@ export function buildTree(rows: Row[], parentField: string | undefined): TreeIte
  * value. Values compare by content, so equal lists share a section.
  * deviation:section-lists-by-content
  */
-export function sectionStarts(rows: Row[], field: string | undefined): Map<Row["key"], unknown> {
-  const starts = new Map<Row["key"], unknown>();
+export function sectionStarts(rows: Row[], field: string | undefined): Map<Row, unknown> {
+  const starts = new Map<Row, unknown>();
   if (!field) return starts;
   let previous: string | undefined;
   for (const row of rows) {
     const value = row.data?.[field];
     const text = JSON.stringify(value ?? null);
-    if (text !== previous) starts.set(row.key, value);
+    if (text !== previous) starts.set(row, value);
     previous = text;
   }
   return starts;

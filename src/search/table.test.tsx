@@ -53,6 +53,19 @@ describe("AfreactSearch table features", () => {
     ).toEqual([true, true, false]);
   });
 
+  // deviation:keyless-rows
+  it("renders grouped rows, which have no key, with an empty id and no selection or editing", async () => {
+    const grouped = (val: string): Row => ({ columns: [{ val }, { val: "" }, { links: [] }] });
+    runs(() => [grouped("Full"), grouped("Reduced")]);
+    const settings = { columns, actions: true, editableRow: { full: true } };
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+    await screen.findByText("Reduced");
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(rows.map((tr) => tr.getAttribute("data-entity-id"))).toEqual(["", ""]);
+    expect(rows.flatMap((tr) => within(tr).queryAllByRole("checkbox"))).toEqual([]);
+    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+  });
+
   it("shows the description, header count and toolbar above the table", async () => {
     const toolbar = [
       { url: "/add", text: "Add", icon: "fa-plus", style: "primary", target: "crm-popup" },

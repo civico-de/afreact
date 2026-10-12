@@ -71,8 +71,12 @@ export interface Subsearch {
   subsearch_mode: "dropdown" | "collapsed" | "inline";
 }
 
+/** A row's id, by which selection, editing and dragging find it. */
+export type RowKey = string | number;
+
 export interface Row {
-  key: string | number;
+  /** Absent on grouped rows (AbstractRunAction::formatResult). */
+  key?: RowKey;
   /** Null for a column the run left out (toggled off). */
   columns: (CellData | null)[];
   cssClass?: string;

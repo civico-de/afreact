@@ -4,7 +4,7 @@ import { Cell, cellText } from "./Cell";
 import { EditableCell } from "./EditableCell";
 import { InlineEditContext, useInlineEditContext, type InlineEdit } from "./inlineEdit";
 import { loadSortable, type Reorder } from "./Reorder";
-import { buildTree, fieldClass, sectionStarts, type TreeItem } from "./rows";
+import { allKeyed, buildTree, fieldClass, keyOf, sectionStarts, type TreeItem } from "./rows";
 import { rowName } from "./Tasks";
 import { treeMove } from "./treeDrag";
 import { FIRST, firstUnder, isSlot } from "./treeSlot";
@@ -116,28 +116,29 @@ export function ItemList({ type, ...props }: ItemsProps & { type: "list" | "grid
           <div className="crm-search-loading-placeholder" />,
         ),
       )
-    : (result?.rows ?? []).flatMap((row) => [
-        ...(sections.has(row.key)
+    : (result?.rows ?? []).flatMap((row, index) => [
+        ...(sections.has(row)
           ? [
               createElement(
                 item,
                 {
-                  key: `header-${String(row.key)}`,
+                  key: `header-${String(row.key ?? index)}`,
                   role,
                   className: grid
                     ? "crm-search-display-grid-header-item"
                     : "crm-search-display-group-header-item",
                 },
-                <SectionHeader value={sections.get(row.key)} tag={settings.header_tag} />,
+                <SectionHeader value={sections.get(row)} tag={settings.header_tag} />,
               ),
             ]
           : []),
         createElement(
           item,
           {
-            key: row.key,
+            // Grouped rows have no key; core writes an empty id for them.
+            key: row.key ?? index,
             role,
-            "data-entity-id": row.key,
+            "data-entity-id": row.key ?? "",
             className: [`crm-search-display-${type}item`, row.cssClass].filter(Boolean).join(" "),
           },
           <ItemColumns
@@ -214,8 +215,9 @@ export function TreeView(props: ItemsProps) {
         aria-label={parent === null && label ? label : undefined}
       >
         {drag?.slot(parent)}
-        {items.map((item) => {
-          const key = String(item.row.key);
+        {items.map((item, position) => {
+          // Grouped rows have no key and no parent; they stay at the top in result order.
+          const key = String(item.row.key ?? `row-${String(position)}`);
           const collapsed = isCollapsed(item);
           const count = item.children.length;
           const className =
@@ -255,7 +257,7 @@ export function TreeView(props: ItemsProps) {
           return drag ? (
             drag.item(item, className, content)
           ) : (
-            <li key={key} data-entity-id={item.row.key} className={className}>
+            <li key={key} data-entity-id={item.row.key ?? ""} className={className}>
               {content(false)}
             </li>
           );
@@ -269,7 +271,7 @@ export function TreeView(props: ItemsProps) {
 
   const rows = result?.rows ?? [];
   const body =
-    reorder?.weightField && settings.parent_field ? (
+    reorder?.weightField && settings.parent_field && allKeyed(rows) ? (
       <Suspense fallback={branch(tree, null, undefined)}>
         <DraggableTree
           reorder={reorder}
@@ -343,7 +345,7 @@ function DraggableTree({ reorder, rows, weightField, parentField, children }: Dr
     item: (item, className, content) => (
       <Item
         key={String(item.row.key)}
-        rowKey={item.row.key}
+        rowKey={keyOf(item.row.key)}
         className={className}
         disabled={reorder.saving}
       >

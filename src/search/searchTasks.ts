@@ -1,14 +1,14 @@
 import { decodeJs, rawProps } from "../afform/bundle";
 import type { ApiResult } from "../api/civi";
 import { editorFor } from "./inlineEdit";
-import type { DisplaySettings, EditableInfo, EditOption, Row } from "./types";
+import type { DisplaySettings, EditableInfo, EditOption, RowKey } from "./types";
 
 /**
  * SearchKit's bulk actions as SearchDisplay.getSearchTasks returns them, and how the renderer
  * runs each kind (searchDisplayTasksTrait's doTask, crmSearchTaskApiBatch, crmSearchBatchRunner).
  */
 
-export type Key = Row["key"];
+export type Key = RowKey;
 
 export interface EntityInfo {
   name: string;
