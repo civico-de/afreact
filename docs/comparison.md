@@ -39,12 +39,15 @@ for them (`crmUI.css`, `afCore.css`, the SearchKit display and in-place edit
 styles). The site theme therefore styles both renderers; `src/afreact.css`
 only sizes the native controls that replace jQuery widgets, and gives
 editable cells a focus outline and icons at full opacity, where core dims them.
+`css/afreact-form.css` lays out React's forms over the theme (see "Improvements
+over core").
 
 `tests/browser/visual.spec.ts` pairs the parts of both pages — titles, fields,
 labels, controls, clear links, buttons, table header, sort icons, rows, pager —
 and compares position, size and the main computed styles to within 2 px.
 Remaining differences must be listed in the spec with a reason, and an entry
-that no longer excuses anything fails the test.
+that no longer excuses anything fails the test. It measures React without
+`css/afreact-form.css`; `tests/browser/design.spec.ts` pins that layer.
 
 ### Improvements over core
 
@@ -64,6 +67,8 @@ that no longer excuses anything fails the test.
 | Confirmation message | replaces the form; the focus is lost with the button | replaces the form and takes the focus `deviation:confirmation-takes-focus` | `src/afform/submission.test.tsx`: "gives the confirmation message the focus of the button it replaces"; `tests/browser/submission.spec.ts`: "React moves the focus to the confirmation message and keeps a closed form locked" |
 | Grid displays | boxes in plain `<div>`s | the same boxes with `role="list"` and `role="listitem"`, named by the display label where the display is loaded by name (a form's layout carries no label), as list displays are `deviation:grid-list-roles` | `src/search/displays.test.tsx`: "lays boxes out in colno columns and names them as a list" |
 | Reference field whose dynamic entity has no mapping for the controlling value | disabled, without a word | disabled, with "No entity to search for …" `deviation:dynamic-entity-unmapped-note` | `src/afform/fields/EntityRef.test.tsx`: "searches the entity the control field names with dfk_entities" |
+| Form layout in the back office | the theme's: a field without Bootstrap's `form-group` margin sits flush on the next, add buttons touch the block below, and a repeat item's remove button and block menu sit at the far right of the page | `css/afreact-form.css`, built on the theme's spacing variables: blocks in a stacking container (form, fieldset, details, layout divs) keep a gap, while hidden fields, flex rows and React's own widgets keep theirs; the add and copy buttons sit close below their items; an item of flex rows is as wide as its fields, so its remove button and block menu follow them side by side. Public pages (`.crm-public`) keep the theme's front-end layout `deviation:form-design-layer` | `tests/browser/design.spec.ts`: "the React form keeps its blocks apart and a repeat item's controls at its fields", "the React form layout keeps to stacking blocks and the back office", "a repeat item's remove button and block menu sit apart" |
+| Form status ("Loading…", "Saving…", "Saved", "Saving Draft", "Draft Saved", "Uploading …") | no status line: `CRM.status` popups while saving, and a blocking overlay while the prefill loads and while saving | the same popups, and a status line below the form that comes and goes without moving the form `deviation:form-status-below` | `src/afform/submission.test.tsx`: "lands over a form that shows at once and is busy until then" |
 
 ### Differences by design
 

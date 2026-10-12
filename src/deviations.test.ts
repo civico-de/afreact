@@ -7,7 +7,7 @@ import { join } from "node:path";
  */
 const ROOT = join(import.meta.dirname, "..");
 const MARK = /deviation:([a-z0-9]+(?:-[a-z0-9]+)*)/g;
-const SCANNED = ["src", "Civi", "tests", "templates", "ang", "js", "xml"];
+const SCANNED = ["src", "Civi", "tests", "templates", "ang", "css", "js", "xml"];
 const SELF = join("src", "deviations.test.ts");
 
 const markers = (path: string) =>

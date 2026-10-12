@@ -850,6 +850,15 @@ variable is the same on `master` as of 2026-10-07. The React pages keep the
 theme's button classes rather than colours of their own, and the a11y spec
 accepts the finding where a core page in the same theme shows it too.
 
+**RiverLea's front-end legend rule reaches back-office forms.** `_front.css`
+styles public pages under `.crm-container.crm-public`, but its
+`af-form > fieldset > legend { width: 100% }` has no such scope, so a titled
+fieldset on any page gets a full-width legend. The default stream draws only a
+top border on fieldsets, which the legend then covers but for a short dash at
+each end. Angular shows both dashes. React lets the legend take its own width
+outside public pages, so the border runs beside the title
+(`css/afreact-form.css`). `deviation:legend-own-width`
+
 **Tab forms put an h3 under the page's h1.** The contact summary tabs for
 memberships and relationships start their second section with a literal
 `<h3>` (`civicrm_admin_ui/ang/afsearchTabMember.aff.html:3`,

@@ -492,6 +492,7 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
           {addLabel ? ` ${addLabel}` : <span className="sr-only">{ts("Add")}</span>}
         </button>
       )}
+      {/* afRepeat.html's line break between the buttons. */}{" "}
       {canAdd && text("af-copy") && count > 0 && (
         <button
           type="button"

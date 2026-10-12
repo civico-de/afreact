@@ -84,6 +84,11 @@ async function measure(page: Page, url: string): Promise<Measured[]> {
   await page.waitForFunction(`(${isReady.toString()})(document)`);
   await page.waitForLoadState("networkidle");
   await page.evaluate(async () => {
+    // React's form layout moves blocks on purpose and design.spec.ts pins it; this compares the rest.
+    for (const link of document.querySelectorAll<HTMLLinkElement>(
+      'link[href*="/css/afreact-form.css"]',
+    ))
+      link.disabled = true;
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     await document.fonts.ready;
   });

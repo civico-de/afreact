@@ -51,6 +51,8 @@ final class Assets {
       ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchDisplayGrid.css')
       ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchDisplayTree.css')
       ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchTasks.css')
+      // React's form layout; its selectors outrank the theme's and afCore's.
+      ->addStyleFile(E::LONG_NAME, 'css/afreact-form.css')
       // What AfformMetadataInjector::preprocess() writes into afLocationInput's unit select.
       ->addVars('afreact', ['distanceUnit' => \CRM_Utils_Address::getDefaultDistanceUnit()])
       // CRM.checkPerm() for the batch display's link to all import batches, afform_admin's edit

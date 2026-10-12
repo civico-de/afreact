@@ -635,6 +635,9 @@ describe("AfreactForm", () => {
         .join("")
         .trim();
     expect(visibleText(add)).toBe("");
+    // afRepeat.html's line break keeps the buttons apart.
+    expect(add.nextSibling?.textContent).toBe(" ");
+    expect(add.nextElementSibling).toBe(screen.getByRole("button", { name: "Copy" }));
     expect(visibleText(screen.getAllByRole("button", { name: "Remove" })[0]!)).toBe("");
     await userEvent.click(add);
     expect(

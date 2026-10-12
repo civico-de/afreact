@@ -626,10 +626,6 @@ function LoadedForm(props: LoadedFormProps) {
           )}
         </div>
       )}
-      <p role="status" className="afreact-status">
-        {/* Without a confirmation message Angular keeps the filled form and shows a "Saved" status. */}
-        {status}
-      </p>
       <FormContext.Provider value={state}>
         <DisplayCountContext.Provider value={displays}>
           {isForm(form) ? (
@@ -659,6 +655,12 @@ function LoadedForm(props: LoadedFormProps) {
           )}
         </DisplayCountContext.Provider>
       </FormContext.Provider>
+      {/* Below the form, the status comes and goes without moving it. */}
+      {/* deviation:form-status-below */}
+      <p role="status" className="afreact-status">
+        {/* Without a confirmation message Angular keeps the filled form and shows a "Saved" status. */}
+        {status}
+      </p>
     </div>
   );
 }

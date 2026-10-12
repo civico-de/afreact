@@ -191,6 +191,8 @@ describe("the prefill", () => {
     const form = input.closest(".afreact-form");
     expect(form).toHaveAttribute("aria-busy", "true");
     expect(screen.getByRole("status")).toHaveTextContent("Loading…");
+    // deviation:form-status-below
+    expect(form?.lastElementChild).toBe(screen.getByRole("status"));
     expect(input).toBeEnabled();
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Save Draft" })).toBeDisabled();

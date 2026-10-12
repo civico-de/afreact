@@ -1,0 +1,20 @@
+/* React's form layout over the back-office theme, from its spacing variables: blocks keep a gap and
+   a repeat item's controls sit at its fields. Public pages keep the theme's front-end layout.
+   deviation:form-design-layer */
+.afreact-form:not(.crm-public *) af-field:not(.af-field-type-hidden) { display: block; }
+/* Bootstrap's form-group margin left only select fields with space below; the gaps below set it. */
+#bootstrap-theme .afreact-form:not(.crm-public *) af-field .crm-af-field > .form-group { margin-bottom: 0; }
+/* A block in a stacking container keeps a gap to any shown block before it; flex rows have their
+   own. The second selector outranks the theme's #bootstrap-theme margins on text and headings. */
+.afreact-form:not(.crm-public *) :is(af-form, :is(fieldset, div, details).af-container:not(.af-layout-inline, .af-layout-cols), div:not([class])):not(af-field *, .af-markup *, .crm-search-display *, af-search-param-sets *, dialog *) > :not(legend, summary, .af-title, .af-field-type-hidden, .af-repeat-remove-btn, .af-repeat-add-btn, .af-repeat-copy-btn, .crm-admin-block-context-dropdown) ~ :not(.af-repeat-remove-btn, .af-repeat-add-btn, .af-repeat-copy-btn, .crm-admin-block-context-dropdown),
+#bootstrap-theme .afreact-form:not(.crm-public *) :is(af-form, :is(fieldset, div, details).af-container:not(.af-layout-inline, .af-layout-cols), div:not([class])):not(af-field *, .af-markup *, .crm-search-display *, af-search-param-sets *, dialog *) > :not(legend, summary, .af-title, .af-field-type-hidden, .af-repeat-remove-btn, .af-repeat-add-btn, .af-repeat-copy-btn, .crm-admin-block-context-dropdown) ~ :not(.af-repeat-remove-btn, .af-repeat-add-btn, .af-repeat-copy-btn, .crm-admin-block-context-dropdown) { margin-block-start: var(--crm-l-reg, 1rem); }
+/* A repeat's add and copy buttons sit close below its last item. */
+.afreact-form:not(.crm-public *) [af-repeat-item] { margin-block-end: var(--crm-flex-gap, 0.5rem); }
+/* An item of flex rows is as wide as its fields, so afCore's remove button and the block menu
+   (placed at its right) follow them; the menu sits left of the remove button. */
+.afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn, > .crm-admin-block-context-dropdown):not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) { width: fit-content; max-width: 100%; padding-right: calc(2.25rem + var(--crm-flex-gap, 0.5rem)); }
+.afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn):has(> .crm-admin-block-context-dropdown):not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) { padding-right: calc(4.5rem + 2 * var(--crm-flex-gap, 0.5rem)); }
+#bootstrap-theme .afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn) > .crm-admin-block-context-dropdown { right: calc(2.25rem + var(--crm-flex-gap, 0.5rem)); }
+/* Riverlea's front-end legend width reaches back-office forms and hides the fieldset's top border
+   but for its ends; the legend takes its own width there. deviation:legend-own-width */
+.afreact-form:not(.crm-public *) fieldset.af-container > legend.af-title { width: auto; }
