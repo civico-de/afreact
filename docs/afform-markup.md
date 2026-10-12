@@ -30,7 +30,7 @@ Elements:
 | `af-tabset`, `af-tab` | tabs |
 | `crm-search-display-*` | a SearchKit display: `search-name`, `display-name`, `filters` |
 | a block's directive name (`afblock-contact-email`, …) | another layout embedded |
-| `af-search-param-sets` | saved filter sets of a search form |
+| `af-search-param-sets` | saved sets of a search form's filters and columns; inside a search `af-fieldset` |
 
 Attributes on any element:
 

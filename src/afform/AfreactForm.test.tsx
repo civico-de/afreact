@@ -436,18 +436,21 @@ describe("AfreactForm", () => {
   it("links the debug panel to the form under Angular with the arguments React loaded it with", () => {
     vi.mocked(window.CRM.checkPerm).mockImplementation((perm) => perm === "view debug output");
     window.localStorage.setItem("afreact-debug", "1");
-    vi.spyOn(window.CRM, "url").mockImplementation(
-      (path, query = {}) =>
-        `/${path}?${new URLSearchParams(Object.entries(query).map(([key, value]) => [key, String(value)])).toString()}`,
-    );
+    const url = vi.spyOn(window.CRM, "url").mockImplementation((path, query) => {
+      if (typeof query !== "string") throw new Error("The link passes its query as a string.");
+      return `/${path}?${query}`;
+    });
     mockApi({ "Afreact.getForm": () => [] });
-    const location = { search: "?q=civicrm/x&id=5&renderer=react", hash: "#?Individual1=7" };
+    const location = {
+      search: "?q=civicrm/x&id=5&tag=1&tag=2&_aff=token&renderer=react",
+      hash: "#?Individual1=7",
+    };
     const { unmount } = renderWithQuery(<AfreactForm name="afformTest" location={location} />);
     const links = () => debugEntries().flatMap((entry) => entry.links);
     expect(links()).toEqual([
       {
         label: "Open with Angular",
-        href: "/civicrm/afreact/render?id=5&name=afformTest&renderer=angular&options=%7B%7D#?Individual1=7",
+        href: "/civicrm/afreact/render?id=5&tag=1&tag=2&name=afformTest&renderer=angular&options=%7B%7D#?Individual1=7",
       },
     ]);
     unmount();
@@ -460,6 +463,7 @@ describe("AfreactForm", () => {
     );
     expect(links()[0]?.label).toBe('Open with Angular, options {"contact_id":3}');
     window.localStorage.clear();
+    url.mockRestore();
   });
 
   it("renders a layout the page embedded without calling getForm", async () => {

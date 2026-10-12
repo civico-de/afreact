@@ -269,10 +269,10 @@ export function AfreactForm({
   );
 }
 
-/** The form's facts in the debug panel, with the same form on the render page under Angular. */
-/** The render page's own parameters, which the page's query string must not override. */
-const RENDER_PARAMETERS = new Set(["q", "name", "renderer", "options"]);
+/** Query parameters the Angular link leaves out: the render page's own, and tokens and modes bound to this page. */
+const NOT_CARRIED = new Set(["q", "name", "renderer", "options", "_aff", "_authx", "snippet"]);
 
+/** The form's facts in the debug panel, with the same form on the render page under Angular. */
 function FormDebug({
   name,
   source,
@@ -285,16 +285,14 @@ function FormDebug({
   location: { search: string; hash: string };
 }) {
   const json = options ? JSON.stringify(options) : null;
-  const query = [...new URLSearchParams(location.search)].filter(
-    ([key]) => !RENDER_PARAMETERS.has(key),
+  const query = new URLSearchParams(
+    [...new URLSearchParams(location.search)].filter(([key]) => !NOT_CARRIED.has(key)),
   );
   // The same arguments React loads the form with; "{}" keeps the render page from picking any.
-  const angular = `${window.CRM.url("civicrm/afreact/render", {
-    ...Object.fromEntries(query),
-    name,
-    renderer: "angular",
-    options: json ?? "{}",
-  })}${location.hash}`;
+  query.set("name", name);
+  query.set("renderer", "angular");
+  query.set("options", json ?? "{}");
+  const angular = `${window.CRM.url("civicrm/afreact/render", query.toString())}${location.hash}`;
   return (
     <DebugFacts
       facts={{
