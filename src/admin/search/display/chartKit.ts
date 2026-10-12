@@ -292,6 +292,7 @@ const BASE_SETTINGS = () => ({
   },
 });
 
+// deviation:chart-legacy-settings-guarded
 /** What the legacy adaptor dereferences without a check: the column list and the order index. */
 function adaptable(settings: ChartSettings): ChartSettings {
   const columns = Array.isArray(settings.columns) ? settings.columns : [];
@@ -339,6 +340,7 @@ export function setOrderColumn(settings: ChartSettings, index: number): void {
   if (col) col.isOrder = true;
 }
 
+// deviation:chart-scale-type-repicks
 /** The first option of each setting whose stored value its column's type no longer offers. */
 export function settleColumnOptions(ctx: ChartContext, settings: ChartSettings): void {
   for (const col of chartColumns(settings, ctx.axes))

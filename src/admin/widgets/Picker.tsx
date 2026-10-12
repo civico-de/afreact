@@ -29,6 +29,11 @@ interface PickerProps {
   hiddenLabel?: boolean;
   /** The caller renders its own <label htmlFor={id}>. */
   externalLabel?: boolean;
+  /** A single value may be cleared, as select2's allowClear. */
+  clearable?: boolean;
+  /** Takes the focus and shows the list on mount, for a picker that opens in a menu. */
+  openOnMount?: boolean;
+  disabled?: boolean;
 }
 
 const itemOf = (option: PickerOption): AutocompleteItem => ({
@@ -36,7 +41,8 @@ const itemOf = (option: PickerOption): AutocompleteItem => ({
   label: option.label,
   icon: option.icon,
   color: option.color,
-  description: [option.group ?? null, option.description ?? null].filter(Boolean),
+  description: option.description ? [option.description] : [],
+  group: option.group,
 });
 
 /** A select over a fixed list, as crm-ui-select over local data: the runtime's combobox. */
@@ -51,6 +57,9 @@ export function Picker({
   single = false,
   hiddenLabel = false,
   externalLabel = false,
+  clearable = false,
+  openOnMount = false,
+  disabled = false,
 }: PickerProps) {
   const byId = new Map(options.map((option) => [String(option.id), option]));
   const selected = value.flatMap((v) => {
@@ -75,10 +84,12 @@ export function Picker({
           placeholder={placeholder}
           describedBy={undefined}
           className={className}
-          disabled={false}
+          disabled={disabled}
           required={false}
           multiple={!single}
           minLength={0}
+          autoFocus={openOnMount}
+          initialOpen={openOnMount}
           selected={selected}
           resolving={false}
           itemText={(item) => item.label}
@@ -106,6 +117,19 @@ export function Picker({
           }}
         />
       </Suspense>
+      {single && clearable && value.length > 0 && (
+        <button
+          type="button"
+          className="btn btn-xs btn-link afreact-picker-clear"
+          aria-label={ts("Clear %1", { 1: label })}
+          title={ts("Clear")}
+          onClick={() => {
+            onChange([]);
+          }}
+        >
+          <i className="crm-i fa-times" role="img" aria-hidden="true" />
+        </button>
+      )}
     </>
   );
 }

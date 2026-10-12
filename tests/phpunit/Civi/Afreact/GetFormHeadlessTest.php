@@ -56,8 +56,14 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
 
     $block = $this->findTag($form['layout'], 'afblock-contact-email')[0];
     $this->assertCount(1, $this->findTag($block['#children'], 'af-field', 'email'));
-    $this->assertSame([], $this->findTag($form['layout'], 'crm-admin-block-context-dropdown'));
-    $this->assertStringNotContainsString('checkLinkPerm', json_encode($form['layout'], JSON_THROW_ON_ERROR));
+    // afform_admin's edit menu, which the renderer shows after its own permission check.
+    $elements = array_values(array_filter($form['layout'], static fn (array $node) => isset($node['#tag'])));
+    $menu = end($elements);
+    $this->assertSame('btn-group crm-admin-block-context-dropdown dropup', $menu['class'] ?? NULL);
+    $this->assertMatchesRegularExpression(
+      "/^checkLinkPerm\\('manage own afform', (null|\\d+)\\)$/",
+      $menu['ng-if'] ?? '',
+    );
   }
 
   public function testAutosaveDraftIsABooleanOnEveryForm(): void {

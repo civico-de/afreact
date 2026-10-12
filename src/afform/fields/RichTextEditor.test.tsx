@@ -103,6 +103,7 @@ describe("RichTextEditor", () => {
     expect(editor.wysiwyg.setVal).toHaveBeenLastCalledWith(textarea, "<p>Loaded</p>");
   });
 
+  // deviation:rich-text-disabled
   it("restarts the editor read-only while the field is disabled and destroys it when removed", () => {
     const editor = mockEditor();
     const { rerender, view } = renderEditor("<p>Text</p>");

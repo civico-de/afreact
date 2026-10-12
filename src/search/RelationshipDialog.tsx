@@ -44,6 +44,7 @@ const contactInfo = (type: RelationshipType) => ({
 export function RelationshipDialog({ task, onSave, onCancel }: RelationshipDialogProps) {
   const titleId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
+  // deviation:relationship-preset-type
   // hook_civicrm_searchKitTasks may preset the type, the contact and field values.
   const {
     relationship_type: presetType,

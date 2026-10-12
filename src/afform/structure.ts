@@ -17,6 +17,7 @@ import { isElement, isFieldDefn } from "./types";
 /**
  * Offset of each non-repeating af-join among its fieldset's joins of the same entity, counted over
  * the layout, shown or not: the server pairs record n with block n's `data` and prefilled record.
+ * deviation:join-blocks-layout-order
  */
 export function joinOffsets(layout: LayoutNode[]): WeakMap<ElementNode, number> {
   const offsets = new WeakMap<ElementNode, number>();
@@ -59,6 +60,7 @@ export function replaceTokens(value: string, data: FormData): string {
   return value.replace(TOKEN, (token) => {
     const [entity = "", index = "", ...field] = token.slice(1, -1).split(".");
     const current = data[entity]?.[Number(index)]?.fields[field.join(".")];
+    // deviation:token-null-empty
     return current === undefined || current === null ? "" : asText(current);
   });
 }
@@ -159,6 +161,7 @@ export function initialiseNodes(
         // A search fieldset (no entity) reads the route itself.
         const given = at.entity ? routeValue(params, at, name) : undefined;
         const value = given ?? staticDefault(defn);
+        // deviation:defaults-keep-loaded-values
         if (defn && value !== undefined && getValue(next, at, name) === undefined)
           next = setValue(next, at, name, defaultValue(defn, value));
         // A slider always holds a value, so an untouched one is not a change.

@@ -94,6 +94,7 @@ describe("AfreactSearch drag to reorder", () => {
     expect(screen.getAllByRole("columnheader")).toHaveLength(2);
   });
 
+  // deviation:keyboard-row-reorder
   it("moves a row by keyboard, saves the displaced row's weight, takes the answer", async () => {
     let answer: (weights: unknown) => void = () => undefined;
     const calls = serve(
@@ -153,6 +154,7 @@ describe("AfreactSearch drag to reorder", () => {
     expect(calls.at(-1)?.params).toMatchObject({ rowKey: 3, values: { weight: 1 } });
   });
 
+  // deviation:drag-sort-failure-restores
   it("puts the rows back and shows the error when saving fails", async () => {
     serve(() => {
       throw apiError("Cannot drag-sort 'Contact'.");

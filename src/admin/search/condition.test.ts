@@ -109,6 +109,14 @@ describe("inputs", () => {
     expect(formatValue(int, "=", undefined, "")).toBe("");
   });
 
+  // deviation:number-default-kept
+  it("keeps an empty or non-numeric value of a number field as it is", () => {
+    const float = { name: "amount", data_type: "Float" };
+    expect(formatValue(float, undefined, undefined, "")).toBe("");
+    expect(formatValue(float, undefined, undefined, "abc")).toBe("abc");
+    expect(formatValue(float, undefined, undefined, "1.5")).toBe(1.5);
+  });
+
   it("quotes ON clause strings as JSON", () => {
     expect(toClauseValue("a", "json")).toBe('"a"');
     expect(fromClauseValue('"a"', "json")).toBe("a");

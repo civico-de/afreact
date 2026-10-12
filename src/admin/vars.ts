@@ -9,8 +9,12 @@ export interface AdminVars {
   searchDisplay?: { viewableDisplayTypes?: Record<string, string>; [key: string]: unknown };
   afAdmin?: Record<string, unknown>;
   afGuiEditor?: Record<string, unknown>;
-  /** Other extensions' search builder modules, whose display editors run as islands. */
-  islandModules?: string[];
+  /** `CRM.crmMonaco` (CRM_Utils_Monaco::getSettings()): where Monaco's AMD modules are served. */
+  monaco?: { paths: { vs: string } };
+  /** CRM_Afform_ArrayHtml's attribute types, for the FormBuilder editor's new elements. */
+  attributeTypes?: Record<string, Record<string, string>>;
+  /** Other extensions' modules for core's classic builder (ForeignModules::of()), loaded on the page. */
+  foreignModules?: string[];
   /** Core's builder partials other extensions changed (BuilderReport::partials()). */
   changedPartials?: string[];
   /** The panel elements other extensions name in the civi.afreact.assets event. */

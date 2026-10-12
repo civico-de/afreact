@@ -28,11 +28,20 @@ class Afreact extends Generic\AbstractEntity {
   }
 
   /**
+   * The settings of a bulk action's Angular module, for the renderer's own dialog.
+   */
+  public static function getTaskSettings(bool $checkPermissions = TRUE): Action\Afreact\GetTaskSettings {
+    return (new Action\Afreact\GetTaskSettings(static::getEntityName(), __FUNCTION__))
+      ->setCheckPermissions($checkPermissions);
+  }
+
+  /**
    * @return array<mixed>
    */
   public static function permissions(): array {
     // Access to a form is the form's own permission, enforced by Afform.get in the action.
-    return ['getForm' => []] + parent::permissions();
+    // Task settings are what core's factories give anyone who loads the module.
+    return ['getForm' => [], 'getTaskSettings' => ['access CiviCRM']] + parent::permissions();
   }
 
 }

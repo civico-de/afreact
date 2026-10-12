@@ -8,6 +8,7 @@ export function columnToggleLabel(column: Column, index: number): string {
   if (column.type === "menu") return ts("Menu");
   if (column.type === "buttons") return ts("Buttons");
   if (column.type === "links") return ts("Links");
+  // deviation:column-picker-position-label
   return ts("Column %1", { 1: index + 1 });
 }
 
@@ -37,6 +38,24 @@ export function hiddenBySavedSet(columns: Column[], saved: Record<string, string
     if (index >= 0) shown.add(index);
   }
   return new Set([...columns.keys()].filter((index) => !shown.has(index)));
+}
+
+/**
+ * getToggledColumns() of crmSearchDisplayTable: the shown columns, key (or label) to label;
+ * empty when all or none are shown.
+ */
+export function toggledColumns(
+  columns: Column[],
+  hidden: ReadonlySet<number>,
+): Record<string, string> {
+  if (!hidden.size || hidden.size >= columns.length) return {};
+  return Object.fromEntries(
+    columns.flatMap((column, index) => {
+      if (hidden.has(index)) return [];
+      const label = columnToggleLabel(column, index);
+      return [[column.key === undefined || column.key === "" ? label : column.key, label]];
+    }),
+  );
 }
 
 /** SearchDisplay.run's `toggleColumns`: the shown columns, sent only when one is hidden. */

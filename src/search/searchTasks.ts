@@ -26,6 +26,8 @@ export interface ApiBatch {
   fields?: UpdateField[];
   confirmMsg?: string;
   runMsg?: string;
+  /** runMsg's plural with %count, where the dialog's heading counts the records. */
+  runMsgPlural?: string;
   successMsg?: string;
   /** The success alert's title; the task's "… Complete" when unset. */
   successTitle?: string;
@@ -210,6 +212,9 @@ export type TaskRun =
   | { kind: "mailing" }
   | { kind: "case" }
   | { kind: "caseRole" }
+  | { kind: "grant" }
+  | { kind: "tagMerge" }
+  | { kind: "translation" }
   | { kind: "unsupported"; reason: string };
 
 /** The core task dialogs the renderer replaces with its own. */
@@ -220,6 +225,9 @@ const RELATIONSHIP_DIALOG = "~/crmSearchTasks/crmSearchTaskRelationship.html";
 const MAILING_DIALOG = "~/crmSearchTasks/crmSearchTaskMailing.html";
 const CASE_DIALOG = "~/civiCaseTasks/civiCaseTaskOpenCase.html";
 const CASE_ROLE_DIALOG = "~/civiCaseTasks/civiCaseTaskCaseRole.html";
+const GRANT_DIALOG = "~/civiGrantTasks/civiGrantTaskAddGrant.html";
+const TAG_MERGE_DIALOG = "~/crmSearchTasks/crmSearchTaskTagMerge.html";
+const TRANSLATION_DIALOG = "~/crmMsgadmTasks/AddTranslation.html";
 
 /** A field the update task may set, as searchTaskFieldsTrait and GetSearchTasks read getFields. */
 export interface UpdateField {
@@ -304,11 +312,39 @@ export function caseBatch(values: Record<string, unknown>): ApiBatch {
     action: "save",
     idField: "contact_id",
     params: { records: [values] },
-    runMsg: "Opening cases...",
+    runMsg: "Opening case...",
+    runMsgPlural: "Opening %count cases...",
     successTitle: "Saved",
     summary: ({ rows }: BatchCounts) =>
       ts("Successfully opened 1 case.", {
         plural: "Successfully opened %count cases.",
+        count: rows.length,
+      }),
+  };
+}
+
+/** civiGrantTaskAddGrant's getFields call: the fields a new grant takes, less the contact and the flag. */
+export const grantFieldsCall = (): ApiCall =>
+  taskFieldsCall("Grant", "create", ["contact_id", "is_deleted"]);
+
+/** civiGrantTaskAddGrant's lookup of the selected contacts that have a grant. */
+export function grantsCall(ids: Key[]): ApiCall {
+  return ["Grant", "get", { select: ["contact_id"], where: [["contact_id", "IN", ids]] }];
+}
+
+/** civiGrantTaskAddGrant's run: Grant.save with the values, the contact per id. */
+export function grantBatch(values: Record<string, unknown>): ApiBatch {
+  return {
+    entity: "Grant",
+    action: "save",
+    idField: "contact_id",
+    params: { records: [values] },
+    runMsg: "Adding grant...",
+    runMsgPlural: "Adding %count grants...",
+    successTitle: "Saved",
+    summary: ({ rows }: BatchCounts) =>
+      ts("Successfully added 1 grant.", {
+        plural: "Successfully added %count grants.",
         count: rows.length,
       }),
   };
@@ -481,6 +517,7 @@ export interface Tagset {
   label: string;
 }
 
+// deviation:tag-task-contact-types
 /** Tags are used for "Contact", whatever contact type a search lists (see upstream-bugs.md). */
 export function tagEntity(entity: string): string {
   return ["Individual", "Organization", "Household"].includes(entity) ? "Contact" : entity;
@@ -788,6 +825,9 @@ export function taskRun(task: SearchTask): TaskRun {
   if (template === MAILING_DIALOG) return { kind: "mailing" };
   if (template === CASE_DIALOG) return { kind: "case" };
   if (template === CASE_ROLE_DIALOG) return { kind: "caseRole" };
+  if (template === GRANT_DIALOG) return { kind: "grant" };
+  if (template === TAG_MERGE_DIALOG) return { kind: "tagMerge" };
+  if (template === TRANSLATION_DIALOG) return { kind: "translation" };
   if (template) return { kind: "unsupported", reason: `Angular dialog ${template}` };
   const batch = task.apiBatch;
   if (!isRecord(batch) || !isString(batch.action))

@@ -760,6 +760,7 @@ describe("values from the route", () => {
     expect(await screen.findByRole("textbox", { name: "id" })).toHaveValue("");
   });
 
+  // deviation:reset-refills-route-values
   it("fill fields over their default and survive a reset", async () => {
     const calls = renderForm(
       form([field("first_name", { afform_default: "Default" }), field("last_name")], [reset]),
@@ -815,6 +816,7 @@ describe("values from the route", () => {
     expect(nick).toHaveValue("Dear Ada");
   });
 
+  // deviation:token-default-keeps-loaded
   it("keeps a prefilled value over the token default until the fields it refers to change", async () => {
     mockApi({
       "Afreact.getForm": () => [

@@ -6,6 +6,7 @@ import type { EditorDisplay } from "../editor";
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+// deviation:search-display-plugin-editors
 export const pluginEditorTag = (type: string) => `afreact-search-admin-display-${type}`;
 
 /** Whether another extension registered an editor element for the display type. */
@@ -49,14 +50,6 @@ export function pluginSearchMeta(meta: SearchAdminMetadata) {
     getField: (fieldName: string, savedSearch?: unknown) =>
       getField(meta, fieldName, searchInfo(savedSearch)),
   };
-}
-
-/** The validation messages of the plugin editors and panels under `root`. */
-export function pluginValidationMessages(root: ParentNode): string[] {
-  return [...root.querySelectorAll("[data-afreact-plugin]")].flatMap((element) => {
-    const message: unknown = Reflect.get(element, "validationMessage");
-    return typeof message === "string" && message !== "" ? [message] : [];
-  });
 }
 
 /** A display type editor from another extension, as a custom element in light DOM. */

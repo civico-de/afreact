@@ -17,14 +17,25 @@ use CRM_Afreact_ExtensionUtil as E;
 final class Assets {
 
   /**
+   * What afCore's checkLinkPerm() asks for the edit links afform_admin appends to forms.
+   */
+  const EDIT_MENU_PERMISSIONS = [
+    'administer afform',
+    'manage own afform',
+    'administer search_kit',
+    'manage own search_kit',
+    'all CiviCRM permissions and ACLs',
+  ];
+
+  /**
    * Where <afreact-form source="…"> takes its layout from: the Afreact.getForm API, the page
    * itself, or the compiled Angular module file the Angular runtime loads.
    */
   public const SOURCES = ['api', 'page', 'bundle'];
 
   /**
-   * Adds the bundle and lets plugins add theirs once per request, for `$builder` on a builder
-   * page and '' elsewhere.
+   * Adds the bundle and lets plugins add theirs once per request and builder, for `$builder` on a
+   * builder page and '' elsewhere.
    */
   public static function load(string $builder = ''): void {
     // Fixed file names: CiviCRM's resource cache code busts browser caches after flushes and upgrades.
@@ -42,12 +53,14 @@ final class Assets {
       ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchTasks.css')
       // What AfformMetadataInjector::preprocess() writes into afLocationInput's unit select.
       ->addVars('afreact', ['distanceUnit' => \CRM_Utils_Address::getDefaultDistanceUnit()])
-      // CRM.checkPerm() for the batch display's link to all import batches.
-      ->addPermissions(['administer queues']);
+      // CRM.checkPerm() for the batch display's link to all import batches and afform_admin's edit menus.
+      ->addPermissions(['administer queues', ...self::EDIT_MENU_PERMISSIONS]);
     ChartKit::addVars();
     Strings::add();
-    if (empty(\Civi::$statics[self::class . '::dispatched'])) {
-      \Civi::$statics[self::class . '::dispatched'] = TRUE;
+    // Once per builder: the support report asks both builders' plugins.
+    $dispatched = self::class . '::dispatched:' . $builder;
+    if (empty(\Civi::$statics[$dispatched])) {
+      \Civi::$statics[$dispatched] = TRUE;
       $panels = [];
       $replaces = [];
       \Civi::dispatcher()->dispatch('civi.afreact.assets', GenericHookEvent::create([

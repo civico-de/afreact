@@ -24,6 +24,7 @@ function itemOf(root: HTMLElement, key: string): Element | undefined {
 /**
  * Placeholders replace a display's rows while it reloads, which takes the focus with them.
  * Once the rows are back, the focus returns to the same control of the same row.
+ * deviation:display-focus-across-reload
  */
 export function useKeptFocus(root: HTMLElement | null, loading: boolean) {
   const spot = useRef<Spot | null>(null);

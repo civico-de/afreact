@@ -31,12 +31,14 @@ describe("routeArgs", () => {
     expect(routeParams({ hash: "" })).toEqual({});
   });
 
+  // deviation:route-args-query-string
   it("lets the hash win over the query string", () => {
     expect(routeArgs({ search: "?Individual1=1", hash: "#?Individual1=2" }, [])).toEqual({
       Individual1: "2",
     });
   });
 
+  // deviation:route-args-query-string
   it("merges query and Angular hash parameters and splits only entity IDs", () => {
     expect(
       routeArgs({ search: "?Individual1=5,6&tag=a,b", hash: "#?Email1=7" }, [
@@ -179,6 +181,7 @@ describe("repeats", () => {
     expect(copyRepeatItem(emptyData(["Individual1"]), scope)).toEqual({ Individual1: [] });
   });
 
+  // deviation:repeat-copy-new-record
   it("copies a record as a new one: without its id and not primary", () => {
     let data = ensureRepeatItems(emptyData(["Individual1"]), joinScope, 1);
     const first = { ...joinScope, joinIndex: 0 };
@@ -287,6 +290,7 @@ describe("extra fields", () => {
     expect(fieldPlace({ "#tag": "af-field", name: "email" }, null)).toBeNull();
   });
 
+  // deviation:draft-extra-fields-restored
   it("submit as one record and come back from a stored draft", () => {
     const data = setValue(emptyData(["Individual1"]), EXTRA_SCOPE, "text1", "x");
     expect(submission(data)).toEqual({ Individual1: [], extra: { fields: { text1: "x" } } });

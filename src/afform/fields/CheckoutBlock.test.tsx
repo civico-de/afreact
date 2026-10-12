@@ -120,6 +120,7 @@ describe("CheckoutBlock", () => {
     expect(screen.queryByText("Checkout is in Test Mode.")).not.toBeInTheDocument();
   });
 
+  // deviation:checkout-params-not-in-drafts
   it("starts with empty details, as afCheckoutBlock does, and keeps them out of drafts", async () => {
     window.CRM.vars = { afreact: { afCheckout: settings } };
     vi.mocked(window.CRM.status).mockReturnValue({ resolve: vi.fn(), reject: vi.fn() });
@@ -159,6 +160,7 @@ describe("CheckoutBlock", () => {
     });
   });
 
+  // deviation:billing-state-follows-country
   it("drops a required text emptied again and the state once the country changes", async () => {
     window.CRM.vars = { afreact: { afCheckout: settings } };
     const calls = renderForm([block()], { checkout_option: "card" });
@@ -203,6 +205,7 @@ describe("CheckoutBlock", () => {
     });
   });
 
+  // deviation:billing-state-follows-country
   it("takes fields keyed by name and frees a required state once the country has none", async () => {
     window.CRM.vars = {
       afreact: {
@@ -265,6 +268,7 @@ describe("CheckoutBlock", () => {
     );
   });
 
+  // deviation:checkout-labels-tied
   it("follows the option field: its fields write checkout_params, a switch empties them", async () => {
     window.CRM.vars = { afreact: { afCheckout: { ...settings, testMode: true } } };
     const calls = renderForm([option, block()]);

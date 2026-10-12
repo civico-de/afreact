@@ -11,6 +11,7 @@ describe("errorMessage", () => {
 });
 
 describe("api4", () => {
+  // deviation:api-call-per-request
   it("passes calls through CRM.api4", async () => {
     vi.mocked(window.CRM.api4).mockResolvedValue([{ id: 1 }]);
     await expect(get("Contact", { select: ["id"], limit: 1 })).resolves.toEqual([{ id: 1 }]);

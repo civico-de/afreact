@@ -64,6 +64,7 @@ function NewBatch({
   const [rowCount, setRowCount] = useState("1");
   const [targets, setTargets] = useState<Record<string, string>>({});
   const targeted = settings.columns.filter((column) => column.tally?.target && column.key);
+  // deviation:batch-create-import-failure
   const create = useMutation({
     mutationFn: async () => {
       const [job] = await api4<{ id: number }>("SearchDisplay", "createBatch", {
@@ -110,6 +111,7 @@ function NewBatch({
             <fieldset>
               <legend>{ts("New Batch")}</legend>
               <div className="form-inline" title={ts("Name of new batch")}>
+                {/* deviation:batch-name-label */}
                 <label htmlFor={`${id}-label`}>{ts("Name")}</label>{" "}
                 <input
                   type="text"
@@ -253,6 +255,7 @@ function BatchEditor({
   const current = page;
   const first = limit ? (current - 1) * limit : 0;
   const shown = limit ? all.slice(first, first + limit) : all;
+  // deviation:batch-required-every-page
   const missingRows = missingValues(all, columns, editable);
   const valid = missingRows.length === 0;
 
@@ -274,6 +277,7 @@ function BatchEditor({
         return true;
       },
       (error: unknown) => {
+        // deviation:batch-save-failure-keeps-rows
         markUnsaved(ids);
         setFailure(error);
         setImporting(false);
@@ -299,6 +303,7 @@ function BatchEditor({
     };
   }, []);
 
+  // deviation:batch-unsaved-on-leave
   // Leaving the page drops what the next autosave would have sent.
   const dirty = unsaved.size > 0;
   useEffect(() => {
@@ -341,6 +346,7 @@ function BatchEditor({
   };
 
   const deleteRow = async (rowId: number, index: number) => {
+    // deviation:batch-delete-then-remove
     await api4(apiName, "delete", { where: [["_id", "=", rowId]] });
     setRows((before) => (before ?? []).filter((row) => row._id !== rowId));
     setUnsaved((before) => new Set([...before].filter((other) => other !== rowId)));
@@ -362,6 +368,7 @@ function BatchEditor({
       });
   };
 
+  // deviation:batch-copy-recomputes-formulas
   /** copyCol(): the first row's value into every row, recomputing the formulas it feeds. */
   const copyColumn = (column: Column) => {
     const name = columnName(column);
@@ -383,6 +390,7 @@ function BatchEditor({
     window.location.assign(result.url);
   };
 
+  // deviation:batch-import-after-last-save
   // The import saves until no edit is left, including those made during a running save.
   const queued = useRef(false);
   const continueImport = useEffectEvent(() => {
@@ -392,6 +400,7 @@ function BatchEditor({
       return;
     }
     queued.current = true;
+    // deviation:batch-create-import-failure
     startQueue().catch((error: unknown) => {
       queued.current = false;
       setFailure(error);
@@ -444,6 +453,7 @@ function BatchEditor({
       )}
       {loaded.error ? (
         <>
+          {/* deviation:batch-load-error-new */}
           <Failure error={loaded.error} />
           <button type="button" className="btn btn-primary" onClick={onNew}>
             <Icon name="fa-plus" /> {ts("New Batch")}
@@ -453,6 +463,7 @@ function BatchEditor({
       <table
         className={(settings.classes ?? []).join(" ")}
         hidden={!!loaded.error}
+        // deviation:batch-import-inert
         inert={importing}
       >
         <thead>
@@ -639,6 +650,7 @@ function BatchEditor({
           </button>
         </div>
       )}
+      {/* deviation:batch-status-announced */}
       <p role="status" className="sr-only">
         {importing
           ? ts("Importing...")
@@ -683,6 +695,7 @@ interface BatchCellProps {
 function BatchCell({ id, row, number, column, info, invalid, onChange }: BatchCellProps) {
   const name = columnName(column);
   const editor = isInput(info) ? editorFor(info) : null;
+  // deviation:batch-display-only-import-column
   if (!isInput(info) || !name || !editor || "unsupported" in editor)
     return (
       <td className={`crm-search-col-type-${column.type}`}>
@@ -723,6 +736,7 @@ function BatchCell({ id, row, number, column, info, invalid, onChange }: BatchCe
   );
 }
 
+// deviation:batch-mismatch-dialog
 /** CRM.confirm "Totals Mismatch" of doImport(): the import runs only when confirmed. */
 function MismatchDialog({
   mismatches,

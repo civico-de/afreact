@@ -103,6 +103,7 @@ export function useReorder({ type, settings, runKey, runParams }: ReorderOptions
     setSaving(true);
     save(page, active, over, weightField)
       .catch((failure: unknown) => {
+        // deviation:drag-sort-failure-restores
         // The order and the parent go back at once; the server then says what it holds.
         const place = new Map(page.rows.map((row, index) => [row.key, index]));
         const at = (row: Row) => place.get(row.key) ?? page.rows.length;

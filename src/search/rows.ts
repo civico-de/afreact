@@ -1,3 +1,4 @@
+import { INCLUDES } from "./includes";
 import { unfillableColumns, unsupportedEditors } from "./inlineEdit";
 import type {
   Column,
@@ -117,7 +118,10 @@ const COLUMN_TYPES = new Set(["field", "html", "image", "links", "buttons", "men
 /** The note a cell of `column` shows instead of its content, or null when the table renders it. */
 export function columnNote(column: Column | undefined): string | null {
   if (column && COLUMN_TYPES.has(column.type)) return null;
-  if (column?.type === "include") return `include column ${column.path ?? ""}`;
+  if (column?.type === "include")
+    return column.path && Object.hasOwn(INCLUDES, column.path)
+      ? null
+      : `include column ${column.path ?? ""}`;
   return `column type ${column?.type ?? "(none)"}`;
 }
 
@@ -285,6 +289,7 @@ export function keyText(value: unknown): string | null {
 /**
  * sortTree() of crmSearchDisplayTree: each row under its parent, in result order. A row whose
  * parent is not among the results stays at the top, where core drops it.
+ * deviation:tree-orphans-top-level
  */
 export function buildTree(rows: Row[], parentField: string | undefined): TreeItem[] {
   const items = new Map<string, TreeItem>(
@@ -302,6 +307,7 @@ export function buildTree(rows: Row[], parentField: string | undefined): TreeIte
 /**
  * groupRows() of searchDisplayBaseTrait: the rows that start a new value of `field`, with that
  * value. Values compare by content, so equal lists share a section.
+ * deviation:section-lists-by-content
  */
 export function sectionStarts(rows: Row[], field: string | undefined): Map<Row["key"], unknown> {
   const starts = new Map<Row["key"], unknown>();

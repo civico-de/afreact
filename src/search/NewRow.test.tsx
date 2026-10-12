@@ -106,6 +106,7 @@ describe("editableRow.create", () => {
     expect(addButton()).toBeInTheDocument();
   });
 
+  // deviation:new-row-checked-save
   it("saves with Enter, cancels with Escape and holds an empty required value", async () => {
     const { edits } = setup();
     await screen.findByText("One");
@@ -159,6 +160,7 @@ describe("editableRow.create", () => {
     expect(edits()[0]?.values).toEqual({ label: "Three", description: 2 });
   });
 
+  // deviation:new-row-checked-save
   it("keeps the row open with the error and the typed values when the save fails", async () => {
     let fail = (): void => {};
     setup({

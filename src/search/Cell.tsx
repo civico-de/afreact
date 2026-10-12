@@ -6,6 +6,7 @@ import { AfreactSearch } from "./AfreactSearch";
 import { Icon, LinkContent } from "./LinkContent";
 import { taskLinkProps } from "./links";
 import { Menu } from "./Menu";
+import { INCLUDES } from "./includes";
 import { columnNote } from "./rows";
 import {
   isDisplaySettings,
@@ -19,6 +20,8 @@ import {
 export interface CellProps {
   column: Column | undefined;
   cell: CellData;
+  /** The row's raw values, which include templates read. */
+  data?: Record<string, unknown>;
   /** Position of the column; core's templates pick some icons by it. */
   colIndex: number;
   /** Subsearch display settings the run sent along. */
@@ -53,6 +56,16 @@ export function Cell(props: CellProps) {
       return <MenuColumn {...props} />;
     case "subsearch":
       return <SubsearchColumn {...props} />;
+    case "include": {
+      const include =
+        column.path && Object.hasOwn(INCLUDES, column.path) ? INCLUDES[column.path] : undefined;
+      // An include reads the row's values; a run without them shows the note, not an empty cell.
+      return include && props.data ? (
+        include(props.data)
+      ) : (
+        <Unsupported what={columnNote(column) ?? `include column ${column.path ?? ""}`} />
+      );
+    }
     default:
       return <Unsupported what={columnNote(column) ?? ""} />;
   }
@@ -102,6 +115,7 @@ function FieldValue({ cell, colIndex }: CellProps) {
   );
 }
 
+// deviation:link-list-comma-space
 /** colType/link.html: each value links on its own, comma-separated. */
 function FieldLinks({ cell, links, onLinkClick }: CellProps & { links: Link[] }) {
   const left = cell.icons?.left ?? [];

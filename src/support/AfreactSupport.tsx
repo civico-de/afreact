@@ -206,7 +206,7 @@ export function AfreactSupport({ listed, settings }: AfreactSupportProps) {
               <th scope="col">{ts("Type")}</th>
               <th scope="col">{ts("Shown at")}</th>
               <th scope="col">{ts("Rendered by")}</th>
-              <th scope="col">{ts("What React cannot show yet")}</th>
+              <th scope="col">{ts("Notes")}</th>
               <th scope="col">{ts("Preview")}</th>
             </tr>
           </thead>
@@ -291,8 +291,8 @@ function Problems({ check }: { check?: Check }) {
   return (
     <>
       {list("react", ts("Not yet in React"))}
-      {list("angular", ts("Angular code, needs the Angular application"))}
-      {list("placement", ts("Needs a placement's arguments"))}
+      {list("angular", ts("Uses Angular code, which only the Angular application runs"))}
+      {list("placement", ts("Shown as meant only where placed, which gives it its arguments"))}
     </>
   );
 }

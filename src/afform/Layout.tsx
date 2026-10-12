@@ -45,9 +45,15 @@ import {
   replaceTokens,
   tokenValues,
 } from "./structure";
+import { adminMenuLinks, checkLinkPerm } from "./adminMenu";
+import { AdminListMenu } from "./AdminListMenu";
+import { ParamSets } from "./ParamSets";
+import { Recaptcha2 } from "./Recaptcha2";
+import { Menu } from "../search/Menu";
 import type { ElementNode, FieldDefn, FormData, LayoutNode, Scope } from "./types";
 import { isElement, isFieldDefn } from "./types";
 import {
+  ADMIN_MENU_NOTE,
   buttonOutsideFormNote,
   conditionNote,
   elementAttributes,
@@ -87,6 +93,8 @@ export interface FormState {
   reset?: () => void;
   /** afForm.submitDraft() and the state its buttons show; undefined outside af-form. */
   draft?: { status: DraftStatus; save: () => void };
+  /** crm-recaptcha2's response, sent as extra.recaptcha2, and the failed submissions that void it. */
+  recaptcha?: { respond: (response: string | null) => void; failures: number };
   /** afCore's addTitle(): a search display reports the labels of its filters. */
   addTitle: (labels: string[]) => void;
 }
@@ -149,8 +157,39 @@ const KIND_VIEWS: Record<NodeKind, (props: { node: ElementNode }) => ReactNode> 
       <Children node={node} />
     </>
   ),
+  adminMenu: AdminMenu,
+  adminListMenu: AdminListMenu,
+  paramSets: ParamSets,
+  recaptcha: Recaptcha2,
   element: Element,
 };
+
+/** afform_admin's edit links, each shown to a user who may follow it; the first opens the menu. */
+function AdminMenu({ node }: { node: ElementNode }) {
+  const links = adminMenuLinks(node);
+  if (!links) return <Unsupported what={ADMIN_MENU_NOTE} />;
+  const allowed = links.filter((link) => checkLinkPerm(link.permission, link.createdId));
+  if (allowed[0] !== links[0]) return null;
+  return (
+    <Menu
+      groupClass="btn-group crm-admin-block-context-dropdown dropup"
+      buttonClass="btn dropdown-toggle btn-sm"
+      label={<i className="crm-i fa-gear" role="img" aria-hidden="true" />}
+      caret={false}
+      srLabel={ts("Configure")}
+      alignRight
+      links={allowed.map((link) => ({
+        url: link.url,
+        target: "_blank",
+        icon: link.icon,
+        text: link.label.map((part) => part.text).join(""),
+        content: link.label.map((part, index) =>
+          part.emphasis ? <em key={index}>{part.text}</em> : part.text,
+        ),
+      }))}
+    />
+  );
+}
 
 /** af-form: tokens in its markup show the form's data. */
 function FormNode({ node }: { node: ElementNode }) {
@@ -449,6 +488,7 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
         >
           <i className={`crm-i ${text("add-icon") || "fa-plus"}`} aria-hidden="true" />
           {/* An empty af-repeat shows only the icon, which still needs a name. */}
+          {/* deviation:repeat-button-names */}
           {addLabel ? ` ${addLabel}` : <span className="sr-only">{ts("Add")}</span>}
         </button>
       )}
@@ -549,6 +589,7 @@ function useTokenDefault(
   const loops = template !== null && refersToItself(template, scope, name);
   const tokens = template === null ? null : JSON.stringify(tokenValues(template, form.data));
   const touched = useRef(false);
+  // deviation:token-default-keeps-loaded
   // A value from the route or the prefill outlasts the first calculation, as afForm sets it last.
   const held = getValue(form.data, scope, name) !== undefined;
   const ready = form.prefilled;
@@ -705,6 +746,7 @@ interface PrimaryFieldProps {
   onClear: () => void;
 }
 
+// deviation:repeat-primary-radio-name
 /** afField turns is_primary in a repeat into one radio per record; the records share a radio group. */
 function PrimaryField({ label, group, checked, disabled, onSelect, onClear }: PrimaryFieldProps) {
   const id = useId();

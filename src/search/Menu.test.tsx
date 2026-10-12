@@ -51,6 +51,7 @@ describe("Menu", () => {
     expect(item("View")).toHaveFocus();
   });
 
+  // deviation:actions-menu-in-viewport
   it("sits under its button and scrolls within the space below it", async () => {
     const { button, list } = menu();
     // A button at (20, 0), 100 px tall: its bottom is at 100.
@@ -62,6 +63,7 @@ describe("Menu", () => {
     expect(list.style.maxHeight).toBe("392px");
   });
 
+  // deviation:actions-menu-in-viewport
   it("opens above its button when the space below is too small", async () => {
     const { button, list } = menu();
     // A button from 460 to 480, 20 px above the viewport's bottom edge.

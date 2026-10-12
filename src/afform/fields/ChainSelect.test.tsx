@@ -70,6 +70,7 @@ const submitted = (calls: ReturnType<typeof mockApi>) =>
   calls.find(({ call }) => call === "Afform.submit")?.params.values;
 
 describe("ChainSelect", () => {
+  // deviation:chain-select-native
   it("waits for the control field, loads its options, and drops a value they no longer offer", async () => {
     const calls = renderForm([country, state()]);
     const select = await screen.findByRole("combobox", { name: "State" });
@@ -143,6 +144,7 @@ describe("ChainSelect", () => {
     expect(screen.getByRole("option", { name: "Bavaria" })).toBeInTheDocument();
   });
 
+  // deviation:chain-select-control-name
   it("names the control field by its name when the form does not show it", async () => {
     // afField puts "Choose undefined first" here.
     renderForm([state()]);

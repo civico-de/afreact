@@ -52,6 +52,10 @@ declare global {
         title?: string,
         type?: "alert" | "success" | "info" | "error" | "warning",
       ) => unknown;
+      /** Core's help popup for a `.hlp` file's entry (js/Common.js). */
+      help?: (title: string, params: { id: string; file: string }) => unknown;
+      /** The admin menu bar (js/crm.menubar.js); a new cacheCode makes initialize() reload it. */
+      menubar?: { cacheCode: unknown; destroy: () => void; initialize: () => void };
       /** The status box in the corner (js/Common.js): a text, or a box the caller settles. */
       status: (options: string | { start?: string; success?: string; error?: string }) => StatusBox;
       utils: {
@@ -95,6 +99,7 @@ export function asRows<R>(value: unknown, call: string): ApiResult<R> {
 }
 
 /** Untyped APIv4 call through core's AJAX endpoint (session auth + CSRF handled by CRM.api4). */
+// deviation:api-call-per-request
 export async function api4<R>(
   entity: string,
   action: string,

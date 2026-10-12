@@ -119,6 +119,7 @@ describe("assignValue", () => {
     expect(relativeDate("now -1 week", true, now)).toBe("2026-01-23 09:05:07");
   });
 
+  // deviation:number-range-bounds
   it("reads a range as its bounds", () => {
     const count = field("count", {
       input_type: "Number",
@@ -259,6 +260,7 @@ describe("Location filters", () => {
   });
   const near = { distance: 5, distance_unit: "km", address: "Berlin" };
 
+  // deviation:location-filter-object-kept
   it("keep the whole object, whatever the operator, from typing, storage and the URL", () => {
     const typed = fieldsetReducer(
       { ...empty, applied: {}, commits: 0 },

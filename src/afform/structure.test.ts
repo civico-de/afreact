@@ -77,6 +77,7 @@ describe("staticDefault", () => {
 });
 
 describe("replaceTokens", () => {
+  // deviation:token-null-empty
   it("fills [Entity.index.field] tokens from the form data, unset ones empty", () => {
     const data = { Individual1: [{ fields: { first_name: "Ada", age: 36 } }] };
     expect(
@@ -128,6 +129,7 @@ describe("defaultValue", () => {
     expect(typed({}, "a,b")).toBe("a,b");
   });
 
+  // deviation:current-user-multiple-default
   it("fills the current user and relative dates as afField's setValue() does", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(2026, 0, 30, 9, 5, 7));
@@ -185,6 +187,7 @@ describe("initialiseData", () => {
     });
   });
 
+  // deviation:defaults-keep-loaded-values
   it("pads repeats, marks a primary record and fills defaults into empty fields only", () => {
     const layout: ElementNode[] = [
       {

@@ -19,6 +19,7 @@ const Combobox = lazy(async () => ({
 }));
 
 /** entityRef.html: crm-autocomplete on the field's foreign entity, named to the server by field. */
+// deviation:inplace-reference-combobox
 export function EntityRefInput(props: InputProps & { params?: AutocompleteParams }) {
   const { info, multiple, value, nullable, common, onChange } = props;
   const entity = info.fk_entity ?? info.entity;

@@ -991,11 +991,22 @@ function ColorsConfig({ ctx, col, editCol }: ColumnEditing) {
   );
 }
 
-interface SubsearchFilter {
+export interface SubsearchFilter {
   subsearch_field?: string;
   parent_field?: string | null;
   value?: unknown;
 }
+
+/** A subsearch filter's new field, or without one the filter removed. */
+export const changeFilterField = (
+  filters: SubsearchFilter[],
+  index: number,
+  field: string | null,
+): SubsearchFilter[] =>
+  // deviation:subsearch-filter-change
+  field === null
+    ? filters.filter((_, i) => i !== index)
+    : filters.map((f, i) => (i === index ? { ...f, subsearch_field: field } : f));
 
 const isFilter = (value: unknown): value is SubsearchFilter =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -1224,11 +1235,7 @@ function SubsearchColumn(props: ColumnEditing) {
                     onChange={(picked) => {
                       const next = picked[0];
                       setFilters(
-                        next === undefined
-                          ? filters.filter((_, i) => i !== index)
-                          : filters.map((f, i) =>
-                              i === index ? { ...f, subsearch_field: String(next) } : f,
-                            ),
+                        changeFilterField(filters, index, next === undefined ? null : String(next)),
                       );
                     }}
                   />

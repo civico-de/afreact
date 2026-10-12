@@ -121,6 +121,7 @@ afterEach(() => {
 });
 
 describe("new batch", () => {
+  // deviation:batch-name-label
   it("starts a batch with its name, row count and the targets of SUM columns", async () => {
     const calls = mockApi({
       "SearchDisplay.createBatch": () => [{ id: 7 }],
@@ -171,6 +172,7 @@ describe("new batch", () => {
     );
   });
 
+  // deviation:batch-create-import-failure
   it("keeps the form with the server's message when the batch cannot start", async () => {
     mockApi({ "SearchDisplay.createBatch": () => Promise.reject(apiError("No access")) });
     renderWithQuery(<AfreactSearch search="S" display="D" type="batch" settings={settings} />);
@@ -212,6 +214,7 @@ describe("batch rows", () => {
     });
   });
 
+  // deviation:batch-save-failure-keeps-rows
   it("keeps changes unsaved and says why when saving fails", async () => {
     show([row(1)], { "Import_7.save": () => Promise.reject(apiError("Disk full")) });
     await userEvent.type(await input("Source, Row 1"), "x");
@@ -234,6 +237,7 @@ describe("batch rows", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  // deviation:batch-unsaved-on-leave
   it("asks before leaving the page with unsaved changes, and saves them when it closes", async () => {
     const calls = show([row(1)]);
     await userEvent.type(await input("Source, Row 1"), "x");
@@ -252,6 +256,7 @@ describe("batch rows", () => {
     expect(leaving()).toBe(false);
   });
 
+  // deviation:batch-load-error-new
   it("offers a new batch when the batch does not load", async () => {
     mockApi({ "SearchDisplay.runBatch": () => Promise.reject(apiError("Batch not found")) });
     const store = memoryStore("#?batch=7");
@@ -295,6 +300,29 @@ describe("batch rows", () => {
     expect(screen.getByRole("button", { name: "Remove Row 1" })).toHaveFocus();
   });
 
+  // deviation:batch-delete-then-remove
+  it("keeps a row whose removal fails, with the server's message", async () => {
+    show([row(1), row(2)], { "Import_7.delete": () => Promise.reject(apiError("Locked")) });
+    await screen.findByRole("textbox", { name: "Source, Row 2" });
+    await userEvent.click(screen.getByRole("button", { name: "Remove Row 1" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Locked");
+    expect(screen.getAllByRole("textbox", { name: /^Source/ })).toHaveLength(2);
+  });
+
+  // deviation:batch-display-only-import-column
+  it("shows a display-only column with a joined, suffixed key from its import column", async () => {
+    const joined: Column = {
+      type: "field",
+      key: "Soft.status_id:label",
+      label: "Soft Status",
+      spec: { name: "Soft_status_id" },
+    };
+    show([row(1, { Soft_status_id: "Pending" })], {}, { ...settings, columns: [source, joined] });
+    await input("Source, Row 1");
+    expect(screen.getByRole("cell", { name: "Pending" })).toBeInTheDocument();
+  });
+
+  // deviation:batch-copy-recomputes-formulas
   it("copies the first row's value down, recomputing the formula", async () => {
     show([
       row(1, { total_amount: "5" }),
@@ -340,6 +368,7 @@ describe("batch rows", () => {
 });
 
 describe("import", () => {
+  // deviation:batch-required-every-page
   it("names the rows missing a required value, on every page, and focuses the first", async () => {
     const calls = show(
       [row(1, { total_amount: "1" }), row(2), row(3), row(4), row(5)],
@@ -363,6 +392,7 @@ describe("import", () => {
     expect(calls.some((call) => call.call === "SearchDisplay.importBatch")).toBe(false);
   });
 
+  // deviation:batch-mismatch-dialog
   it("asks before importing totals that miss their target, then saves and imports", async () => {
     const location = { assign: vi.fn() };
     vi.stubGlobal("location", location);
@@ -390,6 +420,7 @@ describe("import", () => {
     expect(calls.at(-1)?.params).toEqual({ savedSearch: "S", display: "D", userJobId: 7 });
   });
 
+  // deviation:batch-import-after-last-save
   it("saves the edits made while an earlier save ran before it imports", async () => {
     const location = { assign: vi.fn() };
     vi.stubGlobal("location", location);
@@ -491,6 +522,7 @@ describe("import", () => {
     expect(combobox).toHaveAttribute("aria-invalid", "true");
   });
 
+  // deviation:batch-create-import-failure
   it("stays on the batch with the server's message when the import fails", async () => {
     show([row(1, { total_amount: "30.3" })], {
       "SearchDisplay.importBatch": () => Promise.reject(apiError("Queue busy")),
@@ -498,6 +530,28 @@ describe("import", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Run Import" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Queue busy");
     expect(screen.getByRole("button", { name: "Run Import" })).toBeEnabled();
+  });
+
+  // deviation:batch-import-inert
+  // deviation:batch-status-announced
+  it("makes the table inert and announces the import while it runs", async () => {
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    show([row(1, { total_amount: "30.3" })], {
+      "SearchDisplay.importBatch": () => held.then(() => Promise.reject(apiError("Queue busy"))),
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Run Import" }));
+    const statuses = () => screen.getAllByRole("status").map((status) => status.textContent);
+    await waitFor(() => {
+      expect(statuses()).toContain("Importing...");
+    });
+    expect(screen.getByRole("table", { hidden: true })).toHaveAttribute("inert");
+    release();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Queue busy");
+    expect(screen.getByRole("table")).not.toHaveAttribute("inert");
+    expect(statuses()).not.toContain("Importing...");
   });
 
   it("shows an entity reference with the in-place editors' input", async () => {

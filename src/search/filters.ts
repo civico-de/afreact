@@ -21,6 +21,8 @@ export interface FilterField {
 export interface ParamSet {
   filters?: FilterValues | null;
   columns?: unknown;
+  /** The id names no set of this form (`_s=0` clears one): fields take their defaults. */
+  missing?: true;
 }
 
 /** What the conversions need from the page. */
@@ -90,6 +92,7 @@ export interface FieldsetState {
 /**
  * A number range such as "5-10", "-5-10" or "5-": a leading minus is a sign, an empty or invalid
  * bound is left out. Core splits on every "-" and makes an empty bound 0.
+ * deviation:number-range-bounds
  */
 function numberRange(text: string): Record<string, number> {
   const separator = text.indexOf("-", 1);
@@ -108,12 +111,14 @@ function numberRange(text: string): Record<string, number> {
  */
 export function convertValue(defn: FieldDefn, raw: unknown, context: ValueContext): unknown {
   let value = raw;
+  // deviation:current-user-multiple-default
   // Core compares a whole list with "user_contact_id", so a multiple field gets NaN.
   const user = (item: unknown) => (item === "user_contact_id" ? context.userContactId : item);
   if (defn.input_type === "EntityRef" && ["Contact", "Individual"].includes(defn.fk_entity ?? ""))
     value = Array.isArray(value) ? value.map(user) : user(value);
   const isNumberRange = defn.input_type === "Number" && !!defn.search_range;
   // Core converts a range string to a number first, which turns "5-10" into NaN.
+  // deviation:location-filter-object-kept
   // A Location value is an object of its own; core's correctValueType() makes it false.
   if (!["DisplayOnly", "Location"].includes(defn.input_type) && !isNumberRange)
     value = correctValueType(value, defn.data_type);
@@ -213,7 +218,8 @@ function fromUrl(text: string, defn: FieldDefn): unknown {
 
 /**
  * afField's setValueFromRouteParams(): `<fieldset>.<field>` before `<field>`; without
- * either, a saved filter set (`_s`) gives the value, or null until it has loaded.
+ * either, a saved filter set (`_s`) gives the value, or null until it has loaded; where the
+ * set does not exist, the field's default.
  */
 export function applyRoute(
   state: FieldsetState,
@@ -229,7 +235,10 @@ export function applyRoute(
     if (text !== null) {
       next = assignValue(next, field, fromUrl(text, field.defn), context);
     } else if (params.get("_s")) {
+      // deviation:saved-filter-set-kept
       next = assignValue(next, field, paramSet?.filters?.[field.name] ?? null, context);
+      // afFieldset resets the form once the set is known, so a missing one leaves the defaults.
+      if (paramSet?.missing) next = initializeValue(next, field, undefined, context);
     }
   }
   return next;

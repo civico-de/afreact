@@ -148,6 +148,20 @@ test.describe("SearchKit search editor", () => {
     expect(record?.api_params.join).toHaveLength(1);
   });
 
+  test("keeps fast typing in a field picker and lists the fields under their entity", async ({
+    page,
+  }) => {
+    await page.goto("/civicrm/admin/afreact/search#/create/Contact");
+    const picker = page.getByRole("combobox", { name: "Add Group By" });
+    await picker.click();
+    await picker.pressSequentially("email");
+    await expect(picker).toHaveValue("email");
+    const contacts = page
+      .getByRole("listbox", { name: "Add Group By" })
+      .getByRole("group", { name: "Contacts" });
+    await expect(contacts.getByRole("option", { name: /^Billing Email Email/ })).toBeVisible();
+  });
+
   test("saves an unchanged search back as it was, as core's editor does", async ({ page }) => {
     const [created] = await api<{ id: number }>(page, "SavedSearch", "create", {
       values: {

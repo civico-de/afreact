@@ -115,6 +115,7 @@ describe("SearchList", () => {
     expect(await screen.findByText(/Welcome to SearchKit/)).toBeInTheDocument();
   });
 
+  // deviation:search-listing-a11y
   it("switches tabs with the arrow keys and keeps the tab in the hash", async () => {
     mockApi({
       "SavedSearch.get": () => counted([], 0),

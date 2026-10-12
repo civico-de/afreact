@@ -3,6 +3,7 @@ import { parseAsString, useQueryStates } from "nuqs";
 import {
   createContext,
   createElement,
+  useCallback,
   useContext,
   useEffect,
   useEffectEvent,
@@ -64,6 +65,14 @@ interface FieldsetContextValue {
   formName: string;
   /** The saved set's shown columns, per "search.display". */
   columns: unknown;
+  fields: FilterField[];
+  /** The saved set the URL names (`_s`), if any. */
+  setId: string | null;
+  /** Applies a saved set as afSearchParamSets does: a new history entry `#?_s=<id>`. */
+  select: (id: number) => void;
+  /** The tables' picked columns per "search.display", as getToggledColumns() reports them. */
+  toggled: Record<string, Record<string, string>>;
+  reportColumns: (key: string, columns: Record<string, string>) => void;
 }
 
 const SearchFieldsetContext = createContext<FieldsetContextValue | null>(null);
@@ -115,7 +124,7 @@ async function loadParamSet(formName: string, id: string): Promise<ParamSet> {
     select: ["filters", "columns"],
   });
   // afFieldset keeps an empty set when the id belongs to no set of this form.
-  return found ?? {};
+  return found ?? { missing: true };
 }
 
 interface SearchFieldsetProps {
@@ -190,12 +199,39 @@ export function SearchFieldset({ node, formName, children }: SearchFieldsetProps
     if (stores && Object.keys(state.values).length) window.CRM.cache?.set(cacheKey, state.values);
   }, [stores, cacheKey, state.values]);
 
-  useUrlWriter(fields, name, state, context);
+  useUrlWriter(fields, name, state, context, setId, paramSet.data);
 
+  const [toggled, setToggled] = useState<Record<string, Record<string, string>>>({});
+  const reportColumns = useCallback((key: string, picked: Record<string, string>) => {
+    setToggled((all) => {
+      if (JSON.stringify(all[key] ?? {}) === JSON.stringify(picked)) return all;
+      const rest = Object.fromEntries(Object.entries(all).filter(([other]) => other !== key));
+      return Object.keys(picked).length ? { ...rest, [key]: picked } : rest;
+    });
+  }, []);
+  const select = useCallback(
+    (id: number) => {
+      store.write(new URLSearchParams({ _s: String(id) }), { push: true });
+      setRoute(store.params());
+    },
+    [store],
+  );
   const columns = paramSet.data?.columns;
   const value = useMemo(
-    () => ({ state, dispatch, ready, name, formName, columns }),
-    [state, ready, name, formName, columns],
+    () => ({
+      state,
+      dispatch,
+      ready,
+      name,
+      formName,
+      columns,
+      fields,
+      setId,
+      select,
+      toggled,
+      reportColumns,
+    }),
+    [state, ready, name, formName, columns, fields, setId, select, toggled, reportColumns],
   );
   return (
     <SearchFieldsetContext.Provider value={value}>
@@ -210,14 +246,17 @@ export function SearchFieldset({ node, formName, children }: SearchFieldsetProps
 }
 
 /**
- * Writes the user's filter changes to the hash under the keys afField reads, leaves
- * defaults out, and drops the saved set (`_s`) the values no longer match.
+ * Writes the user's filter changes to the hash under the keys afField reads. Values equal to
+ * what a reload would give anyway stay out: the saved set's (`_s`), else the defaults.
  */
+// deviation:param-set-edits-in-url
 function useUrlWriter(
   fields: FilterField[],
   name: string,
   state: FieldsetReducerState,
   context: ValueContext,
+  setId: string | null,
+  paramSet: ParamSet | undefined,
 ) {
   const prefix = useUrlPrefix(name);
   const unique = useMemo(
@@ -225,7 +264,7 @@ function useUrlWriter(
     [fields],
   );
   const keyMap = useMemo(() => {
-    const keys: Record<string, typeof parseAsString> = { _s: parseAsString };
+    const keys: Record<string, typeof parseAsString> = {};
     for (const field of unique) {
       keys[field.name] = parseAsString;
       keys[`${name}.${field.name}`] = parseAsString;
@@ -235,12 +274,13 @@ function useUrlWriter(
   const [, setUrl] = useQueryStates(keyMap);
   const defaults = useMemo(() => filterValues(defaultValues(fields, context)), [fields, context]);
   const write = useEffectEvent(() => {
-    const update: Record<string, string | null> = { _s: null };
+    const update: Record<string, string | null> = {};
     const filters = filterValues(state.applied);
+    const base = setId && !paramSet?.missing ? filterValues(paramSet?.filters ?? {}) : defaults;
     for (const field of unique) {
       const plain = field.name;
       const full = `${name}.${field.name}`;
-      const isDefault = JSON.stringify(filters[plain]) === JSON.stringify(defaults[plain]);
+      const isDefault = JSON.stringify(filters[plain]) === JSON.stringify(base[plain]);
       update[prefix ? full : plain] = isDefault
         ? null
         : urlText(state.applied[plain], operatorOf(field, state.operators));
@@ -370,6 +410,7 @@ export function FieldsetDisplay({ node, formName, onLabels }: FieldsetDisplayPro
         typed={merged(fieldset?.state.values)}
         enabled={(fieldset?.ready ?? true) && (tab?.shown ?? true)}
         onLabels={fieldset ? onLabels : undefined}
+        onColumns={fieldset?.reportColumns}
       />
     </>
   );

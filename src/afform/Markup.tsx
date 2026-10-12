@@ -36,6 +36,7 @@ interface MarkupProps {
   record?: boolean;
 }
 
+// deviation:field-markup-filtered
 /** Elements markup keeps; their content cannot run script. */
 const TAGS = new Set(
   (

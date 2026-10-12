@@ -70,6 +70,7 @@ export function SettingsTab({
       </div>
       <div className="form-group">
         <EntityTags
+          size="sm"
           entityTable="civicrm_saved_search"
           tagIds={search.tag_id}
           onChange={(tag_id) => {

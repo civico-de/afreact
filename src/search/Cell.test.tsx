@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
+import { onTestFinished, vi } from "vitest";
 import { mockApi, renderWithQuery } from "../test/render";
 import { memoryStore } from "../url/hash";
 import { Cell, type CellProps } from "./Cell";
@@ -55,6 +55,7 @@ describe("field columns", () => {
     expect(cell({ type: "field" }, { val: { a: 1 } }).container).toHaveTextContent('{"a":1}');
   });
 
+  // deviation:link-list-comma-space
   it("links each value with its own target, title and icons", () => {
     const { container } = cell(
       { type: "field", key: "name" },
@@ -185,11 +186,44 @@ describe("other column types", () => {
     expect(cell({ type: "menu" }, { text: "Actions", links: [] }).container).toBeEmptyDOMElement();
   });
 
-  it("flags include columns and unknown types with what they are", () => {
-    cell({ type: "include", path: "~/afAdmin/afListPlacementColumn.html" }, {});
-    expect(screen.getByRole("note")).toHaveTextContent(
-      "include column ~/afAdmin/afListPlacementColumn.html",
+  it("renders FormBuilder's placement column from the row's values", () => {
+    const url = vi
+      .spyOn(window.CRM, "url")
+      .mockImplementation((path, _query, mode) => `/${mode ?? ""}/${path}`);
+    onTestFinished(() => {
+      url.mockRestore();
+    });
+    const placement = { type: "include", path: "~/afAdmin/afListPlacementColumn.html" };
+    const { container } = cell(
+      placement,
+      {},
+      {
+        data: {
+          server_route: "civicrm/my-form",
+          is_public: true,
+          "placement:label": ["Contact Summary Tab", "Dashboard"],
+          "placement:icon": ["fa-address-card-o", null],
+        },
+      },
     );
+    const link = screen.getByRole("link", { name: "civicrm/my-form" });
+    expect(link).toHaveAttribute("href", "/front/civicrm/my-form");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect([...container.querySelectorAll("li")].map((item) => item.textContent)).toEqual([
+      " civicrm/my-form",
+      " Contact Summary Tab",
+      " Dashboard",
+    ]);
+    expect(icons(container)).toEqual([
+      "crm-i fa-external-link",
+      "crm-i fa-address-card-o",
+      "crm-i fa-cog",
+    ]);
+  });
+
+  it("flags an include column with another template", () => {
+    cell({ type: "include", path: "~/x.html" }, {});
+    expect(screen.getByRole("note")).toHaveTextContent("include column ~/x.html");
   });
 
   it("flags an unknown column type", () => {

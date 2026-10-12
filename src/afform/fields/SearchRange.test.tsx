@@ -92,6 +92,7 @@ describe("search ranges", () => {
     await lastRun({ postal_code: { ">=": "10115", "<=": "10999" } });
   });
 
+  // deviation:range-bounds-labelled
   it("fills a date range from the URL and clears one bound", async () => {
     const { runs, lastRun } = renderSearch(
       [field("created_date", { label: "Created", input_type: "Date", data_type: "Timestamp" })],
@@ -122,6 +123,25 @@ describe("search ranges", () => {
     await lastRun({ start: { ">=": "2026-02-03 04:05:00" } });
   });
 
+  // deviation:date-range-bound-type
+  it("shows both bounds of a date field without time as date inputs", async () => {
+    const { lastRun } = renderSearch([
+      field("birth_date", {
+        label: "Birth date",
+        input_type: "Date",
+        data_type: "Date",
+        input_attrs: { time: false },
+      }),
+    ]);
+    await screen.findByRole("cell", { name: "Row" });
+    const low = screen.getByLabelText("Birth date from");
+    expect(low).toHaveAttribute("type", "date");
+    expect(screen.getByLabelText("Birth date to")).toHaveAttribute("type", "date");
+    await userEvent.type(low, "1990-05-17");
+    await lastRun({ birth_date: { ">=": "1990-05-17" } });
+  });
+
+  // deviation:search-range-typed-ids
   it("searches a select range with typed option ids", async () => {
     const { lastRun } = renderSearch([
       field("priority", {

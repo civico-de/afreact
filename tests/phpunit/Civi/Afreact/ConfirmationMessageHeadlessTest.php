@@ -81,6 +81,7 @@ class ConfirmationMessageHeadlessTest extends TestCase implements HeadlessInterf
     parent::tearDown();
   }
 
+  // deviation:confirmation-message-escaped
   public function testSubmittedValuesAreEscapedAndTheAdminsMarkupKept(): void {
     $response = $this->submit(self::MARKUP, 'Probe');
     $this->assertSame(

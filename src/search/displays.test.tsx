@@ -108,6 +108,7 @@ describe("list display", () => {
     expect(list).toHaveAttribute("aria-busy", "false");
   });
 
+  // deviation:section-header-zero
   it("starts a section with a heading wherever the grouped value changes", async () => {
     const kinds = ["A", "A", null, 0];
     const rows = kinds.map((kind, index) => row(index + 1, { kind }));
@@ -226,6 +227,7 @@ describe("list display", () => {
 });
 
 describe("grid display", () => {
+  // deviation:grid-list-roles
   it("lays boxes out in colno columns and names them as a list", async () => {
     show("grid", { colno: "2", section_group_by: "kind" }, () => [row(1, { kind: "A" })]);
     const item = (await screen.findByText("Item 1")).closest("[data-entity-id]");
@@ -271,6 +273,8 @@ describe("tree display", () => {
       .closest("li")
       ?.querySelector("button");
 
+  // deviation:tree-orphans-top-level
+  // deviation:tree-item-entity-id
   it("nests each row under its parent and keeps rows whose parent is missing", async () => {
     show("tree", { parent_field: "parent_id" }, tree);
     await screen.findByText("Item 1");
@@ -285,6 +289,7 @@ describe("tree display", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  // deviation:tree-toggle-name-state
   it("opens and closes branches by button, with aria-expanded and the hidden count", async () => {
     show("tree", settings, tree);
     await screen.findByText("Item 1");
@@ -307,6 +312,7 @@ describe("tree display", () => {
     expect(screen.queryByText("Item 2")).toBeNull();
   });
 
+  // deviation:tree-branches-stay-open
   it("starts open on collapsible open and keeps the open branches across a reload", async () => {
     const reload = heldReload();
     const { calls } = show("tree", { ...settings, collapsible: "open" }, () => reload.rows(tree()));
@@ -374,6 +380,7 @@ describe("loaded display type", () => {
 });
 
 describe("focus across reloads", () => {
+  // deviation:display-focus-across-reload
   it("returns the focus to the same control of the same row once the rows are back", async () => {
     let version = 1;
     let release = () => {};

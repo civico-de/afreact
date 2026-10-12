@@ -89,6 +89,7 @@ interface EditableValueProps {
   children: ReactNode;
 }
 
+// deviation:inline-edit-keyboard-button
 /** Keys that open the editor; F2 as in spreadsheets, Enter and Space as on a button. */
 const OPEN_KEYS = new Set(["Enter", " ", "F2"]);
 
@@ -177,11 +178,13 @@ function CellEditor({
     if (save) edit.save(row);
     else edit.cancel();
   };
+  // deviation:inline-edit-required-checked
   const commit = () => {
     const forms = edit.full ? rowForms(form.current) : [form.current];
     if (!edit.full && !isChanged(value, initial)) finish(false);
     else if (forms.every((other) => other?.reportValidity() !== false)) finish(true);
   };
+  // deviation:inline-edit-keys-on-editor
   const onKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
     const target = event.target;
     // An open autocomplete list takes Escape; an input that handled Enter keeps it (pick, chip).
@@ -198,6 +201,7 @@ function CellEditor({
       commit();
     }
   };
+  // deviation:inplace-save-on-leave
   // Leaving a single editor saves a valid change; switching windows leaves it open.
   const onBlur = (event: FocusEvent<HTMLFormElement>) => {
     const next = event.relatedTarget;
@@ -355,6 +359,7 @@ const toLocalDateTime = (value: unknown) => asText(value).replace(" ", "T").slic
 const fromLocalDateTime = (value: string) => (value ? `${value.replace("T", " ")}:00` : null);
 
 /** The input crmSearchInput shows for a field: in a cell, and in the update task's dialog. */
+// deviation:inplace-native-inputs
 export function Input(props: InputProps) {
   const { kind, value, nullable, common, onChange } = props;
   if (
@@ -362,6 +367,7 @@ export function Input(props: InputProps) {
     (kind === "text" || kind === "integer" || kind === "float" || kind === "date")
   )
     return <ListInput {...props} kind={kind} />;
+  // deviation:inplace-empty-null
   // An emptied input clears the value where the record allows it; otherwise `required` holds.
   const typed = (next: string) => {
     onChange(next === "" && nullable ? null : next);

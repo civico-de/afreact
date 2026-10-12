@@ -182,6 +182,34 @@ describe("AfreactSearch", () => {
     ]);
   });
 
+  // deviation:row-count-keyed-filters
+  it("never shows the count of earlier filters, also when it lands after they changed", async () => {
+    let answerLate = (_count: number) => {};
+    const calls = mockApi({
+      "SearchDisplay.run": (params) => {
+        if (params.return !== "row_count") return [row(1), row(2)];
+        if (JSON.stringify(params.filters) !== JSON.stringify({ title: "a" }))
+          return Object.assign([], { count: 4 });
+        return new Promise((resolve) => {
+          answerLate = (count) => {
+            resolve(Object.assign([], { count }));
+          };
+        });
+      },
+    });
+    const view = (filters: Record<string, unknown>) => (
+      <AfreactSearch search="S" display="D" settings={settings} filters={filters} />
+    );
+    const { rerender } = renderWithQuery(view({ title: "a" }));
+    await waitFor(() => {
+      expect(calls.map(({ params }) => params.return)).toEqual(["page:1", "row_count"]);
+    });
+    rerender(view({ title: "b" }));
+    answerLate(30);
+    expect(await screen.findByText("4 results")).toBeInTheDocument();
+    expect(screen.queryByText("30 results")).not.toBeInTheDocument();
+  });
+
   it("takes a short first page as the whole result without a count call", async () => {
     const calls = runs(1);
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
@@ -203,6 +231,7 @@ describe("AfreactSearch", () => {
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });
 
+  // deviation:angular-runtime-classes
   it("shows the display's empty text", async () => {
     runs(0);
     renderWithQuery(

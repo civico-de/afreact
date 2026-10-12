@@ -199,6 +199,9 @@ describe("columnNote", () => {
     for (const type of ["field", "html", "image", "links", "buttons", "menu", "subsearch"])
       expect(columnNote({ type })).toBeNull();
     expect(columnNote({ type: "include", path: "~/x.html" })).toBe("include column ~/x.html");
+    expect(
+      columnNote({ type: "include", path: "~/afAdmin/afListPlacementColumn.html" }),
+    ).toBeNull();
     expect(columnNote({ type: "chart" })).toBe("column type chart");
     expect(columnNote(undefined)).toBe("column type (none)");
   });
@@ -291,6 +294,7 @@ describe("display types", () => {
     expect(keys(buildTree(rows, undefined))).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 
+  // deviation:section-lists-by-content
   it("starts a section wherever the value changes, comparing lists by content", () => {
     const at = (key: number, kind: unknown): Row => ({ key, columns: [], data: { kind } });
     const rows = [at(1, ["a"]), at(2, ["a"]), at(3, null), at(4, undefined), at(5, "b")];

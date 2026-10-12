@@ -209,6 +209,7 @@ export function withEntitySetFields(
  * A set's columns after its joins or grouping changed them: positions stay, a removed column
  * becomes null and an added one is dropped, so every set keeps selecting as many columns.
  */
+// deviation:union-join-keeps-rows
 export function realign(original: (string | null)[], next: string[]): (string | null)[] {
   const filled = original.flatMap((col, i) => (col === null ? [] : [i]));
   if (next.length >= filled.length) {

@@ -17,6 +17,7 @@ final class RenderPage {
   /**
    * Route civicrm/afreact/render: one form with the renderer `?renderer=react|angular` names;
    * `options` (a JSON object) stands for a placement's arguments, as InlineAfform.tpl passes them.
+   * Without it, `placement_<key>` (e.g. placement_contact_id) gives them as the picker sends them.
    */
   public static function render(): string {
     $name = \CRM_Utils_Request::retrieveValue('name', 'String', method: 'GET');
@@ -48,7 +49,7 @@ final class RenderPage {
     // Afform.get with permission checks drops forms the user may not open.
     $form = Afform::get()
       ->addWhere('name', '=', $name)
-      ->addSelect('title', 'module_name', 'directive_name')
+      ->addSelect('title', 'module_name', 'directive_name', 'placement')
       ->execute()
       ->first();
     if ($form === NULL) {
@@ -56,15 +57,29 @@ final class RenderPage {
     }
     $title = is_string($form['title'] ?? NULL) ? $form['title'] : $name;
     \CRM_Utils_System::setTitle($title);
+    $entities = $options === NULL ? PlacementArguments::entities($form) : [];
+    $picked = PlacementArguments::picked($entities);
+    $options ??= $picked ? json_encode($picked, JSON_THROW_ON_ERROR) : NULL;
+    $picker = $entities
+      ? PlacementPicker::html(
+        $name,
+        $renderer,
+        $entities,
+        $picked,
+        \CRM_Utils_System::url('civicrm/afreact/render', htmlize: FALSE),
+      ) : '';
     $optionsAttribute = $options === NULL ? '' : ' options="' . Chrome::escape($options) . '"';
     if ($renderer === 'react') {
       Assets::load();
       // The page knows its one form: its layout travels with it instead of a round trip.
       Assets::layouts('page', [$name]);
-      return Chrome::page(self::single(
-        'react',
-        '<afreact-form name="' . Chrome::escape($name) . '" source="page"' . $optionsAttribute . '></afreact-form>',
-      ));
+      return Chrome::page(
+        $picker
+          . self::single(
+            'react',
+            '<afreact-form name="' . Chrome::escape($name) . '" source="page"' . $optionsAttribute . '></afreact-form>',
+          ),
+      );
     }
     $module = Afforms::field($form, 'module_name');
     $directive = Afforms::field($form, 'directive_name');
@@ -75,7 +90,8 @@ final class RenderPage {
     // As core's AfformBase.tpl: the form element gives Enter its implicit submit.
     $element = "<form><{$directive}{$optionsAttribute}></{$directive}></form>";
     return Chrome::page(
-      '<crm-angular-js modules="'
+      $picker
+      . '<crm-angular-js modules="'
       . Chrome::escape($module)
       . '">'
       . self::single('angular', $element)

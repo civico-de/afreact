@@ -22,6 +22,7 @@ export function Toggle({ id, defn, options, value, onChange, disabled, described
         id={id}
         name={defn.name}
         type="checkbox"
+        // deviation:toggle-switch-role
         role="switch"
         className="crm-form-toggle"
         required={defn.required === true}

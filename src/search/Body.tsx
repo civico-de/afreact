@@ -41,6 +41,7 @@ export interface Collapse {
 }
 
 /** crmSearchDisplayToggleCollapse's state per row, kept while the rows change. */
+// deviation:table-rows-stay-open
 export function useCollapse(rows: Row[], settings: DisplaySettings): Collapse {
   const [toggled, setToggled] = useState<ReadonlyMap<Row["key"], boolean>>(new Map());
   const isCollapsed = (row: Row) =>
@@ -109,6 +110,7 @@ export function BodyRows({
           if (hiddenColumns.has(index)) return null;
           const column = settings.columns[index];
           const target = { rowKey: row.key, colIndex: index };
+          // deviation:full-row-editing-class
           const editing = cell?.edit ? editingClass(edit, target) : "";
           return (
             <td
@@ -130,6 +132,7 @@ export function BodyRows({
                   <Cell
                     column={column}
                     cell={cell}
+                    data={row.data}
                     colIndex={index}
                     subsearch={subsearch}
                     afform={afform}

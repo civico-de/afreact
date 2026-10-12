@@ -45,6 +45,7 @@ final class ConfirmationMessage extends AutoSubscriber {
       return;
     }
     $form = NULL;
+    // deviation:confirmation-message-escaped
     foreach (self::TEMPLATES as $key => [$setting, $encode]) {
       $value = Record::string($response, $key);
       if ($value === NULL) {

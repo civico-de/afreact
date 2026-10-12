@@ -187,7 +187,7 @@ const isOption = (value: unknown): value is FieldOption =>
   typeof value === "object" && value !== null && "id" in value && "label" in value;
 
 /** select.html: the field's options by `optionKey`, one or several. */
-function OptionSelect({
+export function OptionSelect({
   id,
   field,
   optionKey = "id",
@@ -243,8 +243,17 @@ function OptionSelect({
 const CURRENT_USER = "user_contact_id";
 const CONTACTS = ["Contact", "Individual"];
 
-/** entityRef.html: autocomplete on the foreign entity; in a search, "Select Current User" for contacts. */
-function EntityRef({
+const currentUserItem = (): AutocompleteItem => ({
+  id: CURRENT_USER,
+  label: ts("Select Current User"),
+  icon: "fa-user-circle-o",
+});
+
+/**
+ * entityRef.html: autocomplete on the foreign entity; in a search, "Select Current User" for
+ * contacts. `statics` replace that with buttons of their own, as crmAutocomplete's `static`.
+ */
+export function EntityRef({
   id,
   field,
   op,
@@ -253,24 +262,30 @@ function EntityRef({
   onChange,
   multiple,
   required,
-}: SearchInputProps & { multiple: boolean; required: boolean }) {
+  params: given,
+  statics,
+}: SearchInputProps & {
+  multiple: boolean;
+  required: boolean;
+  params?: Record<string, unknown>;
+  statics?: AutocompleteItem[];
+}) {
   const entity = field.fk_entity ?? field.entity ?? "";
-  const params = { fieldName: `${field.entity ?? ""}.${field.name}`, key: optionKey ?? null };
-  const currentUser = !!op && CONTACTS.includes(entity);
+  const params = given ?? {
+    fieldName: `${field.entity ?? ""}.${field.name}`,
+    key: optionKey ?? null,
+  };
+  const buttons = statics ?? (!!op && CONTACTS.includes(entity) ? [currentUserItem()] : []);
   const [known, setKnown] = useState<ReadonlyMap<string, AutocompleteItem>>(new Map());
   const ids = valueIds(value);
-  const missing = ids.filter((v) => v !== CURRENT_USER && !known.has(String(v)));
+  const fixed = new Map([currentUserItem(), ...buttons].map((item) => [String(item.id), item]));
+  const missing = ids.filter((v) => !fixed.has(String(v)) && !known.has(String(v)));
   const resolved = useQuery({
     queryKey: [entity, "autocomplete", params, missing],
     queryFn: missing.length ? () => resolveIds(entity, params, missing) : skipToken,
   });
-  const lookup = new Map(known);
+  const lookup = new Map([...fixed, ...known]);
   for (const item of resolved.data ?? []) lookup.set(String(item.id), item);
-  lookup.set(CURRENT_USER, {
-    id: CURRENT_USER,
-    label: ts("Select Current User"),
-    icon: "fa-user-circle-o",
-  });
   const selected = ids.flatMap((v) => lookup.get(String(v)) ?? []);
   const choose = (item: AutocompleteItem) => {
     setKnown((previous) => new Map(previous).set(String(item.id), item));
@@ -306,18 +321,21 @@ function EntityRef({
           }}
         />
       </Suspense>
-      {currentUser && !ids.includes(CURRENT_USER) && (
-        <button
-          type="button"
-          className="crm-hover-button"
-          onClick={() => {
-            choose({ id: CURRENT_USER, label: ts("Select Current User") });
-          }}
-        >
-          <i className="crm-i fa-user-circle-o" role="img" aria-hidden="true" />{" "}
-          {ts("Select Current User")}
-        </button>
-      )}
+      {buttons
+        .filter((item) => !ids.some((v) => String(v) === String(item.id)))
+        .map((item) => (
+          <button
+            key={String(item.id)}
+            type="button"
+            className="crm-hover-button"
+            onClick={() => {
+              choose(item);
+            }}
+          >
+            {item.icon && <i className={`crm-i ${item.icon}`} role="img" aria-hidden="true" />}{" "}
+            {item.label}
+          </button>
+        ))}
       {resolved.isError && (
         <span className="crm-error" role="alert">
           {errorMessage(resolved.error)}

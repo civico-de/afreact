@@ -881,6 +881,7 @@ export function initAutocomplete(ctx: DisplayContext, draft: Draft): void {
   initColumns(ctx, draft, {});
   const fields = [...(draft.settings.searchFields ?? [])];
   if (!fields.length) {
+    // deviation:autocomplete-search-fields
     if (getField(ctx.meta, "id", ctx.search)) fields.push("id");
     fields.push(...(entity?.search_fields ?? []));
   }
@@ -911,6 +912,7 @@ const DEBURRED: Record<string, string> = {
 };
 
 /** CRM.utils.pascalCase: 'my members' or 'my_members' => 'MyMembers'. */
+// deviation:db-entity-pascal-case
 export function pascalCase(text: string): string {
   const words =
     text

@@ -441,6 +441,7 @@ function AxisColumns({
                 </fieldset>
               );
             })}
+            {/* deviation:chart-add-field-full-axis */}
             {(axis.multiColumn || !onAxis.length) && (
               <button
                 type="button"

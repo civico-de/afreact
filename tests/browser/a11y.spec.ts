@@ -21,6 +21,8 @@ const treeReady = `!!document.querySelector(".afreact-render .crm-search-display
 const groups = (renderer: string) => `${render("afsearchManageGroups")(renderer)}#?title=a`;
 // Rows, count and totals are in.
 const tableReady = `!!document.querySelector(".afreact-render tbody tr[data-entity-id]") && !document.querySelector(".afreact-render .crm-search-loading-placeholder")`;
+// The canvas shows the form's fields.
+const editorReady = `!!document.querySelector("#afGuiEditor-canvas-body .af-gui-field")`;
 interface Pair {
   name: string;
   react: string;
@@ -137,6 +139,33 @@ const PAIRS: Pair[] = [
     // Filter fields and the rows of the first search, placeholders gone.
     ready: `!!document.querySelector(".afreact-render af-field input") && !!document.querySelector(".afreact-render tbody td") && !document.querySelector(".afreact-render .crm-search-loading-placeholder")`,
   },
+  {
+    name: "FormBuilder editor",
+    react: "/civicrm/admin/afreact/afform#/edit/afformQuickAddIndividual",
+    angular: "/civicrm/admin/afform#/edit/afformQuickAddIndividual",
+    scope: "#afGuiEditor",
+    ready: editorReady,
+  },
+  {
+    name: "FormBuilder entity tab",
+    react: "/civicrm/admin/afreact/afform#/edit/afformQuickAddIndividual",
+    angular: "/civicrm/admin/afform#/edit/afformQuickAddIndividual",
+    scope: "#afGuiEditor",
+    ready: editorReady,
+    // The third palette tab is the form's first entity, with its field list.
+    open: {
+      target: "#afGuiEditor-palette-config .panel-heading li:nth-child(3) > :is(a, button)",
+      ready: `!!document.querySelector("#afGuiEditor-palette-config .panel-body .af-gui-palette-item")`,
+      click: true,
+    },
+  },
+  {
+    name: "FormBuilder tab set",
+    react: "/civicrm/admin/afreact/afform#/edit/afformAfreactDemoTabs",
+    angular: "/civicrm/admin/afform#/edit/afformAfreactDemoTabs",
+    scope: "#afGuiEditor",
+    ready: editorReady,
+  },
 ];
 
 /** The Afform page of a form in the afreact_forms setting, against the same route left to Angular. */
@@ -177,6 +206,7 @@ async function attach(testInfo: TestInfo, react: string[], angular: string[]) {
 
 for (const colorScheme of ["light", "dark"] as const) {
   for (const pair of PAIRS)
+    // deviation:editor-tab-controls-outside
     test(`axe finds nothing on the React ${pair.name} beyond the theme contrast Angular shares (${colorScheme})`, async ({
       page,
     }, testInfo) => {

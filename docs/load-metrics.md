@@ -115,5 +115,4 @@ it records while loading and runs each page once.
 - `bundle` also needs the forms in advance. Its file is shared with the
   Angular runtime and cached by the browser across pages, at the cost of
   parsing core's internal partial format in the browser: JS-literal
-  attributes, the attribute types of `CRM_Afform_ArrayHtml`, and the edit menu
-  afform_admin appends.
+  attributes and the attribute types of `CRM_Afform_ArrayHtml`.

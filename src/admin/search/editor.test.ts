@@ -143,6 +143,7 @@ describe("saving", () => {
 });
 
 describe("editing", () => {
+  // deviation:removed-column-prunes-sort
   it("drops a removed column from orderBy and having, which core leaves behind", () => {
     const params = {
       version: 4,

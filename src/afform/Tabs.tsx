@@ -100,6 +100,7 @@ function useSelection(names: string[], node: ElementNode, formName: string): Sel
     // crmUiTabSet's jQuery UI tabs open the tab whose id is the URL fragment.
     const fragment = node["#tag"] === "af-tabset" ? null : window.location.hash.slice(1);
     const stored = typeof remembered === "string" ? remembered : null;
+    // deviation:url-arg-over-selected-tab
     return initialTab(names, [fromUrl, selectedTabOf(node), stored, fragment]);
   });
   const selected = fromUrl && names.includes(fromUrl) ? fromUrl : chosen;
@@ -110,6 +111,7 @@ function useSelection(names: string[], node: ElementNode, formName: string): Sel
   if (selected !== null && !shown.includes(selected)) setShown([...shown, selected]);
   const select = (name: string) => {
     setChosen(name);
+    // deviation:url-arg-on-select
     if (urlArg) void setUrl({ [urlArg]: name });
   };
   return { selected, select, shown };
@@ -131,6 +133,7 @@ function onTabKey(
   list?.querySelectorAll<HTMLElement>('[role="tab"]')[target]?.focus();
 }
 
+// deviation:hidden-tab-invalid-field
 /** A control found invalid on submit selects its tab first, so that the form can focus it. */
 function useShowInvalid(panelIds: string[], names: string[], select: (name: string) => void) {
   const root = useRef<HTMLDivElement>(null);
@@ -222,6 +225,7 @@ function PageNav({ node, names, selected, select, panelIds, submit }: PageNavPro
   const index = selected === null ? -1 : names.indexOf(selected);
   const previous = names[index - 1];
   const next = names[index + 1];
+  // deviation:page-nav-submit-label
   const text = typeof node["page-nav-submit-text"] === "string" ? node["page-nav-submit-text"] : "";
   return (
     <div className="crm-buttons">
@@ -274,6 +278,7 @@ export function Tabset({ node, formName, expressions, nodes, element, submit }: 
     return counted === undefined ? tab.count : String(counted);
   };
 
+  // deviation:aria-tabs-pattern
   const strip = tabs.map((tab, index) => {
     const active = tab.name === selected;
     const common = {
@@ -286,12 +291,14 @@ export function Tabset({ node, formName, expressions, nodes, element, submit }: 
         onTabKey(event, index, names, select);
       },
     };
+    // deviation:later-tab-opens-invalid
     const click = (event: { preventDefault: () => void }) => {
       event.preventDefault();
       select(tab.name);
     };
     const icon = tab.icon && <i className={`crm-i ${tab.icon}`} role="img" aria-hidden="true" />;
     const count = badge(tab);
+    // deviation:tab-link-is-tab
     // The link is the tab, as in afTabset.html (6.20); jQuery UI's role on the item would nest it.
     return ui ? (
       <li
@@ -345,6 +352,7 @@ export function Tabset({ node, formName, expressions, nodes, element, submit }: 
         {nodes(tab.content)}
       </TabPanel>
     );
+    // deviation:tab-title-no-tooltip
     return ui ? panel : createElement("af-tab", { key }, panel);
   });
 
@@ -356,6 +364,7 @@ export function Tabset({ node, formName, expressions, nodes, element, submit }: 
       <ul role="tablist" className={ui ? `crm-tab-list ${UI_LIST}` : "nav nav-tabs crm-tab-list"}>
         {strip}
       </ul>
+      {/* deviation:tabset-wrapper-no-role */}
       <div className="crm-tab-panel" ref={root}>
         {panels}
       </div>
@@ -382,6 +391,7 @@ interface TabCountProps {
  * total-count="$parent.count": the badge shows the display's row count without the form's
  * filters, counted whether or not the tab is shown, and again after a popup form succeeds.
  */
+// deviation:tab-count-at-once
 export function TabCount({ search, display, afform, filters }: TabCountProps) {
   const tab = useTab();
   const counted = useQuery({

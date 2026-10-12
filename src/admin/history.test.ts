@@ -36,6 +36,7 @@ describe("historyReducer", () => {
 });
 
 describe("savedFrom", () => {
+  // deviation:save-keeps-later-edits
   it("marks the sent state saved and keeps edits made while saving unsaved", () => {
     const start = initialHistory({ label: "a", id: 0 });
     const sent = historyReducer(start, { type: "change", update: (s) => ({ ...s, label: "b" }) });

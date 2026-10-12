@@ -1,9 +1,12 @@
 import { ReactElement } from "../element";
+import { FormEditor } from "./afform/FormEditor";
+import { FormList } from "./afform/FormList";
+import { Submissions } from "./afform/Submissions";
 import { Builder, type BuilderName, type Screens } from "./Builder";
 import { DisplayPage } from "./search/DisplayPage";
 import { SearchEditor } from "./search/SearchEditor";
 import { SearchList } from "./search/SearchList";
-import { BuildersReport, parseFindings } from "./support/BuildersReport";
+import { BuildersReport, parseFindings, parseFormFindings } from "./support/BuildersReport";
 import { CoreVersion } from "./version";
 
 const SCREENS: Record<BuilderName, Screens> = {
@@ -34,7 +37,31 @@ const SCREENS: Record<BuilderName, Screens> = {
       },
     },
   },
-  afform: {},
+  afform: {
+    "civicrm/admin/afform": {
+      list: { pattern: "/", render: () => <FormList /> },
+      create: {
+        pattern: "/create/:type/:entity",
+        render: (p) => <FormEditor mode="create" type={p.type ?? ""} entity={p.entity ?? ""} />,
+      },
+      edit: {
+        pattern: "/edit/:name",
+        render: (p) => <FormEditor mode="edit" name={p.name ?? ""} />,
+      },
+      clone: {
+        pattern: "/clone/:name",
+        render: (p) => <FormEditor mode="clone" name={p.name ?? ""} />,
+      },
+    },
+    "civicrm/admin/afform/submissions": {
+      submissions: {
+        pattern: "/",
+        render: () => (
+          <Submissions name={new URLSearchParams(window.location.search).get("name")} />
+        ),
+      },
+    },
+  },
 };
 
 function builderName(value: string): BuilderName {
@@ -59,10 +86,15 @@ class AfreactBuilderElement extends ReactElement {
 
 customElements.define("afreact-builder", AfreactBuilderElement);
 
-/** <afreact-builders-report report="{…}"> lists what the SearchKit builder hands to the classic one. */
+/** <afreact-builders-report report="{…}" afform="{…}"> lists what each builder hands to the classic one. */
 class AfreactBuildersReportElement extends ReactElement {
   protected view() {
-    return <BuildersReport findings={parseFindings(this.required("report"))} />;
+    return (
+      <BuildersReport
+        findings={parseFindings(this.required("report"))}
+        form={parseFormFindings(this.required("afform"))}
+      />
+    );
   }
 }
 

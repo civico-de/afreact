@@ -8,11 +8,13 @@ import { Input } from "./EditableCell";
 import { editorFor } from "./inlineEdit";
 import { Icon } from "./LinkContent";
 import { onLinkClick } from "./links";
-import { CaseDialog } from "./CaseDialog";
 import { CaseRoleDialog } from "./CaseRoleDialog";
 import { MailingDialog } from "./MailingDialog";
+import { NEW_CASE, NEW_GRANT, NewRecordDialog } from "./NewRecordDialog";
 import { RelationshipDialog } from "./RelationshipDialog";
 import { TagDialog } from "./TagDialog";
+import { TagMergeDialog } from "./TagMergeDialog";
+import { TranslationDialog } from "./TranslationDialog";
 import { UpdateDialog } from "./UpdateDialog";
 import { Menu } from "./Menu";
 import {
@@ -94,6 +96,9 @@ type RunningTask = Running &
     | { kind: "mailing" }
     | { kind: "case" }
     | { kind: "caseRole" }
+    | { kind: "grant" }
+    | { kind: "tagMerge" }
+    | { kind: "translation" }
   );
 
 const TASKS = "getSearchTasks";
@@ -159,6 +164,7 @@ export function useTasks(options: TasksOptions) {
       const ids = await api4<Key>("SearchDisplay", "run", { ...runParams, return: "id" });
       select({ keys: [...new Set(ids)], all: true });
     } catch (error) {
+      // deviation:bulk-select-all-error
       setFailure(error);
     } finally {
       setLoadingAll(false);
@@ -202,7 +208,10 @@ export function useTasks(options: TasksOptions) {
       run.kind === "relationship" ||
       run.kind === "mailing" ||
       run.kind === "case" ||
-      run.kind === "caseRole"
+      run.kind === "caseRole" ||
+      run.kind === "grant" ||
+      run.kind === "tagMerge" ||
+      run.kind === "translation"
     ) {
       setRunning({ kind: run.kind, task, ids, isLink, returnTo });
       return;
@@ -219,6 +228,7 @@ export function useTasks(options: TasksOptions) {
       );
       return;
     }
+    // deviation:redirect-task-query-merged
     // A window cannot be posted to, so the data goes into the query beside it.
     window.open(window.CRM.url(path, { ...queryOf(query), ...queryOf(post) }, mode), "_blank");
   };
@@ -234,6 +244,7 @@ export function useTasks(options: TasksOptions) {
       .then((tasks) => {
         const task = tasks.tasks.find((candidate) => candidate.name === name);
         if (!task) {
+          // deviation:row-link-task-not-offered
           notSupported(`task ${name} (not offered for this display)`);
           return;
         }
@@ -294,6 +305,7 @@ export function useTasks(options: TasksOptions) {
         <button
           type="button"
           className="btn btn-secondary-outline"
+          // deviation:select-all-checkbox-role
           role="checkbox"
           aria-checked={state === "all" ? true : state === "some" ? "mixed" : false}
           aria-label={ts("Select all")}
@@ -377,6 +389,7 @@ export function useTasks(options: TasksOptions) {
           select(toggleRow(selection, pageKeys, row.key, shift, rowCount));
         },
         disabled: loadingAll,
+        // deviation:row-checkbox-label
         label: (row) => ts("Select %1", { 1: rowName(row) }),
       }
     : undefined;
@@ -386,6 +399,8 @@ export function useTasks(options: TasksOptions) {
 
   const onDone = (result: { ran: boolean; message: string }) => {
     setRunning(null);
+    // deviation:bulk-failed-batch-reloads
+    // deviation:row-link-reloads-table
     if (result.ran) refreshAfterTask();
     if (result.message) setMessage(result.message);
     if (running?.returnTo?.isConnected) running.returnTo.focus();
@@ -422,6 +437,7 @@ export function useTasks(options: TasksOptions) {
       <RelationshipDialog
         task={running.task}
         onSave={(type, contactId, values) => {
+          // deviation:relationship-batch-failure-alerts
           const apiBatch = relationshipBatch(type, contactId, values);
           setRunning({ ...running, kind: "batch", apiBatch, isLink: false });
         }}
@@ -441,8 +457,9 @@ export function useTasks(options: TasksOptions) {
           onDone({ ran: false, message: "" });
         }}
       />
-    ) : running.kind === "case" ? (
-      <CaseDialog
+    ) : running.kind === "case" || running.kind === "grant" ? (
+      <NewRecordDialog
+        kind={running.kind === "case" ? NEW_CASE : NEW_GRANT}
         task={running.task}
         ids={running.ids}
         onSave={(apiBatch, ids) => {
@@ -451,6 +468,25 @@ export function useTasks(options: TasksOptions) {
         onOpened={(opened) => {
           onDone({ ran: true, message: opened });
         }}
+        onCancel={() => {
+          onDone({ ran: false, message: "" });
+        }}
+      />
+    ) : running.kind === "tagMerge" ? (
+      <TagMergeDialog
+        task={running.task}
+        ids={running.ids}
+        onMerged={(merged) => {
+          onDone({ ran: true, message: merged });
+        }}
+        onCancel={() => {
+          onDone({ ran: false, message: "" });
+        }}
+      />
+    ) : running.kind === "translation" ? (
+      <TranslationDialog
+        task={running.task}
+        ids={running.ids}
         onCancel={() => {
           onDone({ ran: false, message: "" });
         }}
@@ -486,7 +522,9 @@ export function useTasks(options: TasksOptions) {
     rowSelect,
     onRowLink,
     notes,
+    // deviation:bulk-task-list-error
     error: list.error ?? failure,
+    // deviation:selection-count-announced
     /** The dialog of a running task and the live region for selection and task results. */
     overlay: (
       <>
@@ -547,6 +585,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
   const entityTitle = (count: number) => (count === 1 ? entity.title : entity.title_plural);
   const message = (text: string | undefined, count: number) =>
     text ? ts(text, { 1: count, 2: entityTitle(count) }) : "";
+  // deviation:delete-task-always-asks
   // Deleting asks first even when a hook removed the question; the text is core's own.
   const deletes = apiBatch.action === "delete" && !apiBatch.settled;
   const confirmMsg =
@@ -563,6 +602,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
     let ran = false;
     try {
       for (const [index, range] of ranges.entries()) {
+        // deviation:bulk-progress-per-batch
         setProgress({ percent: Math.floor((100 * index) / ranges.length), ...range });
         const [callEntity, action, params] = inline
           ? inlineEditCall(apiBatch, runParams, ids[0] ?? "")
@@ -598,6 +638,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
       }
       finish({ ran, message: text });
     } catch (error) {
+      // deviation:bulk-error-both-messages
       // Core shows its own message instead of the server's; React shows both.
       const text = [message(apiBatch.errorMsg, ids.length), errorMessage(error)]
         .filter(Boolean)
@@ -612,6 +653,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
     onDone(result);
   };
 
+  // deviation:bulk-confirm-native-dialog
   // The dialog mounts once per task. Without a question or field to fill the run starts at once.
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
@@ -643,6 +685,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
       >
         <p>{confirmMsg && <strong>{message(confirmMsg, ids.length)}</strong>}</p>
         {fields.map((field) => {
+          // deviation:task-fields-inplace-inputs
           const info = fieldEditableInfo(apiBatch.entity ?? entity.name, field);
           const editor = editorFor(info);
           if ("unsupported" in editor) return null;
@@ -676,7 +719,13 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
         <hr />
         {progress && (
           <div className="crm-search-task-progress">
-            {apiBatch.runMsg && <h5>{message(apiBatch.runMsg, ids.length)}</h5>}
+            {apiBatch.runMsg && (
+              <h5>
+                {apiBatch.runMsgPlural
+                  ? ts(apiBatch.runMsg, { plural: apiBatch.runMsgPlural, count: ids.length })
+                  : message(apiBatch.runMsg, ids.length)}
+              </h5>
+            )}
             <div className="progress">
               <div
                 className="progress-bar progress-bar-striped active"
@@ -745,8 +794,10 @@ function DownloadDialog({ running, entity, runParams, rowCount, onDone }: Downlo
   const count = ids.length || (rowCount ?? 0);
   const entityTitle = count === 1 ? entity.title : entity.title_plural;
 
+  // deviation:download-failure-closes
   const download = async () => {
     setBusy(true);
+    // deviation:download-dialog-status
     // The buttons go disabled, so the focus moves to the title rather than off the dialog.
     dialog.current?.querySelector<HTMLElement>("h2")?.focus();
     try {

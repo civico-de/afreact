@@ -1,8 +1,8 @@
 # Plan: the builders in React
 
-Status: proposal, nothing built yet (2026-10-10). Numbers are measured
-against civicrm-core master (6.21 alpha), its release tags and this
-repository on that date.
+Status: phases 1 to 4 and 6 built, 5 open. Phase 6 covers the saved search picker, the add grant dialog, `crm-recaptcha2`, and the tag merge and add translation dialogs, which core has on master only (2026-10-11). Numbers are
+measured against civicrm-core master (6.21 alpha), its release tags and this
+repository on 2026-10-10.
 
 afreact renders Afforms and SearchKit displays. The SearchKit admin and
 FormBuilder, where admins make them, stay Angular. This plan brings those
@@ -231,8 +231,29 @@ island, the page loaded 1.9 MB more in 132 more requests, and
 metadata request about 1.1 s with an empty cache, compiling 11 ms.
 
 Islands stop at display type editors. Other builder plugins assume the
-whole Angular builder around them, so a record that needs them opens in
-the classic builder:
+whole Angular builder around them, so while one is installed the React
+builder names it and saves nothing, linking the classic builder. React
+finds them without their help: AngularJS queues a module's decorators and
+`config()` blocks in `_configBlocks` and its `run()` blocks in `_runBlocks`,
+apart from the directives and components in `_invokeQueue`, so a builder
+module of another extension with either is one; and a ChangeSet shows as a
+changed partial of core's builder modules (`BuilderReport::partials()`). Both
+builder pages load every module of the classic page that core does not
+bring, with everything those require: the modules naming its path and those
+added to core modules' `requires`, such as the input types' admin modules
+core adds to the editor's (`ForeignModules::of()`). The FormBuilder page
+loads them only to look for these blocks and boots none of them. Two ways
+past this go unnoticed: a module registering a service or directive under
+the name of one of core's instead of decorating it, and a decorator added to
+one of core's own modules; neither appears in any extension we know, which
+decorate from modules of their own as core's comments advise. Core's own changes to the builder templates
+(afform_admin's `afformAdmin` ChangeSet, civi_case's `angular-modules.json`
+rewrite) are applied before the comparison and never count.
+An extension that moves to the contract names the modules and ChangeSets
+its elements replace in the event's `replaces`, per builder, and React
+leaves them out with the modules only they require; the support report
+lists them apart.
+Known cases:
 
 - civi_case appends its case-role settings to core's template
   `~/afGuiEditor/behaviors/autofillRelationshipBehavior.html` by rewriting
@@ -265,14 +286,14 @@ and at runtime the form stays unsupported as today.
 
 | Extension point | Core's Angular hook | Custom element | Receives | Sends |
 |---|---|---|---|---|
-| display type editor | component `search-admin-display-<type>` | `afreact-search-admin-display-<type>` | `display`, `savedSearch`, `columns` (the search's columns with label and data type) | `change` with `detail.settings`; a non-empty `validationMessage` blocks saving |
+| display type editor | component `search-admin-display-<type>` | `afreact-search-admin-display-<type>` | `display`, `savedSearch`, `columns` (the search's columns with label and data type), `searchMeta` (core's `parseExpr`, `getDefaultLabel` and `getField`) | `change` with `detail.settings`; a non-empty `validationMessage` blocks saving |
 | display type renderer, at runtime and in the preview | directive `crm-search-display-<type>` | `civi-search-display-<type>` | what React gives chart_kit's element today: `search` and `display` by name, or in the preview as JSON of the unsaved records (as core's preview passes them); `settings`; `filters` with the form's values; the form's name through an `afFieldsetCtrl` property, so elements on core's `CiviSearchDisplay` base work unchanged | |
 | search save hooks | `findCriticalChanges`, `preSaveDisplay`, `postSaveDisplay` (a decorator on `crmSearchAdminDirective`) | events of the same names, dispatched on the builder element and bubbling to `document` | core's arguments in `detail` (original and updated displays and a message list; a display and the request's API calls; a display and the results) | messages to confirm; API calls added to the save request; changes to the display before it is saved (core's own listener removes the preview's `limit`, `pager` and `classes`); a request to reload the admin metadata after saving |
 | element settings | element `admin_tpl` | `afreact-afform-admin-<tag>` | `node` (the element's attributes) | `change` with `detail.node` |
 | input type on the canvas | `admin_template` | `afreact-afform-admin-input-<type>` | `node` (the field), `defn` (its definition) | `change` with `detail.node` |
 | behavior settings | `getTemplate()` | `afreact-afform-admin-behavior-<behavior>` | `entity`, `modes` | `change` with `detail.entity` |
-| entity options | `options_tpl` | `afreact-afform-admin-entity-<Entity>` | `entity` | `change` with `detail.entity` |
-| builder panel | ChangeSet on a builder template | the element name the plugin gives in the event | `record` (search with displays, or the form) | `validationMessage` |
+| entity options | `options_tpl` | `afreact-afform-admin-entity-<entity>` (the type in kebab case, as custom element names hold no capitals) | `entity` | `change` with `detail.entity` |
+| builder panel | ChangeSet on a builder template | the element name the plugin gives in the event | `record` (search with displays, or the form as it would be saved, its layout in Afform's `shallow` format); in the search builder `searchMeta` as above | a non-empty `validationMessage` blocks saving; `saveNotes`, a list of texts, go into the save confirmation; saving first waits for `ready`, a promise that settles once the panel is done with its last record and stays the same object until a newer record arrives, and again for a newer one handed out meanwhile; a rejection or 30 seconds without an answer blocks it, and an edit made while waiting stops it |
 
 An input type's `admin_template` is more than its picture on the canvas:
 core's own hold editing controls (placeholder and default values in
@@ -283,13 +304,15 @@ menu stays editable.
 
 afreact's own builder plugins move to the contract in their repositories:
 
-- **smartchart**: its display code and admin panel are framework-free
-  TypeScript behind Angular components; they register as
+- **smartchart**: the `crmSearchAdminDirective` decorator sits in a module
+  of its own, which the `smartchart-save-gate` panel replaces; the display
+  editor runs as an island and the display in Angular at runtime. Elements
   `civi-search-display-smart-chart` and
-  `afreact-search-admin-display-smart-chart`, and the `crmSearchAdminDirective`
-  decorator becomes the panel reacting to `savedSearch` changes. The
-  Angular components stay for the classic builder.
-- **preflight**: its two ChangeSet panels become builder panels.
+  `afreact-search-admin-display-smart-chart` can follow from its
+  framework-free TypeScript.
+- **preflight**: its two ChangeSet panels become builder panels; in both
+  builders the findings go into the save confirmation as `saveNotes`, which
+  core's FormBuilder has no place for.
 
 Other extensions' builder plugins keep working in the classic builder until
 they adopt the contract; the support report lists them.
@@ -365,15 +388,18 @@ with only the edited keys changed.
   resolves to `undefined` (`afform_default: options.search_query`); its
   markup tab's `deep` conversion turns a `ts()` inside `defn` into `null`;
   and a `defn`, `data` or `actions` value `$parse` cannot read stays a
-  string, on which the `deep` save fails. These go into upstream-bugs.md
-  with phase 5.
+  string, on which the `deep` save fails. upstream-bugs.md lists them under
+  FormBuilder.
 - **Searches and displays.** Keys React does not know (from a newer core, a
   plugin) pass through unchanged, and the per-record check names a display's
   in a notice.
 - **On load and save,** React does to an unedited record what core's
   builder does, listed per record type from core's code. For a form it
   fills in `icon`, `placement`, `placement_filters`, `permission_operator`,
-  `confirmation_type` and each entity's `actions` and `security` (on
+  `confirmation_type`, each entity's `actions` and `security`, and the
+  `actions` of each join and block it draws: core those on the tabs the
+  admin opened, React every one, so a save never depends on which tabs were
+  looked at (on
   multilingual sites `Afform.loadAdminData` adds `locale` itself), and the
   save sends `server_route` as `''` when the form has none and sets
   `create_submission` whenever `manual_processing` or
@@ -573,10 +599,11 @@ display.
 **4. FormBuilder listing, submissions and gear menus.**
 `afAdminFormList` with `af-admin-list-menu` and its placement column (a
 registry maps core's own include templates to React cells; any other include
-template stays unsupported); the submissions page through `<afreact-search>`,
-which learns the inline `settings`, `api-entity` and `filters` core's page
-passes; the gear menus with edit links on placed forms and displays, for
-users with the permission. Exit: the support report shows `afAdminFormList`
+template stays unsupported); the submissions page, which runs the default
+display core builds for the form (`SearchDisplay.getDefault` with the form in
+its context filters, as core's page compiles it; core's `api-entity` is the
+search's own and unused by the table); the gear menus with edit links on
+placed forms and displays, for users with the permission. Exit: the support report shows `afAdminFormList`
 supported; parity on the listing.
 
 **5. FormBuilder editor.**

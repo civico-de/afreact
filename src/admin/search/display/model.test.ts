@@ -244,6 +244,7 @@ describe("list, grid and tree init", () => {
 });
 
 describe("autocomplete and DB entity init", () => {
+  // deviation:autocomplete-search-fields
   it("shows the entity's search fields and searches by id and them", () => {
     const draft = table();
     draft.type = "autocomplete";
@@ -308,6 +309,7 @@ describe("autocomplete and DB entity init", () => {
     expect(createSqlName(long)).toMatch(/^a{42}[0-9a-f]{16}$/);
   });
 
+  // deviation:db-entity-pascal-case
   it("pascal-cases names as core's master does, folding accents", () => {
     expect(pascalCase("my members")).toBe("MyMembers");
     expect(pascalCase("contribution_recur")).toBe("ContributionRecur");

@@ -24,13 +24,13 @@ the Afform in a `div` instead of a form. The Save button has no `type`
 form: a click, or Enter in a field, runs `Afform.submit` and submits the case
 form as well (`master` as of 2026-10-05; read from the code, not run). The
 React renderer keeps its own `<form>` inside the case form: controls submit
-that form, and its submit event stops there.
+that form, and its submit event stops there. `deviation:case-summary-own-form`
 
 **Defaults overwrite loaded or copied values.** A block behind `af-if` that
 opens after prefill gets its field defaults over the loaded values, and
 copying a repeat item overwrites the copied values with defaults; fix proposed
 in [civicrm-core#37199](https://github.com/civicrm/civicrm-core/pull/37199).
-The React renderer keeps the loaded and copied values.
+The React renderer keeps the loaded and copied values. `deviation:defaults-keep-loaded-values`
 
 **Word replacements on Standalone.** On Standalone sites in en_US, word and
 translation replacements never apply: `CRM_Core_I18n` caches an empty list
@@ -42,7 +42,7 @@ civikitchen standalone image carries it as a patch.
 embed itself, but its check (`Utils::findEmbedCycle`) knows only forms already
 saved, so a new block whose layout includes itself is saved anyway
 (`SavedFormHeadlessTest` saves one on 6.19.0). `Afreact.getForm` stops at the
-loop and rejects such a block with an error.
+loop and rejects such a block with an error. `deviation:self-including-block-rejected`
 
 **Confirmation message is not escaped.** `Afform.submit` fills tokens such as
 `[Individual1.0.first_name]` in the confirmation message with the submitted
@@ -72,14 +72,14 @@ is left as it is. The contribution checkout sets its own; afreact escapes it
 only where it equals core's (no `[token]`, no entity saved after the
 contribution). The same listener rebuilds the redirect with each token value
 URL-encoded, unless another listener set it, as the checkout does with its
-payment URL. The checkout page is unchanged.
+payment URL. The checkout page is unchanged. `deviation:confirmation-message-escaped`
 
 **An emptied field shows "null" in a token.** afForm's `getTokenValues()`
 and `replaceTokens()` treat only `undefined` as empty, so a token for a field
 set to `null` (a cleared number, or a cleared select of an Integer or Float field; a cleared date is `""`, a cleared String select `""`, a cleared Boolean one `false`) reads
 "null" in labels, content blocks and calculated defaults (read from the code
 on `master` as of 2026-10-06, not run). The React renderer shows nothing and
-leaves the default's text without it.
+leaves the default's text without it. `deviation:token-null-empty`
 
 **A token default overwrites the loaded value.** afField watches the values
 of the fields a token default refers to (`afField.component.js:118-128`) and
@@ -89,14 +89,23 @@ and replaces the record's own value: a contact with nickname "Stored" and a
 field defaulting to `Dear [Individual1.0.first_name]` opens as "Dear Ada" and
 saves that (reproduced on civikitchen 6.18.1 with `afformAfreactDemoRules`,
 `tests/browser/rules.spec.ts`). The React renderer keeps the loaded value
-until a referenced field changes.
+until a referenced field changes. `deviation:token-default-keeps-loaded`
 
 **A paged form's submit button has no text without `page-nav-submit-text`.**
 `afTabset.html` (6.19) writes `{{ $ctrl.pageNavSubmitText }}` into the
 button on the last page with no fallback; FormBuilder shows "Submit" as the
 attribute's default in the editor only, so a tab set with `page-nav-buttons`
 and no `page-nav-submit-text` renders an empty, unnamed button (read from the
-code, not run). The React renderer labels it "Submit".
+code, not run). The React renderer labels it "Submit". `deviation:page-nav-submit-label`
+
+**Titles in the edit menu are compiled as Angular templates.**
+`AfformAdminInjector` writes the form's title and each embedded SavedSearch's
+label into the edit menu with `htmlspecialchars()`, which leaves `{{ }}`
+alone, and Angular then compiles the partial. A form titled `Probe {{7*6}}`
+shows "Edit Probe 42 in FormBuilder" (run on 6.19). Labels come from users
+with "manage own" permissions, while the menu is shown to administrators, so
+this lets one user's text run as an expression in another user's session.
+React renders the titles as text. `deviation:admin-menu-title-text`
 
 ## Drafts and submission
 
@@ -106,14 +115,14 @@ unchanged data, marks a pristine draft as saved (`setupDraftWatcher`,
 `afForm.component.js` on 6.18; read from the code, not run). Every save-draft
 button therefore reads "Draft Saved", disabled, as soon as the form has
 loaded. The React renderer keeps the button's own text, disabled, until the
-form holds a change no draft has saved.
+form holds a change no draft has saved. `deviation:draft-pristine-label`
 
 **A submit can cross a running draft save.** afForm lets Submit run while
 `submitDraft` or a draft's upload is in flight, so the late draft answer can
 leave a draft behind the submission, or the draft's upload fails with "Draft
 not found" after a successful save (`afForm.component.js`, `master` as of
 2026-10-06; read from the code, not run). The React renderer keeps the submit
-button disabled until the draft save has ended.
+button disabled until the draft save has ended. `deviation:draft-save-holds-submit`
 
 **A restored draft adds keys to its extra fields.** Extra fields (an
 `af-field` without a name, FormBuilder's "Extra …" fields) live in
@@ -124,7 +133,7 @@ keys among the field values, which the next save stores with them
 (`afForm.component.js` `loadData()`, `master` as of 2026-10-06; read from the
 code, not run). The React renderer restores the field values only. It sends
 `extra` only once a form holds an extra field's value; afForm always sends
-`extra: {fields: {}}`, which the server treats as no values.
+`extra: {fields: {}}`, which the server treats as no values. `deviation:draft-extra-fields-restored`
 
 ## Fields and filters
 
@@ -133,7 +142,7 @@ afField looks the control field's label up among its neighbours and puts
 `Choose %1 first` in the placeholder. If that field has no label or sits
 outside the nearest repeat item, join or fieldset, the placeholder reads
 "Choose undefined first" (read from the code on `master` as of 2026-10-03).
-The React renderer uses the control field's name instead.
+The React renderer uses the control field's name instead. `deviation:chain-select-control-name`
 
 **Number ranges from the URL or a default.** afField converts the value of an
 Integer or Float range field to a number before splitting it, so `5-10` becomes
@@ -144,14 +153,14 @@ an empty bound into 0: `5` searches `>= 5 AND <= 0`, and on a Money field
 [`d116180483`](https://github.com/civicrm/civicrm-core/commit/d116180483)
 ([civicrm-core#37198](https://github.com/civicrm/civicrm-core/pull/37198)). The
 React renderer splits at the first `-` after a leading sign and leaves an empty
-bound out: `-5-10` is −5 to 10, `5-` and `5` are `>= 5`.
+bound out: `-5-10` is −5 to 10, `5-` and `5` are `>= 5`. `deviation:number-range-bounds`
 
 **A date range's inputs have no label.** In a search range, `fields/Date.html`
 gives the two datepickers the ids `<field>1` and `<field>2`, while afField's
 label points at `<field>`, so neither input is labelled; the high input of the
 other range templates has no label either (`master` as of 2026-10-05; read
 from the code, not run). The React renderer names the pair after the label and
-each input "… from" and "… to".
+each input "… from" and "… to". `deviation:range-bounds-labelled`
 
 **A rich text field is never disabled.** `fields/RichTextEditor.html` has no
 `ng-disabled`, so `af-disabled` and a saving form leave the editor writable,
@@ -159,7 +168,7 @@ and `crm-ui-richtext` never destroys the editor when `af-if` removes the field
 (`master` as of 2026-10-05; read from the code, not run). The React renderer
 restarts the editor on a disabled textarea, which core's CKEditor 4 opens
 read-only (its `readOnly` setting follows the textarea), and destroys it with
-the field.
+the field. `deviation:rich-text-disabled`
 
 **The current user as default of a multiple contact field.** afField's
 `setValue()` splits a multiple field's default into a list before it compares
@@ -167,19 +176,45 @@ the value with `user_contact_id`, so the list never matches and is then typed
 as numbers: the field starts as `[NaN]`, which the request sends as `[null]`
 (`afField.component.js`, `master` as of 2026-10-05; read from the code, not
 run). The React renderer replaces `user_contact_id` in each list item, for
-form fields and search filters alike.
+form fields and search filters alike. `deviation:current-user-multiple-default`
 
 **The minlength message names the required marker.** afForm words the
 message for a too short text from the label's `textContent`, so a required
 field reads "First Name \* must be at least 3 characters." (`master`, 6.20,
 added in [`d777c0f29b`](https://github.com/civicrm/civicrm-core/commit/d777c0f29b)).
-The React renderer leaves the marker out.
+The React renderer leaves the marker out. `deviation:minlength-message-without-marker`
 
 **A saved filter set is dropped after loading.** With `#?_s=<id>` afFieldset
 loads the `SearchParamSet`, then resets the fields to their defaults, so the
 set's values never reach the search; fix proposed in
 [civicrm-core#37200](https://github.com/civicrm/civicrm-core/pull/37200). The
-React renderer keeps them (fields the URL leaves out take the set's values).
+React renderer keeps them (fields the URL leaves out take the set's values). `deviation:saved-filter-set-kept`
+
+**The saved search picker loses or hides errors.** `afSearchParamSets` turns
+a failed list into a fake set named "Error fetching Saved Searches", leaves
+its saving spinner up forever when an update fails, and drops a failed delete
+without a word (`afSearchParamSets.component.js`, 6.19, read from the code,
+not run). The React renderer shows each error, the update's in its dialog. `deviation:param-sets-show-errors`
+
+**The saved search picker offers "Save changes" for an unchanged set.**
+`afSearchParamSets` compares the set's `filters` and `columns` with the
+current ones as JSON strings, but the server returns a set saved without
+column choices with `columns` as `[]` or `null`, never the `{}` the current
+values hold, and keys may come back in another order; so "Save changes" shows
+as soon as such a set is picked (read from the code, not run). The React
+renderer compares the values with sorted keys and an empty list equal to an
+empty object. `deviation:param-set-unchanged-compare`
+
+**A saved set's details fail on a removed field and blank Yes/No values.**
+The picker's details look up each filter's field and read its `options`, so a
+set holding a filter whose field the form no longer has throws; and a Yes/No
+field's options are added by afField, not written in its `defn` attribute,
+so `false` shows as nothing (6.19; the blank seen on the dev stack). The
+React renderer shows the field's name for a removed field and "Yes" or "No". `deviation:param-set-details-robust`
+
+**The saved search choice has no label.** The picker's `<select>` carries
+neither a label nor an `aria-label` (6.19). The React renderer names it
+"Saved searches". `deviation:param-sets-select-label`
 
 **Field labels and help texts are set as unfiltered HTML.** afField puts the
 label, `help_pre` and `help_post` into `af-markup`, which assigns them to
@@ -189,43 +224,43 @@ attribute therefore runs for every visitor of the form. Only users who edit
 forms or custom fields can write these texts, so this is a hardening gap
 rather than an escalation (read from the code on `master` as of 2026-10-06,
 not run). The React renderer keeps the HTML but only plain elements and
-attributes, and React blocks `javascript:` URLs.
+attributes, and React blocks `javascript:` URLs. `deviation:field-markup-filtered`
 
 **Month dates in a format other than `yy-mm`.** For a date format without a
 day, `crm.datepicker.js` stores the displayed text plus `-01`, so a custom
 field with the format `M yy` saves `Mar 2001-01` instead of `2001-03-01` (read
 from the code, not run). The React renderer stores `2001-03-01` for every
-format without a day.
+format without a day. `deviation:month-date-any-format`
 
 **A range slider is never disabled.** `fields/Range.html` has no
 `ng-disabled`, so `af-disabled` and a saving form leave the slider movable
 (`master` as of 2026-10-05; read from the code, not run). The React renderer
-disables it with the form.
+disables it with the form. `deviation:range-slider-disabled`
 
 **A bound of 0 is dropped.** `fields/Number.html` and `fields/Range.html` write
 `min="{{:: input_attrs.min || '' }}"`, and the same for `max`, so a minimum or
 maximum of 0 leaves the input unbounded: a field limited to 0–10 accepts
 negative numbers (`master` as of 2026-10-05; read from the code, not run). The
-React renderer keeps a bound of 0.
+React renderer keeps a bound of 0. `deviation:number-bound-zero`
 
 **A Location filter's inputs have no label.** `afLocationInput.html` shows the
 distance, unit and address with placeholders only, and afField's label points
 at an id no input carries (`master` as of 2026-10-05; read from the code, not
 run). The React renderer names the three as a group after the label, and each
-input "Distance", "Distance unit" and "Address".
+input "Distance", "Distance unit" and "Address". `deviation:location-inputs-labelled`
 
 **A saved Location filter loads as false.** Restoring a filter value from a
 saved filter set (`_s`) runs it through afField's `correctValueType()`, which
 compares the proximity filter's object with 1 because the field is Boolean
 (`master` as of 2026-10-05; read from the code, not run). The React renderer
-keeps the object, also from the URL.
+keeps the object, also from the URL. `deviation:location-filter-object-kept`
 
 **A reset drops the values the URL gave.** afField fills a field from the
 route parameters (`first_name=…` or `Individual1.first_name=…`) once, when it
 renders; on `afFormReset` it only restores the default, while `loadData()`
 prefills the URL's records again, so a reset form loses what the link filled
 in (`afField.component.js`, `master` as of 2026-10-06; read from the code, not
-run). The React renderer fills them again on a reset.
+run). The React renderer fills them again on a reset. `deviation:reset-refills-route-values`
 
 **`_s` in a submission form's URL.** afField sets every field the URL leaves
 out to the saved filter set's value, null before the set has loaded; the
@@ -236,12 +271,12 @@ search forms.
 **Clearing a Yes/No select stores "No".** afField's `getSetSelect()` turns a
 Boolean field's value into `val === 'true'`, so an emptied select (`""` or
 `undefined`) stores `false` (read from the code on `master` as of 2026-10-06,
-not run). The React renderer stores `null`.
+not run). The React renderer stores `null`. `deviation:boolean-select-cleared-null`
 
 **A URL field is never disabled.** `fields/Url.html` has no `ng-disabled`, so
 `af-disabled`, a saving form and a read-only autofill field leave URL inputs
 editable (read from the code, not run). The React renderer disables them like
-every other input.
+every other input. `deviation:url-input-disabled`
 
 **A date range shows a time input on each bound.** `afField.component.js`
 fills `inputAttrs` for a `search_range` date in a `$timeout`, but
@@ -250,7 +285,7 @@ once, when it links, before that timeout; the datepicker starts from empty
 options and shows date and time even for a field whose `input_attrs` say
 `time: false`, and the bounds' placeholders are lost (`master` as of
 2026-10-08; seen on the demo's birth date range). The React renderer renders
-the bounds from the field's own attributes: a date input for a date field.
+the bounds from the field's own attributes: a date input for a date field. `deviation:date-range-bound-type`
 
 ## Conditions
 
@@ -260,7 +295,7 @@ condition's `IS EMPTY` and `IS NOT EMPTY` test the value with `!val1`
 a checkbox list or multi-select emptied again (`[]`) and an emptied range
 (`{}`) count as filled, a Yes/No answer "No" and the number 0 as empty. The
 React renderer takes unset, `""`, `[]` and `{}` as empty and `false` and `0`
-as answers.
+as answers. `deviation:condition-is-empty-values`
 
 ## Joins and repeats
 
@@ -269,7 +304,7 @@ only its icon, and the add button only the `af-repeat` value, which may be
 empty; `crm-icon` hides the icon from assistive technology, so screen readers
 meet a button without a name (`master` as of 2026-10-05; read from the code,
 not run). The React renderer shows the same content and adds a screen-reader
-name, "Add" or "Remove".
+name, "Add" or "Remove". `deviation:repeat-button-names`
 
 **Join blocks are numbered in link order.** afJoin takes its record index
 from a counter in afFieldset each time it links (`afJoin.directive.js`,
@@ -294,20 +329,20 @@ Read from the source of `master` as of 2026-10-03; `joins.spec.ts` pins the
 first case in the browser. The React renderer numbers blocks by their
 position in the layout, shown or not, and sends `null` for a block without a
 record, as core's own prefill does for a missing location type; the server
-drops the nulls and keeps the positions.
+drops the nulls and keeps the positions. `deviation:join-blocks-layout-order`
 
 **The primary radio of a repeat has no name.** In a repeated join, afField
 gives `is_primary` a single option with an empty label
 (`afField.component.js:72-74`), and `fields/Radio.html` names each radio by
 `aria-label="{{opt.label}}"`, so screen readers announce an unnamed radio
-(6.18.1). The React renderer names the radio by the field's label.
+(6.18.1). The React renderer names the radio by the field's label. `deviation:repeat-primary-radio-name`
 
 **A copied repeat item is the same record.** `af-copy` appends
 `angular.copy()` of the last item (`afRepeat.directive.js` `copyItem()`; read
 from the code, not run), including a loaded record's `id` and its
 `is_primary`, so the copy and the original submit under one ID and two join
 records are primary. The React renderer copies the values without `id` and
-with `is_primary` off.
+with `is_primary` off. `deviation:repeat-copy-new-record`
 
 ## File uploads
 
@@ -323,7 +358,7 @@ those again with the same token, without a second `Afform.submit`. A failed
 file is no longer required and has a "Remove file" button, so the submit can
 finish without it. Once the files are uploaded or removed the form finishes as
 after any submit; a user who leaves before that leaves the records saved with
-nothing announced.
+nothing announced. `deviation:failed-upload-retry`
 
 **Replacing a join's file never clears it.** The Replace link sets the stored
 file's `id` to null and keeps `file_name`. For a join record,
@@ -331,14 +366,14 @@ file's `id` to null and keeps `file_name`. For a join record,
 "unchanged" and a `file_name` key that is null as "deleted", so a replaced file
 without a new upload stays (`master` as of 2026-10-05; read from the code, not
 run). The React renderer sends `{id: null, file_name: null}`, which clears the
-field on the entity and on a join record.
+field on the entity and on a join record. `deviation:replace-join-file-clears`
 
 **The first join record's upload carries no index.** afField sends `joinIndex:
 afJoin && repeatIndex || null`, so record 0 sends null. Saving the record
 casts it to 0, but uploading into a draft stores the file under an empty key
 (`SubmitFile::updateDraft()`, `master` as of 2026-10-05; read from the code,
 not run). The React renderer uploads a file chosen before Save Draft into the
-draft after `submitDraft`, as afForm does, and sends the record's index.
+draft after `submitDraft`, as afForm does, and sends the record's index. `deviation:first-join-upload-index`
 
 **A draft's file on a new join record is lost on submit.**
 `AbstractProcessor::preprocessSubmittedValues()` drops a join's stored file
@@ -346,18 +381,18 @@ and gives a join record without an id an empty placeholder, so a file uploaded
 into the draft for a record the submit creates is not saved, and no upload
 follows because the file is no longer pending (`master` as of 2026-10-06;
 read from the code, not run). The React renderer keeps such a file and uploads
-it again after the submit.
+it again after the submit. `deviation:draft-join-file-reupload`
 
 ## Tabs
 
 **A tab's title becomes a tooltip on its panel.** afTab reads `title` as a
 binding but leaves the attribute on `<af-tab>`, so hovering anywhere in the
-panel shows the tab's title. The React renderer drops the attribute.
+panel shows the tab's title. The React renderer drops the attribute. `deviation:tab-title-no-tooltip`
 
 **Nested tab panels in `crm-ui-tab-set`.** `crmUi/tabset.html` gives the
 wrapper around all panels `role="tabpanel"`, and jQuery UI gives each panel
 the same role, so every panel is a tab panel inside another one. The React
-renderer leaves the wrapper without a role.
+renderer leaves the wrapper without a role. `deviation:tabset-wrapper-no-role`
 
 **A link inside each tab.** jQuery UI makes each `<li>` of `crmUi/tabset.html`
 the tab (`role="tab"`) and leaves the `<a href>` in it focusable by click
@@ -366,13 +401,13 @@ a link inside too. Every tab therefore holds a nested interactive element (axe
 `nested-interactive`, measured on 6.18.1 for both tab sets). The React renderer
 makes the link the tab, inside an item with `role="presentation"` that keeps
 jQuery UI's classes, as `afTabset.html` does on `master`
-([`f7156dc5f0`](https://github.com/civicrm/civicrm-core/commit/f7156dc5f0)).
+([`f7156dc5f0`](https://github.com/civicrm/civicrm-core/commit/f7156dc5f0)). `deviation:tab-link-is-tab`
 
 **A required field in a hidden tab blocks submit silently.** afTab hides its
 panel with `ng-show`; the browser refuses to submit while a control in it is
 invalid and cannot point at it, so nothing visible happens. The React
 renderer selects that tab first, and the browser shows its message at the
-field.
+field. `deviation:hidden-tab-invalid-field`
 
 **A later tab does not open while the current one has an invalid field.**
 From 6.19 `selectTab()` in `afTabset.component.js` refuses to move forward
@@ -380,7 +415,7 @@ while the open tab holds an `.ng-invalid` control, also in a tab set without
 `page-nav-buttons` and for a required field nobody has touched yet. The click
 does nothing and says nothing (measured on 6.19.0, `tabs.spec.ts`). The React
 renderer opens the tab; submit and Next check the fields and show the
-browser's message at the first invalid one.
+browser's message at the first invalid one. `deviation:later-tab-opens-invalid`
 
 **`url-arg` loses to a literal `selected-tab`.** `afTabset.component.js`
 (6.19) binds `selected-tab` two-way (`=?`) and `$onInit` overwrites
@@ -389,7 +424,7 @@ the first digest's binding watch finds the child changed, resets it to the
 literal and throws `nonassign` (`initializeDirectiveBindings` in AngularJS
 1.8): the URL's tab is dropped with a console error (read from the code, not
 run). The React renderer opens the URL's tab and starts on `selected-tab`
-only without one.
+only without one. `deviation:url-arg-over-selected-tab`
 
 ## Checkout
 
@@ -400,14 +435,14 @@ its id, which collides when a form shows the block twice; a screen reader
 reads the card number input as unnamed. The select templates also set the
 literal `name='field.name'`. The React renderer ties each label to its
 control, names the expiry pair as a group and names each control after its
-field (read from the code of 6.18.1).
+field (read from the code of 6.18.1). `deviation:checkout-labels-tied`
 
 **Billing state after a change of country.** The billing state select keeps
 the state chosen for the previous country, and a country without states shows
 "- please wait -" for good, since the fetched empty list counts as not loaded
 (`afCheckoutBlock.component.js`, read from 6.18.1). The React renderer empties
 the state with the country, and a country without states frees the required
-select.
+select. `deviation:billing-state-follows-country`
 
 ## Search displays
 
@@ -423,26 +458,26 @@ the four rows until the next filter change. The guard came with dev/core#5965
 next run has started. Present on 6.18; fixed on `master` (6.20) in
 [civicrm-core#37253](https://github.com/civicrm/civicrm-core/pull/37253).
 React asks for the count with the rows, keyed by the same filters, so a count
-never outlives its filters; the tour video shows both.
+never outlives its filters; the tour video shows both. `deviation:row-count-keyed-filters`
 
 **A space before the comma in linked lists.** SearchKit's `colType/link.html`
 leaves whitespace between each linked value and its comma, so a multi-valued
 link column reads "German , French". Fixed on `master` (6.20) in
 [`6cbc2bab82`](https://github.com/civicrm/civicrm-core/commit/6cbc2bab82). The
 React renderer writes the fixed markup; on 6.19 and older the Angular table
-still shows the space.
+still shows the space. `deviation:link-list-comma-space`
 
 **Search labels stay in the page title.** A search display adds the labels of
 its filters to the title of a search page (`searchDisplayBaseTrait`, afCore's
 `addTitle`), but only when there are any, so clearing the filter keeps the old
-labels in the title. The React renderer shows the plain title again.
+labels in the title. The React renderer shows the plain title again. `deviation:title-labels-cleared`
 
 **"Column undefined" in the column picker.** `getColumnToggleLabel()` numbers
 a column without label or key with `col.index`, which nothing sets
 (`crmSearchDisplayTable.component.js:187`), so such a column is listed as
 "Column undefined", and a saved filter set stores that label. React numbers it
 by position ("Column 3"); a set saved by Angular for such a column therefore
-does not match it in React.
+does not match it in React. `deviation:column-picker-position-label`
 
 **List, grid and tree displays.** Read from the source of `master` as of
 2026-10-05 (`ext/search_kit/ang/crmSearchDisplayTree/`,
@@ -450,24 +485,24 @@ does not match it in React.
 - *The tree drops rows whose parent is filtered out.* `sortTree()` keeps at the
   top level only rows without a parent value, so a row whose parent is not in
   the results (another page, a filter) is not shown at all. React shows it at
-  the top level.
+  the top level. `deviation:tree-orphans-top-level`
 - *Every reload closes the tree again.* `sortTree()` sets `collapsed` from
   `collapsible: closed` on each run, so a popup form's save or a new filter
-  closes the branches the user opened. React keeps them open.
+  closes the branches the user opened. React keeps them open. `deviation:tree-branches-stay-open`
 - *The tree's toggle has no name or state.* The button holds an icon and the
   child count, which the theme hides while the branch is open, and no
   `aria-expanded` (`crmSearchDisplayTreeLeaf.html`). React names it
-  "%1 sub-items" and sets `aria-expanded` on every button with children.
+  "%1 sub-items" and sets `aria-expanded` on every button with children. `deviation:tree-toggle-name-state`
 - *Focus is lost on a reload.* All three types replace their items with
   loading placeholders, so a focused link or editor in an item is removed and
   focus falls to the page. React returns it to the same control in the same
-  row once the rows are back.
+  row once the rows are back. `deviation:display-focus-across-reload`
 - *A section header for 0 reads "(none)".* The header templates show
   `row.groupHeader || ts('(none)')` (`crmSearchDisplayListHeader.html`, its grid
-  twin). React shows the value and keeps "(none)" for empty ones.
+  twin). React shows the value and keeps "(none)" for empty ones. `deviation:section-header-zero`
 - *A multi-valued field starts a section on every row.* `groupRows()` compares
   values with `!==`, and each row's list is a separate array. React compares
-  them by content.
+  them by content. `deviation:section-lists-by-content`
 
 ## Editing and drag ordering
 
@@ -479,38 +514,38 @@ does not match it in React.
   cell stays a loading placeholder until the next search, and the typed value
   is lost; the error shows only as a status notice (`crmStatus`). React opens the editor
   again with the typed value and the error, marked `aria-invalid`, and
-  announces "Not saved" in a live region.
+  announces "Not saved" in a live region. `deviation:inline-edit-failed-save-reopens`
 - *Enter anywhere on the page saves.* The editor listens for keys on the
   document (`crmSearchDisplayEditable.component.js:47-55`): Enter in a filter
   field or another form saves the open edit, Escape anywhere cancels it. React
-  listens on the editor only.
+  listens on the editor only. `deviation:inline-edit-keys-on-editor`
 - *An emptied required field fails with "Inline edit failed."* Enter calls
   `save()` without the form's validation. The server skips an empty value for
   a field that cannot be emptied and, with nothing left to do, throws
   (`Civi/Api4/Action/SearchDisplay/InlineEdit.php:89-91, 119-121`), which
   then ends in the placeholder above. React marks the input `required` and
-  checks it before sending.
+  checks it before sending. `deviation:inline-edit-required-checked`
 - *Unchanged lists are saved.* `save()` compares with `!==` (line 73), and the
   value and its starting copy are separate arrays, so a multi-select saves
-  even when nothing changed. React compares by value.
+  even when nothing changed. React compares by value. `deviation:inline-edit-compare-by-value`
 - *Totals stay stale.* `refreshAfterEditing()` replaces the row only, so the
-  totals row keeps the old sums and counts. React asks for the totals again.
+  totals row keeps the old sums and counts. React asks for the totals again. `deviation:inline-edit-refreshes-totals`
 - *Editing needs a mouse.* An editable value is a `<span>` with `ng-click`,
   without role or tab stop (`colType/editable.html:10-15`). React makes it a
   button in the tab order with an "Edit <column>" name, opens it with Enter,
-  Space or F2, and returns focus to it when the editor closes.
+  Space or F2, and returns focus to it when the editor closes. `deviation:inline-edit-keyboard-button`
 
 **Full-row editing marks every cell of the row as editing.** `startEditing()`
 sets `editing` on every column when `editableRow.full` is on, so the
 `crm-search-field-editing` class lands on cells that hold no editor. React
-marks the editable cells only.
+marks the editable cells only. `deviation:full-row-editing-class`
 
 **Dragging a row of a hierarchical table leaves its sub-rows behind.** The
 table's `draggableOptions` move the row alone through the flat result list
 and give it the weight of whatever row it displaces, even one under another
 parent; a weight from another sibling group then puts it at an arbitrary place
 among its own siblings, which core renumbers around it. React moves the row
-with its sub-rows and only among its siblings.
+with its sub-rows and only among its siblings. `deviation:tree-table-drag-with-subrows`
 
 **The "Add" row of `editableRow.create` throws per input.** The row's inputs
 run `crmSearchDisplayEditable` without a row, and its `$onInit` reads
@@ -528,14 +563,14 @@ save the table shows an order that is not stored until the next reload. A
 second drag before the first answer sends the displaced row's old weight,
 which can store a different order than the one shown. Read from the code on
 6.18 and `master` (2026-10-05). The React renderer puts the rows back and shows
-the error, and offers no drag while a save runs.
+the error, and offers no drag while a save runs. `deviation:drag-sort-failure-restores`
 
 **The weight column keeps the old numbers after a drag.**
 crmSearchDisplayTable writes the weights `inlineEdit` returns into its rows
 and replaces the column object "to trigger an Angular view refresh", but the
 cell is repeated `track by $index` and keeps its text, so a moved row shows
 its old weight until the next reload. Measured on CiviCRM 6.18 with the
-drag-to-reorder browser spec. The React renderer shows the returned weights.
+drag-to-reorder browser spec. The React renderer shows the returned weights. `deviation:drag-weights-shown`
 
 ## Bulk actions
 
@@ -545,22 +580,22 @@ so:
 - A batch that fails after earlier batches were applied leaves the table and
   the selection as they were (`crmSearchTaskApiBatch.ctrl.js` `onError`
   cancels the dialog), so the rows show stale values. React reloads the table
-  and clears the selection whenever a batch was sent.
+  and clears the selection whenever a batch was sent. `deviation:bulk-failed-batch-reloads`
 - The error alert shows the task's `errorMsg` in place of the server's
-  message whenever the task has one. React shows both.
+  message whenever the task has one. React shows both. `deviation:bulk-error-both-messages`
 - Selecting all pages has no error handler
   (`searchDisplayTasksTrait.service.js` `selectAllPages`): the checkboxes stay
-  disabled with no message. React shows the error and enables them again.
+  disabled with no message. React shows the error and enables them again. `deviation:bulk-select-all-error`
 - A failed `getSearchTasks` leaves an empty actions menu with no message
-  (`getMetadata`). React shows the error.
+  (`getMetadata`). React shows the error. `deviation:bulk-task-list-error`
 - A redirect task's query is replaced by its data expression (`doTask`:
   `query && $eval(query) && $eval(data)`), so `reset=1` is lost. React merges
-  query and data.
+  query and data. `deviation:redirect-task-query-merged`
 - A row link to a task the server does not return opens the API batch dialog
   without an `apiBatch`, which throws (`onClickLink`). React alerts that the
-  task is not offered.
+  task is not offered. `deviation:row-link-task-not-offered`
 - The row checkboxes have no label (`crmSearchDisplayTableBody.html`). React
-  labels each with the row's first column.
+  labels each with the row's first column. `deviation:row-checkbox-label`
 
 **The download dialog never ends a failed download.** `crmSearchTaskDownload`
 posts the file request without a rejection handler, so a server error leaves
@@ -569,7 +604,7 @@ the bar at 90 % and the dialog open, with its title-bar close button hidden
 Download buttons are disabled by `$ctrl.run`, which that controller never
 sets, so a second click starts a second download; Cancel and Escape still
 close the dialog. The React renderer shows the server's error and closes the
-dialog, and disables the buttons while the file loads.
+dialog, and disables the buttons while the file loads. `deviation:download-failure-closes`
 
 **The tag dialog offers no tags on a contact-type search.** `crmSearchTaskTag`
 queries `Tag.get` with `used_for:name CONTAINS <entity>` and saves
@@ -577,14 +612,14 @@ queries `Tag.get` with `used_for:name CONTAINS <entity>` and saves
 `api_entity`. Tags are used for "Contact", so a search of Individuals,
 Organizations or Households lists no tags at all (run on 6.18.1: the select2
 holds no data). The React renderer looks tags up for "Contact" on any
-contact-type search, and the EntityTag rows name that table.
+contact-type search, and the EntityTag rows name that table. `deviation:tag-task-contact-types`
 
 **A failed relationship batch leaves its dialog hanging.** `crmSearchTaskRelationship.js`
 defines no `onError`, yet the template binds the batch runner's `error` to
 `$ctrl.onError(error)`; the Angular expression swallows the missing function,
 so a rejected `Relationship.save` shows nothing and the dialog stays on
 "Adding relationships..." (read from the code, not run). The React renderer
-alerts with the server's message and closes the dialog.
+alerts with the server's message and closes the dialog. `deviation:relationship-batch-failure-alerts`
 
 **A preset relationship type breaks core's dialog.** `crmSearchTaskRelationship.js`
 calls `this.onChangeRelationship()` for a `relationship_type` a
@@ -592,14 +627,14 @@ calls `this.onChangeRelationship()` for a `relationship_type` a
 function, so the dialog throws a TypeError and shows neither the contact
 field nor the type's fields (read from the code, not run). The React renderer
 starts from the preset type, contact and field values, with the type locked
-when `disableRelationshipSelect` is set.
+when `disableRelationshipSelect` is set. `deviation:relationship-preset-type`
 
 **The open case dialog's Save needs no lookup.** `civiCaseTaskOpenCase.ctrl.js`
 never sets `existingCount`, yet its template disables Save on
 `$ctrl.existingCount === null`, so Save is enabled before `CaseContact.get`
 answers; a click then throws a TypeError on `existingCaseContacts.includes`
 (read from the code, not run). The React renderer enables Save once the
-fields and the lookup are loaded.
+fields and the lookup are loaded. `deviation:open-case-save-waits-lookup`
 
 **A failed open case batch leaves its dialog hanging.** As with the
 relationship dialog, `civiCaseTaskOpenCase.ctrl.js` defines no `onError`
@@ -607,20 +642,55 @@ while its template binds the batch runner's `error` to `$ctrl.onError(error)`,
 so a rejected `Case.save` or `Case.create` shows nothing and the dialog stays
 on "Opening case..." (read from the code, not run). The React renderer keeps a
 failed joint case in the dialog with the server's message and alerts for a
-failed batch.
+failed batch. `deviation:open-case-batch-failure`
 
 **A failed assign role batch leaves its dialog hanging.** `civiCaseTaskCaseRole.ctrl.js`
 defines no `onError` either, while its template binds the batch runner's
 `error` to `$ctrl.onError(error)`, so a rejected `CaseContact.get` with its
 chained `Relationship.create` shows nothing and the dialog stays on "Adding
 roles..." (read from the code, not run). The React renderer alerts with the
-server's message and closes the dialog.
+server's message and closes the dialog. `deviation:case-role-batch-failure-alerts`
 
 **Skipping every contact still starts the open case batch.** `submit()` in
 `civiCaseTaskOpenCase.ctrl.js` cancels the dialog when no contact is left but
 does not return, so `start()` runs and hides the title bar buttons of every
 open jQuery UI dialog (read from the code, not run). The React renderer closes
-the dialog and sends nothing.
+the dialog and sends nothing. `deviation:skipped-contacts-send-nothing`
+
+**The add grant dialog shares the open case dialog's faults.** `civiGrantTaskAddGrant.ctrl.js`
+never sets the `existingCount` its Save button waits for, defines no `onError`
+for the batch runner's `error` binding, and starts the batch after cancelling
+when every contact is skipped (read from the code, not run). The React
+renderer handles these as in the open case dialog above. `deviation:grant-dialog-case-fixes`
+
+**The add grant dialog counts grants as contacts.** `civiGrantTaskAddGrant.ctrl.js`
+keeps one `contact_id` per existing grant and words its warning from that
+list's length, so one contact with two grants reads "2 contacts already have
+grants." (read from the code, not run). The React renderer counts each contact
+once. `deviation:grant-count-contacts-once`
+
+**The merge tags dialog hangs when no selected tag is left.**
+`crmSearchTaskTagMerge.ctrl.js` reads `tags[0].id` without checking that
+`Tag.get` returned a row, so tags deleted since the selection throw in the
+promise and leave the spinner turning (read from the code, not run). The React
+renderer says that none of the selected tags exists any more. `deviation:tag-merge-none-left`
+
+**The add translation dialog swallows a failed lookup and leaves its fields
+unlabelled.** `AddTranslation.js` gives its `crmApi4` call no error handler, so
+a failure leaves an empty dialog without a message, and `AddTranslation.html`
+puts "Message Template" and "Locale" in `<label>`s tied to no field (read from
+the code, not run). The React renderer shows the error, labels the title field
+and names the locale radios as a group. `deviation:translation-dialog-labels-errors`
+
+## ReCaptcha
+
+**A used reCAPTCHA response is sent again.** `crmRecaptcha2.component.js`
+keeps the widget's response after a failed submission and after the response
+expires, while Google accepts a response only once and only for two minutes,
+so every further attempt fails with "Please go back and complete the CAPTCHA"
+until the visitor ticks the box anew, which the widget does not ask for (read
+from the code, not run). The React renderer drops an expired response and
+resets the widget after a failed submission. `deviation:recaptcha-response-once`
 
 ## Batch display
 
@@ -629,72 +699,72 @@ adds the amounts as JavaScript numbers in `getTally()` and compares the sum
 with the target by `==`, so two rows of 10.1 and 20.2 against a target of 30.3
 show the total in red and ask "Total Amount value 30.299999999999997 does not
 match expected 30.3" before the import (seen in `batch.spec.ts`). The React
-renderer rounds the sum to 15 significant digits and imports without asking.
+renderer rounds the sum to 15 significant digits and imports without asking. `deviation:batch-tally-exact`
 
 **The new batch's Name label points nowhere.** `crmSearchDisplayBatch.html`
 labels the name with `for="crm-create-new-batch-name"`, but the input's id is
 `crm-create-new-batch-label`, so the field has no accessible name and a click
 on the label does nothing (`batch.spec.ts` finds Angular's input by id). The
-React renderer labels it.
+React renderer labels it. `deviation:batch-name-label`
 
 **A failed batch save drops the changes.** `saveRows()` empties the unsaved
 rows before the save and ignores a rejection, so the edits are neither kept
 for the next save nor reported, and the import then runs on the old rows
 (read from the code, not run). The React renderer keeps the rows unsaved and
-shows the server's message.
+shows the server's message. `deviation:batch-save-failure-keeps-rows`
 
 **A removed batch row can come back.** `deleteRow()` takes the row out of the
 table before `Import.delete` answers and ignores a rejection, so a failed
 delete leaves the row in the import, hidden until a reload (read from the code,
-not run). The React renderer removes the row once the delete succeeds.
+not run). The React renderer removes the row once the delete succeeds. `deviation:batch-delete-then-remove`
 
 **Copying a batch column leaves its formulas stale.** `copyCol()` writes the
 value into every row and the import table, but recomputes no formula, so
 copying a fee keeps every other row's net amount as it was (read from the code,
-not run). The React renderer recomputes the formulas of every row.
+not run). The React renderer recomputes the formulas of every row. `deviation:batch-copy-recomputes-formulas`
 
 **A formula adds strings.** `onChangeData()` evaluates `[a] + [b]` on the
 values as stored, and a text input stores strings, so a formula with `+` joins
 them (`"10" + "5"` is `"105"`); core's only formula, the net amount, subtracts
 and is not affected (read from the code, not run). The React renderer computes
-on numbers.
+on numbers. `deviation:batch-formula-numbers`
 
 **Required batch values are checked on one page only.** `doImport()` asks the
 Angular form whether it is valid, and the form holds only the inputs of the
 current page (`resultsPage`), so an empty required value on another page of a
 batch longer than the display's limit passes into the import (read from the
 code, not run). The React renderer checks every row and moves to the first
-row missing a value.
+row missing a value. `deviation:batch-required-every-page`
 
 **A failed batch create or import hangs.** `createNewBatch()` and
 `runImport()` handle no rejection, so a failed `createBatch` leaves the button
 spinning and a failed `importBatch` leaves the display blocked without a
 message (read from the code, not run). The React renderer shows the server's
-message and lets the user try again.
+message and lets the user try again. `deviation:batch-create-import-failure`
 
 **The batch import can miss the last edits.** `saveRows()` hands back the save
 already running, which holds only the rows changed before it started, and
 `runImport()` calls `importBatch` once that save answers. An edit made while
 an autosave runs is then left out of the import (read from the code, not run).
-The React renderer saves again until no edit is left, then imports.
+The React renderer saves again until no edit is left, then imports. `deviation:batch-import-after-last-save`
 
 **Leaving a batch drops its unsaved edits.** `$onDestroy` only cancels the
 autosave timer, and nothing asks before the page is left, so the edits of up
 to the last 10 seconds are lost on navigation (read from the code, not run).
 The React renderer asks before the page is left with unsaved rows and saves
-them when the display closes.
+them when the display closes. `deviation:batch-unsaved-on-leave`
 
 **A display-only batch column with a joined or suffixed key shows nothing.**
 `crmSearchDisplayBatchBody.html` writes `row.data[col.key]`, but the rows are
 keyed by the import column, `Meta::createSqlName()`, which strips the `:label`
 suffix and munges dots to underscores (read from the code, not run). The React
-renderer reads the import column (`col.spec.name`).
+renderer reads the import column (`col.spec.name`). `deviation:batch-display-only-import-column`
 
 **A batch formula over a joined entity computes 0.** `onChangeData()` reads
 each formula field as `data["<join>.<field>"]`, while the row is keyed by the
 munged import column (`<join>_<field>`), so every field reads 0 (read from the
 code, not run). The React renderer reads each field from the column showing
-it.
+it. `deviation:batch-formula-joined-columns`
 
 ## Chart display
 
@@ -703,12 +773,12 @@ it.
 run and reload stay, and so does the `crmFormSuccess` handler bound on the
 enclosing form, so a removed chart still searches and draws into a detached
 node (read from the code, not run). The React renderer clears the timers when
-it removes the chart; the form handler is bound anonymously and stays.
+it removes the chart; the form handler is bound anonymously and stays. `deviation:chart-removed-clears-timers`
 
 **An empty filter list breaks a chart's search.** `getJsonAttribute()` returns
 a value without `{` as the raw string, so a `filters` of `[]`, the server's
 empty filters, is spread as `{0: "[", 1: "]"}` into `SearchDisplay.run` (read
-from the code, not run). The React renderer hands an empty list over as `{}`.
+from the code, not run). The React renderer hands an empty list over as `{}`. `deviation:chart-empty-filters-object`
 
 **A chart on a contact summary tab throws.** `initializeDisplay()` looks the
 tab up with `querySelector(id + ' [search][display]')`, missing the `#`, so the
@@ -732,21 +802,21 @@ shows the button when `axis.multiColumn || !$ctrl.getAxisColumnSlots(axisKey).le
 but the controller defines no `getAxisColumnSlots`, so Angular evaluates it as
 undefined and the button shows on every axis (`chartKitAdminColumns.html`). A
 second column on a single-column axis is saved but skipped by the editor and
-the chart. The React editor offers "Add field" only on a multi-column axis or one without a column.
+the chart. The React editor offers "Add field" only on a multi-column axis or one without a column. `deviation:chart-add-field-full-axis`
 
 **A changed scale type keeps settings it no longer offers.** chart_kit's column
 editor picks the first option of each setting only when the field changes;
 switching the scale type to categorical narrows Stat Type to count and list
 but leaves a stored `sum`, which Angular shows as a blank option and the chart
 still applies. The React editor re-picks every setting whose stored value the
-column no longer offers.
+column no longer offers. `deviation:chart-scale-type-repicks`
 
 **Old chart settings crash the editor.** `legacySettingsAdaptor()` calls
 `settings.columns.find()` on pie and row charts and indexes `columns` with
 `chartOrderColIndex` unchecked, so a pie stored without columns, or an order
 index past the last column, throws a TypeError and the editor stays empty
 (read from the code, not run). The React editor hands the adaptor an empty
-column list and drops an order index that names no column.
+column list and drops an order index that names no column. `deviation:chart-legacy-settings-guarded`
 
 ## Accessibility and themes
 
@@ -799,6 +869,16 @@ mode Minetta's badges (`.crm-container .badge`: `--crm-primary-text-color` on
 search builder's "Where" clause badges fail in core's editor and in React's,
 measured with axe on 6.19.0 (civikitchen image of 2026-10-11).
 
+**FormBuilder's "View Page" link fails contrast in light mode.** The link
+sits in the canvas heading with the theme's link colour, `#2c789b` on
+`#d5d5d5`, about 3.4:1 where 4.5:1 is required (Minetta, axe on 6.19). React
+gives it the colour of the tab labels beside it. `deviation:view-page-link-contrast`
+
+**In-place edit placeholders fail contrast.** `crmUI.css` shows the
+placeholder of an empty `crm-ui-editable` (a container without a title, say)
+in `#9a9a9a`, 2.8:1 on white (6.19). React shows it in the text colour,
+in italics. `deviation:editable-placeholder-contrast`
+
 ## SearchKit builder
 
 **A new autocomplete display searches by description.** When it sets up a
@@ -806,49 +886,49 @@ new autocomplete display, core adds `description` to the entity's
 `search_fields` array in the admin metadata instead of to a copy, so the
 default search fields of that display and of every later one on the page
 include `description`, even for entities without such a field. afreact
-searches by `id` and the entity's own search fields.
+searches by `id` and the entity's own search fields. `deviation:autocomplete-search-fields`
 
 **DB entity names lose their word breaks.** Before 6.20 the DB entity editor
 derives the API name with `_.capitalize(_.camelCase())`, which lowercases all
 but the first letter ("my members" becomes `Mymembers`). afreact derives it as
-core's later `CRM.utils.pascalCase()` does (`MyMembers`).
+core's later `CRM.utils.pascalCase()` does (`MyMembers`). `deviation:db-entity-pascal-case`
 
 **Changing a subsearch filter removes it.** The subsearch column editor
 should remove a filter when its field is cleared, but `onChangeFilter()` tests
 `filter.field` while filters store `subsearch_field`, so every change of the
-field deletes the row. afreact removes a filter only when its field is cleared.
+field deletes the row. afreact removes a filter only when its field is cleared. `deviation:subsearch-filter-change`
 
 **Import reports calls as records.** The import dialog's success message
 counts the API calls of the bundle, not the records they save, so a bundle
 with one search and three displays reports two items. afreact counts the
-saved records.
+saved records. `deviation:import-counts-records`
 
 **Import checks only the first display.** Before importing, core looks up
 whether a display already exists only for the first SearchDisplay record's
 search; displays of further searches in the same bundle are not checked and
 collide on save. afreact checks every display against its own search, matching
-exact search and display name pairs.
+exact search and display name pairs. `deviation:import-checks-every-display`
 
 **Listing accessibility.** Core's saved-search listing nests the count badge
 links inside the tab links (`nested-interactive`), labels its filter inputs
 only by `title` (`label-title-only`), and leaves the actions column header
 empty (`empty-table-header`). afreact renders tabs as a `tablist` with arrow
-keys, visible filter labels and a named actions header.
+keys, visible filter labels and a named actions header. `deviation:search-listing-a11y`
 
 **Segment items reorder only by mouse.** The segment editor sorts items by
 drag and drop with no keyboard path. afreact adds move-up and move-down
-buttons per item.
+buttons per item. `deviation:segment-item-move-buttons`
 
 **Removing a column leaves its sort and having behind.** The editor's
 `onChangeSelect()` should drop a removed column from `orderBy` and `having`,
 but the watcher calls it without the old and new select, so nothing is pruned
 and the next run sorts or filters by a column that no longer exists. afreact
-prunes both when a column goes.
+prunes both when a column goes. `deviation:removed-column-prunes-sort`
 
 **Selected columns stay selectable.** `fieldsForSelect()` passes a
 `disabledIf` callback without a `return`, so fields already in the select
 are never disabled; picking one does nothing because `addParam()` skips
-duplicates. afreact leaves selected columns out of the list.
+duplicates. afreact leaves selected columns out of the list. `deviation:selected-columns-not-offered`
 
 **A join inside a combined search breaks the union.** In a search that
 combines several entities, adding a join to one set appends the joined
@@ -856,11 +936,274 @@ entity's search fields to that set's columns only, so the sets no longer
 select the same number of columns and the union fails; removing such a join
 shifts that set's remaining columns into the wrong rows. afreact keeps each
 set's columns in their rows: a join adds no columns there, and a removed
-column leaves an empty cell.
+column leaves an empty cell. `deviation:union-join-keeps-rows`
 
 **An empty default on a number column becomes 0.** When the data entry
 editor renders a column's default value, `crm-search-input` converts it to
 the field's data type with `Number()`, so an empty default of an Integer or
 Float field that is not an ID or a reference turns into `0`, and text such
 as `abc` into `NaN`, which the save stores as `null`. afreact converts
-numeric text only and keeps an empty or non-numeric default as it is.
+numeric text only and keeps an empty or non-numeric default as it is. `deviation:number-default-kept`
+
+## FormBuilder
+
+**The "New Submission Form" choices are not sorted.** `afAdminListMenu`
+sorts the primary entities with `_.sortBy(links, 'Label')`, a key the links
+lack (they carry `label`), so the choices keep the order of afform_admin's
+entity metadata (6.19, read from the code and seen in the listing). React
+sorts them by label. `deviation:new-form-choices-sorted`
+
+**The content block is not always first among the "New Field Block" choices.**
+`afAdminListMenu` sorts the content block under the key `'0'` among the
+entity labels, so a label starting with a space or punctuation sorts before
+it (6.19, read from the code, not run). React always puts it first, then
+the others by label in the same code unit order. `deviation:content-block-first`
+
+**A search without a display label shows "null".** The "New Search Form"
+choices join the search's label and `display.label`, which reads
+"Label: null" for a display without a label (6.19, read from the code, not
+run). React shows the search's label alone. `deviation:search-display-label-null`
+
+**A failed load of the "New Search Form" choices spins forever.**
+`afGui.getAllSearchDisplays()` never rejects its promise, so when
+`SavedSearch.get` fails the menu keeps its spinner (6.19, read from the
+code, not run). React shows the error and loads again on the next opening. `deviation:search-choices-load-error`
+
+**An unknown form shows an empty submissions page.**
+`CRM_AfformAdmin_Page_Submissions` reads the title of the form that `name`
+names without checking that one was found, so a misspelt name, or a form
+the user may not see, gives the title "Submissions for " with a PHP warning
+and an empty table (6.19, seen on the dev stack). React says that no such
+form exists that the user may see. `deviation:unknown-form-submissions`
+
+**Two packaged contact tabs ignore their contact type filter.**
+civicrm_admin_ui's `afformTabMember` and `afsearchTabMember` store
+`placement_filters` as a list (`[['contact_type' => 'Organization']]`, and
+`[['contact_type' => 'Individual', 'Household']]`), while the placements read
+`placement_filters['contact_type']`, so both tabs show on every contact type
+(6.19, read from the code). The editor then drops such a list on any save:
+it replaces every list with an empty object. React keeps a filled list as it
+is, says that the placements ignore it, and replaces it only when a filter is
+chosen. `deviation:placement-filters-list`
+
+**The navigation menu item's title has no label.** `config-form.html` gives
+its input only the placeholder "Title", so a screen reader reads it with the
+same name as the form's title and the name disappears once text is typed
+(6.19, read from the code and seen on the dev stack). React keeps the
+placeholder and names the input "Menu item title". `deviation:menu-item-title-label`
+
+**The conditional rules dialog lists a field twice.** `afGui.getFormElements()`
+keeps the matches of the previous element's children when the next element
+has neither children nor a block, so with a container holding field A
+followed by field B, A is offered twice in the field selector (6.19, read
+from the code, not run). React lists each placed field once. `deviation:condition-fields-once`
+
+**The conditional rules are stored doubly escaped.** The dialog writes the
+rule's quotes as `&quot;`, which the save escapes again to `&amp;quot;`; the
+runtime and `FormDataModel` decode both levels, so nothing breaks, but the
+stored markup differs from hand-written forms (6.19, seen with
+`Afform.convert`). React reads both and writes plain JSON, stored with
+single escaping. `deviation:condition-rules-plain-json`
+
+**An opened form counts as unsaved.** The undo history starts with the loaded
+form marked saved, but `editor.afform` changes again while the editor draws
+it, and the deep watcher records that as a first, unsaved step. A form opened
+from the listing so shows "Save" instead of "Saved", with Undo enabled and the
+browser's warning on leaving the page, though the user changed nothing (6.19,
+seen on `afformQuickAddIndividual`). React shows "Saved" until the first edit. `deviation:opened-form-saved`
+
+**Editor tabs hold controls inside the tab.** The palette marks each `<li>` as
+the tab and puts the active entity's label editor (`crm-ui-editable`) inside
+its link; the tab set puts each tab's gear button inside the tab's link (axe
+`aria-tab-name` on 6.19; a tab's content is presentational, so the nested
+control is lost to assistive technology). React renders each tab as a link
+with `role="tab"`, keeps the label editor beside the tab list and the tab
+set's gear menu, for the active tab, at the end of the tab bar. `deviation:editor-tab-controls-outside`
+
+**Ctrl-Shift-Z does not redo.** The editor's `onKeyup()` compares `e.key`
+with `'z'`, but with Shift held the key is `Z`, so the shortcut does nothing
+(6.19, read from the code, not run). React compares the key case-blind and
+redoes on Ctrl-Shift-Z. `deviation:redo-shift-z`
+
+**Ctrl-Z in a text input undoes the form.** `onKeyup()` listens on the window
+without looking at the event's target, so Ctrl-Z in a title, a placeholder or
+the markup editor reverts the whole form a step besides undoing the typing
+(6.19, read from the code, not run). React ignores the keys in inputs,
+textareas, selects and editable text, which keep the browser's own undo. `deviation:undo-keys-outside-inputs`
+
+**Undo during markup editing keeps the stale markup.** Undo and redo stay
+enabled while the markup is being edited; `changeHistory()` switches to the
+layout tab without leaving edit mode, so the edited markup stays pending and
+the next save applies it over the undone form (6.19, read from the code, not
+run). React disables undo and redo while the markup is being edited. `deviation:undo-off-while-markup`
+
+**Edits made during a save count as saved.** When `Afform.save` returns,
+`doSave()` marks the snapshot current at that moment as saved, which includes
+edits made while the request ran; the button shows "Saved" and leaving the
+page gives no warning, though those edits were never sent (6.19, read from
+the code, not run). React marks the state it sent as saved; later edits stay
+unsaved. `deviation:save-keeps-later-edits`
+
+**Entities added in the markup arrive without metadata.** Applying edited
+markup rebuilds the editor's entities and search displays from the layout,
+but unlike `addEntity()` and `addSearchDisplay()` never calls
+`Afform.loadAdminData`, so a new entity type has no fields in the editor and
+a new display no settings (6.19, read from the code, not run). React loads
+the metadata of every entity type and display on the form that lacks it. `deviation:markup-entities-load-meta`
+
+**Extra fields all get the same name.** `afGuiElements` looks for names in use
+in `editor.afform.layout['#children']`, but the layout is an array without
+that key, so every new extra field of a type gets the same name, such as
+`text1`, and two such fields submit under one name (6.19, read from the code,
+not run). React numbers each new extra field past the names on the form. `deviation:extra-field-unique-name`
+
+**Changing placements duplicates display filters.** `onChangePlacement()`
+tests `key in filterValues` on an array, which checks indexes, not values, so
+each change of the placement adds every placement entity's default filter to
+the search displays again (6.19, read from the code, not run). React adds a
+default filter only for a placement entity that has none. `deviation:placement-filter-once`
+
+**The locale setting has no label.** On multilingual sites the settings tab
+labels the locale with `afform_fields.afform_locale.title`, but the Afform
+field is `locale`, so the label and its help title are empty and only the
+required marker shows (6.19, read from the code, not run). React labels it
+with the `locale` field's title. `deviation:locale-setting-label`
+
+**Behaviors on a block's tab are not saved.** `afGuiEntity` shows the entity's
+behaviors, such as autofill, on a block's entity tab too, but a block's entity
+is a stand-in that is not in the layout, so a chosen mode is dropped (6.19,
+read from the code, not run). React shows behaviors only for entities on a
+form. `deviation:behaviors-only-on-forms`
+
+**The relationship autofill cannot be cleared.** The default behavior template
+lets a behavior without a default mode be cleared (`allowClear`), but the
+autofill template, which replaces it for contacts, leaves that out, and none of
+its modes means "none", so a chosen autofill can only be swapped for another
+(6.19, read from the code, not run). React lets the autofill be cleared. `deviation:relationship-autofill-clearable`
+
+**Placement entities without a filter show an empty row.** The settings tab
+renders a filter row for every placement entity, also one without a type
+field to filter by (a placement for such an entity added by an extension), so
+an unlabelled, empty select appears (6.19, read from the code, not run).
+React renders rows only for entities with a filter. `deviation:placement-rows-with-filter`
+
+**"Save as block" fails outside a fieldset.** The container menu offers "Save
+as block" for a container outside any fieldset, but `saveBlock()` then calls
+`getFieldEntityType()` without a field key, which throws on
+`fieldKey.substr()`, and nothing happens (6.19, read from the code, not run).
+React saves such a block for any entity type (`*`). `deviation:save-block-any-entity`
+
+**The block toggle can name the wrong value.** `getButtonText()` of the
+multiple/single toggle returns `false` from a `forEach` to stop at the first
+unique field with a value, which does not stop it, so a block whose data sets
+two such fields (from markup) is named after the last (6.19, read from the
+code, not run). React names the first. `deviation:block-toggle-first-value`
+
+**Saving a form stores the admin's translations in place of `ts()`.** The
+editor loads the layout `shallow`, evaluates each `js` attribute with
+`$parse(…)({ts: CRM.ts('afform')})` and saves the result `deep`, so
+`defn="{label: ts('Given name')}"` comes back as the text `ts()` returned in
+the admin's language: one save in a German admin session writes "Vorname"
+into the form as its source text for every language, and a packaged form
+becomes a local override with fixed strings (6.19, run with a translation
+given to `CRM.strings`). React keeps the attribute's text and saves
+`shallow`; `formbuilder-editor.spec.ts` saves such a form with a translated
+page and checks the attribute is stored unchanged. `deviation:save-keeps-ts-calls`
+
+**Saving a form drops values the editor cannot resolve, or fails.** The same
+evaluation turns `afform_default: options.search_query` into `undefined`,
+which the save leaves out; a `js` attribute `$parse` cannot read stays a
+string, and the `deep` save of that string fails with a server error, so the
+form cannot be saved at all (6.19, run). React keeps both texts; the same
+test covers them. `deviation:save-keeps-unread-attributes`
+
+**The markup tab turns `ts()` into `null`.** Applying edited markup converts
+it `deep`, where `CRM_Utils_JS::decode()` reads `{label: ts('Given name')}`
+as `{label: null}`, and the next save stores the null (6.19, `Afform.convert`
+run). React converts the markup `shallow`; `formbuilder-editor.spec.ts`
+applies markup and checks the `ts()` call is stored. `deviation:markup-keeps-ts-calls`
+
+**A display's filters cannot be read back once they hold a list, a time or a
+quote.** `afGui.parseDisplayFilters()` splits the `filters` attribute on every
+comma outside single quotes and on every colon, so the text its own
+`stringifyDisplayFilters()` writes for `{tags: [1,2]}`,
+`{receive_date: '2024-01-01 10:00:00'}` or `{a: 1, last_name: "O'Brien"}`
+throws in `JSON.parse`, and the search display's filter settings stop opening
+(6.19, core's two functions run). React splits only outside quotes and
+brackets and reads back everything it writes; `nodes.test.ts` covers the three
+values. `deviation:display-filters-read-back`
+
+**A display filter's backslashes double on every edit.** `afGui`'s
+`encode()` writes a string as JSON text in single quotes, and `decode()`
+strips the quotes without reading the escapes, so `a\b` with a line break is
+read back as `a\\b\nc` and written as `'a\\\\b\\nc'`. The value
+changes on each pass, which every filter or placement edit makes
+(6.19, core's two functions run three times). React reads string literals
+with AngularJS's escapes, for the editor and the form alike; `nodes.test.ts`
+covers it. `deviation:display-filter-escapes`
+
+**A display filter named with a leading digit breaks the form.**
+`stringifyDisplayFilters()` quotes a name only when it holds a non-word
+character, so a filter key `1abc` or a URL parameter `2x` is written bare as
+`{1abc: …}` or `routeParams.2x`, which AngularJS 1.8's `$parse` rejects
+(6.19, core's AngularJS run on both). React writes such names quoted, as
+`{'1abc': routeParams['2x']}`; `nodes.test.ts` covers it. `deviation:display-filter-digit-names`
+
+**Saving a form writes an empty `input_attrs` into fields' settings.**
+`afGuiField`'s `getProp()` reads a nested setting through `drillDown()`,
+which creates each missing level on the field's own `defn`; the input
+templates read `input_attrs.placeholder`, so every field with a `defn` of
+its own gains `input_attrs: {}` on each save, as `afformQuickAddIndividual`'s
+email field does (6.19, intercepted save from the edit and clone routes).
+React reads without writing and saves the `defn` as stored;
+`formbuilder-editor.spec.ts` compares the clone route with core's and names
+this difference. `deviation:field-defn-read-only`
+
+**A form without `af-form` breaks the editor.** `setEditorLayout()` takes
+the first `af-form` of a form-type record's layout unchecked, so a record such
+as message_admin's `crmMsgadmMonaco` throws `Cannot read properties of
+undefined (reading '#children')`, followed by a stream of further errors, and
+the editor stays half drawn without a Save button (6.19, opened in core's
+editor). React says the form has no `af-form` element and cannot be edited in
+the builder; `form-sweep.spec.ts` checks the message. `deviation:form-without-af-form`
+
+**A field whose label the form hides is listed without a name.** A field with
+`defn="{label: false}"`, such as the checkout block on `afformNewDonation`,
+keeps `label: false` in `getEntityFields()`. The condition dialog lists it as
+`field.label || field.input_attrs.label` and the token list as `field.label`,
+so both show an empty entry (6.19, read from `afGuiConditionalDialog.ctrl.js`
+and `afGuiEditor.component.js`). React lists it by its metadata label;
+`fields.test.ts` covers it. `deviation:hidden-label-field-named`
+
+**Opening a form detaches a block holding a join.** A join inside a block's
+layout without an `actions` attribute gets one backfilled when it is drawn,
+which changes the block's copy of the layout; the block's deep watcher takes
+that for an edit and replaces the block with an `af-container` holding its
+contents, so the next save stops using the block (6.19, run). React backfills
+`actions` only on the form's own joins and blocks and leaves blocks' contents
+alone; `formbuilder-editor.spec.ts` saves such a form and checks the block
+stays. `deviation:block-join-kept`
+
+**The date range separator shows twice.** For a date range the field preview
+draws one input per suffix `'1'` and `'2'` and puts the separator before each
+truthy suffix, so a dash also stands before the first input (6.19, read from
+the code, not run). React shows it between the two inputs only. `deviation:date-range-separator-once`
+
+**Viewing a slider field changes it.** For a Range field without options or
+bounds, `getRangeProp()` writes `min` 0, `max` 99 and `step` 1 into the field's
+definition while the canvas draws it, so opening the form records an undo
+step and the next save stores the bounds (6.19, read from the code, not run).
+React shows the same defaults without writing them. `deviation:slider-defaults-not-written`
+
+**Filters of a removed placement stay stored.** When the last placement with
+entities goes, the editor deletes `placement_filters` from the record, but
+`Afform.save` merges the saved record over the stored one (`$item + $orig`),
+so a left-out key keeps its stored value and the old filters return on the
+next load (6.19, run with `cv`). React sends `placement_filters: {}`, which
+stores an empty list. `deviation:placement-filters-emptied`
+
+**`AfformBehavior.get` fails with a narrow `select`.** civi_case's
+`onAfformGetBehaviors()` adds the case-role modes on every `get` response and
+reads each row's `entities` and `modes`; with a `select` that leaves them
+out, `in_array()` gets null and the call fails (6.19, run). The support
+report selects both with the keys it needs. `deviation:behavior-get-full-select`

@@ -11,6 +11,9 @@ import {
   caseFieldsCall,
   dispositionFileName,
   downloadParams,
+  grantBatch,
+  grantFieldsCall,
+  grantsCall,
   presetValues,
   evaluateTaskExpression,
   initialUpdateValue,
@@ -94,6 +97,13 @@ const caseRole: SearchTask = {
   uiDialog: { templateUrl: "~/civiCaseTasks/civiCaseTaskCaseRole.html" },
   values: [],
   relationshipTypes: [],
+};
+const addGrant: SearchTask = {
+  name: "contact.addGrant",
+  title: "Grant - Add New Grant",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/civiGrantTasks/civiGrantTaskAddGrant.html" },
+  values: [],
 };
 const foreign: SearchTask = {
   name: "contact.foreign",
@@ -204,6 +214,14 @@ describe("taskRun", () => {
     expect(taskRun(mailing)).toEqual({ kind: "mailing" });
     expect(taskRun(openCase)).toEqual({ kind: "case" });
     expect(taskRun(caseRole)).toEqual({ kind: "caseRole" });
+    expect(taskRun(addGrant)).toEqual({ kind: "grant" });
+    const dialog = (templateUrl: string) => ({ ...addGrant, uiDialog: { templateUrl } });
+    expect(taskRun(dialog("~/crmSearchTasks/crmSearchTaskTagMerge.html"))).toEqual({
+      kind: "tagMerge",
+    });
+    expect(taskRun(dialog("~/crmMsgadmTasks/AddTranslation.html"))).toEqual({
+      kind: "translation",
+    });
   });
 
   it("names why it cannot run Angular dialogs, input fields and the rest", () => {
@@ -423,6 +441,7 @@ describe("update task", () => {
 });
 
 describe("tag task", () => {
+  // deviation:tag-task-contact-types
   it("looks tags up for Contact whatever contact type the search lists", () => {
     expect(tagEntity("Individual")).toBe("Contact");
     expect(tagEntity("Household")).toBe("Contact");
@@ -666,13 +685,60 @@ describe("case task", () => {
         ],
       },
     ]);
-    expect(batch.runMsg).toBe("Opening cases...");
+    expect([batch.runMsg, batch.runMsgPlural]).toEqual([
+      "Opening case...",
+      "Opening %count cases...",
+    ]);
     expect(batch.successTitle).toBe("Saved");
     expect(batch.summary?.({ fetched: 2, matched: 2, rows: [{ id: 5 }, { id: 6 }] })).toBe(
       "Successfully opened 2 cases.",
     );
     expect(batch.summary?.({ fetched: 1, matched: 1, rows: [{ id: 5 }] })).toBe(
       "Successfully opened 1 case.",
+    );
+  });
+});
+
+describe("add grant task", () => {
+  it("asks for a new grant's fields and the selected contacts' grants", () => {
+    const [entity, action, params] = grantFieldsCall();
+    expect([entity, action]).toEqual(["Grant", "getFields"]);
+    expect(params).toMatchObject({
+      action: "create",
+      where: [
+        ["name", "NOT IN", ["contact_id", "is_deleted"]],
+        ["deprecated", "=", false],
+        ["readonly", "=", false],
+      ],
+    });
+    expect(grantsCall([1, 2])).toEqual([
+      "Grant",
+      "get",
+      { select: ["contact_id"], where: [["contact_id", "IN", [1, 2]]] },
+    ]);
+  });
+
+  it("saves a grant per contact and counts the grants added", () => {
+    const batch = grantBatch({ amount_total: 10 });
+    expect(batchCall(batch, contact, [1, 2])).toEqual([
+      "Grant",
+      "save",
+      {
+        records: [
+          { amount_total: 10, contact_id: 1 },
+          { amount_total: 10, contact_id: 2 },
+        ],
+      },
+    ]);
+    expect([batch.runMsg, batch.runMsgPlural]).toEqual([
+      "Adding grant...",
+      "Adding %count grants...",
+    ]);
+    expect(batch.summary?.({ fetched: 2, matched: 2, rows: [{ id: 5 }, { id: 6 }] })).toBe(
+      "Successfully added 2 grants.",
+    );
+    expect(batch.summary?.({ fetched: 1, matched: 1, rows: [{ id: 5 }] })).toBe(
+      "Successfully added 1 grant.",
     );
   });
 });

@@ -88,6 +88,7 @@ export function CaseRoleDialog({ task, ids, onSave, onCancel }: CaseRoleDialogPr
         return;
       }
     }
+    // deviation:case-role-batch-failure-alerts
     onSave(caseRoleBatch(type, contactId));
   };
 

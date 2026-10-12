@@ -142,6 +142,8 @@ test("both renderers follow a submission alike", async ({ page }) => {
   });
 });
 
+// deviation:closed-form-locked
+// deviation:confirmation-takes-focus
 test("React moves the focus to the confirmation message and keeps a closed form locked", async ({
   page,
 }) => {

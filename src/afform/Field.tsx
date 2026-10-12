@@ -64,8 +64,10 @@ function useTrimmedText(
     onChange: (event: { target: { value: string } }) => {
       const text = event.target.value;
       setShown(text);
+      // deviation:search-filter-minlength
       onChange(text.trim() === "" ? emptied(required, false) : text.trim());
     },
+    // deviation:blank-required-validity
     // The browser checks the raw text; ngModel's required and minlength see the trimmed one.
     ref: (node: HTMLInputElement | HTMLTextAreaElement | null) => {
       const tooShort = ts("Enter at least %1 characters.", { 1: minlength });
@@ -132,6 +134,7 @@ export function fromLocalDateTime(value: string): string | null {
 }
 
 /** crm.datepicker.js: "yy" is a year input, any other format without a day a month picker. */
+// deviation:native-date-inputs
 function dateFormatKind(format: boolean | string | undefined): "year" | "month" | "date" {
   if (format === "yy") return "year";
   return typeof format === "string" && !format.toLowerCase().includes("d") ? "month" : "date";
@@ -170,6 +173,7 @@ function Marker() {
 }
 
 /** Core's clear link, with the role and keys that make it reachable from the keyboard. */
+// deviation:clear-link-button
 export function ClearButton({
   onClear,
   hidden = false,
@@ -216,6 +220,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
   const label = defn.label === false ? undefined : (defn.label ?? defn.name);
   const required = defn.required === true;
   const describedBy = defn.help_post ? helpId : undefined;
+  // deviation:url-input-disabled
   const common = {
     id,
     name: defn.name,
@@ -261,6 +266,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
     }
     if (textType) {
       const numeric = textType === "number";
+      // deviation:number-bound-zero
       return (
         <input
           {...common}
@@ -273,6 +279,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
           max={attrs.max}
           step={numeric ? (attrs.step ?? 1) : undefined}
           onChange={(event) => {
+            // deviation:invalid-input-kept
             const text = event.target.value;
             if (text === "") onChange(emptied(required, numeric));
             else onChange(numeric ? Number(text) : text);
@@ -290,6 +297,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
               {...common}
               // The count is read with the field, not announced on each keystroke.
               aria-describedby={
+                // deviation:textarea-count-describes
                 [describedBy, attrs.maxlength && countId].filter(Boolean).join(" ") || undefined
               }
               className={`crm-form-textarea ${style ?? ""}`.trim()}
@@ -320,6 +328,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                 value={datePrefix(value, 7)}
                 onChange={(event) => {
                   const month = event.target.value;
+                  // deviation:month-date-any-format
                   // A browser without a month picker hands over text, stored only as yyyy-mm.
                   event.target.setCustomValidity(
                     month && !/^\d{4}-\d{2}$/.test(month) ? ts("Enter a month as yyyy-mm.") : "",
@@ -364,6 +373,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
       }
       case "Select": {
         const options = fieldOptions(defn);
+        // deviation:native-select-fields
         // Without a label, the placeholder or else Select.html's title names the select.
         const named = (title: string) =>
           label === undefined ? (attrs.placeholder ?? title) : undefined;
@@ -403,6 +413,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                   value={textValue(value)}
                   onChange={(event) => {
                     onChange(
+                      // deviation:boolean-select-cleared-null
                       event.target.value === "" ? null : optionById(options, event.target.value),
                     );
                   }}

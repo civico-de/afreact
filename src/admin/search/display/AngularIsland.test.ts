@@ -28,7 +28,7 @@ beforeAll(() => {
       return module;
     },
   });
-  window.CRM.vars = { afreactAdmin: { islandModules: ["islandAdmin"] } };
+  window.CRM.vars = { afreactAdmin: { foreignModules: ["islandAdmin"] } };
 });
 
 describe("island editors", () => {

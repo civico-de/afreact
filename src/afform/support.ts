@@ -1,3 +1,5 @@
+import { isListMenuTab, listMenuTabNote } from "./AdminListMenu";
+import { adminMenuLinks, isAdminMenu } from "./adminMenu";
 import { chartKitMissing } from "../search/ElementDisplay";
 import { parseFiltersAttribute, readsOptions, type DisplayFilters } from "../search/displayFilters";
 import { columnNote, settingsOf, unsupportedFeatures } from "../search/rows";
@@ -129,7 +131,14 @@ export type NodeKind =
   | "join"
   | "tabset"
   | "tab"
+  | "adminMenu"
+  | "adminListMenu"
+  | "paramSets"
+  | "recaptcha"
   | "element";
+
+export const PARAM_SETS_OUTSIDE_NOTE = "af-search-param-sets outside a search fieldset";
+export const RECAPTCHA_OUTSIDE_FORM_NOTE = "crm-recaptcha2 outside af-form";
 
 export const SUBMIT_BUTTON_CONDITION = "afform.showSubmitButton";
 
@@ -145,6 +154,10 @@ export function renderedKind(
   node: ElementNode,
 ): Exclude<NodeKind, "conditional" | "submitCondition"> {
   const tag = node["#tag"];
+  if (isAdminMenu(node)) return "adminMenu";
+  if (tag === "af-admin-list-menu") return "adminListMenu";
+  if (tag === "af-search-param-sets") return "paramSets";
+  if (tag === "crm-recaptcha2") return "recaptcha";
   if (tag === "af-entity") return "entity";
   if (tag === "af-field") return "field";
   // Blocks arrive with their compiled layout as children.
@@ -200,6 +213,9 @@ export function expressionNote(expressions: string[]): string {
   return `Angular expression ${expressions.join(", ")}`;
 }
 
+export const ADMIN_MENU_NOTE = "afform_admin's edit menu in a shape React does not know";
+
+// deviation:display-filters-outside-placement
 export const PLACEMENT_NOTE = "display filters from options outside a placement";
 
 export type NoteKind = "react" | "angular" | "placement";
@@ -465,6 +481,10 @@ const KIND_PROBLEMS: Record<NodeKind, (node: ElementNode, scope: Scope) => strin
     ),
   ],
   tab: (node, scope) => [tabOutsideNote(node["#tag"]), ...childProblems(node, scope)],
+  adminMenu: (node) => (adminMenuLinks(node) ? [] : [ADMIN_MENU_NOTE]),
+  adminListMenu: (node) => (isListMenuTab(node.tab) ? [] : [listMenuTabNote(node.tab)]),
+  paramSets: (_node, scope) => (scope.filters ? [] : [PARAM_SETS_OUTSIDE_NOTE]),
+  recaptcha: (_node, scope) => (scope.form ? [] : [RECAPTCHA_OUTSIDE_FORM_NOTE]),
   element: (node, scope) => [...elementProblems(node), ...childProblems(node, scope)],
 };
 

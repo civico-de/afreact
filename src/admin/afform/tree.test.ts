@@ -1,4 +1,12 @@
-import { insertNode, moveNode, nodeAt, removeNode, updateNode, type ShallowNode } from "./tree";
+import {
+  insertNode,
+  movedPath,
+  moveNode,
+  nodeAt,
+  removeNode,
+  updateNode,
+  type ShallowNode,
+} from "./tree";
 
 const el = (tag: string, children?: ShallowNode[]): ShallowNode =>
   children ? { "#tag": tag, "#children": children } : { "#tag": tag };
@@ -58,5 +66,20 @@ describe("layout tree", () => {
       { E: [{ A: ["a1", "a2", { R: ["c1", "c2"] }] }] },
       "b",
     ]);
+  });
+
+  it("says where a moved node lands, as moveNode places it", () => {
+    for (const [from, parent, index] of [
+      [[0, 0], [0], 2],
+      [[0, 2, 1], [0, 2], 0],
+      [[2], [1], 0],
+      [[0, 0], [0, 2], 2],
+      [[0], [1], 0],
+    ] as const) {
+      const moved = moveNode(layout, from, parent, index) ?? [];
+      expect(nodeAt(moved, movedPath(from, parent, index))).toBe(nodeAt(layout, from));
+    }
+    expect(movedPath([0, 0], [0], 2)).toEqual([0, 1]);
+    expect(movedPath([0], [1], 0)).toEqual([0, 0]);
   });
 });

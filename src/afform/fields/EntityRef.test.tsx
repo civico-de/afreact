@@ -82,6 +82,7 @@ describe("EntityRef", () => {
     await import("./Combobox");
   });
 
+  // deviation:entityref-aria-combobox
   it("searches once the typing pauses and submits the chosen id as a number", async () => {
     const calls = renderForm(form([entityRef("employer_id")]), {
       "Contact.autocomplete": () => rows([ADA, BOB]),
@@ -216,6 +217,7 @@ describe("EntityRef", () => {
     });
   });
 
+  // deviation:missing-ids-noted
   it("says which stored ids it could not find", async () => {
     renderForm(form([entityRef("employer_id")]), {
       "Afform.prefill": () => [{ name: "Individual1", values: [{ fields: { employer_id: 9 } }] }],
@@ -299,6 +301,7 @@ describe("EntityRef", () => {
     });
   });
 
+  // deviation:dynamic-entity-unmapped-note
   it("searches the entity the control field names with dfk_entities", async () => {
     const calls = renderForm(
       form([
@@ -464,6 +467,7 @@ describe("EntityRef quick-add links", () => {
     vi.mocked(window.CRM.loadForm).mockReset();
   });
 
+  // deviation:quick-add-links-reachable
   it("offers the contact types' forms, opens one and selects the record it saved", async () => {
     const { opened, succeed } = popup();
     const quickAdd = entityRef("employer_id", { input_attrs: { quickAdd: true } });
@@ -522,6 +526,7 @@ describe("EntityRef quick-add links", () => {
     expect(screen.getByText("Ada")).toBeInTheDocument();
   });
 
+  // deviation:quick-add-links-reachable
   it("says when the form saved no record", async () => {
     const { succeed } = popup();
     renderForm(form([entityRef("employer_id", { input_attrs: { quickAdd: true } })]), {});

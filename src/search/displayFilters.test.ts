@@ -17,12 +17,26 @@ describe("parseDisplayFilters", () => {
     expect(parseDisplayFilters(" { } ")).toEqual([]);
   });
 
+  it("reads lists, nested literals, bracket names and AngularJS's string escapes", () => {
+    expect(
+      parseDisplayFilters(
+        String.raw`{tags: [1, 'b',], o: {"k": [null]}, p: routeParams['a-b'], 'q\'s': 'x\\y\nz\u00e9'}`,
+      ),
+    ).toEqual([
+      ["tags", { literal: [1, "b"] }],
+      ["o", { literal: { k: [null] } }],
+      ["p", { scope: "routeParams", key: "a-b" }],
+      ["q's", { literal: "x\\y\nzé" }],
+    ]);
+  });
+
   it.each([
     "job_type: 1",
     "{a: b}",
     "{a: routeParams.x.y}",
     "{a: 1 + 2}",
-    "{a: [1]}",
+    "{a: [routeParams.x]}",
+    "{a: routeParams[x]}",
     "{a 1}",
     "{a: }",
     "{a: 1} extra",

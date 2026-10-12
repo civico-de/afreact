@@ -8,7 +8,19 @@ export abstract class ReactElement extends HTMLElement {
   private root: Root | null = null;
 
   connectedCallback() {
-    this.root = createRoot(this);
+    this.root = createRoot(this, {
+      // React removes the whole tree on a render error; the element says so instead of going blank.
+      onUncaughtError: (error) => {
+        reportError(error);
+        const alert = document.createElement("div");
+        alert.className = "messages error no-popup";
+        alert.setAttribute("role", "alert");
+        alert.textContent = ts("This part of the page could not be shown: %1", {
+          1: error instanceof Error ? error.message : String(error),
+        });
+        this.append(alert);
+      },
+    });
     this.root.render(
       <QueryClientProvider client={queryClient}>
         <UrlState store={storeFor(this)} onlyElement={isOnlyElement(this)}>

@@ -18,7 +18,8 @@ const entryImportedByNoChunk: Plugin = {
   },
 };
 
-const LITERAL = String.raw`"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'`;
+// A string literal never holds a raw line break, so text like "ts(" in code matches none.
+const LITERAL = String.raw`"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'`;
 const TS_CALL = new RegExp(String.raw`\bts\(\s*(${LITERAL})|\bplural:\s*(${LITERAL})`, "g");
 
 /** A quoted source literal's text. */

@@ -34,6 +34,7 @@ describe("Markup", () => {
     expect(screen.getByRole("textbox")).toHaveAccessibleDescription("Read the terms");
   });
 
+  // deviation:field-markup-filtered
   it("drops script, handlers and unknown tags but keeps their text", () => {
     const { container } = render(
       <Markup

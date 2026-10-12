@@ -27,6 +27,7 @@ describe("segment items", () => {
     expect(splitExpr("id")).toEqual({ name: "id", optionKey: "id" });
   });
 
+  // deviation:segment-item-move-buttons
   it("moves an item and ignores a move past either end", () => {
     expect(moveItem([1, 2, 3], 0, 1)).toEqual([2, 1, 3]);
     const list = [1, 2];

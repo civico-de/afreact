@@ -22,7 +22,8 @@ export function joinHash(path: string, params: URLSearchParams): string {
 export interface ParamStore {
   /** A fresh copy on every call, so callers may change it. */
   params: () => URLSearchParams;
-  write: (params: URLSearchParams) => void;
+  /** Replaces the history entry, or adds one with `push`, as an assigned location.hash does. */
+  write: (params: URLSearchParams, options?: { push?: boolean }) => void;
   subscribe: (listener: () => void) => () => void;
   /** Changes made by others (the user, a link, Angular), never this store's own writes. */
   external: (listener: () => void) => () => void;
@@ -63,11 +64,13 @@ function createPageStore(): ParamStore {
   };
   return {
     params: () => splitHash(window.location.hash).params,
-    write(params) {
+    write(params, options) {
       const { pathname, search, hash } = window.location;
       const next = joinHash(splitHash(hash).path, params);
       if (next === hash || (next === "" && hash === "#")) return;
-      window.history.replaceState(window.history.state, "", `${pathname}${search}${next}`);
+      const url = `${pathname}${search}${next}`;
+      if (options?.push) window.history.pushState(window.history.state, "", url);
+      else window.history.replaceState(window.history.state, "", url);
       notify();
     },
     subscribe: (listener) => add(listener, listen, unlisten),

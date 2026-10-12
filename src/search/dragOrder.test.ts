@@ -51,6 +51,7 @@ describe("moveRow", () => {
       nested(7, 10, 1),
     ];
 
+    // deviation:tree-table-drag-with-subrows
     it("moves a row with its sub-rows down past a sibling's, taking the sibling's weight", () => {
       const moved = moveRow(tree, 1, 6, "weight", true);
       expect(keys(moved?.rows ?? [])).toEqual([5, 6, 7, 1, 2, 3, 4]);
@@ -112,6 +113,7 @@ describe("withWeights", () => {
     { type: "field", key: "weight" },
   ];
 
+  // deviation:drag-weights-shown
   it("writes the returned weights into the data and the weight column of each row", () => {
     const rows = withWeights([row(1, 1), row(2, 2), row(3, 3)], { 1: 2, 2: 1 }, "weight", columns);
     expect(rows.map((each) => each.data?.weight)).toEqual([2, 1, 3]);

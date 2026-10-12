@@ -131,6 +131,7 @@ describe("SearchFieldset", () => {
     expect(runs()).toEqual([{ is_active: true }]);
   });
 
+  // deviation:saved-filter-set-kept
   it("waits for a saved filter set, then searches once with it", async () => {
     const { calls, runs } = renderSearch("#?_s=4&is_active=1", searchForm(), {
       "SearchParamSet.get": () => [{ filters: { title: { CONTAINS: "Set" }, is_active: false } }],
@@ -232,6 +233,7 @@ describe("SearchFieldset", () => {
     expect(store.params().toString()).toBe("_s=4");
   });
 
+  // deviation:param-set-edits-in-url
   it("searches with typed values once typing pauses and writes them to the URL", async () => {
     const { store, runs } = renderSearch("#?_s=4&other=x", searchForm(), {
       "SearchParamSet.get": () => [],
@@ -245,10 +247,27 @@ describe("SearchFieldset", () => {
       },
       { timeout: 2000 },
     );
-    expect(runs()[1]).toEqual({ title: { CONTAINS: "Ne" } });
+    // The id names no set, so the fields keep their defaults, as after afFormReset.
+    expect(runs()[1]).toEqual({ is_active: true, title: { CONTAINS: "Ne" } });
     await waitFor(() => {
-      expect(store.params().toString()).toBe("other=x&title=Ne&is_active=");
+      // The id stays in the URL; only what differs from the defaults is written.
+      expect(store.params().toString()).toBe("_s=4&other=x&title=Ne");
     });
+  });
+
+  // deviation:search-filter-minlength
+  it("filters by text shorter than the field's minlength", async () => {
+    const short = field("name", { label: "Name", input_attrs: { minlength: 4 } });
+    const { runs } = renderSearch("", searchForm({}, [display("Groups")], [short]));
+    await screen.findByRole("cell", { name: "Row" });
+    await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "ab");
+    await waitFor(
+      () => {
+        expect(runs()).toHaveLength(2);
+      },
+      { timeout: 2000 },
+    );
+    expect(runs()[1]).toEqual({ is_active: true, name: "ab" });
   });
 
   it("searches with the typed values when the search button is clicked before the pause", async () => {

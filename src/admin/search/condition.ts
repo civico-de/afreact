@@ -147,6 +147,7 @@ export function formatValue(
     (field?.data_type === "Integer" || field?.data_type === "Float") &&
     field.category !== "partial_date"
   ) {
+    // deviation:number-default-kept
     if (value === "") return value;
     const number = Number(value);
     if ((field.name === "id" || field.fk_entity) && String(number) !== value) return value;

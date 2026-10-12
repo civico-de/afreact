@@ -248,6 +248,7 @@ const clauseUsesField = (clause: unknown, field: string): boolean =>
     (Array.isArray(clause[1]) && clause[1].some((sub: unknown) => clauseUsesField(sub, field))));
 
 /** onChangeSelect: a removed column leaves orderBy and having with it, and columns stay unique. */
+// deviation:removed-column-prunes-sort
 export function withSelect(params: ApiParams, select: string[]): ApiParams {
   const unique = [...new Set(select)];
   const gone = params.select

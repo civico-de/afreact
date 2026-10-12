@@ -19,6 +19,7 @@ final class AdminPage {
   public const OWN = [
     'civicrm/admin/afreact/search' => 'civicrm/admin/search',
     'civicrm/admin/afreact/afform' => 'civicrm/admin/afform',
+    'civicrm/admin/afreact/afform/submissions' => 'civicrm/admin/afform/submissions',
     'civicrm/afreact/search' => 'civicrm/search',
   ];
 
@@ -29,12 +30,22 @@ final class AdminPage {
     if ($builder === NULL) {
       throw new \CRM_Core_Exception('No React builder for this route.');
     }
+    if (!in_array($builder, Builders::available(), TRUE)) {
+      throw new \CRM_Core_Exception("The {$builder} builder's core extension is not enabled.");
+    }
+    $classic = \Civi::url('backend://' . self::classic($route));
+    if ($route === 'civicrm/admin/afform/submissions') {
+      $name = SubmissionsPage::chrome();
+      if ($name !== NULL) {
+        $classic->addQuery(['name' => $name]);
+      }
+    }
     self::load($builder);
     return Chrome::page(sprintf(
       '<div id="bootstrap-theme" class="afreact-builder-page"><afreact-builder builder="%s" route="%s" classic="%s" core-version="%s"></afreact-builder></div>',
       Chrome::escape($builder),
       Chrome::escape($route),
-      Chrome::escape((string) \Civi::url('backend://' . self::classic($route))),
+      Chrome::escape((string) $classic),
       Chrome::escape(\CRM_Utils_System::version()),
     ));
   }
@@ -58,12 +69,12 @@ final class AdminPage {
    */
   public static function load(string $builder): void {
     Assets::load($builder);
-    $islands = $builder === 'search_kit' ? Islands::modules() : [];
-    if ($islands !== []) {
-      Chrome::angular()->addModules($islands);
+    $foreign = ForeignModules::of($builder);
+    if ($foreign !== []) {
+      Chrome::angular()->addModules($foreign);
     }
     \Civi::resources()->addVars('afreactAdmin', [
-      'islandModules' => $islands,
+      'foreignModules' => $foreign,
       'changedPartials' => BuilderReport::partials($builder),
     ]);
     \Civi::resources()->addModuleFile(E::LONG_NAME, 'dist/afreact-admin.js');
@@ -81,7 +92,7 @@ final class AdminPage {
         'crmSearchTasks' => 'searchTasks',
         'crmSearchDisplay' => 'searchDisplay',
       ],
-      'afform' => ['afAdmin' => 'afAdmin', 'afGuiEditor' => 'afGuiEditor'],
+      'afform' => ['afAdmin' => 'afAdmin', 'afGuiEditor' => 'afGuiEditor', 'crmMonaco' => 'monaco'],
       default => [],
     };
     $angular = Afforms::angular();
@@ -94,6 +105,11 @@ final class AdminPage {
         (array) ($definition['permissions'] ?? []),
         'is_string',
       )));
+    }
+    if ($builder === 'afform') {
+      // The canvas renders core's af-gui-* markup, styled by the editor module's stylesheet.
+      \Civi::resources()->addStyleFile('org.civicrm.afform_admin', 'ang/afGuiEditor.css');
+      $vars['attributeTypes'] = Afforms::cached('attributeTypes', static fn (): array => (new AttributeSchema())->attributeTypes());
     }
     \Civi::resources()->addVars('afreactAdmin', $vars);
   }

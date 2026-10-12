@@ -1,4 +1,4 @@
-import { isElement, type FormDefinition, type LayoutNode, type TextNode } from "./types";
+import { isElement, type FormDefinition, type LayoutNode } from "./types";
 
 /**
  * Builds a form definition from the compiled Angular module file (angular-modules.json),
@@ -164,9 +164,10 @@ function phpArray(entries: [string | number, unknown][]): unknown {
   return Object.fromEntries(entries.map(([key, value]) => [String(key), value]));
 }
 
-type AttributeTypes = BundleVars["attributeTypes"];
+export type AttributeTypes = BundleVars["attributeTypes"];
 
-function attributeType(types: AttributeTypes, tag: string, attribute: string): string {
+/** CRM_Afform_ArrayHtml::pickAttrType(): 'js' or 'text'. */
+export function attributeType(types: AttributeTypes, tag: string, attribute: string): string {
   return types[tag]?.[attribute] ?? types["*"]?.[attribute] ?? types["*"]?.["*"] ?? "text";
 }
 
@@ -254,41 +255,11 @@ function compileModule(compilation: Compilation, module: string, trail: string[]
   compilation.compiled.push(module);
   const strings = compilation.file[module]?.strings;
   const own = new Map(strings && !Array.isArray(strings) ? Object.entries(strings) : []);
-  const nodes = withoutAdminMenu(
-    htmlToLayout(html, {
-      types: compilation.vars.attributeTypes,
-      translate: (text) => own.get(text) ?? ts(text),
-    }),
-  );
-  return prepare(compilation, nodes, [...trail, module]);
-}
-
-const isAdminMenu = (node: LayoutNode | undefined): boolean =>
-  !!node &&
-  isElement(node) &&
-  typeof node.class === "string" &&
-  node.class.split(" ").includes("crm-admin-block-context-dropdown");
-const isText = (node: LayoutNode | undefined): node is TextNode =>
-  !!node && !isElement(node) && "#text" in node;
-const isBlank = (node: LayoutNode | undefined): boolean =>
-  isText(node) && node["#text"].trim() === "";
-
-/**
- * afform_admin appends an edit menu for Angular to show after a client-side permission check,
- * as "  <div …>…</div>\n"; the indentation and newline go with it.
- */
-function withoutAdminMenu(nodes: LayoutNode[]): LayoutNode[] {
-  const result: LayoutNode[] = [];
-  nodes.forEach((node, index) => {
-    if (isAdminMenu(node) || (isBlank(node) && isAdminMenu(nodes[index - 1]))) return;
-    if (isText(node) && isAdminMenu(nodes[index + 1])) {
-      const text = node["#text"].replace(/[ \t]+$/, "");
-      if (text !== "") result.push({ "#text": text });
-      return;
-    }
-    result.push(node);
+  const nodes = htmlToLayout(html, {
+    types: compilation.vars.attributeTypes,
+    translate: (text) => own.get(text) ?? ts(text),
   });
-  return result;
+  return prepare(compilation, nodes, [...trail, module]);
 }
 
 function prepare(compilation: Compilation, nodes: LayoutNode[], trail: string[]): LayoutNode[] {

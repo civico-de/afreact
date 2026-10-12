@@ -68,6 +68,7 @@ const nick = () => screen.getByLabelText("Nick, Ada");
 const control = () => screen.getAllByRole("cell")[0]!;
 
 describe("full-row editing", () => {
+  // deviation:full-row-editing-class
   it("opens every editable cell of the row and saves their values in one call", async () => {
     const { edits } = setup();
     await openRow();
@@ -117,6 +118,7 @@ describe("full-row editing", () => {
     expect(edits()).toHaveLength(1);
   });
 
+  // deviation:full-row-changed-save
   it("closes an unchanged row without a call and holds an invalid one", async () => {
     const { edits } = setup();
     await openRow();
@@ -132,6 +134,7 @@ describe("full-row editing", () => {
     expect(edits()).toEqual([]);
   });
 
+  // deviation:full-row-changed-save
   it("keeps a failed row open with its values and the error in the control column", async () => {
     setup({
       inlineEdit: () => {

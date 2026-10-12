@@ -151,13 +151,12 @@ function isContrastData(data: unknown): data is ContrastData {
 /**
  * Axe findings in `scope` of the loaded page, one per element and without element content:
  * contrast failures by colours and font, which the theme decides, anything else by selector.
- * Admin gear menus are Angular-only. CKEditor's editing frame holds the field's content as a
+ * CKEditor's editing frame holds the field's content as a
  * page of its own, without main landmark or h1, the same under both renderers.
  */
 export async function axeFindings(page: Page, scope: string): Promise<string[]> {
   const { violations } = await new AxeBuilder({ page })
     .include(scope)
-    .exclude(".crm-admin-block-context-dropdown")
     .exclude("iframe.cke_wysiwyg_frame")
     .analyze();
   return violations.flatMap((violation) =>

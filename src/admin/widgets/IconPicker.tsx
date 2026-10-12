@@ -107,7 +107,13 @@ interface IconDialogProps {
   onCancel: () => void;
 }
 
-function IconDialog({ label, transform: initial, required, onPick, onCancel }: IconDialogProps) {
+export function IconDialog({
+  label,
+  transform: initial,
+  required,
+  onPick,
+  onCancel,
+}: IconDialogProps) {
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const [search, setSearch] = useState("");

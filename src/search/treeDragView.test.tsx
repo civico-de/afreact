@@ -74,6 +74,7 @@ describe("tree display drag to reorder", () => {
     expect(document.querySelectorAll("li.afreact-tree-slot")).toHaveLength(6);
   });
 
+  // deviation:tree-drag-keyboard
   it("steps up by keyboard to the first place and saves weight and parent", async () => {
     const calls = serve(() => ({ 3: 10, 1: 20 }));
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} type="tree" />);

@@ -143,6 +143,7 @@ describe("Range fields", () => {
     expect(at({ min: "1", max: "4" })).toBe(3);
   });
 
+  // deviation:range-slider-disabled
   it("is disabled with the form", () => {
     render(<Field defn={rating} value={4} disabled onChange={() => undefined} />);
     expect(screen.getByRole("slider")).toBeDisabled();

@@ -92,6 +92,7 @@ function show(filters: Record<string, unknown> | unknown[], enabled = true) {
 }
 
 describe("chart display", () => {
+  // deviation:chart-scripts-on-demand
   it("loads chart_kit once and hands core's element the display, the form and its filters", async () => {
     notLoaded();
     window.CRM.vars = {
@@ -151,6 +152,7 @@ describe("chart display", () => {
     expect(container.querySelector("civi-search-display-chart-kit")).toBeNull();
   });
 
+  // deviation:chart-attached-when-runnable
   it("draws only once its filters are final, and keeps the chart while paused", async () => {
     const { container, rerender } = show({}, false);
     expect(container.querySelector("civi-search-display-chart-kit")).toBeNull();
@@ -195,6 +197,7 @@ describe("chart display", () => {
     });
   });
 
+  // deviation:chart-removed-clears-timers
   it("stops a removed chart's pending run", async () => {
     const { unmount } = show({});
     await waitFor(() => {
@@ -232,6 +235,7 @@ describe("chart display", () => {
     );
   });
 
+  // deviation:chart-empty-filters-object
   it("hands an empty filter list over as an empty object", async () => {
     const { container } = show([]);
     await waitFor(() => {
@@ -252,6 +256,7 @@ describe("chart display", () => {
     expect(document.head.querySelector("script")).toBeNull();
   });
 
+  // deviation:chart-kit-missing-alert
   it("says that chart_kit is missing", async () => {
     notLoaded();
     show({});
@@ -260,6 +265,7 @@ describe("chart display", () => {
     );
   });
 
+  // deviation:chart-scripts-on-demand
   it("says which script failed to load", async () => {
     notLoaded();
     window.CRM.vars = { afreact: { chartKit: { scripts: SCRIPTS, styles: [] } } };

@@ -151,6 +151,39 @@ describe("File fields", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Saved");
   });
 
+  // deviation:first-join-upload-index
+  it("uploads the first join record's file into the draft after submitDraft, with index 0", async () => {
+    const draftSaved = () =>
+      vi
+        .mocked(window.CRM.api4)
+        .mock.calls.some(([entity, action]) => entity === "Afform" && action === "submitDraft");
+    const order: boolean[] = [];
+    const fetchMock = vi.fn<typeof fetch>(() => {
+      order.push(draftSaved());
+      return Promise.resolve(respond(200, { values: [stored] }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const scan = { ...imageField, defn: { ...image, label: "Scan" } };
+    renderForm(
+      form([{ "#tag": "div", "af-join": "Attachment", "#children": [scan] }, draftButton]),
+      undefined,
+      [],
+      { "Afform.submitDraft": () => [{}] },
+    );
+    await userEvent.upload(await screen.findByLabelText("Scan"), png());
+    await userEvent.click(screen.getByRole("button", { name: "Save Draft" }));
+    await screen.findByRole("link", { name: "ada.png" });
+    expect(order).toEqual([true]);
+    expect(sent(fetchMock).params).toEqual({
+      name: "afformFiles",
+      modelName: "Individual1",
+      fieldName: "image",
+      joinEntity: "Attachment",
+      entityIndex: 0,
+      joinIndex: 0,
+    });
+  });
+
   it("keeps the form with a visible error when an upload fails, instead of confirming", async () => {
     vi.stubGlobal(
       "fetch",
@@ -197,6 +230,7 @@ describe("File fields", () => {
     expect(sent(fetchMock)).toMatchObject({ params: { entityIndex: 0 }, file: "second.png" });
   });
 
+  // deviation:failed-upload-retry
   it("after a failed upload keeps the saved records and retries only the file", async () => {
     const fetchMock = vi
       .fn()
@@ -287,6 +321,7 @@ describe("File fields", () => {
     expect(calls.filter(({ call }) => call === "Afform.submit")).toHaveLength(1);
   });
 
+  // deviation:draft-join-file-reupload
   it("uploads a draft's file again on submit for a join record the submit creates", async () => {
     const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(respond(200, { values: [stored] })),
@@ -412,6 +447,8 @@ describe("File fields", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  // deviation:replace-join-file-clears
+  // deviation:file-replace-button
   it("shows a prefilled file with a replace button that clears it and moves focus to the input", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const calls = renderForm(form([imageField]), () => [{ token: "tok" }], [
@@ -429,6 +466,7 @@ describe("File fields", () => {
     });
   });
 
+  // deviation:file-replace-button
   it("opens the replace button from the keyboard and shows a file without a link", async () => {
     vi.stubGlobal("fetch", vi.fn());
     renderForm(form([imageField]), undefined, [

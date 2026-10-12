@@ -1,15 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { api4, errorMessage } from "../../api/civi";
+import { ClassicContext } from "../classic";
 import { Menu } from "../../search/Menu";
 import type { RunDebug } from "../../search/types";
 import { splitHash } from "../../url/hash";
@@ -32,13 +24,15 @@ import {
   type EditorDisplay,
   type EditorSearch,
 } from "./editor";
-import { AngularIsland, hasIslandEditor, modulesChangingBuilder } from "./display/AngularIsland";
+import { AngularIsland, hasIslandEditor } from "./display/AngularIsland";
+import { ClassicOnly } from "../ClassicOnly";
+import { classicOnlyChanges } from "../foreign";
+import { usePageLoaded } from "../pageLoaded";
 import { DisplayEditor, hasDisplayEditor, PluginPreview } from "./display/DisplayEditor";
 import {
   hasPluginEditor,
   PluginDisplayEditor,
   pluginSearchMeta,
-  pluginValidationMessages,
 } from "./display/PluginDisplayEditor";
 import { ConditionsTab } from "./editor/ConditionsTab";
 import { EntitySetQueryTab, EntitySetsTab } from "./editor/EntitySetTabs";
@@ -50,8 +44,7 @@ import { ResultsPreview } from "./editor/ResultsPreview";
 import { SettingsTab } from "./editor/SettingsTab";
 import { withEntitySetFields } from "./entitySets";
 import { ExportDialog } from "./ExportDialog";
-import { BuilderPanels } from "../BuilderPanels";
-import { adminVars } from "../vars";
+import { BuilderPanels, pluginsReady, pluginVerdict } from "../BuilderPanels";
 import { getEntity, type ApiParams } from "./expr";
 import { displayChanges, findCriticalChanges, postSaveDisplay, preSaveDisplay } from "./saveHooks";
 import {
@@ -61,9 +54,6 @@ import {
   type SchemaField,
   type SearchAdminMetadata,
 } from "./meta";
-
-/** The classic builder's address, without hash, for links to the same record there. */
-export const ClassicContext = createContext("");
 
 export type EditorRoute =
   | { mode: "create"; entity: string }
@@ -110,6 +100,7 @@ async function loadSearch(meta: SearchAdminMetadata, route: EditorRoute): Promis
 
 /** crmSearchAdmin's routes: `#/create/<entity>`, `#/edit/<id>` and `#/clone/<id>`. */
 export function SearchEditor(route: EditorRoute) {
+  const pageLoaded = usePageLoaded();
   const meta = useSearchMetadata();
   const loaded = useQuery({
     queryKey: ["SavedSearch", "editor", route],
@@ -128,7 +119,7 @@ export function SearchEditor(route: EditorRoute) {
         {errorMessage(error)}
       </p>
     );
-  if (!meta.data || !loaded.data) return <p role="status">{ts("Loading…")}</p>;
+  if (!meta.data || !loaded.data || !pageLoaded) return <p role="status">{ts("Loading…")}</p>;
   return <Editor meta={meta.data} initial={loaded.data} create={route.mode === "create"} />;
 }
 
@@ -300,8 +291,13 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
   const [savedGroup, setSavedGroup] = useState(groupExists);
   const [saving, setSaving] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  const latestSearch = useRef(search);
+  useEffect(() => {
+    latestSearch.current = search;
+  }, [search]);
   const refreshMetadata = useRefreshSearchMetadata();
   const [errors, setErrors] = useState<string[]>([]);
+  const [attempts, setAttempts] = useState(0);
   const [debug, setDebug] = useState<RunDebug | null>(null);
   const [exporting, setExporting] = useState(false);
   const [goto, setGoto] = useState<number | null>(null);
@@ -517,23 +513,8 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
     enabled: afformEnabled && !!search.id && !!search.name,
   });
 
-  function save() {
-    const problems = validate(search, groupExists);
-    setErrors(problems.map((p) => p.message));
-    if (problems.length) {
-      const first = problems.find((p) => p.tab);
-      if (first?.tab) setTab(first.tab);
-      return;
-    }
-    if (changedBuilder.length) {
-      setErrors([classicOnly()]);
-      return;
-    }
-    const invalid = root.current ? pluginValidationMessages(root.current) : [];
-    if (invalid.length) {
-      setErrors(invalid);
-      return;
-    }
+  /** Core's questions before a save, with other extensions' notes; false once one is declined. */
+  function confirmSave(target: ParentNode, notes: string[]): boolean {
     const risky = structuralRisk(history.saved, search);
     if (
       risky.length &&
@@ -543,22 +524,57 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
         }),
       )
     )
-      return;
-    const target = root.current ?? document;
+      return false;
     const critical = findCriticalChanges(
       target,
       displayChanges(history.saved.displays, search.displays),
     );
-    if (
-      critical.length &&
-      !window.confirm(
-        `${ts("The following change(s) may affect other customizations:")}\n\n${critical.join("\n")}`,
-      )
-    )
+    const question = [
+      critical.length
+        ? `${ts("The following change(s) may affect other customizations:")}\n\n${critical.join("\n")}`
+        : "",
+      notes.length ? `${ts("Other extensions report on this search:")}\n\n${notes.join("\n")}` : "",
+    ].filter(Boolean);
+    return !question.length || window.confirm(question.join("\n\n"));
+  }
+
+  async function save() {
+    setAttempts((count) => count + 1);
+    const problems = validate(search, groupExists);
+    setErrors(problems.map((p) => p.message));
+    if (problems.length) {
+      const first = problems.find((p) => p.tab);
+      if (first?.tab) setTab(first.tab);
       return;
-    setSaving(true);
+    }
+    // deviation:search-builder-classic-only
+    if (changedBuilder.length) {
+      setErrors([classicOnly()]);
+      return;
+    }
+    const target = root.current ?? document;
     const sent = search;
     const sentGroup = groupExists;
+    setSaving(true);
+    const late = await pluginsReady(target);
+    // Left while the panels checked: nothing is saved.
+    if (!target.isConnected) return;
+    if (latestSearch.current !== sent) {
+      setErrors([ts("The search changed while other extensions checked it. Save again.")]);
+      setSaving(false);
+      return;
+    }
+    const verdict = pluginVerdict(target);
+    const invalid = [...late, ...verdict.invalid];
+    if (invalid.length) {
+      setErrors(invalid);
+      setSaving(false);
+      return;
+    }
+    if (!confirmSave(target, verdict.notes)) {
+      setSaving(false);
+      return;
+    }
     persist(sent, sentGroup, target).then(
       (result) => {
         const report = (failure: unknown) => {
@@ -626,7 +642,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                 className={`btn ${status === "unsaved" ? "btn-primary" : status === "saving" ? "btn-warning" : "btn-success"}`}
                 disabled={status !== "unsaved"}
                 onClick={() => {
-                  save();
+                  void save();
                 }}
               >
                 <i
@@ -757,9 +773,19 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
             </div>
           </div>
         </div>
-        <ClassicOnly changes={changedBuilder} classic={classic} id={search.id} />
+        <ClassicOnly
+          changes={changedBuilder}
+          message={classicOnly()}
+          link={search.id ? `${classic}#/edit/${String(search.id)}` : `${classic}#/list`}
+          linkText={
+            search.id
+              ? ts("Edit this search in the classic builder.")
+              : ts("Open the classic builder.")
+          }
+        />
         {errors.length > 0 && (
-          <div className="messages error no-popup" role="alert">
+          // A new alert per attempt, so a repeated refusal is announced again.
+          <div key={attempts} className="messages error no-popup" role="alert">
             <ul>
               {errors.map((message) => (
                 <li key={message}>{message}</li>
@@ -1090,6 +1116,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
           </div>
         </div>
 
+        {/* deviation:search-builder-panels */}
         <BuilderPanels record={search} services={{ searchMeta: pluginSearchMeta(meta) }} />
         {displayIndex === null && (
           <ResultsPreview
@@ -1146,43 +1173,6 @@ const classicOnly = () =>
   ts(
     "Other extensions change the classic search builder in ways this builder does not run, so searches are saved there.",
   );
-
-/** What other extensions add to core's builder beyond display editors: modules and templates. */
-const classicOnlyChanges = () => [
-  ...modulesChangingBuilder(),
-  ...(adminVars().changedPartials ?? []),
-];
-
-function ClassicOnly({
-  changes,
-  classic,
-  id,
-}: {
-  changes: string[];
-  classic: string;
-  id?: number;
-}) {
-  if (!changes.length) return null;
-  return (
-    <div className="messages warning no-popup" role="status">
-      <i className="crm-i fa-exclamation-triangle" role="img" aria-hidden="true" /> {classicOnly()}{" "}
-      {id ? (
-        <a href={`${classic}#/edit/${String(id)}`}>
-          {ts("Edit this search in the classic builder.")}
-        </a>
-      ) : (
-        <a href={`${classic}#/list`}>{ts("Open the classic builder.")}</a>
-      )}
-      <ul>
-        {changes.map((change) => (
-          <li key={change}>
-            <code>{change}</code>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
 interface TabItemProps {
   id: string;

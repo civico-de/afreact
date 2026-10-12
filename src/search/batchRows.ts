@@ -97,6 +97,7 @@ export function parseFormula(
     if ("number" in token) return () => token.number;
     if ("field" in token)
       return (value) => {
+        // deviation:batch-formula-numbers
         const number = Number(value(token.field));
         return Number.isFinite(number) ? number : 0;
       };
@@ -113,6 +114,7 @@ export function parseFormula(
   return root && at === tokens.length ? root : null;
 }
 
+// deviation:batch-tally-exact
 /** Drops binary floating point noise: 10.1 + 20.2 gives 30.3, not 30.299999999999997. */
 const exact = (value: number) => Number(value.toPrecision(15));
 
@@ -131,6 +133,7 @@ export function withFormulas(
     const name = columnName(column);
     const compute = formula && parseFormula(formula);
     if (!info || !name || !compute) return [];
+    // deviation:batch-formula-joined-columns
     const prefix = info.explicit_join ? `${info.explicit_join}.` : "";
     const source = (field: string) => {
       const other = columns.find((candidate) => candidate.key?.split(":")[0] === prefix + field);

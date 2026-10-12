@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { mockApi, renderWithQuery } from "../test/render";
@@ -113,6 +113,16 @@ describe("af-tabset", () => {
     ).not.toBeVisible();
   });
 
+  // deviation:tab-title-no-tooltip
+  it("leaves the tab's title off its af-tab, where it would be the panel's tooltip", async () => {
+    renderTabs({ layout: searchTabs() });
+    const panel = await screen.findByRole("tabpanel", { name: /Submission Forms/ });
+    expect(panel.parentElement?.tagName).toBe("AF-TAB");
+    expect(panel.parentElement).not.toHaveAttribute("title");
+    expect(panel).not.toHaveAttribute("title");
+  });
+
+  // deviation:aria-tabs-pattern
   it("moves and selects with the arrow keys, Home and End, and selects on click", async () => {
     renderTabs({ layout: searchTabs() });
     await userEvent.click(await screen.findByRole("tab", { name: /Search Forms/ }));
@@ -136,6 +146,7 @@ describe("af-tabset", () => {
     expect(screen.getByRole("textbox", { name: "Field Blocks title" })).toHaveFocus();
   });
 
+  // deviation:tab-count-at-once
   it("runs a display only once its tab is shown, and counts every tab's rows", async () => {
     const { runs, calls } = renderTabs({ layout: searchTabs() });
     expect(await screen.findByRole("cell", { name: "form_table row" })).toBeInTheDocument();
@@ -175,6 +186,21 @@ describe("af-tabset", () => {
     expect(tab(/Submission Forms/)).toHaveAttribute("aria-selected", "true");
   });
 
+  // deviation:url-arg-on-select
+  it("leaves the URL alone on opening and writes url-arg once the user selects a tab", async () => {
+    const store = memoryStore("#?other=1");
+    renderTabs({ layout: searchTabs({ "url-arg": "tab" }), store });
+    expect(await screen.findByRole("tab", { name: /Submission Forms/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(store.params().toString()).toBe("other=1");
+    await userEvent.click(tab(/Field Blocks/));
+    await waitFor(() => {
+      expect(store.params().toString()).toBe("other=1&tab=block");
+    });
+  });
+
   it("skips a tab name that no longer exists, in the URL or remembered", async () => {
     window.CRM.cache = { get: () => "gone", set: vi.fn<(name: string, value: unknown) => void>() };
     renderTabs({
@@ -207,6 +233,22 @@ describe("af-tabset", () => {
     renderTabs({
       layout: searchTabs({ "selected-tab": "'search'", "remember-selection": "true" }),
     });
+    expect(await screen.findByRole("tab", { name: /Search Forms/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  // deviation:url-arg-over-selected-tab
+  it("opens the URL's tab over a literal selected-tab, which applies without one", async () => {
+    const layout = searchTabs({ "url-arg": "tab", "selected-tab": "'search'" });
+    renderTabs({ layout, hash: "#?tab=block" });
+    expect(await screen.findByRole("tab", { name: /Field Blocks/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    cleanup();
+    renderTabs({ layout });
     expect(await screen.findByRole("tab", { name: /Search Forms/ })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -281,12 +323,14 @@ describe("af-tabset", () => {
     });
   });
 
+  // deviation:page-nav-submit-label
   it("labels the last page's button Submit without page-nav-submit-text", async () => {
     renderTabs({ layout: pages({ "selected-tab": "'tab1'" }), type: "form" });
     expect(await screen.findByRole("button", { name: "Submit" })).toHaveAttribute("type", "submit");
     expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
   });
 
+  // deviation:hidden-tab-invalid-field
   it("keeps fields of hidden tabs in the form, submits them, and shows the tab of an invalid one", async () => {
     const submit = vi.fn((_params: Record<string, unknown>) => []);
     const layout: LayoutNode[] = [
@@ -476,6 +520,28 @@ describe("af-tabset", () => {
     );
     expect(screen.getByRole("tabpanel")).toHaveTextContent("Surveys text");
   });
+
+  // deviation:tab-names-per-tabset
+  it("numbers unnamed tabs per tab set, where afTab counts on across the page", async () => {
+    const tabset = (arg: string, titles: string[]): LayoutNode => ({
+      "#tag": "af-tabset",
+      "url-arg": arg,
+      "#children": titles.map((title) => ({
+        "#tag": "af-tab",
+        title,
+        "#children": [{ "#text": `${title} text` }],
+      })),
+    });
+    renderTabs({
+      layout: [tabset("t", ["Campaigns", "Surveys"]), tabset("u", ["Notes", "Files"])],
+      store: memoryStore("#?u=tab1"),
+    });
+    expect(await screen.findByRole("tab", { name: /Files/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(tab(/Campaigns/)).toHaveAttribute("aria-selected", "true");
+  });
 });
 
 /** afsearchLabelFormats: crm-ui-tab on the fieldsets themselves, titles as ts() expressions. */
@@ -512,6 +578,7 @@ describe("crm-ui-tab-set", () => {
     window.history.replaceState(null, "", "/");
   });
 
+  // deviation:tab-link-is-tab
   it("writes the markup of tabset.html after jQuery UI's tabs(), with the ARIA tabs pattern", async () => {
     const { runs } = renderTabs({ layout: uiTabs });
     const list = await screen.findByRole("tablist");
@@ -553,6 +620,15 @@ describe("crm-ui-tab-set", () => {
     expect(tab("Mailing Labels")).toHaveAttribute("aria-selected", "true");
     await userEvent.keyboard("{End}");
     expect(tab("Name Badges")).toHaveAttribute("aria-selected", "true");
+  });
+
+  // deviation:tabset-wrapper-no-role
+  it("leaves the wrapper around the panels without a role, so no panel nests in another", async () => {
+    renderTabs({ layout: uiTabs });
+    const panel = await screen.findByRole("tabpanel", { name: "Mailing Labels" });
+    expect(panel.parentElement).toHaveClass("crm-tab-panel");
+    expect(panel.parentElement).not.toHaveAttribute("role");
+    expect(screen.getAllByRole("tabpanel")).toEqual([panel]);
   });
 
   it("opens the tab named by the URL fragment, as jQuery UI does", async () => {

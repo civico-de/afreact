@@ -86,6 +86,7 @@ describe("entity sets", () => {
     ]);
   });
 
+  // deviation:union-join-keeps-rows
   it("keeps a set's rows in place when its joins add or remove columns", () => {
     expect(
       realign(["id", null, "subject"], ["id", "subject", "Activity_Contact_01.display_name"]),

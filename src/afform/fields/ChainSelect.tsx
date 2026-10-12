@@ -100,6 +100,7 @@ export function ChainSelect({
   }, [control]);
 
   const placeholder = ((): string => {
+    // deviation:chain-select-control-name
     if (control !== null && !chained) return ts("Choose %1 first", { 1: controlLabel ?? control });
     if (attrs.placeholder) return attrs.placeholder;
     return settled && !options.length ? ts("None Found") : ts("Select");
@@ -109,6 +110,7 @@ export function ChainSelect({
     id,
     ref: element,
     className: "form-control",
+    // deviation:chain-select-native
     // afField disables the select while its options load and when none came back.
     disabled: disabled || (chained && (loaded.isFetching || (settled && !options.length))),
     required: defn.required === true,

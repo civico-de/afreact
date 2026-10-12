@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
-import { jquerySelection } from "../test/jquery";
+import { events, jquerySelection } from "../test/jquery";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
 import { AfreactForm, formExpressions, redirectUrl } from "./AfreactForm";
 import type { FieldDefn, LayoutNode } from "./types";
@@ -194,6 +194,7 @@ describe("AfreactForm", () => {
       await userEvent.click(await screen.findByRole("button", { name: "Save" }));
     };
 
+    // deviation:minlength-message-without-marker
     it("blocks the submission and names the field, without its required marker", async () => {
       const calls = renderFields(
         [
@@ -298,6 +299,7 @@ describe("AfreactForm", () => {
     });
   });
 
+  // deviation:case-summary-own-form
   it("submits from inside a page's own form, as in the case summary, not that form", async () => {
     const outer = document.body.appendChild(document.createElement("form"));
     const outerSubmit = vi.fn((event: Event) => {
@@ -346,6 +348,23 @@ describe("AfreactForm", () => {
     );
   });
 
+  // deviation:form-events-on-wrapper
+  it("triggers crmFormSuccess on the renderer's wrapper, which af-form does not hear", async () => {
+    vi.mocked(window.CRM.$).mockImplementation((target) => events(target));
+    const onDocument = vi.fn<(event: Event) => void>();
+    const onAfForm = vi.fn<(event: Event) => void>();
+    document.addEventListener("crmFormSuccess", onDocument);
+    renderForm(() => [{ saved: true }]);
+    const button = await screen.findByRole("button", { name: "Save" });
+    button.closest("af-form")?.addEventListener("crmFormSuccess", onAfForm);
+    await userEvent.click(button);
+    await waitFor(() => {
+      expect(onDocument).toHaveBeenCalled();
+    });
+    expect(onAfForm).not.toHaveBeenCalled();
+    document.removeEventListener("crmFormSuccess", onDocument);
+  });
+
   it("keeps the popup open for a confirmation message", async () => {
     const dialog = vi.fn(() => popup);
     const popup = jquerySelection({ length: 1, data: () => "", dialog });
@@ -376,6 +395,7 @@ describe("AfreactForm", () => {
     window.location.hash = "";
   });
 
+  // deviation:repeat-primary-radio-name
   it("adds and removes email records within min and max and moves the primary flag", async () => {
     renderForm(() => [{}], "");
     await screen.findByRole("form");
@@ -532,6 +552,7 @@ describe("AfreactForm", () => {
     }
   });
 
+  // deviation:repeat-button-names
   it("repeats a fieldset, embeds a search display and flags a join outside a fieldset", async () => {
     const layout: LayoutNode[] = [
       {

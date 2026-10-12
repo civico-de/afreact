@@ -26,11 +26,6 @@ final class Builders {
   ];
 
   /**
-   * Builders whose last phase is done, offered by the setting.
-   */
-  public const SELECTABLE = [];
-
-  /**
    * @return list<string>
    *   The builders React takes over.
    */
@@ -38,7 +33,7 @@ final class Builders {
     $builders = \Civi::settings()->get(self::SETTING);
     return (
       is_array($builders)
-        ? array_values(array_intersect(array_keys(self::PATHS), array_filter($builders, 'is_string')))
+        ? array_values(array_intersect(self::available(), array_filter($builders, 'is_string')))
         : []
     );
   }
@@ -62,7 +57,19 @@ final class Builders {
    */
   public static function options(): array {
     $labels = ['search_kit' => E::ts('SearchKit'), 'afform' => E::ts('FormBuilder')];
-    return array_intersect_key($labels, array_flip(self::SELECTABLE));
+    return array_intersect_key($labels, array_flip(self::available()));
+  }
+
+  /**
+   * @return list<string>
+   *   The builders whose core screens the site has: FormBuilder's come with afform_admin.
+   */
+  public static function available(): array {
+    $mapper = \CRM_Extension_System::singleton()->getMapper();
+    return array_values(array_filter(
+      array_keys(self::PATHS),
+      static fn (string $builder): bool => $builder !== 'afform' || $mapper->isActiveModule('afform_admin'),
+    ));
   }
 
   /**

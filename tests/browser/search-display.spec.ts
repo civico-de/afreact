@@ -375,6 +375,7 @@ test.describe("SearchKit table display editor", () => {
     expect(found).toEqual([]);
   });
 
+  // deviation:display-settings-unknown-kept
   test("names settings it cannot edit, links the classic builder and saves them back", async ({
     page,
   }) => {
@@ -460,6 +461,7 @@ test.describe("SearchKit table display editor", () => {
     ).toBeVisible();
   });
 
+  // deviation:search-display-plugin-editors
   test("another extension's editor element edits its display type's settings", async ({ page }) => {
     await api(page, "OptionValue", "create", {
       values: {
@@ -532,6 +534,7 @@ test.describe("SearchKit table display editor", () => {
     );
   });
 
+  // deviation:search-builder-panels
   test("another extension's builder panel follows the search and blocks saving", async ({
     page,
   }) => {
@@ -552,9 +555,13 @@ test.describe("SearchKit table display editor", () => {
       if (/SavedSearch|SearchDisplay/.test(request.postData() ?? request.url())) writes++;
     });
     await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.locator("afreact-builder .messages.error")).toContainText(
-      "The island panel blocks this label.",
-    );
+    const refusal = page.locator("afreact-builder .messages.error");
+    await expect(refusal).toContainText("The island panel blocks this label.");
+    // Saving again refuses again in a new alert, which screen readers announce.
+    const first = await refusal.elementHandle();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect.poll(() => first?.evaluate((element) => element.isConnected)).toBe(false);
+    await expect(refusal).toContainText("The island panel blocks this label.");
     expect(writes).toBe(0);
     await label.fill(LABEL);
     await expect(panel).toHaveText("");
@@ -562,6 +569,34 @@ test.describe("SearchKit table display editor", () => {
     expect(display.type).toBe("table");
   });
 
+  // deviation:search-builder-panels
+  test("another extension's builder panel notes ask before saving", async ({ page }) => {
+    await open(page, "react", LABEL);
+    const label = page.locator("#crm-saved-search-label");
+    await label.fill(`${LABEL} [note]`);
+    let writes = 0;
+    page.on("request", (request) => {
+      if (/\/api4\/(SavedSearch|SearchDisplay)\/(save|create|update|delete)\b/.test(request.url()))
+        writes++;
+    });
+    const asked: string[] = [];
+    page.once("dialog", (dialog) => {
+      asked.push(dialog.message());
+      void dialog.dismiss();
+    });
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect
+      .poll(() => asked)
+      .toEqual(["Other extensions report on this search:\n\nThe island panel notes this label."]);
+    expect(writes).toBe(0);
+    page.once("dialog", (dialog) => {
+      void dialog.accept();
+    });
+    const { display } = await save(page);
+    expect(display.type).toBe("table");
+  });
+
+  // deviation:search-builder-classic-only
   test("an extension decorating core's builder sends saving to the classic builder", async ({
     page,
   }) => {
@@ -595,6 +630,7 @@ test.describe("SearchKit table display editor", () => {
     expect(writes).toBe(0);
   });
 
+  // deviation:search-display-plugin-editors
   test("another extension's Angular display editor runs as an island", async ({ page }) => {
     const saved: Record<string, Record<string, unknown>> = {};
     const findings: Record<string, string[]> = {};

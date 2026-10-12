@@ -23,6 +23,7 @@ function isLocation(value: unknown): value is LocationValue {
 /**
  * afLocationInput: distance, unit and address, written to the model once all three are set and
  * null before. The address counts on leaving its input, as in core.
+ * deviation:location-inputs-labelled
  */
 export function Location({ id, labelId, value, onChange, disabled, describedBy }: LocationProps) {
   const unit = window.CRM.vars?.afreact?.distanceUnit;

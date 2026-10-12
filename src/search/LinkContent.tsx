@@ -9,7 +9,7 @@ export function Icon({ name }: { name: string | null | undefined }) {
 export function LinkContent({ link }: { link: Link }) {
   return (
     <>
-      <Icon name={link.icon} /> {link.text}{" "}
+      <Icon name={link.icon} /> {link.content ?? link.text}{" "}
     </>
   );
 }

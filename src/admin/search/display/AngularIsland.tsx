@@ -1,24 +1,9 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { adminVars } from "../../vars";
+import { angularOf, call, foreignModules } from "../../foreign";
 import type { EditorDisplay } from "../editor";
-
-/** Calls `method` on an untyped Angular object, failing loudly when it is missing. */
-function call(target: unknown, method: string, ...args: unknown[]): unknown {
-  const fn: unknown =
-    typeof target === "object" || typeof target === "function"
-      ? Reflect.get(Object(target), method)
-      : undefined;
-  if (typeof fn !== "function") throw new TypeError(`Angular has no ${method}().`);
-  return Reflect.apply(fn, target, args);
-}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
-
-/** The other extensions' modules for core's search builder, which the page loaded. */
-const islandModules = () => adminVars().islandModules ?? [];
-
-const angularOf = (): unknown => Reflect.get(window, "angular");
 
 /** The editor's element for a display type, and its directive name as Angular normalizes it. */
 const editorTag = (type: string) => `search-admin-display-${type}`;
@@ -49,32 +34,15 @@ function islandDirectives(): Set<string> {
     }
     for (const required of requires) if (typeof required === "string") visit(required);
   };
-  for (const name of islandModules()) visit(name);
+  for (const name of foreignModules()) visit(name);
   return names;
-}
-
-/**
- * The island modules that also decorate services or run config or run blocks, which reach into
- * core's builder rather than adding an editor; AngularJS 1.8 queues those apart from directives.
- */
-export function modulesChangingBuilder(): string[] {
-  const ng = angularOf();
-  if (ng === undefined) return [];
-  return islandModules().filter((name) => {
-    const module: unknown = call(ng, "module", name);
-    const config: unknown = Reflect.get(Object(module), "_configBlocks");
-    const run: unknown = Reflect.get(Object(module), "_runBlocks");
-    if (!Array.isArray(config) || !Array.isArray(run))
-      throw new TypeError(`Angular module ${name} has no config or run blocks.`);
-    return config.length > 0 || run.length > 0;
-  });
 }
 
 let directives: Set<string> | undefined;
 
 /** Whether an island module on the page has an Angular editor for the display type. */
 export function hasIslandEditor(type: string): boolean {
-  if (angularOf() === undefined || islandModules().length === 0) return false;
+  if (angularOf() === undefined || foreignModules().length === 0) return false;
   directives ??= islandDirectives();
   return directives.has(directiveName(editorTag(type)));
 }
@@ -93,7 +61,7 @@ function islandModule(ng: unknown): string {
       state: () => null,
       onUrlChange: () => browser,
     });
-  call(call(ng, "module", name, islandModules()), "config", [
+  call(call(ng, "module", name, foreignModules()), "config", [
     "$provide",
     (provide: unknown) => call(provide, "decorator", "$browser", ["$delegate", decorate]),
   ]);

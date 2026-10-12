@@ -125,6 +125,7 @@ test.afterAll(async ({ browser }) => {
 
 test.describe.configure({ mode: "serial" });
 
+// deviation:tree-drag-keyboard
 test("react: items move under another parent and among siblings by keyboard", async ({ page }) => {
   await create(page);
   await page.goto(render("react"));

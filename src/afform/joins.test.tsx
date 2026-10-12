@@ -76,6 +76,7 @@ const contact = (fields: Record<string, unknown>, Email: unknown[]) => ({
 });
 
 describe("join blocks of one entity behind af-if", () => {
+  // deviation:join-blocks-layout-order
   it("keeps its position while an earlier block is hidden, so it keeps its location", async () => {
     const calls = renderForm(homeThenWork);
     await userEvent.type(await screen.findByRole("textbox", { name: "Work" }), "w@example.org");

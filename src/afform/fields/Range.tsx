@@ -29,6 +29,7 @@ export function rangeValue(defn: FieldDefn, value: unknown): number {
 /**
  * fields/Range.html: a slider over the field's options, with the chosen option's label beside
  * it; the server sets min, max and step from the option ids (AfformMetadataInjector).
+ * deviation:range-slider-disabled
  */
 export function Range({ id, defn, value, onChange, disabled, describedBy }: RangeProps) {
   const input = useRef<HTMLInputElement>(null);

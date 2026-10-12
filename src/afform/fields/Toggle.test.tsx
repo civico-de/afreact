@@ -36,6 +36,7 @@ function setup(defn: FieldDefn, initial?: unknown, disabled = false) {
 }
 
 describe("Toggle", () => {
+  // deviation:toggle-switch-role
   it("is a labelled switch in Toggle.html's markup with Yes and No after it", () => {
     const { container } = setup(toggle({ help_post: "Hidden from lists" }));
     const control = screen.getByRole("switch", { name: "Archived" });

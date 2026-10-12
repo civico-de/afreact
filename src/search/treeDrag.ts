@@ -40,6 +40,7 @@ function weightOf(row: Row, weightField: string): number {
  * carry the new parent, are the same rows where nothing changes, and null for a drop under itself.
  * An item whose parent is not on the page stands at the top, as the tree shows it.
  */
+// deviation:tree-drag-keyboard
 export function treeMove(
   rows: Row[],
   active: Row["key"],

@@ -23,6 +23,7 @@ function isEmpty(value: unknown): boolean {
   return value === undefined || value === null || value === "";
 }
 
+// deviation:display-only-as-stored
 /** Labels of the chosen options in option order; a value without option shows as stored. */
 function optionText(options: FieldOption[], value: unknown): string {
   const keys: unknown[] = Array.isArray(value) ? value : [value];

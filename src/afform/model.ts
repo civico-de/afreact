@@ -44,17 +44,23 @@ export function fieldPlace(
   return isFieldDefn(node.defn) ? { scope: EXTRA_SCOPE, name: node.defn.name } : null;
 }
 
-/** The values afForm submits and announces: extra fields as one record, `extra: {fields}`. */
-export type Submission = Record<string, EntityItem[] | { fields: Values }>;
+/**
+ * The values afForm submits and announces: extra fields as one record, `extra: {fields}`, beside
+ * the values elements add to data.extra, such as crm-recaptcha2's response.
+ */
+export type Submission = Record<string, EntityItem[] | ({ fields: Values } & Values)>;
 
-export function submission(data: FormData): Submission {
+export function submission(data: FormData, beside: Values = {}): Submission {
   const { extra, ...entities } = data;
-  return extra ? { ...entities, extra: { fields: extra[0]?.fields ?? {} } } : entities;
+  return extra || Object.keys(beside).length
+    ? { ...entities, extra: { ...beside, fields: extra?.[0]?.fields ?? {} } }
+    : entities;
 }
 
 /** The field a CheckoutBlock writes; card details never go into a draft. */
 const CHECKOUT_PARAMS = "checkout_params";
 
+// deviation:checkout-params-not-in-drafts
 /** What autosave and the draft button send: the submission without checkout details. */
 export function draftValues(data: FormData): Submission {
   const without = <T extends { fields: Values }>(item: T): T => {
@@ -94,6 +100,7 @@ export function routeArgs(
   options: Record<string, unknown> = {},
 ): Record<string, unknown> {
   const args: Record<string, unknown> = {
+    // deviation:route-args-query-string
     ...queryParams(location.search.replace(/^\?/, "")),
     ...routeParams(location),
     ...options,
@@ -140,6 +147,7 @@ export function applyPrefill(
 ): FormData {
   const next = structuredClone(data);
   for (const { name, values } of prefill) {
+    // deviation:draft-extra-fields-restored
     // A stored draft holds extra fields as they were submitted.
     if (name === EXTRA_SCOPE.entity) {
       const fields: unknown = Array.isArray(values) ? undefined : values.fields;
@@ -237,6 +245,7 @@ export function addRepeatItem(data: FormData, scope: Scope): FormData {
   return next;
 }
 
+// deviation:repeat-copy-new-record
 /** A copy is a new record: it has no id and is not the primary one. */
 function copied(record: Values): Values {
   const { id: _id, ...rest } = structuredClone(record);

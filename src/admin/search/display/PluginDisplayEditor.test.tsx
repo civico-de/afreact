@@ -6,8 +6,8 @@ import {
   PluginDisplayEditor,
   pluginColumns,
   pluginSearchMeta,
-  pluginValidationMessages,
 } from "./PluginDisplayEditor";
+import { pluginVerdict } from "../../BuilderPanels";
 
 class ProbeEditor extends HTMLElement {
   display: unknown;
@@ -55,9 +55,9 @@ describe("plugin display editor", () => {
     expect(onSettings).toHaveBeenCalledWith({ a: 2 });
     expect(screen.getByRole("textbox", { name: "Display Label" })).toHaveValue("P");
 
-    expect(pluginValidationMessages(container)).toEqual([]);
+    expect(pluginVerdict(container).invalid).toEqual([]);
     element.validationMessage = "Choose a chart type.";
-    expect(pluginValidationMessages(container)).toEqual(["Choose a chart type."]);
+    expect(pluginVerdict(container).invalid).toEqual(["Choose a chart type."]);
   });
 
   it("answers core's searchMeta calls for the record, or the entity, they are given", () => {

@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { api4, errorMessage } from "../../api/civi";
-import { replacePageTitle } from "../../afform/pageTitle";
 import { AfreactSearch, useSearchDisplay } from "../../search/AfreactSearch";
 import { Menu } from "../../search/Menu";
 import { displayKeys } from "../../search/urlKeys";
 import { useHashParams } from "../../url/UrlState";
+import { usePageHeading } from "../pageHeading";
 
 interface PageSearch {
   id: number;
@@ -43,14 +43,7 @@ export function DisplayPage({ search, display }: { search: string; display: stri
 
   // The heading follows once the page, and with it the host element, renders.
   const label = saved.data ? loaded.data?.label : undefined;
-  const shown = useRef<string | null>(null);
-  useEffect(() => {
-    if (!label || !host.current) return;
-    const heading = document.querySelector(".crm-page-title-wrapper>h1, h1.crm-page-title, h1");
-    const from = shown.current ?? heading?.textContent.trim() ?? "";
-    replacePageTitle(host.current, from, label);
-    shown.current = label;
-  }, [label]);
+  usePageHeading(host, label);
 
   const error = saved.error ?? loaded.error;
   if (error)

@@ -57,6 +57,7 @@ export function NewRow({ settings, edit, hidden }: NewRowProps) {
     if (save) void edit.saveNew(values);
     else edit.cancelCreating();
   };
+  // deviation:new-row-checked-save
   // The inputs sit in cells outside the form, so each one reports for itself.
   const commit = () => {
     const controls = [

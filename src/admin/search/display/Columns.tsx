@@ -133,6 +133,7 @@ export function Columns(props: ColumnsProps) {
                 <button
                   type="button"
                   className="btn btn-xs"
+                  // deviation:builder-reorder-buttons
                   disabled={index === 0}
                   aria-label={ts("Move %1 up", { 1: label })}
                   onClick={() => {

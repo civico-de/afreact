@@ -150,6 +150,7 @@ export function parseImport(text: string, afformEnabled: boolean): ImportCheck {
       typeof record.name === "string" ? [record.name] : [],
     );
     if (!names.length) continue;
+    // deviation:import-checks-every-display
     // A display's name is unique only within its search.
     const pairs = records.flatMap((record) =>
       typeof record.name === "string"
@@ -213,6 +214,7 @@ export async function previewImport(check: ImportCheck): Promise<ImportPreview> 
 }
 
 /** Runs the calls in order, as crmApi4 with a list; resolves to the number of saved records. */
+// deviation:import-counts-records
 export async function runImport(check: ImportCheck): Promise<number> {
   let saved = 0;
   for (const [entity, action, params] of check.calls)

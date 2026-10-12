@@ -17,6 +17,7 @@ function show(defn: Partial<FieldDefn>, value: unknown) {
 const output = () => screen.getByRole("status");
 
 describe("DisplayOnly", () => {
+  // deviation:display-only-as-stored
   it("shows option labels in option order and an unknown value as stored", () => {
     const options = [
       { id: 1, label: "Red" },

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Unsupported } from "../afform/Unsupported";
 import { api4, errorMessage, get, type ApiResult } from "../api/civi";
 import { useUrlPrefix } from "../url/UrlState";
-import { ColumnPicker, useColumnToggles } from "./ColumnPicker";
+import { ColumnPicker, toggledColumns, useColumnToggles } from "./ColumnPicker";
 import { useInlineEdit } from "./inlineEdit";
 import { ItemList, TreeView } from "./Items";
 import { useKeptFocus } from "./keptFocus";
@@ -53,6 +53,8 @@ interface AfreactSearchProps {
   savedColumns?: Record<string, string>;
   /** Takes the labels of each run's own filters, which core puts before the page title. */
   onLabels?: (labels: string[]) => void;
+  /** Takes a table's picked columns, for a saved filter set to keep. */
+  onColumns?: (key: string, columns: Record<string, string>) => void;
   /** An unsaved search run as an object, with an unsaved display or the search's default one. */
   inline?: { search: Record<string, unknown>; display?: Record<string, unknown> };
   /** Asks each run for its debug output (SQL, timing) and passes it on. */
@@ -153,6 +155,7 @@ function ResultDisplay({
   enabled = true,
   savedColumns,
   onLabels,
+  onColumns,
   inline,
   onDebug,
   headerTools,
@@ -203,7 +206,20 @@ function ResultDisplay({
     JSON.stringify([params, activeSort, limit, page]),
   );
   const { hidden, params: columnParams } = toggles;
+  const picked = useMemo(
+    () => (type === "table" && settings ? toggledColumns(settings.columns, hidden) : {}),
+    [type, settings, hidden],
+  );
+  // searchDisplayBaseTrait's getSearchDisplayKey().
+  const displayKey = display ? `${search}.${display}` : search;
+  useEffect(() => {
+    onColumns?.(displayKey, picked);
+    return () => {
+      onColumns?.(displayKey, {});
+    };
+  }, [onColumns, displayKey, picked]);
   // The count and totals ignore sort, page and page size, so they are asked once per set of filters.
+  // deviation:row-count-keyed-filters
   const countKey = ["SearchDisplay", "count", params];
   const rowsKey = ["SearchDisplay", "run", params, activeSort, limit, page, columnParams];
   const rows = useQuery({

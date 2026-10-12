@@ -21,6 +21,10 @@
 .afreact-combobox .select2-choices .select2-search-field input.select2-input { width: 100%; }
 .afreact-combobox:focus-within .select2-choices { outline: 2px solid var(--crm-focus-color, Highlight); outline-offset: 1px; }
 .afreact-combobox .select2-search-choice-close:focus-visible { outline: 2px solid var(--crm-focus-color, Highlight); }
+/* The list sits inside the container and the page, where select2 appends it to the body: undo
+   civicrm.css hiding the choice's description and Bootstrap's paragraph margin. */
+.afreact-combobox .select2-drop .crm-select2-row-description { display: block; }
+#bootstrap-theme .afreact-combobox .select2-drop .crm-select2-row-description p { margin: 0; }
 .afreact-dialog { padding: 0; border: 0; border-radius: var(--crm-dialog-radius, 4px); width: min(40rem, calc(100vw - 2rem)); background: var(--crm-dialog-body-bg-color, Canvas); color: var(--crm-text-color, CanvasText); }
 .afreact-dialog::backdrop { background: rgb(0 0 0 / 50%); }
 .afreact-dialog .afreact-dialog-title { margin: 0; padding: var(--crm-dialog-header-padding, 0.75rem 1rem); font-size: var(--crm-dialog-header-size, 1.25rem); background: var(--crm-dialog-header-bg-color, Canvas); color: var(--crm-dialog-header-color, CanvasText); }
@@ -63,3 +67,63 @@ crm-search-display-tree-branch:has(> ul > li.afreact-tree-slot:only-child) { fle
 .crm-chart-kit-admin input[type='color'] { min-width: 3rem; }
 .crm-chart-kit-admin-chart-type { display: flex; flex-flow: row wrap; gap: 0.5rem; border: 0; margin: 0; padding: 0; }
 .crm-chart-kit-admin-chart-type label { padding: 2rem; border: 1px solid; font-weight: normal; }
+/* FormBuilder editor: core's afGuiEditor.css styles the rest. */
+/* The label's token menu shows while editing the label and while its list is open. */
+.af-gui-node-title:not(:focus-within) .afreact-label-token:not(:has(.open)) { visibility: hidden; }
+/* The token menu's popover only places the search; its list shows as select2's dropdown. */
+/* Its button is a <button>, which the theme pads for an icon; core's select2 box is a link. */
+.afreact-token-menu > .select2-choice > .select2-chosen > .crm-i { display: inline-block; min-width: 0; padding: 0; }
+.crm-container .afreact-token-menu > .dropdown-menu.afreact-menu:popover-open { overflow: visible; min-width: 15em; padding: 0; border: 0; background: none; box-shadow: none; }
+#afGuiEditor .afreact-palette-heading { display: flex; align-items: flex-start; }
+/* Inactive tabs shrink and the active one does not, without core's measuring script. deviation:palette-tabs-flex-row */
+#afGuiEditor .afreact-palette-heading > ul.nav-tabs { display: flex; flex-wrap: nowrap; flex: 0 1 auto; width: auto; min-width: 0; border-bottom: 0; }
+#afGuiEditor .afreact-palette-heading > ul.nav-tabs > li.fluid-width-tab { min-width: 0; flex: 0 1 auto; }
+#afGuiEditor .afreact-palette-heading > ul.nav-tabs > li.active { flex-shrink: 0; }
+/* The label editor and the add menu sit beside the tablist, styled as core's tab contents. */
+#afGuiEditor .afreact-palette-heading > .afreact-tab-label { position: relative; top: 6px; padding: 0 4px; line-height: 29px; }
+/* crmUI.css styles [crm-ui-editable]; its placeholder grey fails contrast, the text colour does not.
+   deviation:editable-placeholder-contrast */
+.crm-container [crm-ui-editable][data-placeholder]:empty::before { content: attr(data-placeholder); color: var(--crm-text-color); font-style: italic; }
+#afGuiEditor .afreact-palette-heading > ul.afreact-palette-add { flex: none; width: auto; border-bottom: 0; }
+#afGuiEditor .afreact-palette-add > li > .dropdown > .btn { height: 33px; padding: 5px 8px; font-size: 12px; color: var(--crm-tab-color); text-decoration: none; }
+/* The link colour has too little contrast on the heading grey; the tab labels beside it do not.
+   deviation:view-page-link-contrast */
+#afGuiEditor .panel-heading .afreact-view-page { color: var(--crm-tab-color); }
+/* A tablist owns tabs only: the active tab's menu sits at the end of the tab bar instead. */
+#afGuiEditor .afreact-tabset-tabs { position: relative; }
+#afGuiEditor .afreact-tabset-tabs > .afreact-tab-menu { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
+.afreact-palette-label { display: block; font-weight: bold; }
+.dropdown-menu > li > a.afreact-menu-action { cursor: pointer; }
+/* The page scrolls the canvas, its toolbar sticks below the menu bar; the palette stays beside it
+   and scrolls on its own where it is taller than the window. */
+#afGuiEditor.afreact-editor { align-items: flex-start; height: auto; --afreact-top: var(--crm-menubar-bottom, 0px); }
+#afGuiEditor.afreact-editor > #afGuiEditor-palette { position: sticky; top: var(--afreact-top); height: auto; }
+#afGuiEditor.afreact-editor > #afGuiEditor-palette > .panel { display: flex; flex-direction: column; max-height: calc(100vh - var(--afreact-top)); margin-bottom: 0; }
+#afGuiEditor.afreact-editor > #afGuiEditor-palette > .panel > .panel-body { flex: 1 1 auto; height: auto; min-height: 0; overflow-y: auto; }
+#afGuiEditor.afreact-editor > #afGuiEditor-canvas { height: auto; }
+#afGuiEditor.afreact-editor > #afGuiEditor-canvas > .panel { overflow: visible; }
+#afGuiEditor.afreact-editor > #afGuiEditor-canvas > .panel > .panel-heading { position: sticky; top: var(--afreact-top); z-index: 3; }
+#afGuiEditor.afreact-editor > #afGuiEditor-canvas > .panel > .panel-body { height: auto; overflow: visible; }
+#afGuiEditor.afreact-editor .af-gui-container-type-fieldset { scroll-margin-top: calc(var(--afreact-top) + 50px); }
+/* Core hides the page's scrollbars while dragging; here the page scrolls the canvas. */
+html body.af-gui-dragging { overflow-x: visible; overflow-y: visible; }
+/* Where a dragged element lands: a line in the focus colour, readable in dark mode too, without moving the layout. */
+#afGuiEditor .afreact-drop-before { box-shadow: 0 -4px 0 var(--crm-focus-color); }
+#afGuiEditor .afreact-drop-after { box-shadow: 0 4px 0 var(--crm-focus-color); }
+#afGuiEditor :is(.af-layout-cols, .af-layout-inline) > .afreact-drop-before { box-shadow: -4px 0 0 var(--crm-focus-color); }
+#afGuiEditor :is(.af-layout-cols, .af-layout-inline) > .afreact-drop-after { box-shadow: 4px 0 0 var(--crm-focus-color); }
+#afGuiEditor .afreact-drop-refused { outline: 2px dashed var(--crm-danger-ink-color); cursor: no-drop; }
+/* The dragged element keeps its place, outlined; a label follows the pointer. */
+#afGuiEditor .afreact-dragging { outline: 2px dashed var(--crm-focus-color); outline-offset: -2px; }
+#afGuiEditor .afreact-drag-chip { display: inline-flex; align-items: center; gap: 0.5em; padding: 4px 10px; white-space: nowrap; font-weight: bold; color: var(--crm-text-color); background: var(--crm-container-bg-color); border: 2px solid var(--crm-focus-color); border-radius: 4px; box-shadow: 0 2px 8px rgb(0 0 0 / 30%); }
+body.af-gui-dragging { cursor: grabbing; }
+/* The grip's keyboard control covers core's grip, raised above the label while focused;
+   a bar holding focus shows as on hover. */
+#afGuiEditor .af-gui-bar:has(> .afreact-drag-handle) { position: relative; }
+#afGuiEditor .afreact-drag-handle { position: absolute; inset-block: 0; left: 0; width: 14px; cursor: move; }
+#afGuiEditor .afreact-drag-handle:focus-visible { z-index: 1; outline: 2px solid var(--crm-focus-color); outline-offset: -2px; }
+#afGuiEditor #afGuiEditor-canvas .af-gui-bar:focus-within { opacity: 1; }
+.afreact-picker-clear { margin-left: 0.25rem; }
+#afGuiEditor .afreact-permission-row { display: flex; gap: 0.25rem; align-items: flex-start; }
+#afGuiEditor .afreact-permission-row > :first-child { flex: 1 1 auto; min-width: 0; }
+#afGuiEditor .afreact-permission-row > select { width: auto; }

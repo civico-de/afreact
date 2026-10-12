@@ -87,6 +87,7 @@ describe("import", () => {
     );
   });
 
+  // deviation:import-checks-every-display
   it("counts existing displays by their name within their own search", () => {
     const check = parseImport(
       JSON.stringify([
@@ -152,6 +153,7 @@ describe("import", () => {
     });
   });
 
+  // deviation:import-counts-records
   it("saves the calls in order and counts the saved records", async () => {
     const calls = mockApi({
       "SavedSearch.save": () => [{ id: 1 }],

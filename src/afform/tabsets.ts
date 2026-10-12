@@ -103,6 +103,7 @@ function interpolated(value: unknown, context: ExpressionContext, problems: stri
 function afTab(node: ElementNode, index: number, context: ExpressionContext): Tab {
   const problems = unknownAttributes(node, TAB_ATTRIBUTES);
   return {
+    // deviation:tab-names-per-tabset
     // afTab numbers unnamed tabs with one counter for the whole page; this counts per tab set.
     name: text(node.name) || `tab${index}`,
     title: interpolated(node.title, context, problems),

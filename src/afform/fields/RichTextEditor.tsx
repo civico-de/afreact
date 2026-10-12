@@ -38,6 +38,7 @@ export function RichTextEditor({
     if (next !== text) onChange(next);
   });
 
+  // deviation:rich-text-disabled
   // The editor reads the textarea's disabled state when it starts, so a change restarts it.
   useEffect(() => {
     const target = element.current;

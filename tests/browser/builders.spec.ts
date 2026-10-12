@@ -16,6 +16,34 @@ test.describe("builder pages", () => {
     expect(await axeFindings(page, "afreact-builder")).toEqual([]);
   });
 
+  test("the settings page offers SearchKit and FormBuilder", async ({ page }) => {
+    await page.goto("/civicrm/admin/setting/afreact");
+    const options = page.locator(
+      "select[name='afreact_builders[]'] option, select[name='afreact_builders'] option",
+    );
+    await expect(options).toHaveText(["SearchKit", "FormBuilder"]);
+  });
+
+  test("FormBuilder taken over opens React at core's routes, core's builder at the classic ones", async ({
+    page,
+  }) => {
+    await setBuilders(page, ["afform"]);
+    await page.goto("/civicrm/admin/afform#/list");
+    await expect(page.locator("afreact-builder")).toBeVisible();
+    await expect(page.locator("[ng-app], .ng-scope")).toHaveCount(0);
+    await page.goto("/civicrm/admin/afform#/edit/afformQuickAddIndividual");
+    await expect(page.locator("#afGuiEditor-canvas-body")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("link", { name: "Open in the classic builder" })).toHaveAttribute(
+      "href",
+      /\/civicrm\/admin\/afform\/classic#\/edit\/afformQuickAddIndividual$/,
+    );
+    await page.goto("/civicrm/admin/afform/classic#/edit/afformQuickAddIndividual");
+    await expect(page.locator("af-gui-editor")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("afreact-builder")).toHaveCount(0);
+    await page.goto("/civicrm/admin/afform/submissions?name=afformQuickAddIndividual");
+    await expect(page.locator("afreact-builder")).toBeVisible();
+  });
+
   test("a builder taken over opens React at core's route, core's builder at the classic one", async ({
     page,
   }) => {

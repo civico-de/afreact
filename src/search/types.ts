@@ -1,14 +1,19 @@
+import type { ReactNode } from "react";
 /** A link as SearchDisplay.run formats it: `url` for a path, `task` for a bulk action. */
 export interface Link {
   url?: string;
   task?: string;
   text?: string;
+  /** Shown in place of `text` where it carries markup, as a title in `<em>`. */
+  content?: ReactNode;
   title?: string;
   target?: string;
   icon?: string;
   style?: string;
   /** Toolbar only: open the form when the first run finds nothing. */
   autoOpen?: boolean;
+  /** Menus only: a divider in place of a link. */
+  separator?: boolean;
 }
 
 /** A toolbar entry; one with `children` is a dropdown of several links (formatMultiLink). */

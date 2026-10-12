@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { ClauseMoveButtons, type ClauseTree } from "../../widgets/ClauseMove";
 import { Picker, type PickerOption } from "../../widgets/Picker";
 import type { ConditionField } from "../condition";
 import { hasFunction, parseExpr, type SearchInfo } from "../expr";
@@ -29,11 +30,14 @@ interface ClauseEditorProps {
   aliases?: string[];
   placeholder?: string;
   onDeleteGroup?: () => void;
+  /** Set for a nested group: the clauses it sits in. */
+  tree?: ClauseTree;
 }
 
 /** crmSearchClause: a group of conditions joined by one conjunction, with nested groups. */
 export function ClauseEditor(props: ClauseEditorProps) {
   const { clauses, onChange, op, skip = 0, onDeleteGroup } = props;
+  const tree = props.tree ?? { root: clauses, path: [], skip, onChange };
   const id = useId();
   const names = conjunctions();
   const groupLabel = props.label ?? ts("%1 group", { 1: names[op] ?? op });
@@ -64,18 +68,25 @@ export function ClauseEditor(props: ClauseEditorProps) {
         const first = index === skip && !onDeleteGroup;
         const badge = first ? (props.label ?? names[op]) : names[op];
         const head: unknown = clause[0];
+        const isGroup = typeof head === "string" && head in names;
+        const name = isGroup
+          ? ts("%1 group", { 1: names[head] ?? head })
+          : ts("condition %1", { 1: index - skip + 1 });
         return (
           <div className="api4-input form-inline clearfix" key={index}>
             <span className="api4-clause-badge">
               <span className="badge badge-info">{badge}</span>
             </span>
-            {typeof head === "string" && head in names ? (
+            {/* deviation:builder-reorder-buttons */}
+            <ClauseMoveButtons tree={tree} index={index} name={name} />
+            {isGroup ? (
               <ClauseEditor
                 {...props}
                 label={undefined}
                 skip={0}
                 placeholder={undefined}
                 clauses={Array.isArray(clause[1]) ? clause[1] : []}
+                tree={{ ...tree, path: [...tree.path, index] }}
                 op={head}
                 onChange={(sub) => {
                   setClause(index, [head, sub]);

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { createElement, useEffect, useMemo, useRef, useState } from "react";
+import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api4, errorMessage, isApiError } from "../api/civi";
 import { asHtml } from "../html";
 import { RouteOptionsContext } from "../search/displayFilters";
@@ -101,6 +101,7 @@ async function prefillForm(
   args: Record<string, unknown>,
   params: Record<string, string>,
 ): Promise<Prefilled> {
+  // deviation:reset-refills-route-values
   const { initial } = unfilled(form, params);
   if (!isForm(form)) return { initial, closed: null, prefilled: true };
   try {
@@ -161,6 +162,7 @@ function shortOf(control: Control): number {
 function labelText(control: Control): string {
   const label = control.labels?.[0]?.cloneNode(true);
   if (!(label instanceof HTMLElement)) return "";
+  // deviation:minlength-message-without-marker
   label.querySelector(".crm-marker")?.remove();
   return label.textContent.trim();
 }
@@ -236,6 +238,7 @@ export function AfreactForm({
       <RouteOptionsContext.Provider value={options}>
         {/* A reset loads the form afresh, so every part of it starts over. */}
         <LoadedForm
+          // deviation:reset-reloads-form
           key={loaded.dataUpdatedAt}
           name={name}
           pageTitle={pageTitle}
@@ -283,6 +286,7 @@ function LoadedForm(props: LoadedFormProps) {
     /** From a draft save, whose next success takes it away. */
     draft?: boolean;
   } | null>(null);
+  // deviation:form-events-on-wrapper
   const host = useRef<HTMLDivElement>(null);
   const summary = useRef<HTMLDivElement>(null);
   const announceFailure = (error: unknown) => {
@@ -293,6 +297,12 @@ function LoadedForm(props: LoadedFormProps) {
   const [uploading, setUploading] = useState<string | null>(null);
   /** Counts the files chosen or removed, which change the form without changing its data. */
   const [fileChanges, setFileChanges] = useState(0);
+  /** crm-recaptcha2's response, and the failed submissions after which it is void. */
+  const recaptchaResponse = useRef<string | null>(null);
+  const [submitFailures, setSubmitFailures] = useState(0);
+  const respondRecaptcha = useCallback((response: string | null) => {
+    recaptchaResponse.current = response;
+  }, []);
   /** afForm's submissionResponse: the last response Afform.submit returned. */
   const submissionResponse = useRef<SubmitResponse[] | undefined>(undefined);
   const save = useMutation({
@@ -312,6 +322,7 @@ function LoadedForm(props: LoadedFormProps) {
       return { values, response, failed, retry: new Set(uploads.keys()) };
     },
     onSuccess: ({ values, response, failed }) => {
+      // deviation:failed-upload-retry
       // The records exist: a failed upload leaves only the files to retry, without an announcement.
       if (failed.length) {
         const retry = ts(
@@ -332,7 +343,9 @@ function LoadedForm(props: LoadedFormProps) {
       }
       if (redirect) window.location.href = redirectUrl(redirect);
     },
-    onError: (error, { values }) => {
+    onError: (error, { values, saved }) => {
+      // Only a response Afform.submit received is used up; an upload retry sends none.
+      if (!saved) setSubmitFailures((count) => count + 1);
       announceFailure(error);
       if (host.current)
         window.CRM.$(host.current).trigger("crmFormError", {
@@ -372,6 +385,7 @@ function LoadedForm(props: LoadedFormProps) {
     mutationFn: () => prefillForm(name, form, args, params),
     onSuccess: onReset,
   });
+  // deviation:prefill-without-overlay
   // The form shows before its prefill; the loaded records land over what it holds by then.
   const prefill = useMutation({
     mutationFn: () => api4<PrefillItem>("Afform", "prefill", { name, args, fillMode: "form" }),
@@ -411,6 +425,7 @@ function LoadedForm(props: LoadedFormProps) {
   const displays = useMemo(() => countDisplays(form.layout), [form]);
   const [itemKeys] = useState(() => new Map<string, number[]>());
   const [labels, setLabels] = useState<string[]>([]);
+  // deviation:draft-pristine-label
   const changed = snapshot !== draftSaved;
   const draftStatus: DraftStatus = draft.isPending
     ? "saving"
@@ -423,7 +438,9 @@ function LoadedForm(props: LoadedFormProps) {
   const state: FormState = {
     data,
     update: setData,
+    // deviation:closed-form-locked
     disabled: busy || closed !== null || reset.isPending || !!retry,
+    // deviation:draft-save-holds-submit
     // A submit waits for a running draft save, whose files and late answer would cross it.
     submitDisabled: busy || closed !== null || reset.isPending || !prefilled || draft.isPending,
     joinOffsets: offsets,
@@ -444,6 +461,7 @@ function LoadedForm(props: LoadedFormProps) {
           draft.mutate({ values: draftValues(data), snapshot, background: false });
         },
       },
+      recaptcha: { respond: respondRecaptcha, failures: submitFailures },
     }),
     addTitle: setLabels,
   };
@@ -474,9 +492,11 @@ function LoadedForm(props: LoadedFormProps) {
   }, [closed]);
 
   useEffect(() => {
+    // deviation:submit-error-summary
     if (failure?.focus) summary.current?.focus();
   }, [failure]);
 
+  // deviation:title-labels-cleared
   const title = titleWithLabels(form.title ?? "", labels) || "CiviCRM";
   const shownTitle = useRef((form.title ?? "") || "CiviCRM");
   useEffect(() => {
@@ -503,11 +523,16 @@ function LoadedForm(props: LoadedFormProps) {
       return;
     }
     setFailure(null);
-    save.mutate({ values: submission(data), saved: retry?.response });
+    const response = recaptchaResponse.current;
+    save.mutate({
+      values: submission(data, response === null ? {} : { recaptcha2: response }),
+      saved: retry?.response,
+    });
   }
 
   if (saved?.message) {
     // The admin's HTML, with submitted values escaped by the server (Civi/Afreact/ConfirmationMessage.php).
+    // deviation:confirmation-takes-focus
     // It takes the focus of the submit button it replaces.
     return (
       <div
@@ -569,6 +594,7 @@ function LoadedForm(props: LoadedFormProps) {
               aria-label={form.title ?? undefined}
               onSubmit={(event) => {
                 event.preventDefault();
+                // deviation:case-summary-own-form
                 // Placed in a page's own <form> (the case summary), the submit must not reach it.
                 event.stopPropagation();
                 submit();

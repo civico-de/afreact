@@ -114,6 +114,28 @@ const openCase: SearchTask = {
   values: [],
   allowMultipleClients: true,
 };
+const addGrant: SearchTask = {
+  name: "contact.addGrant",
+  title: "Grant - Add New Grant",
+  icon: "fa-money",
+  number: "> 0",
+  uiDialog: { templateUrl: "~/civiGrantTasks/civiGrantTaskAddGrant.html" },
+  values: [],
+};
+const tagMerge: SearchTask = {
+  name: "merge_tags",
+  title: "Merge Tags",
+  icon: "fa-compress",
+  number: ">= 2",
+  uiDialog: { templateUrl: "~/crmSearchTasks/crmSearchTaskTagMerge.html" },
+};
+const addTranslation: SearchTask = {
+  name: "add_translation",
+  title: "Add Translation",
+  icon: "fa-language",
+  number: "=== 1",
+  uiDialog: { templateUrl: "~/crmMsgadmTasks/AddTranslation.html" },
+};
 const caseRole: SearchTask = {
   name: "case.addRole",
   title: "Case - Assign Role",
@@ -205,6 +227,9 @@ async function selectRows(...names: string[]) {
 }
 
 describe("AfreactSearch bulk actions", () => {
+  // deviation:row-checkbox-label
+  // deviation:select-all-checkbox-role
+  // deviation:selection-count-announced
   it("labels row checkboxes and selects this page or none from the select-all control", async () => {
     serve({});
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
@@ -372,6 +397,7 @@ describe("AfreactSearch bulk actions", () => {
     expect(actionButton()).toHaveFocus();
   });
 
+  // deviation:delete-task-always-asks
   it("asks before a delete whose task carries no question", async () => {
     const quiet = { ...remove, apiBatch: { action: "delete", confirmMsg: "" } };
     const calls = serve({ tasks: [enable, quiet] });
@@ -386,6 +412,7 @@ describe("AfreactSearch bulk actions", () => {
     expect(named(calls, "Contact.delete")).toHaveLength(0);
   });
 
+  // deviation:bulk-confirm-native-dialog
   it("leaves data, rows and selection alone when the confirmation is cancelled", async () => {
     const calls = serve({});
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
@@ -448,6 +475,7 @@ describe("AfreactSearch bulk actions", () => {
     expect(selectAll()).toHaveAttribute("aria-checked", "false");
   });
 
+  // deviation:task-fields-inplace-inputs
   it("asks for a task's input fields, started as core does, and saves them with every id", async () => {
     const credit: SearchTask = {
       name: "add_soft_credit",
@@ -532,6 +560,7 @@ describe("AfreactSearch bulk actions", () => {
     expect(checkbox("Name 1")).not.toBeChecked();
   });
 
+  // deviation:bulk-failed-batch-reloads
   it("shows the progress of a run and the error of a failed batch, then reloads what changed", async () => {
     let finish: (value: unknown) => void = () => undefined;
     let call = 0;
@@ -590,6 +619,47 @@ describe("AfreactSearch bulk actions", () => {
     expect(selectAll()).toHaveAttribute("aria-checked", "false");
   });
 
+  // deviation:bulk-progress-per-batch
+  it("moves the progress bar once per finished batch", async () => {
+    const pending: ((value: unknown) => void)[] = [];
+    serve({
+      rows: [row(1), row(2)],
+      count: 600,
+      handlers: {
+        "Contact.update": () =>
+          new Promise((resolve) => {
+            pending.push(resolve);
+          }),
+      },
+    });
+    renderWithQuery(
+      <AfreactSearch search="S" display="D" settings={{ ...settings, limit: 2, pager: {} }} />,
+    );
+    await screen.findByText("Name 1");
+    await userEvent.click(selectAll());
+    await waitFor(() => {
+      expect(selectAll()).toHaveAttribute("aria-checked", "true");
+    });
+    await openActions();
+    await userEvent.click(screen.getByRole("menuitem", { name: /Enable Contacts/, hidden: true }));
+    const dialog = await screen.findByRole("dialog", { name: "Enable Contacts" });
+    const bar = within(dialog).getByRole("progressbar", { name: "Enable Contacts" });
+    await waitFor(() => {
+      expect(pending).toHaveLength(1);
+    });
+    expect(bar).toHaveAttribute("aria-valuenow", "0");
+    pending[0]?.(counted(500));
+    await waitFor(() => {
+      expect(bar).toHaveAttribute("aria-valuenow", "50");
+    });
+    expect(dialog).toHaveTextContent("Processing records 501 - 600");
+    pending[1]?.(counted(100));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+  });
+
+  // deviation:bulk-error-both-messages
   it("fails a batch whose answer lacks the fetched count instead of reporting zero", async () => {
     serve({ handlers: { "Contact.update": () => [] } });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
@@ -632,6 +702,7 @@ describe("AfreactSearch bulk actions", () => {
     url.mockRestore();
   });
 
+  // deviation:redirect-task-query-merged
   it("opens a redirect task in a new window with its query and data", async () => {
     serve({ tasks: [label] });
     const open = vi.spyOn(window, "open").mockReturnValue(null);
@@ -681,6 +752,7 @@ describe("AfreactSearch bulk actions", () => {
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
+  // deviation:bulk-task-list-error
   it("shows the error of a failed task list instead of an empty menu", async () => {
     mockApi({
       "SearchDisplay.run": () => [row(1)],
@@ -694,6 +766,7 @@ describe("AfreactSearch bulk actions", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Permission denied");
   });
 
+  // deviation:bulk-select-all-error
   it("shows the error of a failed select-all and lets the rows be selected again", async () => {
     mockApi({
       "SearchDisplay.run": (params) => {
@@ -736,6 +809,7 @@ describe("AfreactSearch bulk actions", () => {
     );
   });
 
+  // deviation:row-link-reloads-table
   it("runs a row's update link through inlineEdit and confirms with a status", async () => {
     const links = [{ task: "enable", text: "Enable", icon: "fa-toggle-on" }];
     const calls = serve({
@@ -792,6 +866,7 @@ describe("AfreactSearch bulk actions", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  // deviation:row-link-task-not-offered
   it("alerts for a row link to a task the server does not offer", async () => {
     const links = [{ task: "gone", text: "Gone" }];
     serve({ rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })] });
@@ -901,6 +976,7 @@ describe("AfreactSearch bulk actions", () => {
       expect(checkbox("Name 1")).toBeChecked();
     });
 
+    // deviation:download-failure-closes
     it("offers every row without a selection and reports a failed download", async () => {
       const { fetchMock } = stubDownload(
         new Response(JSON.stringify({ error_message: "Not permitted" }), {
@@ -925,6 +1001,7 @@ describe("AfreactSearch bulk actions", () => {
       expect(status()).toHaveTextContent("Not permitted");
     });
 
+    // deviation:download-dialog-status
     it("keeps the dialog open while the file loads and closes it once, when done", async () => {
       let answer = (response: Response) => {
         void response;
@@ -1009,6 +1086,8 @@ describe("AfreactSearch bulk actions", () => {
       await userEvent.click(within(dialog).getByRole("button", { name: "Add" }));
     }
 
+    // deviation:bulk-update-native-picker
+    // deviation:update-clause-field-resets
     it("updates the selected rows with the chosen fields and values", async () => {
       const calls = serve({
         tasks: [enable, update],
@@ -1101,6 +1180,7 @@ describe("AfreactSearch bulk actions", () => {
       expect(checkbox("Name 1")).not.toBeChecked();
     });
 
+    // deviation:update-preset-unknown-field
     it("starts with the values a hook preset and runs a row link as a plain update", async () => {
       const links = [{ task: "update", text: "Retire" }];
       const preset: SearchTask = { ...update, values: { is_deceased: true, legacy: "x" } };
@@ -1392,6 +1472,7 @@ describe("AfreactSearch bulk actions", () => {
       });
     });
 
+    // deviation:relationship-preset-type
     it("starts from the values a hook preset, the type locked", async () => {
       const preset = {
         ...relationship,
@@ -1460,6 +1541,7 @@ describe("AfreactSearch bulk actions", () => {
       });
     });
 
+    // deviation:relationship-batch-failure-alerts
     it("shows a failed save and reloads, as a batch may have run", async () => {
       const calls = serve({
         tasks: [enable, relationship],
@@ -1605,6 +1687,7 @@ describe("AfreactSearch bulk actions", () => {
       vi.unstubAllGlobals();
     });
 
+    // deviation:mailing-group-failure-stays
     it("keeps the dialog with the error when the group cannot be created", async () => {
       serve({
         tasks: [enable, mailing],
@@ -1796,6 +1879,7 @@ describe("AfreactSearch bulk actions", () => {
       expect(named(calls, "Case.getFields")).toHaveLength(1);
     });
 
+    // deviation:skipped-contacts-send-nothing
     it("tells when every contact is skipped and opens nothing", async () => {
       const calls = serve({
         tasks: [enable, openCase],
@@ -1818,6 +1902,7 @@ describe("AfreactSearch bulk actions", () => {
       expect(checkbox("Name 1")).toBeChecked();
     });
 
+    // deviation:open-case-batch-failure
     it("keeps a failed joint case in the dialog with the server's message", async () => {
       serve({
         tasks: [enable, openCase],
@@ -1840,6 +1925,30 @@ describe("AfreactSearch bulk actions", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 
+    // deviation:open-case-save-waits-lookup
+    it("withholds the save until the case lookup answers", async () => {
+      let answer: (rows: unknown[]) => void = () => undefined;
+      serve({
+        tasks: [enable, openCase],
+        handlers: {
+          "Case.getFields": () => fields,
+          "CaseContact.get": () =>
+            new Promise((resolve) => {
+              answer = resolve;
+            }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openCaseDialog("Name 1");
+      await within(dialog).findByRole("combobox", { name: "Case Type" });
+      expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
+      answer([]);
+      await waitFor(() => {
+        expect(within(dialog).getByRole("button", { name: "Save" })).toBeEnabled();
+      });
+    });
+
+    // deviation:open-case-save-waits-lookup
     it("shows a failed case lookup and withholds the save", async () => {
       serve({
         tasks: [enable, openCase],
@@ -1855,6 +1964,283 @@ describe("AfreactSearch bulk actions", () => {
       expect(await within(dialog).findByRole("alert")).toHaveTextContent("No such entity");
       await within(dialog).findByRole("combobox", { name: "Case Type" });
       expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
+    });
+  });
+  describe("grant", () => {
+    const fields = [
+      {
+        name: "grant_type_id",
+        label: "Grant Type",
+        input_type: "Select",
+        data_type: "Integer",
+        required: true,
+        options: [{ id: 1, label: "Emergency" }],
+      },
+      {
+        name: "status_id",
+        label: "Grant Status",
+        input_type: "Select",
+        data_type: "Integer",
+        required: true,
+        default_value: 1,
+        options: [{ id: 1, label: "Submitted" }],
+      },
+      {
+        name: "amount_total",
+        label: "Total Amount",
+        input_type: "Text",
+        data_type: "Money",
+        required: true,
+      },
+      { name: "rationale", label: "Rationale", input_type: "TextArea", data_type: "Text" },
+    ];
+
+    async function openGrantDialog(...names: string[]) {
+      await screen.findByText("Name 1");
+      await selectRows(...names);
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /Add New Grant/, hidden: true }));
+      return screen.findByRole("dialog", { name: "Grant - Add New Grant" });
+    }
+
+    // deviation:grant-count-contacts-once
+    it("starts with the required fields, counts each contact with grants once and skips them", async () => {
+      const calls = serve({
+        tasks: [enable, addGrant],
+        handlers: {
+          "Grant.getFields": () => fields,
+          // Two grants of one contact.
+          "Grant.get": () => [{ contact_id: 2 }, { contact_id: 2 }],
+          "Grant.save": () => Object.assign([{ id: 10 }, { id: 11 }], { countFetched: 2 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openGrantDialog("Name 1", "Name 2", "Name 3");
+      await within(dialog).findByRole("combobox", { name: "Grant Type" });
+      const fieldSelects = within(dialog).getAllByRole("combobox", { name: "Field" });
+      expect(fieldSelects).toHaveLength(2);
+      expect(fieldSelects[0]).toHaveValue("grant_type_id");
+      expect(fieldSelects[1]).toHaveValue("amount_total");
+      expect(within(dialog).queryByRole("radio", { name: /single/ })).not.toBeInTheDocument();
+      expect(
+        within(dialog).getByRole("radiogroup", { name: "1 contact already has a grant." }),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByRole("radio", { name: "Skip contact with existing grant" }),
+      ).toBeChecked();
+      await userEvent.type(within(dialog).getByRole("textbox", { name: "Total Amount" }), "25");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "Successfully added 2 grants.",
+          "Saved",
+          "success",
+        );
+      });
+      expect(named(calls, "Grant.get")[0]?.params).toEqual({
+        select: ["contact_id"],
+        where: [["contact_id", "IN", [1, 2, 3]]],
+      });
+      expect(named(calls, "Grant.save").map(({ params }) => params)).toEqual([
+        {
+          records: [
+            { grant_type_id: 1, amount_total: "25", contact_id: 1 },
+            { grant_type_id: 1, amount_total: "25", contact_id: 3 },
+          ],
+        },
+      ]);
+    });
+
+    // deviation:grant-dialog-case-fixes
+    it("adds grants for every contact when asked, and tells when every contact is skipped", async () => {
+      const calls = serve({
+        tasks: [enable, addGrant],
+        handlers: {
+          "Grant.getFields": () => fields,
+          "Grant.get": () => [{ contact_id: 1 }],
+          "Grant.save": () => Object.assign([{ id: 10 }], { countFetched: 1 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      let dialog = await openGrantDialog("Name 1");
+      await within(dialog).findByRole("combobox", { name: "Grant Type" });
+      await userEvent.type(within(dialog).getByRole("textbox", { name: "Total Amount" }), "5");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith("No grants to add.", "All contacts skipped");
+      });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /Add New Grant/, hidden: true }));
+      dialog = await screen.findByRole("dialog", { name: "Grant - Add New Grant" });
+      await userEvent.click(
+        await within(dialog).findByRole("radio", { name: "Add new grant anyway" }),
+      );
+      await userEvent.type(within(dialog).getByRole("textbox", { name: "Total Amount" }), "5");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(named(calls, "Grant.save")).toHaveLength(1);
+      });
+      expect(named(calls, "Grant.save")[0]?.params).toMatchObject({
+        records: [expect.objectContaining({ contact_id: 1 })],
+      });
+    });
+  });
+  describe("tag merge", () => {
+    const tags = [
+      { id: 2, label: "Alpha", is_reserved: false },
+      { id: 1, label: "Beta", is_reserved: true },
+    ];
+    async function openMerge() {
+      await screen.findByText("Name 1");
+      await selectRows("Name 1", "Name 2");
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /Merge Tags/, hidden: true }));
+      return screen.findByRole("dialog", { name: "Merge Tags" });
+    }
+
+    it("keeps the first tag by label, takes the kept tag's label and merges the others into it", async () => {
+      const calls = serve({
+        tasks: [enable, tagMerge],
+        handlers: { "Tag.get": () => tags, "Tag.merge": () => [] },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openMerge();
+      const keep = await within(dialog).findByRole("combobox", { name: "Tag to keep" });
+      const labelBox = within(dialog).getByRole("textbox", { name: "Label" });
+      expect(keep).toHaveValue("2");
+      expect(labelBox).toHaveValue("Alpha");
+      expect(dialog).toHaveTextContent("One or more selected tags are reserved.");
+      await userEvent.selectOptions(keep, "1");
+      expect(labelBox).toHaveValue("Beta");
+      await userEvent.clear(labelBox);
+      expect(within(dialog).getByRole("button", { name: "Merge tags" })).toBeDisabled();
+      await userEvent.type(labelBox, "Gamma");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Merge tags" }));
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          '2 tags merged into "Gamma".',
+          "Merged",
+          "success",
+        );
+      });
+      expect(named(calls, "Tag.get")[0]?.params).toEqual({
+        select: ["id", "label", "is_reserved"],
+        where: [["id", "IN", [1, 2]]],
+        orderBy: { label: "ASC" },
+      });
+      expect(named(calls, "Tag.merge").map(({ params }) => params)).toEqual([
+        { targetId: 1, tagIds: [2], label: "Gamma" },
+      ]);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(pageRuns(calls)).toHaveLength(2);
+      });
+    });
+
+    // deviation:tag-merge-none-left
+    it("says when none of the selected tags exists any more", async () => {
+      const calls = serve({ tasks: [enable, tagMerge], handlers: { "Tag.get": () => [] } });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openMerge();
+      expect(
+        await within(dialog).findByText("None of the selected tags exists any more."),
+      ).toBeInTheDocument();
+      expect(within(dialog).getByRole("button", { name: "Merge tags" })).toBeDisabled();
+      expect(named(calls, "Tag.merge")).toHaveLength(0);
+    });
+
+    it("keeps a failed merge in the dialog with the server's message", async () => {
+      serve({
+        tasks: [enable, tagMerge],
+        handlers: {
+          "Tag.get": () => tags,
+          "Tag.merge": () => {
+            throw apiError("Permission denied");
+          },
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openMerge();
+      await within(dialog).findByRole("combobox", { name: "Tag to keep" });
+      await userEvent.click(within(dialog).getByRole("button", { name: "Merge tags" }));
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent("Permission denied");
+      expect(within(dialog).getByRole("button", { name: "Merge tags" })).toBeEnabled();
+    });
+  });
+
+  describe("add translation", () => {
+    const settingsOf = () => [
+      {
+        allLanguages: { fr_FR: "French", de_DE: "German", es_ES: "Spanish" },
+        uiLanguages: { de_DE: "German" },
+      },
+    ];
+    async function openTranslation() {
+      await screen.findByText("Name 1");
+      await selectRows("Name 1");
+      await userEvent.click(actionButton());
+      await userEvent.click(
+        await screen.findByRole("menuitem", { name: /Add Translation/, hidden: true }),
+      );
+      return screen.findByRole("dialog", { name: "Add Translation" });
+    }
+
+    // deviation:translation-dialog-labels-errors
+    it("offers the languages in use first, marks existing ones and opens the editor for the choice", async () => {
+      const location = { assign: vi.fn() };
+      vi.stubGlobal("location", location);
+      const calls = serve({
+        tasks: [enable, addTranslation],
+        handlers: {
+          "MessageTemplate.get": () => [{ id: 1, msg_title: "Receipt" }],
+          "Translation.get": (params) =>
+            JSON.stringify(params.where).includes("entity_id")
+              ? [{ language: "de_DE" }]
+              : [{ language: "de_DE" }, { language: "fr_FR" }],
+          "Afreact.getTaskSettings": settingsOf,
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openTranslation();
+      expect(await within(dialog).findByRole("textbox", { name: "Message Template" })).toHaveValue(
+        "Receipt",
+      );
+      const group = within(dialog).getByRole("radiogroup", { name: /Locale/ });
+      expect(within(group).getByRole("radio", { name: /German/ })).toBeDisabled();
+      expect(within(group).getByRole("radio", { name: "French" })).toBeChecked();
+      expect(within(group).queryByRole("radio", { name: "Spanish" })).not.toBeInTheDocument();
+      await userEvent.selectOptions(
+        within(dialog).getByRole("combobox", { name: "Other" }),
+        "es_ES",
+      );
+      expect(within(group).getByRole("radio", { name: "Other" })).toBeChecked();
+      await userEvent.click(within(dialog).getByRole("button", { name: "Add" }));
+      expect(location.assign).toHaveBeenCalledWith(
+        "/civicrm/admin/messageTemplates/edit#/edit?id=1&lang=es_ES",
+      );
+      expect(named(calls, "Afreact.getTaskSettings")[0]?.params).toEqual({
+        module: "crmMsgadmTasks",
+      });
+      vi.unstubAllGlobals();
+    });
+
+    it("shows a failed lookup and offers no language", async () => {
+      serve({
+        tasks: [enable, addTranslation],
+        handlers: {
+          "MessageTemplate.get": () => [{ id: 1, msg_title: "Receipt" }],
+          "Translation.get": () => [],
+          "Afreact.getTaskSettings": () => {
+            throw apiError('Module "crmMsgadmTasks" is not enabled.');
+          },
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openTranslation();
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent("is not enabled");
+      expect(within(dialog).queryByRole("radio")).not.toBeInTheDocument();
+      expect(within(dialog).getByRole("button", { name: "Add" })).toBeDisabled();
     });
   });
   describe("case role", () => {
@@ -2024,6 +2410,39 @@ describe("AfreactSearch bulk actions", () => {
       expect(await within(dialog).findByRole("alert")).toHaveTextContent("No write");
       expect(within(dialog).getByRole("button", { name: "Save" })).toBeEnabled();
       await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    // deviation:case-role-batch-failure-alerts
+    it("alerts with the server's message when the role batch fails and closes the dialog", async () => {
+      serve({
+        tasks: [enable, caseRole],
+        handlers: {
+          "Relationship.get": () => roleCount(0),
+          "CaseContact.get": () => {
+            throw apiError("Relationship type is inactive");
+          },
+          "Individual.autocomplete": () =>
+            Object.assign([{ id: 7, label: "Bob" }], { countMatched: 1 }),
+        },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openRoleDialog("Name 1");
+      await userEvent.selectOptions(
+        within(dialog).getByRole("combobox", { name: /Role Type/ }),
+        "9_b_a",
+      );
+      const contact = await within(dialog).findByRole("combobox", { name: /Contact/ });
+      await userEvent.type(contact, "Bo");
+      await userEvent.click(await screen.findByRole("option", { name: "Bob" }));
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "Relationship type is inactive",
+          "Error",
+          "error",
+        );
+      });
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 

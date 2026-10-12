@@ -70,6 +70,7 @@ for (const renderer of ["react", "angular"] as const) {
       await expect(form(page).locator("table tbody tr").first()).toBeVisible();
     });
 
+    // deviation:later-tab-opens-invalid
     test("with a required field empty, a later tab opens on click", async ({ page }) => {
       await page.goto(render(renderer));
       await tab(page, "privacy").locator("a").click();
@@ -126,6 +127,7 @@ for (const renderer of ["react", "angular"] as const) {
   });
 }
 
+// deviation:aria-tabs-pattern
 test("react: tabs follow the ARIA pattern with arrow keys", async ({ page }) => {
   await page.goto(render("react"));
   const first = page.getByRole("tab", { name: "Name" });

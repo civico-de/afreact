@@ -218,6 +218,7 @@ describe("chart_kit admin model", () => {
     expect(settings.columns?.[0]?.seriesType).toBe("x");
   });
 
+  // deviation:chart-legacy-settings-guarded
   it("hands the legacy adaptor a column list and no order index past the columns", () => {
     const seen: unknown[] = [];
     const watching = readChartKit({

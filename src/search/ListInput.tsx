@@ -26,6 +26,7 @@ function parse(kind: ListKind, text: string): string | number | null {
  * separator, crm-multi-select-date): each entry a chip, the input adds one with Enter or a
  * comma and keeps a date out twice.
  */
+// deviation:inplace-list-chips
 export function ListInput({
   kind,
   value,

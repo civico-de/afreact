@@ -43,6 +43,14 @@ describe("pageStore", () => {
     expect(window.history.length).toBe(length);
   });
 
+  it("adds a history entry when asked, as an assigned location.hash", () => {
+    setHash("#/tab?x=1");
+    const length = window.history.length;
+    pageStore.write(new URLSearchParams({ _s: "4" }), { push: true });
+    expect(window.location.hash).toBe("#/tab?_s=4");
+    expect(window.history.length).toBe(length + 1);
+  });
+
   it("hands out copies, so a caller's change is not a write", () => {
     setHash("#?a=1");
     pageStore.params().set("a", "2");

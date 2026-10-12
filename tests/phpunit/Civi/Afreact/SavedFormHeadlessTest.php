@@ -92,6 +92,7 @@ class SavedFormHeadlessTest extends TestCase implements HeadlessInterface {
     }
   }
 
+  // deviation:self-including-block-rejected
   public function testSelfIncludingBlockIsRejected(): void {
     // Core's loop check (Utils::findEmbedCycle) knows only forms already saved, so it lets a new
     // block that includes itself through.

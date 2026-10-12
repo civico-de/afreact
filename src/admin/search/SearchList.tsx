@@ -105,6 +105,7 @@ export function SearchList() {
   const primary = (meta.data?.schema ?? []).filter((entity) => entity.searchable === "primary");
   const [segmentDialog, setSegmentDialog] = useState<{ entity?: string } | null>(null);
 
+  // deviation:search-listing-a11y
   function onTabKey(event: KeyboardEvent) {
     const index = all.findIndex((t) => t.name === tab);
     const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
@@ -346,6 +347,7 @@ function ListingTab({ tab }: { tab: SearchTab }) {
       label: ts("Tags"),
       render: (row, access) => (
         <EntityTags
+          size="xs"
           entityTable="civicrm_saved_search"
           entityId={row.id}
           tagIds={row.tag_id ?? []}

@@ -70,6 +70,7 @@ describe("chart display editor", () => {
     expect(onChange).toHaveBeenLastCalledWith({ ...line, label: "D" });
   });
 
+  // deviation:chart-scale-type-repicks
   it("re-picks the stat type a categorical scale no longer offers", async () => {
     const { onChange } = renderEditor(line);
     const y = await screen.findByRole("group", { name: "Y field 1" });
@@ -81,6 +82,19 @@ describe("chart display editor", () => {
       expect.objectContaining({ axis: "x" }),
       expect.objectContaining({ scaleType: "categorical", reduceType: "count" }),
     ]);
+  });
+
+  // deviation:chart-add-field-full-axis
+  it("offers Add field only on a multi-column axis or one without a column", async () => {
+    renderEditor(line);
+    const add = (axis: string) =>
+      within(screen.getByRole("group", { name: axis })).queryByRole("button", {
+        name: "Add field",
+      });
+    await screen.findByRole("group", { name: "Y field 1" });
+    expect(add("X")).toBeNull();
+    expect(add("Y")).toBeInTheDocument();
+    expect(add("Group")).toBeInTheDocument();
   });
 
   it("refuses to edit a chart whose column has no axis, rather than dropping it", async () => {

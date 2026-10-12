@@ -142,3 +142,26 @@ test("the builders section names the island display type and its modules", async
   await expect(list("Builder templates changed on this site")).toHaveText("None");
   expect(await axeFindings(page, ".afreact-builders-report")).toEqual([]);
 });
+
+test("the FormBuilder section names the island fixture's modules and leaves no part to the classic builder", async ({
+  page,
+}) => {
+  await page.goto("/civicrm/admin/afreact");
+  const section = page.getByRole("region", { name: "FormBuilder" });
+  const list = (heading: string) =>
+    section
+      .getByRole("heading", { name: heading })
+      .locator("xpath=following-sibling::*[self::ul or self::p][1]");
+  // The fixture's element, input type, behavior and entity options all have plugin elements.
+  await expect(list("Parts React leaves to the classic builder")).toHaveText("None");
+  await expect(
+    section
+      .getByRole("heading", {
+        name: "Angular modules on the classic builder that React does not know",
+      })
+      .locator("xpath=following-sibling::ul[1]")
+      .getByRole("listitem"),
+  ).toHaveText(["afreactIsland", "afreactIslandForm"]);
+  // civi_case's own addition to the relationship autofill does not count.
+  await expect(list("Builder templates changed on this site")).toHaveText("None");
+});

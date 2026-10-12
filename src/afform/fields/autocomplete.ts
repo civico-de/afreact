@@ -14,6 +14,8 @@ export interface AutocompleteItem {
   image?: string;
   icon_class?: string;
   label_class?: string;
+  /** The optgroup a local list files the item under; consecutive items share a heading. */
+  group?: string;
 }
 
 /**
@@ -131,7 +133,8 @@ export function searchedEntity(
   const entity = defn.dfk_entities[String(key)];
   return entity
     ? { entity }
-    : { error: ts("No entity to search for %1 = %2", { 1: control, 2: key }) };
+    : // deviation:dynamic-entity-unmapped-note
+      { error: ts("No entity to search for %1 = %2", { 1: control, 2: key }) };
 }
 
 /** afField's namePrefix: the part of the af-field's name before defn.name, kept for the control field. */

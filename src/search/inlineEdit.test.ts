@@ -109,6 +109,7 @@ describe("values", () => {
     );
   });
 
+  // deviation:inline-edit-compare-by-value
   it("compares by value, so unchanged lists do not save", () => {
     expect(isChanged([1, 2], [1, 2])).toBe(false);
     expect(isChanged(undefined, null)).toBe(false);

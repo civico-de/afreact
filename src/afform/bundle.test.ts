@@ -126,17 +126,14 @@ describe("compileBundle", () => {
   const partial = (module: string, html: string) => ({
     partials: { [`~/${module}/${module}.aff.html`]: html },
   });
-  // As afform_admin appends it to every partial.
-  const admin = `  <div class="btn-group crm-admin-block-context-dropdown dropup"><button>Configure</button></div>\n`;
-
-  it("inlines blocks, decodes display settings and drops afform_admin's edit menu", () => {
+  it("inlines blocks and decodes display settings", () => {
     const file: ModuleFile = {
       afformA: partial(
         "afformA",
-        `<afblock-b></afblock-b><crm-search-display-table settings="{limit: 10}"></crm-search-display-table>\n${admin}`,
+        `<afblock-b></afblock-b><crm-search-display-table settings="{limit: 10}"></crm-search-display-table>\n`,
       ),
       afblockB: {
-        ...partial("afblockB", `<p>block</p>\n${admin}`),
+        ...partial("afblockB", `<p>block</p>\n`),
         strings: { Block: "Baustein" },
       },
       afformUnrelated: { ...partial("afformUnrelated", ""), strings: { Other: "Andere" } },

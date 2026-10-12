@@ -82,6 +82,7 @@ export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: 
     }
   };
   const links = entity === null ? [] : quickAddLinks(defn, entity, env);
+  // deviation:quick-add-links-reachable
   // $.fn.crmAutocomplete's quick-add click: the popup's submit response names the new record.
   const quickAdd = (url: string) => {
     window.CRM.loadForm(url).on("crmFormSuccess", (_event, data) => {
@@ -118,6 +119,7 @@ export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: 
   const errors = [
     "error" in target ? target.error : null,
     resolved.isError ? errorMessage(resolved.error) : null,
+    // deviation:missing-ids-noted
     notFound.length ? ts("No record found for %1.", { 1: notFound.join(", ") }) : null,
     links === null ? ts("The page lists no quick-add forms.") : null,
     failed,

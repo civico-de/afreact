@@ -73,6 +73,7 @@ describe("in-place editing", () => {
     vi.restoreAllMocks();
   });
 
+  // deviation:inline-edit-refreshes-totals
   it("marks the cell as core does and saves a text with core's parameters", async () => {
     const { edits, runs } = setup({ value_key: "job_title" }, "Pilot");
     const cell = await screen.findByRole("button", { name: edit("Pilot") });
@@ -116,6 +117,7 @@ describe("in-place editing", () => {
     expect(runs().filter(({ params }) => params.return === "page:1")).toHaveLength(1);
   });
 
+  // deviation:inline-edit-keyboard-button
   it("opens with Enter, Space and F2 and cancels with Escape, focus back on the cell", async () => {
     const { edits } = setup({ value_key: "job_title" }, "Pilot");
     const cell = await screen.findByRole("button", { name: edit("Pilot") });
@@ -145,6 +147,7 @@ describe("in-place editing", () => {
     expect(edits()[0]?.values).toEqual({ job_title: "Pilots" });
   });
 
+  // deviation:inplace-save-on-leave
   it("saves a change on leaving the editor and closes an unchanged one", async () => {
     // jsdom reports no focus while focus moves; a browser reports whether the window has it.
     vi.spyOn(document, "hasFocus").mockReturnValue(true);
@@ -162,12 +165,25 @@ describe("in-place editing", () => {
     expect(edits()[0]?.values).toEqual({ job_title: "Pilots" });
   });
 
+  // deviation:inplace-save-on-leave
   it("stays open when the window loses focus", async () => {
     vi.spyOn(document, "hasFocus").mockReturnValue(false);
     const { edits } = setup({ value_key: "job_title" }, "Pilot");
     await open();
     await userEvent.type(field(), "s");
     field().blur();
+    expect(field()).toHaveValue("Pilots");
+    expect(edits()).toEqual([]);
+  });
+
+  // deviation:inline-edit-keys-on-editor
+  it("leaves Enter and Escape outside the editor alone", async () => {
+    vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    const { edits } = setup({ value_key: "job_title" }, "Pilot");
+    await open();
+    await userEvent.type(field(), "s");
+    fireEvent.keyDown(document.body, { key: "Enter" });
+    fireEvent.keyDown(document.body, { key: "Escape" });
     expect(field()).toHaveValue("Pilots");
     expect(edits()).toEqual([]);
   });
@@ -180,6 +196,7 @@ describe("in-place editing", () => {
     expect(await screen.findByRole("button", { name: edit("Pilot") })).toBeInTheDocument();
   });
 
+  // deviation:inline-edit-failed-save-reopens
   it("keeps a failed editor open with the error and the typed value", async () => {
     setup({ value_key: "job_title" }, "Pilot", {
       inlineEdit: () => {
@@ -255,6 +272,7 @@ describe("in-place editing", () => {
     expect(screen.getByRole("button", { name: edit("Pilot") })).toBeInTheDocument();
   });
 
+  // deviation:inplace-empty-null
   it("sends null for an emptied nullable field", async () => {
     const { edits } = setup({ value_key: "job_title" }, "Pilot");
     await open();
@@ -263,6 +281,7 @@ describe("in-place editing", () => {
     expect(edits()[0]?.values).toEqual({ job_title: null });
   });
 
+  // deviation:inline-edit-required-checked
   it("requires a value where the field cannot be emptied", async () => {
     const { edits } = setup({ value_key: "job_title", nullable: false }, "Pilot");
     await open();
@@ -304,6 +323,7 @@ describe("in-place editing", () => {
     expect(named([{ val: null }, {}, {}, { val: "self" }])).toBe("ID 9");
   });
 
+  // deviation:inplace-reference-combobox
   it("edits a contact reference through an autocomplete on its entity", async () => {
     const bob = { id: 2, label: "Bob" };
     const { edits, calls } = setup({ value_key: "employer_id", fk_entity: "Contact" }, 3, {
@@ -348,6 +368,7 @@ describe("in-place editing", () => {
       },
     });
 
+  // deviation:inplace-reference-combobox
   it("closes an open list on Escape before the editor, then the editor with a value", async () => {
     const { edits } = reference();
     await open();
@@ -434,6 +455,7 @@ describe("in-place editors", () => {
     expect(edits()[0]?.values).toEqual({ t: "2026-03-04 08:15:00" });
   });
 
+  // deviation:inplace-native-inputs
   it("edits a colour by picker or as text", async () => {
     const { edits } = setup({ value_key: "c", input_type: "Color" }, "#112233");
     await open();
@@ -456,6 +478,7 @@ describe("in-place editors", () => {
     expect(edits()[0]?.values).toEqual({ b: true });
   });
 
+  // deviation:inplace-native-inputs
   it("edits an option list with the option's own id type, and clears it", async () => {
     const options = [
       { id: 1, label: "Female" },
@@ -499,6 +522,7 @@ describe("in-place editors", () => {
     expect(edits()[0]?.values).toEqual({ m: ["a", "b"] });
   });
 
+  // deviation:inplace-list-chips
   it("edits a list of texts as chips: Enter or a comma adds, Backspace removes", async () => {
     const { edits } = setup({ value_key: "fee_level", serialize: true }, ["Early"], {
       shown: "Early",

@@ -37,6 +37,7 @@ export function moveRow(
   const moved = rows[from];
   if (!moved || to < 0)
     throw new Error(`Row ${String(active)} or ${String(over)} is not on this page.`);
+  // deviation:tree-table-drag-with-subrows
   if (hierarchical) {
     const depth = rowDepth(moved);
     while (to >= 0 && rowDepth(rows[to]!) > depth) to = parentOf(rows, to);
@@ -61,6 +62,7 @@ export function moveRow(
   return { rows: rest, weight };
 }
 
+// deviation:drag-weights-shown
 /** The weights SearchDisplay.inlineEdit returns by row key, in the data and the weight column. */
 export function withWeights(
   rows: Row[],

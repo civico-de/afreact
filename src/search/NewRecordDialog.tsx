@@ -6,43 +6,104 @@ import { Icon } from "./LinkContent";
 import {
   caseBatch,
   caseFieldsCall,
+  grantBatch,
+  grantFieldsCall,
+  grantsCall,
   initialCreateFields,
   openCasesCall,
   presetValues,
   type ApiBatch,
+  type ApiCall,
   type EntityInfo,
   type Key,
   type SearchTask,
   type UpdateField,
 } from "./searchTasks";
 
-interface CaseDialogProps {
+/** What a dialog that adds one record per selected contact asks, looks up and says. */
+export interface NewRecordKind {
+  entity: EntityInfo;
+  fieldsCall: () => ApiCall;
+  /** The selected contacts that hold such a record already, one row per record. */
+  existingCall: (ids: Key[]) => ApiCall;
+  /** The fields the dialog adds after the required ones. */
+  own: string[];
+  batch: (values: Record<string, unknown>) => ApiBatch;
+  /** One record for all contacts may be created, where the task allows several clients. */
+  joint: boolean;
+  existing: (count: number) => string;
+  skip: (count: number) => string;
+  anyway: (count: number) => string;
+  /** The alert when every contact is skipped: message and title. */
+  noneLeft: () => [string, string];
+}
+
+/** civiCaseTaskOpenCase.html. */
+export const NEW_CASE: NewRecordKind = {
+  entity: { name: "Case", title: "Case", title_plural: "Cases", primary_key: ["id"] },
+  fieldsCall: caseFieldsCall,
+  existingCall: openCasesCall,
+  own: ["subject"],
+  batch: caseBatch,
+  joint: true,
+  existing: (count) =>
+    ts("1 contact already has an open case.", {
+      plural: "%count contacts already have an open case.",
+      count,
+    }),
+  skip: (count) =>
+    ts("Skip contact with open case", { plural: "Skip contacts with open cases", count }),
+  anyway: (count) => ts("Create new case anyway", { plural: "Create new cases anyway", count }),
+  noneLeft: () => [ts("No cases to open."), ts("All contacts skipped")],
+};
+
+// deviation:grant-dialog-case-fixes
+/** civiGrantTaskAddGrant.html. */
+export const NEW_GRANT: NewRecordKind = {
+  entity: { name: "Grant", title: "Grant", title_plural: "Grants", primary_key: ["id"] },
+  fieldsCall: grantFieldsCall,
+  existingCall: grantsCall,
+  own: [],
+  batch: grantBatch,
+  joint: false,
+  existing: (count) =>
+    ts("1 contact already has a grant.", {
+      plural: "%count contacts already have grants.",
+      count,
+    }),
+  skip: (count) =>
+    ts("Skip contact with existing grant", { plural: "Skip contacts with existing grants", count }),
+  anyway: (count) => ts("Add new grant anyway", { plural: "Add new grants anyway", count }),
+  noneLeft: () => [ts("No grants to add."), ts("All contacts skipped")],
+};
+
+interface NewRecordDialogProps {
+  kind: NewRecordKind;
   task: SearchTask;
   /** The selected contacts. */
   ids: Key[];
-  /** A case per contact: the batch and the contacts it runs on; the caller runs it. */
+  /** A record per contact: the batch and the contacts it runs on; the caller runs it. */
   onSave: (apiBatch: ApiBatch, ids: Key[]) => void;
-  /** One case for all contacts was opened here. */
+  /** One joint case for all contacts was opened here. */
   onOpened: (message: string) => void;
   onCancel: () => void;
 }
-
-const CASE: EntityInfo = {
-  name: "Case",
-  title: "Case",
-  title_plural: "Cases",
-  primary_key: ["id"],
-};
 
 const isContactId = (row: unknown): row is { contact_id: Key } =>
   typeof row === "object" && row !== null && "contact_id" in row;
 
 /**
- * civiCaseTaskOpenCase.html: the new case's fields, a choice between one case per contact and a
- * joint case where the setting allows it, and a choice to skip the contacts that have a case
- * open already.
+ * The new record's fields, a choice between one case per contact and a joint case where the
+ * setting allows it, and a choice to skip the contacts that hold such a record already.
  */
-export function CaseDialog({ task, ids, onSave, onOpened, onCancel }: CaseDialogProps) {
+export function NewRecordDialog({
+  kind,
+  task,
+  ids,
+  onSave,
+  onOpened,
+  onCancel,
+}: NewRecordDialogProps) {
   const titleId = useId();
   const addId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
@@ -54,55 +115,59 @@ export function CaseDialog({ task, ids, onSave, onOpened, onCancel }: CaseDialog
   const [skip, setSkip] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [callEntity, action, params] = caseFieldsCall();
+  const entity = kind.entity.name;
+  const [callEntity, action, params] = kind.fieldsCall();
   const fields = useQuery({
-    queryKey: ["caseFields"],
+    queryKey: ["newRecordFields", entity],
     queryFn: () => api4<UpdateField>(callEntity, action, params),
   });
-  const [casesEntity, casesAction, casesParams] = openCasesCall(ids);
-  // Looked up afresh each time the dialog opens: a case may have been opened or closed since.
-  const openCases = useQuery({
-    queryKey: ["openCases", ids],
-    queryFn: () => api4(casesEntity, casesAction, casesParams),
+  const [existingEntity, existingAction, existingParams] = kind.existingCall(ids);
+  // Looked up afresh each time the dialog opens: a record may have been added or closed since.
+  const existing = useQuery({
+    queryKey: ["newRecordExisting", entity, ids],
+    queryFn: () => api4(existingEntity, existingAction, existingParams),
     gcTime: 0,
   });
-  const withCase = new Set(
-    (openCases.data ?? []).filter(isContactId).map((row) => String(row.contact_id)),
+  // deviation:grant-count-contacts-once
+  const holders = new Set(
+    (existing.data ?? []).filter(isContactId).map((row) => String(row.contact_id)),
   );
-  const jointAllowed = ids.length > 1 && !!task.allowMultipleClients;
+  const jointAllowed = kind.joint && ids.length > 1 && !!task.allowMultipleClients;
 
-  // The trait's first clauses, once the fields are known: required without default, then subject.
+  // The trait's first clauses, once the fields are known: required without default, then own.
   useEffect(() => {
     if (!fields.data || started) return;
     setStarted(true);
     setClauses((current) =>
-      addClauses(current, fields.data, initialCreateFields(fields.data, ["subject"])),
+      addClauses(current, fields.data, initialCreateFields(fields.data, kind.own)),
     );
-  }, [fields.data, started]);
+  }, [fields.data, started, kind.own]);
 
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
   });
 
   const submit = async () => {
-    const clients = skip ? ids.filter((id) => !withCase.has(String(id))) : ids;
-    if (!clients.length) {
-      window.CRM.alert(ts("No cases to open."), ts("All contacts skipped"));
+    const contacts = skip ? ids.filter((id) => !holders.has(String(id))) : ids;
+    // deviation:skipped-contacts-send-nothing
+    if (!contacts.length) {
+      window.CRM.alert(...kind.noneLeft());
       dialog.current?.close();
       return;
     }
     const values = clauseValues(clauses);
     if (!(joint && jointAllowed)) {
-      onSave(caseBatch(values), clients);
+      onSave(kind.batch(values), contacts);
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      await api4("Case", "create", { values: { ...values, contact_id: clients } });
+      await api4("Case", "create", { values: { ...values, contact_id: contacts } });
       const message = ts("Successfully opened 1 case.");
       window.CRM.alert(message, ts("Saved"), "success");
       onOpened(message);
+      // deviation:open-case-batch-failure
     } catch (failure) {
       setError(failure);
       setSaving(false);
@@ -171,48 +236,25 @@ export function CaseDialog({ task, ids, onSave, onOpened, onCancel }: CaseDialog
           </div>
         )}
         <FieldClauses
-          entity={CASE}
+          entity={kind.entity}
           fields={fields.data}
           error={fields.error}
           clauses={clauses}
           onChange={setClauses}
           id={addId}
         />
-        {openCases.isError && (
+        {existing.isError && (
           <p className="alert alert-danger" role="alert">
-            {errorMessage(openCases.error)}
+            {errorMessage(existing.error)}
           </p>
         )}
-        {withCase.size > 0 && (
+        {holders.size > 0 && (
           <div className="alert alert-warning">
             <Icon name="fa-exclamation-triangle" />{" "}
-            <span id={skipId}>
-              {ts("1 contact already has an open case.", {
-                plural: "%count contacts already have an open case.",
-                count: withCase.size,
-              })}
-            </span>
+            <span id={skipId}>{kind.existing(holders.size)}</span>
             <div className="form-inline" role="radiogroup" aria-labelledby={skipId}>
-              {choice(
-                "skip",
-                true,
-                skip,
-                setSkip,
-                ts("Skip contact with open case", {
-                  plural: "Skip contacts with open cases",
-                  count: withCase.size,
-                }),
-              )}{" "}
-              {choice(
-                "skip",
-                false,
-                skip,
-                setSkip,
-                ts("Create new case anyway", {
-                  plural: "Create new cases anyway",
-                  count: withCase.size,
-                }),
-              )}
+              {choice("skip", true, skip, setSkip, kind.skip(holders.size))}{" "}
+              {choice("skip", false, skip, setSkip, kind.anyway(holders.size))}
             </div>
           </div>
         )}
@@ -235,7 +277,8 @@ export function CaseDialog({ task, ids, onSave, onOpened, onCancel }: CaseDialog
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={saving || !fields.data || !openCases.isSuccess}
+            // deviation:open-case-save-waits-lookup
+            disabled={saving || !fields.data || !existing.isSuccess}
           >
             <Icon name="fa-user-plus" /> {ts("Save")}
           </button>

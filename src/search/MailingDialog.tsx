@@ -70,6 +70,7 @@ export function MailingDialog({ task, ids, onCreated, onCancel }: MailingDialogP
       if (!group) throw new Error("Group.create returned no group.");
       onCreated(group.id, group.mailing.id);
     } catch (cause) {
+      // deviation:mailing-group-failure-stays
       // Core alerts its own message and closes; React keeps the dialog with both messages.
       setError(
         `${ts("An error occurred while attempting to create mailing.")} ${errorMessage(cause)}`,

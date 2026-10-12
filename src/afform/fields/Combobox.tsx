@@ -42,6 +42,8 @@ export interface ComboboxProps {
   onRemove: (item: AutocompleteItem) => void;
   /** Takes the focus on mount, for an editor whose first input it is. */
   autoFocus?: boolean;
+  /** Shows the list on mount, as select2 opens a dropdown's search. */
+  initialOpen?: boolean;
   invalid?: boolean;
 }
 
@@ -69,6 +71,17 @@ const classes = (...names: (string | false | undefined)[]) => names.filter(Boole
 
 function failure(error: unknown): string {
   return error instanceof Error ? error.message : JSON.stringify(error);
+}
+
+/** Consecutive items of one optgroup, with the list index of the first. */
+function runs(items: AutocompleteItem[]) {
+  const result: { group: string | undefined; start: number; members: AutocompleteItem[] }[] = [];
+  items.forEach((item, index) => {
+    const last = result.at(-1);
+    if (last && last.group === item.group) last.members.push(item);
+    else result.push({ group: item.group, start: index, members: [item] });
+  });
+  return result;
 }
 
 /** CRM.utils.formatSelect2Result. */
@@ -118,6 +131,7 @@ function ItemMarks({ item, icon }: { item: AutocompleteItem; icon: boolean }): R
   );
 }
 
+// deviation:entityref-aria-combobox
 export function Combobox(props: ComboboxProps) {
   const { id, multiple, selected, itemText, disabled } = props;
   // null while the input shows the value rather than what the user typed.
@@ -142,15 +156,17 @@ export function Combobox(props: ComboboxProps) {
     menuId: `${id}-listbox`,
     getItemId: (index) => `${id}-option-${String(index)}`,
     defaultHighlightedIndex: 0,
+    initialIsOpen: props.initialOpen ?? false,
     stateReducer: (state, { type, changes }) =>
       // Leaving the field keeps the value; select2 selects nothing on blur.
       type === useCombobox.stateChangeTypes.InputBlur
         ? { ...changes, selectedItem: state.selectedItem }
         : changes,
-    onStateChange: ({ type, selectedItem, inputValue }) => {
+    // Downshift reports changes from an effect, a render late; the input's own onChange keeps
+    // the typed text, which a fast typist would otherwise lose.
+    onStateChange: ({ type, selectedItem }) => {
       const types = useCombobox.stateChangeTypes;
-      if (type === types.InputChange) setQuery(inputValue ?? "");
-      else if (selectedItem && (type === types.ItemClick || type === types.InputKeyDownEnter)) {
+      if (selectedItem && (type === types.ItemClick || type === types.InputKeyDownEnter)) {
         props.onSelect(selectedItem);
         setQuery(null);
       } else if (type === types.InputBlur || type === types.InputKeyDownEscape) setQuery(null);
@@ -285,6 +301,9 @@ export function Combobox(props: ComboboxProps) {
               "aria-invalid": props.invalid,
               "aria-busy": props.resolving,
               onKeyDown: removeLast,
+              onChange: (event) => {
+                setQuery(event.currentTarget.value);
+              },
               onFocus: (event) => {
                 if (single) event.currentTarget.select();
               },
@@ -313,20 +332,39 @@ export function Combobox(props: ComboboxProps) {
         >
           {isOpen &&
             fresh &&
-            items.map((item, index) => (
-              <li
-                key={String(item.id)}
-                className={classes(
-                  "select2-results-dept-0 select2-result select2-result-selectable",
-                  highlightedIndex === index && "select2-highlighted",
-                )}
-                {...combobox.getItemProps({ item, index })}
-              >
-                <div className="select2-result-label">
-                  <ResultRow item={item} text={itemText(item)} />
-                </div>
-              </li>
-            ))}
+            runs(items).map(({ group, start, members }) => {
+              const options = members.map((item, offset) => (
+                <li
+                  key={String(item.id)}
+                  className={classes(
+                    `select2-results-dept-${group === undefined ? "0" : "1"} select2-result select2-result-selectable`,
+                    highlightedIndex === start + offset && "select2-highlighted",
+                  )}
+                  {...combobox.getItemProps({ item, index: start + offset })}
+                >
+                  <div className="select2-result-label">
+                    <ResultRow item={item} text={itemText(item)} />
+                  </div>
+                </li>
+              ));
+              if (group === undefined) return options;
+              const heading = `${id}-group-${String(start)}`;
+              return (
+                <li
+                  key={heading}
+                  role="group"
+                  aria-labelledby={heading}
+                  className="select2-results-dept-0 select2-result select2-result-unselectable select2-result-with-children"
+                >
+                  <div id={heading} className="select2-result-label" role="presentation">
+                    {group}
+                  </div>
+                  <ul className="select2-result-sub" role="none">
+                    {options}
+                  </ul>
+                </li>
+              );
+            })}
         </ul>
         {message && (
           <ul className="select2-results">

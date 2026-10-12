@@ -82,6 +82,7 @@ function unknownIn(value: unknown, shape: Shape, path: string, found: string[]):
 }
 
 /** The paths in a display's settings that its React editor does not know, in stored order. */
+// deviation:display-settings-unknown-kept
 export function unknownSettings(type: string, settings: unknown): string[] {
   const found: string[] = [];
   unknownIn(settings, SHAPES[type] ?? SEARCH_KIT, "", found);

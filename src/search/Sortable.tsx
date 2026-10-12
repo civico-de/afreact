@@ -37,6 +37,7 @@ interface SortableRowsProps {
 }
 
 /** The rows of a draggable table, moved by pointer or by keyboard, with announcements. */
+// deviation:keyboard-row-reorder
 export function SortableRows({
   keys,
   nameOf,

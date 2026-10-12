@@ -66,6 +66,7 @@ function ItemColumns({ row, settings, subsearch, afform, onLinkClick }: ColumnsP
             <Cell
               column={column}
               cell={cell}
+              data={row.data}
               colIndex={index}
               subsearch={subsearch}
               afform={afform}
@@ -89,6 +90,7 @@ function SectionHeader({ value, tag }: { value: unknown; tag: string | undefined
   return createElement(
     element,
     { className: "crm-search-display-group-header" },
+    // deviation:section-header-zero
     text || ts("(none)"),
   );
 }
@@ -156,6 +158,7 @@ export function ItemList({ type, ...props }: ItemsProps & { type: "list" | "grid
             className: grid
               ? `crm-search-display-grid-container crm-search-display-grid-layout-${String(settings.colno ?? "")}`
               : "crm-search-display-list-container",
+            // deviation:grid-list-roles
             role: grid ? "list" : undefined,
             "aria-label": label || undefined,
             "aria-busy": loading,
@@ -190,6 +193,7 @@ interface TreeDrag {
 /**
  * crmSearchDisplayTree.html: nested lists under disclosure buttons. Which branches are open
  * survives reloads, where core closes them again after every run.
+ * deviation:tree-branches-stay-open
  */
 export function TreeView(props: ItemsProps) {
   const { settings, label, loading, result, error, reorder } = props;
@@ -226,6 +230,7 @@ export function TreeView(props: ItemsProps) {
                   type="button"
                   className="btn btn-xs crm-search-display-tree-collapse-toggle"
                   style={count ? undefined : { visibility: "hidden" }}
+                  // deviation:tree-toggle-name-state
                   aria-expanded={count ? !collapsed : undefined}
                   aria-label={ts("%1 sub-items", { 1: count })}
                   onClick={() => {
@@ -246,6 +251,7 @@ export function TreeView(props: ItemsProps) {
               {!collapsed && !dragging && branch(item.children, item.row.key, drag)}
             </>
           );
+          // deviation:tree-item-entity-id
           return drag ? (
             drag.item(item, className, content)
           ) : (

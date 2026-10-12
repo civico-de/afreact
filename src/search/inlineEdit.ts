@@ -73,6 +73,7 @@ export function isNullable(row: Row, info: EditableInfo): boolean {
   return info.nullable && !!row.data?.[info.id_path];
 }
 
+// deviation:inline-edit-compare-by-value
 export function isChanged(value: unknown, initial: unknown): boolean {
   return JSON.stringify(value ?? null) !== JSON.stringify(initial ?? null);
 }
@@ -222,6 +223,7 @@ export function useInlineEdit({
     if (!open) return;
     const target = { rowKey: row.key, colIndex: open.colIndex };
     const { initial, values } = edited.current;
+    // deviation:full-row-changed-save
     if (!isChanged(values, initial)) {
       close(target);
       return;
@@ -251,6 +253,7 @@ export function useInlineEdit({
             ...current,
             rows: current.rows.map((old) => (old.key === row.key ? mergeRow(old, fresh) : old)),
           }));
+          // deviation:inline-edit-refreshes-totals
           void client.invalidateQueries({ queryKey: tallyKey });
           setFocus(target);
         } else {
@@ -262,6 +265,7 @@ export function useInlineEdit({
         finish();
         const message = errorMessage(error);
         setAnnouncement(ts("Not saved: %1", { 1: message }));
+        // deviation:inline-edit-failed-save-reopens
         // The editor opens again, with its values, unless another one opened meanwhile.
         const shown = client.getQueryData<RunPage>(key);
         if (shown)

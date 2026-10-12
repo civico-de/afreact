@@ -54,4 +54,10 @@
     <title>FormBuilder (React)</title>
     <access_arguments>manage own afform</access_arguments>
   </item>
+  <item>
+    <path>civicrm/admin/afreact/afform/submissions</path>
+    <page_callback>Civi\Afreact\AdminPage::render</page_callback>
+    <title>Submissions (React)</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
 </menu>

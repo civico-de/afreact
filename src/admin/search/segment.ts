@@ -58,6 +58,7 @@ export function splitExpr(expr: unknown): { name: string; optionKey: string } {
   return { name, optionKey: key ?? "id" };
 }
 
+// deviation:segment-item-move-buttons
 export function moveItem<T>(list: T[], from: number, to: number): T[] {
   if (to < 0 || to >= list.length) return list;
   const next = [...list];

@@ -50,6 +50,7 @@ export function SearchRange({ id, labelId, defn, value, onChange, disabled }: Se
     return {
       id: first ? id : `${id}2`,
       disabled,
+      // deviation:range-bounds-labelled
       "aria-label": first ? ts("%1 from", { 1: label }) : ts("%1 to", { 1: label }),
     };
   };
@@ -94,6 +95,7 @@ export function SearchRange({ id, labelId, defn, value, onChange, disabled }: Se
       </span>
     ));
   }
+  // deviation:date-range-bound-type
   if (defn.input_type === "Date") {
     return pair((bound) => (
       <DateBound
@@ -126,6 +128,7 @@ export function SearchRange({ id, labelId, defn, value, onChange, disabled }: Se
   ));
 }
 
+// deviation:search-range-typed-ids
 function optionById(options: FieldOption[], raw: string): FieldOption["id"] | null {
   return options.find((option) => String(option.id) === raw)?.id ?? null;
 }

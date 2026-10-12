@@ -90,6 +90,7 @@ function StateSelect({
         id={id}
         name={field.name}
         value={typeof value === "string" ? value : ""}
+        // deviation:billing-state-follows-country
         // A country without states offers nothing to choose (upstream bug: Angular waits forever).
         required={!!field.is_required && states.data?.length !== 0}
         disabled={disabled}
@@ -166,6 +167,7 @@ function TrimmedInput({
 /**
  * afCheckout/checkoutFields/<htmlType>.html, with each label tied to its control (upstream bug);
  * an expiry date is two inputs under fixed names.
+ * deviation:checkout-labels-tied
  */
 function CheckoutInput({
   id,
@@ -335,6 +337,7 @@ export function CheckoutBlock({
   const set = (name: string, next: unknown) => {
     const changed = { ...params, [name]: next };
     if (next === undefined) delete changed[name];
+    // deviation:billing-state-follows-country
     // A new country empties the state chosen for the old one (upstream bug: Angular keeps it).
     if (name.startsWith(COUNTRY)) delete changed[name.replace(COUNTRY, STATE)];
     onChange(changed);

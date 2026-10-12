@@ -36,6 +36,7 @@ final class LayoutCompiler {
    * @return array<mixed>
    */
   public function compile(string $module, array $trail = []): array {
+    // deviation:self-including-block-rejected
     if (in_array($module, $trail, TRUE)) {
       throw new \CRM_Core_Exception("Afform block {$module} includes itself.");
     }
@@ -44,12 +45,11 @@ final class LayoutCompiler {
   }
 
   private function html(string $module): string {
-    // afformAdmin injects Angular-only edit menus whose permission check runs client-side.
-    $changeSets = array_filter(
+    $partials = ChangeSet::applyResourceFilters(
       $this->angular->getChangeSets(),
-      static fn (mixed $set) => !$set instanceof ChangeSet || $set->getName() !== 'afformAdmin',
+      'partials',
+      $this->angular->getRawPartials($module),
     );
-    $partials = ChangeSet::applyResourceFilters($changeSets, 'partials', $this->angular->getRawPartials($module));
     $html = is_array($partials) ? $partials["~/{$module}/{$module}.aff.html"] ?? NULL : NULL;
     if (!is_string($html)) {
       throw new \CRM_Core_Exception("No layout for Afform module {$module}.");

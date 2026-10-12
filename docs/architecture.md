@@ -11,8 +11,10 @@ Every Afform a site shows can render with React instead of Angular, switched
 on per form (`afreact_forms`), with the same server contracts: the compiled
 layout as the Angular runtime sees it, the APIv4 actions `Afform.prefill`,
 `Afform.submit` and `SearchDisplay.run`, and the form's own permission.
-FormBuilder, the SearchKit admin and their previews stay Angular; so does the
-dashboard screen around the dashlets (see below).
+The takeover leaves core's Angular builders and their previews alone; the
+React builders are a separate switch (`afreact_builders`, see
+[plan-builders.md](plan-builders.md)). The dashboard screen around the
+dashlets stays Angular (see below).
 
 ## State
 
@@ -25,6 +27,19 @@ dashboard screen around the dashlets (see below).
   brings typed parsers, one URL write for several keys, defaults kept out of
   the URL and `urlKeys` for the per-display prefix; its adapter API is marked
   `unstable_`, so the version is pinned in `package.json`.
+
+  Keys get the display name as a prefix (`<display>._page=2`) once a form
+  holds several displays or other forms or displays share the page
+  (`useUrlPrefix`). A plain `<field>` key from a link leaves the URL once one
+  fieldset writes its own prefixed key, even where a second fieldset read it
+  too. A form in a popup reads the dialog's own `urlHash`, as `afCore` does,
+  and keeps its changes in memory. React reads the URL differently from core
+  in three places: `_s` fills the fields the URL leaves out from the saved
+  set, where core loads the set and then resets the fields to their defaults
+  (upstream-bugs.md); an empty value (`is_active=`) means no filter, where
+  core reads an empty Yes/No as No; and a value with another operator than
+  the field's, or a range, is written as JSON (`type={"NOT IN":["1"]}`),
+  which only React reads.
 - **A fieldset.** Filter fields and the displays they filter share one
   context with `useReducer` (`src/afform/SearchFieldset.tsx`); a form's
   entities, joins and conditions live in `src/afform/model.ts`. Both are
@@ -33,7 +48,12 @@ dashboard screen around the dashlets (see below).
   A save invalidates the queries it affects, where core fires jQuery events
   (`crmPopupFormSuccess`); an element that leaves the page drops the answers
   no other element observes, which is why a dashlet's refresh loads its form
-  afresh.
+  afresh. Search displays follow SearchKit's request rules
+  (`src/search/AfreactSearch.tsx`): placeholder rows while a page loads; a
+  `row_count` request only when the pager or the header count needs it,
+  unless the first page came back short and gave the count; a `tally` request for a totals row; and a reload of
+  all three when a popup form of the display (`crmPopupFormSuccess`)
+  succeeds.
 
 ## The first search
 
@@ -133,10 +153,41 @@ would then need an Angular island (`angular.bootstrap()` on the dashlet with
 its module), which is not verified. It pays off when keyboard reordering is
 wanted, not for the number of forms React renders.
 
+## Support report
+
+The report at `civicrm/admin/afreact` lists every form but blocks, which
+core only places inside other forms, with what React cannot show. It walks
+each form's layout with the same checks the renderer words its notes with
+(`src/afform/support.ts`), so the report and the rendered form agree
+(`tests/browser/support.spec.ts`). The notes come in two kinds: parts of the
+layout vocabulary not yet in React (plain HTML, display, column and setting
+names), and Angular code (any note naming a directive with `ng-`, `af-` or
+`crm-`, an attribute holding an expression, a template or a dialog) that
+only the Angular application runs. The status line counts both kinds and the
+forms core shows nowhere.
+
+A form core shows somewhere is checked as shown there, where `options.x` in
+a display's filters names the placement's arguments or nothing. A form shown
+nowhere, and the preview of any form, has no placement, so a display
+filtered by `options.x` shows a note there only; such forms are listed
+apart. The button **Render every supported form with React** writes every
+form without a finding into `afreact_forms` and drops those with one; a
+listed form that is missing or whose check failed keeps its state. The
+button writes the list as the page saw it, over any edit made on the
+settings form meanwhile.
+
+The builder sections below the forms list what the React builders would
+hand to the classic ones and what other extensions' panels replace; how
+modules and changed partials are found is in
+[plan-builders.md](plan-builders.md), "Switching and fallback". With only
+core's extensions the sections list nothing. Without FormBuilder's admin
+(afform_admin) the FormBuilder section says so, and the `afreact_builders`
+setting neither offers nor applies the FormBuilder builder.
+
 ## Kept Angular on purpose
 
-- Pages that place a listed form still queue its Angular module through
-  core's placement listeners; the directive is never rendered. Dropping the
-  module needs an upstream way to say so.
+- Except on the dashboard, pages that place a listed form still queue its
+  Angular module through core's placement listeners; the directive is never
+  rendered. Dropping the module needs an upstream way to say so.
 - A display placed in a form has no label of its own, so lists and table
   captions have no name there, on either renderer.

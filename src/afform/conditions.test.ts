@@ -84,6 +84,7 @@ describe("checkConditions", () => {
     }
   });
 
+  // deviation:condition-is-empty-values
   it("takes an emptied list or range as empty, and false or 0 as an answer", () => {
     const answers = (value: unknown): FormData => ({
       Individual1: [{ fields: { answer: value } }],

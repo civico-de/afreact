@@ -4,6 +4,7 @@ import { api4, errorMessage } from "../../api/civi";
 
 export interface TagRecord {
   id: number;
+  name: string;
   label: string;
   color: string | null;
   is_selectable: boolean;
@@ -18,6 +19,8 @@ interface EntityTagsProps {
   onChange: (tagIds: number[]) => void;
   /** Without it the tags only show as badges. */
   editable?: boolean;
+  /** The button size core gives the widget there: `sm` on settings, `xs` in listings. */
+  size: "sm" | "xs";
 }
 
 const tagsKey = (entityTable: string) => ["crmEntityTags", entityTable];
@@ -59,6 +62,7 @@ export function EntityTags({
   tagIds,
   onChange,
   editable = true,
+  size,
 }: EntityTagsProps) {
   const id = useId();
   const client = useQueryClient();
@@ -134,11 +138,11 @@ export function EntityTags({
   });
   if (!editable) return <span className="crm-entity-tags">{badges}</span>;
   return (
-    <span className="crm-entity-tags btn-group btn-group-xs" onKeyDown={close}>
+    <span className={`crm-entity-tags btn-group btn-group-${size}`} onKeyDown={close}>
       <button
         id={`${id}-button`}
         type="button"
-        className="btn btn-secondary-outline"
+        className="btn btn-secondary-outline dropdown-toggle"
         aria-expanded={open}
         aria-controls={`${id}-panel`}
         onClick={() => {
@@ -146,7 +150,7 @@ export function EntityTags({
         }}
       >
         <i className="crm-i fa-tag" role="img" aria-hidden="true" />{" "}
-        <span className="crm-entity-tags-btn-label">{ts("Tags")}</span>
+        <span className="crm-entity-tags-btn-label">{ts("Tags")}</span> <span className="caret" />
       </button>
       {badges}
       {open && (

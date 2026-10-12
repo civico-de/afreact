@@ -3,8 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { jquerySelection } from "../test/jquery";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
+import { memoryStore } from "../url/hash";
 import { AfreactForm } from "./AfreactForm";
-import type { LayoutNode } from "./types";
+import { isElement, type LayoutNode } from "./types";
 
 const button = (ngClick: string | null, text: string, extra = {}): LayoutNode => ({
   "#tag": "button",
@@ -104,6 +105,7 @@ describe("submitting", () => {
     expect(box.reject).not.toHaveBeenCalled();
   });
 
+  // deviation:confirmation-takes-focus
   it("gives the confirmation message the focus of the button it replaces", async () => {
     renderForm({ "Afform.submit": () => [{ message: "<p>Thanks</p>" }] });
     await userEvent.click(await screen.findByRole("button", { name: "Save" }));
@@ -112,6 +114,7 @@ describe("submitting", () => {
   });
 
   describe("an error the server returns", () => {
+    // deviation:submit-error-summary
     it("is a warning, in a summary that takes focus and lists each message", async () => {
       const box = { resolve: vi.fn(), reject: vi.fn() };
       vi.mocked(window.CRM.status).mockReturnValue(box);
@@ -177,6 +180,7 @@ describe("submitting", () => {
 });
 
 describe("the prefill", () => {
+  // deviation:prefill-without-overlay
   it("lands over a form that shows at once and is busy until then", async () => {
     let release: (() => void) | undefined;
     const held = new Promise<void>((resolve) => {
@@ -204,6 +208,7 @@ describe("the prefill", () => {
 });
 
 describe("a form closed for submissions", () => {
+  // deviation:closed-form-locked
   it("is disabled, says why inline and alerts it as afForm does", async () => {
     const calls = renderForm({
       "Afform.prefill": () => {
@@ -235,6 +240,19 @@ describe("the reset button", () => {
     await waitFor(async () => expect(await firstName()).toHaveValue("Ada"));
     expect(called(calls, "Afform.prefill")).toHaveLength(2);
     expect(called(calls, "Afform.submit")).toEqual([]);
+  });
+
+  // deviation:reset-reloads-form
+  it("draws the form anew, so the status of an earlier save starts over too", async () => {
+    renderForm({});
+    const before = await firstName();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Saved"));
+    await userEvent.click(screen.getByRole("button", { name: "Reset" }));
+    await waitFor(async () => {
+      expect(await firstName()).not.toBe(before);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("");
   });
 });
 
@@ -282,6 +300,50 @@ describe("the page title", () => {
     expect(document.title).toBe("Ada Search | CiviCRM");
   });
 
+  // deviation:title-labels-cleared
+  it("shows the plain title again once the filters with labels are cleared", async () => {
+    const filtered: LayoutNode[] = [
+      {
+        "#tag": "div",
+        "af-fieldset": "",
+        "#children": [
+          {
+            "#tag": "af-field",
+            name: "title",
+            defn: { name: "title", label: "Title", input_type: "Text", data_type: "String" },
+          },
+          ...search.flatMap((node) => (isElement(node) ? (node["#children"] ?? []) : [])),
+        ],
+      },
+    ];
+    document.body.innerHTML = `<h1 id="title">Search</h1>`;
+    document.title = "Search | CiviCRM";
+    mockApi({
+      "Afreact.getForm": () => [
+        { name: "afsearchTest", title: "Search", type: "search", layout: filtered, strings: [] },
+      ],
+      "SearchDisplay.run": (params) => {
+        const { filters } = params;
+        const labels = typeof filters === "object" && filters && "title" in filters ? ["Ada"] : [];
+        return Object.assign([{ key: 1, columns: [{ val: 1 }] }], { labels });
+      },
+    });
+    const hash = "#?title=Ada";
+    renderWithQuery(
+      <AfreactForm name="afsearchTest" location={{ search: "", hash }} pageTitle={true} />,
+      memoryStore(hash),
+    );
+    await waitFor(() => expect(document.getElementById("title")).toHaveTextContent("Ada Search"));
+    await userEvent.clear(screen.getByRole("textbox", { name: "Title" }));
+    await waitFor(
+      () => {
+        expect(document.getElementById("title")).toHaveTextContent(/^Search$/);
+      },
+      { timeout: 2000 },
+    );
+    expect(document.title).toBe("Search | CiviCRM");
+  });
+
   it("stays as it is where the form is placed in another page", async () => {
     renderSearch(false, ["Ada"]);
     expect(await screen.findByRole("cell", { name: "1" })).toBeInTheDocument();
@@ -295,6 +357,7 @@ describe("drafts", () => {
     vi.useRealTimers();
   });
 
+  // deviation:draft-pristine-label
   it("are saved on request once the form holds changes", async () => {
     const box = { resolve: vi.fn(), reject: vi.fn() };
     vi.mocked(window.CRM.status).mockReturnValue(box);
@@ -330,6 +393,32 @@ describe("drafts", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save Draft" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Drafts are not allowed.");
     expect(screen.getByRole("button", { name: "Save Draft" })).toBeEnabled();
+  });
+
+  // deviation:draft-save-holds-submit
+  it("hold the submit button while one is saving", async () => {
+    let finish: (() => void) | undefined;
+    const calls = renderForm({
+      "Afform.submitDraft": () =>
+        new Promise((resolve) => {
+          finish = () => {
+            resolve([{}]);
+          };
+        }),
+    });
+    await userEvent.type(await firstName(), "!");
+    await userEvent.click(screen.getByRole("button", { name: "Save Draft" }));
+    const save = screen.getByRole("button", { name: "Save" });
+    await waitFor(() => {
+      expect(save).toBeDisabled();
+    });
+    await userEvent.click(save);
+    expect(called(calls, "Afform.submit")).toEqual([]);
+    act(() => {
+      finish?.();
+    });
+    expect(await screen.findByRole("button", { name: "Draft Saved" })).toBeInTheDocument();
+    expect(save).toBeEnabled();
   });
 
   it("save themselves ten seconds after a change for a known user", async () => {

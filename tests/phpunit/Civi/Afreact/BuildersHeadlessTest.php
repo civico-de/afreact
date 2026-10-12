@@ -67,7 +67,7 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
 
   public function testIslandsAreOtherExtensionsSearchBuilderModulesWithAndWithoutTakeover(): void {
     // Core's own and chart_kit's, which React edits itself, are no islands.
-    $this->assertSame([], Islands::modules());
+    $this->assertSame([], ForeignModules::of('search_kit'));
 
     $this->island = static function (GenericHookEvent $e): void {
       $e->angularModules['afreactTestIsland'] = [
@@ -79,10 +79,10 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
     };
     \Civi::dispatcher()->addListener('hook_civicrm_angularModules', $this->island);
     Afforms::angular()->clear();
-    $this->assertSame(['afreactTestIsland'], Islands::modules());
+    $this->assertSame(['afreactTestIsland'], ForeignModules::of('search_kit'));
     \Civi::settings()->set(Builders::SETTING, ['search_kit']);
     Afforms::angular()->clear();
-    $this->assertSame(['afreactTestIsland'], Islands::modules());
+    $this->assertSame(['afreactTestIsland'], ForeignModules::of('search_kit'));
   }
 
   public function testFormBuilderTakeoverTakesItsModulesAndSubmissions(): void {
@@ -103,6 +103,10 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
     $this->assertContains('civicrm/admin/afform/classic', self::basePages('afAdmin'));
   }
 
+  public function testTheSettingOffersTheBuildersWhosePhasesAreDone(): void {
+    $this->assertSame(['search_kit' => 'SearchKit', 'afform' => 'FormBuilder'], Builders::options());
+  }
+
   public function testUnknownBuildersAreIgnored(): void {
     \Civi::settings()->set(Builders::SETTING, ['nope', 'search_kit']);
     $this->assertSame(['search_kit'], Builders::takenOver());
@@ -121,7 +125,7 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
   }
 
   public function testBuilderPageDispatchesTheAssetsEvent(): void {
-    unset(\Civi::$statics[Assets::class . '::dispatched']);
+    unset(\Civi::$statics[Assets::class . '::dispatched:search_kit']);
     $seen = [];
     $listener = static function ($e) use (&$seen): void {
       $seen[] = $e->builder;
@@ -137,7 +141,7 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
   }
 
   public function testRuntimePagesDispatchTheAssetsEventOnce(): void {
-    unset(\Civi::$statics[Assets::class . '::dispatched']);
+    unset(\Civi::$statics[Assets::class . '::dispatched:search_kit']);
     $seen = [];
     $listener = static function ($e) use (&$seen): void {
       $seen[] = $e->builder;
@@ -160,7 +164,7 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
    *   The panels the page hands the builder.
    */
   private function panelsAfter(string $builder, array $named, array $replaces = []): mixed {
-    unset(\Civi::$statics[Assets::class . '::dispatched']);
+    unset(\Civi::$statics[Assets::class . '::dispatched:search_kit']);
     $listener = static function ($e) use ($named, $replaces): void {
       foreach ($named as $name) {
         $e->panels[] = $name;
@@ -205,12 +209,49 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
     \Civi::dispatcher()->addListener('hook_civicrm_angularModules', $module);
     Afforms::angular()->clear();
     try {
-      $this->assertContains('afreactTestReplaced', Islands::modules());
+      $this->assertContains('afreactTestReplaced', ForeignModules::of('search_kit'));
       $this->panelsAfter('search_kit', [], ['afreactTestReplaced']);
-      $this->assertNotContains('afreactTestReplaced', Islands::modules());
+      $this->assertNotContains('afreactTestReplaced', ForeignModules::of('search_kit'));
     }
     finally {
       \Civi::dispatcher()->removeListener('hook_civicrm_angularModules', $module);
+      Afforms::angular()->clear();
+    }
+  }
+
+  public function testForeignModulesFollowRequiresButNotIntoWhatAPluginReplaces(): void {
+    $modules = static function (GenericHookEvent $e): void {
+      $module = static fn (array $requires, array $basePages = []): array => [
+        'ext' => E::LONG_NAME,
+        'js' => [],
+        'requires' => $requires,
+        'basePages' => $basePages,
+      ];
+      $e->angularModules['afreactTestHost'] = $module(['afreactTestDependency'], ['civicrm/admin/search']);
+      $e->angularModules['afreactTestDependency'] = $module([]);
+      // As core adds the input types' admin modules to afGuiEditor's requires.
+      $e->angularModules['afreactTestInjected'] = $module([]);
+      $e->angularModules['crmSearchAdmin']['requires'][] = 'afreactTestInjected';
+      $e->angularModules['afreactTestReplaced'] = $module(['afreactTestOnlyReplaced'], ['civicrm/admin/search']);
+      $e->angularModules['afreactTestOnlyReplaced'] = $module([]);
+    };
+    \Civi::dispatcher()->addListener('hook_civicrm_angularModules', $modules);
+    Afforms::angular()->clear();
+    try {
+      $this->panelsAfter('search_kit', [], ['afreactTestReplaced']);
+      $this->assertSame(
+        ['afreactTestDependency', 'afreactTestHost', 'afreactTestInjected'],
+        ForeignModules::of('search_kit'),
+      );
+      // The support report lists the same, and what the plugins replace apart.
+      $this->assertSame(ForeignModules::of('search_kit'), BuilderReport::check('search_kit')['modules']);
+      $this->assertSame(['afreactTestReplaced'], BuilderReport::check('search_kit')['replaced']);
+      // Each builder keeps its own: FormBuilder's plugins replace nothing here.
+      $this->assertSame(['afreactTestReplaced'], BuilderPanels::replaced('search_kit'));
+      $this->assertSame([], BuilderPanels::replaced('afform'));
+    }
+    finally {
+      \Civi::dispatcher()->removeListener('hook_civicrm_angularModules', $modules);
       Afforms::angular()->clear();
     }
   }

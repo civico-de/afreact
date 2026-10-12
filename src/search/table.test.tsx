@@ -166,6 +166,7 @@ describe("AfreactSearch table features", () => {
     expect(screen.queryByText("Name 3")).not.toBeInTheDocument();
   });
 
+  // deviation:table-rows-stay-open
   it("keeps the rows opened by hand open through a reload", async () => {
     const tree = () => [
       row(1, { data: { _depth: 0, _descendents: 1 } }),

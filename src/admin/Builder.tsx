@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode } from "react";
-import { ClassicContext } from "./search/SearchEditor";
+import { ClassicContext } from "./classic";
 import { firstMatch, LeaveGuardContext, useGuardedHashPath, type Pattern } from "./route";
 
 export type BuilderName = "search_kit" | "afform";
@@ -29,7 +29,13 @@ interface BuilderProps {
 /** A React builder page: the screen for the hash, and a link to the same screen in core's builder. */
 export function Builder({ route, classic, screens }: BuilderProps) {
   const { path: hashPath, setGuard } = useGuardedHashPath();
-  const path = hashPath !== "" ? hashPath : (DEFAULT_PATH[route] ?? "/");
+  // Core's routers read `#create/…` as `#/create/…`.
+  const path =
+    hashPath === ""
+      ? (DEFAULT_PATH[route] ?? "/")
+      : hashPath.startsWith("/")
+        ? hashPath
+        : `/${hashPath}`;
   const routed = screens[route] ?? {};
   const match = firstMatch(
     Object.fromEntries(Object.entries(routed).map(([name, screen]) => [name, screen.pattern])),

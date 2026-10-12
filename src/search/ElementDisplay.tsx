@@ -47,11 +47,13 @@ export function ElementDisplay({
     staleTime: Infinity,
     enabled,
   });
+  // deviation:chart-attached-when-runnable
   // Drawn once the filters are final; a later pause (hidden tab) keeps the chart.
   const [ready, setReady] = useState(false);
   if (!ready && enabled && loaded.isSuccess) setReady(true);
   const attributes = {
     settings: JSON.stringify(settings),
+    // deviation:chart-empty-filters-object
     // Core reads "[]" as a string and spreads its characters into the filters (see upstream bugs).
     filters: JSON.stringify(Array.isArray(filters) ? {} : filters),
   };
@@ -74,6 +76,7 @@ export function ElementDisplay({
     return () => {
       if (!chart) return;
       chart.remove();
+      // deviation:chart-removed-clears-timers
       // A removed element would still run its search and draw into the void (see upstream bugs).
       clearTimeout(chart.nextRun);
       clearTimeout(chart.nextReload);
@@ -116,10 +119,12 @@ export async function loadPluginElement(tag: string): Promise<true> {
 
 export const chartKitMissing = () => ts("Charts need the chart_kit extension.");
 
+// deviation:chart-scripts-on-demand
 /** chart_kit's bundle, once per page: d3 and dc load only where a chart is drawn. */
 export async function loadChartKit(): Promise<true> {
   if (customElements.get(TAG)) return true;
   const assets = window.CRM.vars?.afreact?.chartKit;
+  // deviation:chart-kit-missing-alert
   if (!assets) throw new Error(chartKitMissing());
   if ("error" in assets) throw new Error(assets.error);
   for (const href of assets.styles) {

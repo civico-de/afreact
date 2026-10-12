@@ -2,7 +2,7 @@
 <extension key="afreactisland" type="module">
   <file>afreactisland</file>
   <name>afreact island fixture</name>
-  <description>A display type with only an Angular editor and a builder panel, for afreact's browser tests.</description>
+  <description>A display type with only an Angular editor, a builder panel and FormBuilder plugins (element, input type, behavior, entity options), for afreact's browser tests.</description>
   <license>Proprietary</license>
   <maintainer>
     <author>civico GmbH</author>
@@ -16,9 +16,14 @@
   </compatibility>
   <requires>
     <ext>org.civicrm.search_kit</ext>
+    <ext>org.civicrm.afform_admin</ext>
   </requires>
+  <classloader>
+    <psr4 prefix="Civi\" path="Civi"/>
+  </classloader>
   <mixins>
     <mixin>ang-php@1.0.0</mixin>
     <mixin>mgd-php@1.0.0</mixin>
+    <mixin>scan-classes@1.0.0</mixin>
   </mixins>
 </extension>

@@ -52,6 +52,7 @@ interface FieldClausesProps {
  * the "Add Value" select below. Fields whose input the renderer lacks stay in the list, disabled,
  * with the reason as their title.
  */
+// deviation:bulk-update-native-picker
 export function FieldClauses({ entity, fields, error, clauses, onChange, id }: FieldClausesProps) {
   const [chosen, setChosen] = useState("");
   const list = useRef<HTMLDivElement>(null);
@@ -73,6 +74,7 @@ export function FieldClauses({ entity, fields, error, clauses, onChange, id }: F
     setChosen("");
     setAdded(next.at(-1)?.key ?? null);
   };
+  // deviation:update-clause-field-resets
   const setField = (key: number, name: string) => {
     const field = fieldByName(name);
     onChange(
@@ -133,6 +135,7 @@ export function FieldClauses({ entity, fields, error, clauses, onChange, id }: F
               {options(name)}
             </select>
           );
+          // deviation:update-preset-unknown-field
           // A preset on a field getFields leaves out keeps its value; the clause can be removed.
           if (!field)
             return (

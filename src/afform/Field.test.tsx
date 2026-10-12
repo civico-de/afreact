@@ -103,6 +103,7 @@ describe("Field", () => {
     expect(values.at(-1)).toBe("");
   });
 
+  // deviation:blank-required-validity
   it("leaves a required field holding only spaces invalid and its value unset", async () => {
     const values = setup({ required: true });
     const input = screen.getByRole("textbox", { name: "Field" });
@@ -164,6 +165,16 @@ describe("Field", () => {
     expect(number).toEqual([4, null]);
   });
 
+  // deviation:invalid-input-kept
+  it("keeps a typed number above max in the data, where ngModel holds undefined", async () => {
+    const number = setup({ input_type: "Number", data_type: "Integer", input_attrs: { max: 5 } });
+    const input = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Field" });
+    await userEvent.type(input, "12");
+    expect(input.validity.rangeOverflow).toBe(true);
+    expect(number).toEqual([1, 12]);
+  });
+
+  // deviation:number-bound-zero
   it("keeps a number's bounds, a minimum of 0 included, and flags a value outside them", async () => {
     const number = setup({
       input_type: "Number",
@@ -197,6 +208,25 @@ describe("Field", () => {
     expect(values).toEqual([2, null]);
   });
 
+  // deviation:boolean-select-cleared-null
+  it("empties a Yes/No select to null, not No", async () => {
+    const values = setup(
+      { input_type: "Select", data_type: "Boolean", input_attrs: { placeholder: "- select -" } },
+      true,
+    );
+    const select = screen.getByRole("combobox", { name: "Field" });
+    await userEvent.selectOptions(select, "No");
+    await userEvent.selectOptions(select, "- select -");
+    expect(values).toEqual([false, null]);
+  });
+
+  // deviation:url-input-disabled
+  it("disables a URL input like every other input", () => {
+    const url = { name: "website", label: "Website", input_type: "Url", data_type: "String" };
+    render(<Field defn={url} value="https://example.org" disabled onChange={() => undefined} />);
+    expect(screen.getByRole("textbox", { name: "Website" })).toBeDisabled();
+  });
+
   it("returns the typed IDs of a multi-select", async () => {
     const values = setup(
       {
@@ -213,6 +243,7 @@ describe("Field", () => {
     expect(values).toEqual([[1, 2]]);
   });
 
+  // deviation:native-select-fields
   it("names selects without a label by their placeholder, else Select.html's title", () => {
     const options = [{ id: 1, label: "A" }];
     setup({ input_type: "Select", label: false, options });
@@ -238,6 +269,7 @@ describe("Field", () => {
     expect(screen.getByRole("radio", { name: "Yes" })).toBeRequired();
   });
 
+  // deviation:clear-link-button
   it("clears an optional radio from the keyboard", async () => {
     const values = setup(
       {
@@ -271,6 +303,7 @@ describe("Field", () => {
     expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
   });
 
+  // deviation:textarea-count-describes
   it("counts the characters of a text area with a maximum and describes the field by the count", async () => {
     setup(
       { input_type: "TextArea", input_attrs: { maxlength: 10 }, help_post: "Short" },
@@ -370,6 +403,7 @@ describe("Field", () => {
     expect(values).toEqual([""]);
   });
 
+  // deviation:native-date-inputs
   it("shows the year of a year-only date and stores January 1st", async () => {
     const values = setup({ input_type: "Date", input_attrs: { date: "yy" } }, "1990-05-17");
     const input = screen.getByRole("spinbutton", { name: "Field" });
@@ -385,6 +419,7 @@ describe("Field", () => {
     expect(input).toHaveValue(null);
   });
 
+  // deviation:month-date-any-format
   it.each(["yy-mm", "M yy"])("stores the 1st of the month for format %s", (date) => {
     const values = setup({ input_type: "Date", input_attrs: { date } }, "1990-05-17");
     const input = screen.getByLabelText("Field");
@@ -395,6 +430,7 @@ describe("Field", () => {
     expect(input).toHaveValue("2001-03");
   });
 
+  // deviation:native-date-inputs
   it("keeps a full date input for a format with a day", () => {
     setup({ input_type: "Date", input_attrs: { date: "dd.mm.yy" } }, "1990-05-17");
     const input = screen.getByLabelText("Field");

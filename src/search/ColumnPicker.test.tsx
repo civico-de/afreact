@@ -18,6 +18,7 @@ const columns: Column[] = [
 ];
 
 describe("column picker helpers", () => {
+  // deviation:column-picker-position-label
   it("labels columns as getColumnToggleLabel(), numbering the last case", () => {
     expect(columns.map(columnToggleLabel)).toEqual(["Name", "[email]", "Links", "Notes"]);
     expect(columnToggleLabel({ type: "menu" }, 0)).toBe("Menu");

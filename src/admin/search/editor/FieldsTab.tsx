@@ -21,6 +21,7 @@ interface FieldsTabProps {
 }
 
 /** fieldsForSelect: every field and pseudo field, without the columns the search has. */
+// deviation:selected-columns-not-offered
 export function selectableFields(meta: SearchAdminMetadata, search: SearchInfo) {
   return getAllFields(meta, search, ":label", ["Field", "Custom", "Extra", "Pseudo"], (key) =>
     search.api_params.select.includes(key),

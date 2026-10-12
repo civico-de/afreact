@@ -101,6 +101,7 @@ function order(left: unknown, right: unknown): number {
   return Number(a) - Number(b);
 }
 
+// deviation:condition-is-empty-values
 /** No answer: unset, "", an empty list or an empty range; false and 0 are answers. */
 function isEmpty(value: unknown): boolean {
   if (value === undefined || value === null || value === "") return true;

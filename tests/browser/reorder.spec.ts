@@ -75,6 +75,7 @@ async function pointerMove(page: Page, label: string, onto: string) {
 
 test.describe.configure({ mode: "serial" });
 
+// deviation:keyboard-row-reorder
 test("react: moves a row by keyboard and keeps the order after a reload", async ({ page }) => {
   await createGroup(page);
   await page.goto(render("react"));

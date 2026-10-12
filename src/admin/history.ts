@@ -53,6 +53,7 @@ export function historyReducer<T>(history: History<T>, action: HistoryAction<T>)
       const state = action.state ?? history.present;
       return { ...history, present: state, saved: state };
     }
+    // deviation:save-keeps-later-edits
     case "savedFrom": {
       const saved = action.merge(action.sent);
       const present = Object.is(history.present, action.sent)

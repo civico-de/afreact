@@ -44,6 +44,7 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
     [pending, key],
   );
   useEffect(() => {
+    // deviation:file-replace-button
     if (replaced && !stored) input.current?.focus();
   }, [replaced, stored]);
 
@@ -56,6 +57,7 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
     const replace = () => {
       pending?.delete(key);
       // Both keys empty: the server then clears the field on the entity and on a join record.
+      // deviation:replace-join-file-clears
       onChange({ id: null, file_name: null });
       setReplaced(true);
     };
@@ -117,6 +119,7 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
               fieldName,
               joinEntity: join,
               entityIndex,
+              // deviation:first-join-upload-index
               joinIndex: joinIndex ?? null,
             };
           },
@@ -124,6 +127,7 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
             latest.current.onChange(uploaded);
           },
           // The submit drops a draft's file on a join record it creates.
+          // deviation:draft-join-file-reupload
           again: () => !!latest.current.env.joinEntity && !latest.current.env.values.id,
         });
       }}

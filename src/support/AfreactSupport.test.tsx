@@ -90,7 +90,10 @@ describe("AfreactSupport", () => {
       "display filters from options outside a placement",
     ]);
     expect(gaps.getByText("Not yet in React")).toBeInTheDocument();
-    expect(gaps.getByText("Needs a placement's arguments")).toBeInTheDocument();
+    // deviation:display-filters-outside-placement
+    expect(
+      gaps.getByText("Shown as meant only where placed, which gives it its arguments"),
+    ).toBeInTheDocument();
     expect(within(row("afsearchGaps")).getAllByRole("cell")[1]).toHaveTextContent("Nowhere");
     expect(within(row("afformBroken")).getByText("Form broke")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Choose the forms React renders" })).toHaveAttribute(
@@ -230,7 +233,9 @@ describe("AfreactSupport", () => {
     renderWithQuery(<AfreactSupport listed={[]} settings="/s" />);
     await screen.findByText(/^Checked 1 forms: 0 with parts not yet in React, 1 needing Angular/);
     expect(
-      within(row("afsearchGaps")).getByText("Angular code, needs the Angular application"),
+      within(row("afsearchGaps")).getByText(
+        "Uses Angular code, which only the Angular application runs",
+      ),
     ).toBeInTheDocument();
     expect(within(row("afsearchGaps")).getByRole("listitem")).toHaveTextContent(
       "task download (Angular dialog ~/x.html)",

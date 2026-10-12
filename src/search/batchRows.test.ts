@@ -54,6 +54,11 @@ describe("parseFormula", () => {
     expect(run("[a] / [b]")).toBe(5.25);
   });
 
+  // deviation:batch-formula-numbers
+  it("adds text values as numbers, not as joined strings", () => {
+    expect(run("[a] + [a]")).toBe(21);
+  });
+
   it("counts an empty or non-numeric value as 0, as core's `|| 0`", () => {
     expect(run("[c] + [d] + [missing] + 1")).toBe(1);
   });
@@ -79,6 +84,7 @@ describe("withFormulas", () => {
     expect(withFormulas([row], columns, editable)[0]).toBe(row);
   });
 
+  // deviation:batch-formula-joined-columns
   it("reads a joined entity's fields from the columns showing them", () => {
     const joined = [
       field("Soft.amount"),
@@ -118,6 +124,7 @@ describe("tallies", () => {
     { _id: 3, total_amount: "", fee_amount: "0", flag: true },
   ];
 
+  // deviation:batch-tally-exact
   it("sums typed amounts exactly, counts filled values and averages over every row", () => {
     expect(tallyOf(rows, amount)).toBe(30.3);
     expect(tallyOf(rows, field("flag", { tally: { fn: "COUNT" } }))).toBe(2);
