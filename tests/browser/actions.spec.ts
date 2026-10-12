@@ -5,7 +5,7 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const PREFIX = "afreact_actions_";
@@ -30,7 +30,7 @@ async function groups(page: Page): Promise<Group[]> {
 }
 
 async function removeGroups(page: Page) {
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   await api(page, "Group", "delete", { where: [["name", "LIKE", `${PREFIX}%`]] });
 }
 

@@ -1,24 +1,6 @@
 <?xml version="1.0"?>
 <menu>
   <item>
-    <path>civicrm/afreact/demo</path>
-    <page_callback>Civi\Afreact\Pages::react</page_callback>
-    <title>Afreact demo (React)</title>
-    <access_arguments>access CiviCRM</access_arguments>
-  </item>
-  <item>
-    <path>civicrm/afreact/angular</path>
-    <page_callback>Civi\Afreact\Pages::angular</page_callback>
-    <title>Afreact demo (Angular)</title>
-    <access_arguments>access CiviCRM</access_arguments>
-  </item>
-  <item>
-    <path>civicrm/afreact/compare</path>
-    <page_callback>Civi\Afreact\Pages::compare</page_callback>
-    <title>Afreact: React vs Angular</title>
-    <access_arguments>access CiviCRM</access_arguments>
-  </item>
-  <item>
     <path>civicrm/afreact/render</path>
     <page_callback>Civi\Afreact\RenderPage::render</page_callback>
     <title>Afreact form</title>

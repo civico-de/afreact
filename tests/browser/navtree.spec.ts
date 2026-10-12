@@ -4,7 +4,7 @@
  * React moves the sub-row along and refuses a drop under another parent (upstream-bugs.md).
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, keysListened, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, keysListened, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const NAME = `afreact_tree_${RUN}`;
@@ -46,7 +46,7 @@ async function stored(page: Page) {
 
 /** Children go before their parents, which the API will not delete while they have any. */
 async function remove(page: Page) {
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   const found = await api<{ id: number }>(page, "Navigation", "get", {
     select: ["id"],
     where: [["name", "LIKE", `${NAME}%`]],

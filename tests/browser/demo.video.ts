@@ -6,6 +6,7 @@
 import { expect, test, type Locator, type Response } from "@playwright/test";
 import {
   api,
+  API_PAGE,
   AUTH,
   driver,
   label,
@@ -31,8 +32,13 @@ const typeInto = (field: Locator, text: string) =>
 
 let debugBefore: unknown;
 let lastIdBefore: number | undefined;
-test.beforeAll(async ({ browser }) => {
+// Per test: after a failure Playwright starts a new worker and reruns beforeAll, which would read
+// the switched-off value as the one to restore.
+test.beforeEach(async ({ browser }) => {
   debugBefore = await setDebug(browser, false);
+});
+test.afterEach(async ({ browser }) => {
+  await setDebug(browser, debugBefore);
 });
 
 for (const renderer of ["angular", "react"] as const) {
@@ -100,11 +106,10 @@ for (const renderer of ["angular", "react"] as const) {
 }
 
 test.afterAll(async ({ browser }) => {
-  await setDebug(browser, debugBefore);
   if (lastIdBefore === undefined) return;
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   await api(page, "Contact", "delete", {
     where: [
       ["id", ">", lastIdBefore],

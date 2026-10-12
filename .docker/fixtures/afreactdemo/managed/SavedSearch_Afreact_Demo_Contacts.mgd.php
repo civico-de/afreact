@@ -2,8 +2,6 @@
 
 declare(strict_types = 1);
 
-use CRM_Afreact_ExtensionUtil as E;
-
 /**
  * Contact list for the demo page; the name links back to the React form in edit mode.
  */
@@ -17,7 +15,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Contacts',
-        'label' => E::ts('Afreact demo contacts'),
+        'label' => 'Afreact demo contacts',
         'api_entity' => 'Individual',
         'api_params' => [
           'version' => 4,
@@ -38,7 +36,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Contacts_Table',
-        'label' => E::ts('Contacts'),
+        'label' => 'Contacts',
         'saved_search_id.name' => 'Afreact_Demo_Contacts',
         'type' => 'table',
         'settings' => [
@@ -51,36 +49,36 @@ return [
             [
               'type' => 'field',
               'key' => 'sort_name',
-              'label' => E::ts('Name'),
+              'label' => 'Name',
               'sortable' => TRUE,
               'link' => [
                 'path' => 'civicrm/afreact/demo?Individual1=[id]',
                 'target' => '',
               ],
-              'title' => E::ts('Edit in the React form'),
+              'title' => 'Edit in the React form',
             ],
             [
               'type' => 'field',
               'key' => 'email_primary.email',
-              'label' => E::ts('Email'),
+              'label' => 'Email',
               'sortable' => TRUE,
             ],
             [
               'type' => 'field',
               'key' => 'gender_id:label',
-              'label' => E::ts('Gender'),
+              'label' => 'Gender',
               'sortable' => TRUE,
             ],
             [
               'type' => 'field',
               'key' => 'birth_date',
-              'label' => E::ts('Birth date'),
+              'label' => 'Birth date',
               'sortable' => TRUE,
             ],
             [
               'type' => 'field',
               'key' => 'created_date',
-              'label' => E::ts('Created'),
+              'label' => 'Created',
               'sortable' => TRUE,
             ],
           ],

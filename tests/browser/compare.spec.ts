@@ -1,7 +1,7 @@
 /**
  * Load metrics for the React renderer with each layout source and for the
- * Angular runtime, outside the compare page's iframes: a cold
- * load gets a fresh browser context (empty HTTP cache), warm loads reuse one.
+ * Angular runtime: a cold load gets a fresh browser context (empty HTTP
+ * cache), warm loads reuse one.
  * Measured as in production (debug off: minified core scripts, Angular modules
  * as a static file); the previous debug setting is restored afterwards.
  * Numbers go to stdout and the report; the assertions only guard the harness.
@@ -35,10 +35,12 @@ const runsPerRenderer = (): Record<Renderer, PageMetrics[]> => ({
 const ROUNDS = Number(process.env.COMPARE_ROUNDS ?? 5);
 
 let debugBefore: unknown;
-test.beforeAll(async ({ browser }) => {
+// Per test: after a failure Playwright starts a new worker and reruns beforeAll, which would read
+// the switched-off value as the one to restore.
+test.beforeEach(async ({ browser }) => {
   debugBefore = await setDebug(browser, false);
 });
-test.afterAll(async ({ browser }) => {
+test.afterEach(async ({ browser }) => {
   await setDebug(browser, debugBefore);
 });
 
@@ -152,21 +154,4 @@ test("prints the request waterfall of a cold load", async ({ browser }, testInfo
   console.log(report);
   await testInfo.attach("waterfall.md", { body: report, contentType: "text/markdown" });
   expect(lines.some((line) => line.includes("ajax/api4"))).toBe(true);
-});
-
-test("the compare page measures one round in the browser", async ({ page }) => {
-  await page.goto("/civicrm/afreact/compare");
-  await page.getByLabel("Rounds").selectOption("1");
-  await page.getByRole("button", { name: "Measure" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Done." })).toBeVisible({
-    timeout: 90_000,
-  });
-  for (const label of ["React, layout in page", "React, Angular module file", "Angular"]) {
-    await expect(page.getByRole("columnheader", { name: `${label} (n=1)` })).toBeVisible();
-  }
-  const readyRow = page
-    .getByRole("row")
-    .filter({ has: page.getByRole("rowheader") })
-    .first();
-  await expect(readyRow.getByRole("cell").first()).toHaveText(/\d+ ms/);
 });

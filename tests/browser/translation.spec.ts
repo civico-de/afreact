@@ -4,7 +4,7 @@
  * Core master only, where the site offers more than one language.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, quietApi, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, quietApi, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const LOAD = { timeout: 30_000 };
@@ -26,7 +26,7 @@ let available = false;
 test.beforeAll(async ({ browser }) => {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   const forms = await quietApi(page, "Afform", "get", { where: [["name", "=", FORM]] });
   const tasks = forms.length
     ? await quietApi<Record<string, unknown>>(page, "SearchDisplay", "getSearchTasks", {
@@ -59,7 +59,7 @@ test.afterAll(async ({ browser }) => {
   if (!template) return;
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   await api(page, "Translation", "delete", {
     where: [
       ["entity_table", "=", "civicrm_msg_template"],

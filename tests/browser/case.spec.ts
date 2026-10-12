@@ -3,7 +3,7 @@
  * contacts, with the first contact's open case skipped, and the Case rows must come out alike.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const LOAD = { timeout: 30_000 };
@@ -26,7 +26,7 @@ const cases: number[] = [];
 test.beforeAll(async ({ browser }) => {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   for (const renderer of ["react", "angular"] as const) {
     const created = await api<{ id: number }>(page, "Individual", "save", {
       records: ["Aa", "Bb"].map((first) => ({ first_name: first, last_name: lastName(renderer) })),
@@ -48,7 +48,7 @@ test.beforeAll(async ({ browser }) => {
 test.afterAll(async ({ browser }) => {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   const ids = Object.values(contacts).flat();
   try {
     // Every case of the contacts, whatever the task did, before the contacts themselves.

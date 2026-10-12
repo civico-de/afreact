@@ -2,8 +2,6 @@
 
 declare(strict_types = 1);
 
-use CRM_Afreact_ExtensionUtil as E;
-
 /**
  * A table with bulk actions for the browser tests: groups the test creates itself (named
  * afreact_actions_*), so enabling, disabling and deleting them touches no other data.
@@ -18,7 +16,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Groups',
-        'label' => E::ts('Afreact demo groups'),
+        'label' => 'Afreact demo groups',
         'api_entity' => 'Group',
         'api_params' => [
           'version' => 4,
@@ -39,7 +37,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Groups_Table',
-        'label' => E::ts('Groups'),
+        'label' => 'Groups',
         'saved_search_id.name' => 'Afreact_Demo_Groups',
         'type' => 'table',
         'settings' => [
@@ -49,8 +47,8 @@ return [
           'actions' => ['enable', 'disable', 'delete', 'download', 'update'],
           'sort' => [['title', 'ASC']],
           'columns' => [
-            ['type' => 'field', 'key' => 'title', 'label' => E::ts('Title'), 'sortable' => TRUE],
-            ['type' => 'field', 'key' => 'is_active', 'label' => E::ts('Enabled'), 'sortable' => TRUE],
+            ['type' => 'field', 'key' => 'title', 'label' => 'Title', 'sortable' => TRUE],
+            ['type' => 'field', 'key' => 'is_active', 'label' => 'Enabled', 'sortable' => TRUE],
           ],
         ],
       ],

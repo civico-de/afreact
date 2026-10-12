@@ -4,7 +4,7 @@
  * Escape drops the row's changes. Each renderer edits its own contact, found by last name.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const LOAD = { timeout: 30_000 };
@@ -36,7 +36,7 @@ test.afterAll(async ({ browser }) => {
   if (!contacts.length) return;
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   await api(page, "Contact", "delete", { where: [["id", "IN", contacts]], useTrash: false });
   await context.close();
 });
@@ -44,7 +44,7 @@ test.afterAll(async ({ browser }) => {
 /** A contact of this run, shown alone in the display. */
 async function open(page: Page, renderer: Renderer): Promise<number> {
   const lastName = `Row${RUN}${renderer}`;
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   const [created] = await api<{ id: number }>(page, "Individual", "create", {
     values: {
       first_name: "Aa",

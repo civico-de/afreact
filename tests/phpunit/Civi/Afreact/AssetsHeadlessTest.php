@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace Civi\Afreact;
 
+use Civi\AfreactDemo\Pages;
 use Civi\Api4\Afreact;
 use Civi\Test\CiviEnvBuilder;
 use Civi\Test\HeadlessInterface;
@@ -99,7 +100,7 @@ class AssetsHeadlessTest extends TestCase implements HeadlessInterface {
     $this->assertStringContainsString('from"./chunks/' . $chunks[0] . '"', $entry);
     $this->assertCount(substr_count($entry, 'from"./chunks/'), $chunks);
     // Lazy chunks stay lazy.
-    $this->assertNotContains('AfreactCompare', array_map(
+    $this->assertNotContains('Combobox', array_map(
       static fn (string $c): string => explode('-', $c)[0],
       $chunks,
     ));

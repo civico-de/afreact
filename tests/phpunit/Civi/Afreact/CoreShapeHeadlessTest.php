@@ -25,12 +25,13 @@ class CoreShapeHeadlessTest extends TestCase implements HeadlessInterface, Trans
   private const FILE = __DIR__ . '/../../../../src/api/core.gen.ts';
 
   /**
-   * Every component, so that the forms placed for CiviCase and CiviCampaign find their displays.
-   * Menu as in GetFormHeadlessTest::builder().
+   * Every component, so that the forms placed for CiviCase and CiviCampaign find their displays;
+   * the demo fixture for display settings core's own forms leave out. Menu as in
+   * GetFormHeadlessTest::builder().
    */
   public function setUpHeadless(): CiviEnvBuilder {
     return ck_headless()
-      ->install(['civi_case', 'civi_campaign', 'org.civicrm.afform_admin', 'civicrm_admin_ui'])
+      ->install(['civi_case', 'civi_campaign', 'org.civicrm.afform_admin', 'civicrm_admin_ui', 'afreactdemo'])
       ->callback(static fn () => \Civi::router()->clear()->rebuild(), 'afreact-menu')
       ->apply();
   }

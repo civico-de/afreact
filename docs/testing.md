@@ -14,7 +14,7 @@ CIVICRM_BASE_URL=http://localhost:8080 bun run test:e2e
 | Spec | Checks |
 |---|---|
 | `tests/browser/parity.spec.ts` | the same scenarios against both renderers: empty submit is rejected client-side, create with a joined email submitted by Enter, prefill and update from the URL, equal saved records, equal table rows after sorting and paging |
-| `tests/browser/compare.spec.ts` | cold and warm load metrics for every React layout source and Angular (printed as a table), a cold request waterfall, and one round of the in-browser compare page |
+| `tests/browser/compare.spec.ts` | cold and warm load metrics for every React layout source and Angular (printed as a table), and a cold request waterfall |
 | `tests/browser/pages.spec.ts` | cold and warm ready times of every tour page on both renderers (printed as a table and written to `test-results/pages.md`) |
 | `tests/browser/sources.spec.ts` | every layout source renders the demo page to the same DOM; `page` and `bundle` never call `getForm`; the edit menus offer an admin the links core's runtime offers |
 | `tests/browser/visual.spec.ts` | the React page matches the Angular page part by part in position, size and main styles; differences by design are listed with a reason |

@@ -88,7 +88,7 @@ it records while loading and runs each page once.
 - **Chunks.** The bundle's static imports (the React vendor chunk and the
   module runtime) are preloaded from the page head
   (`Civi\Afreact\Assets::load`), so they arrive with `afreact.js` instead of
-  after it has run; lazy chunks (comboboxes, drag and drop, the compare page)
+  after it has run; lazy chunks (comboboxes, drag and drop)
   still load on demand. Measured on the membership types page with 10 cold
   loads each way: 20 ms on localhost, 50 ms with 50 ms of emulated latency,
   which is the one round trip it saves.

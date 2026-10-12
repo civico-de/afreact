@@ -2,8 +2,6 @@
 
 declare(strict_types = 1);
 
-use CRM_Afreact_ExtensionUtil as E;
-
 /**
  * Table displays that use every table feature the React renderer draws, for the browser
  * tests that compare it with Angular: link and button columns, a row menu, a subsearch,
@@ -23,7 +21,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Emails',
-        'label' => E::ts('Afreact demo emails'),
+        'label' => 'Afreact demo emails',
         'api_entity' => 'Email',
         'api_params' => [
           'version' => 4,
@@ -44,7 +42,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Emails_Table',
-        'label' => E::ts('Emails'),
+        'label' => 'Emails',
         'saved_search_id.name' => 'Afreact_Demo_Emails',
         'type' => 'table',
         'settings' => [
@@ -53,8 +51,8 @@ return [
           'pager' => FALSE,
           'sort' => [['email', 'ASC']],
           'columns' => [
-            ['type' => 'field', 'key' => 'email', 'label' => E::ts('Email'), 'sortable' => TRUE],
-            ['type' => 'field', 'key' => 'location_type_id:label', 'label' => E::ts('Location'), 'sortable' => TRUE],
+            ['type' => 'field', 'key' => 'email', 'label' => 'Email', 'sortable' => TRUE],
+            ['type' => 'field', 'key' => 'location_type_id:label', 'label' => 'Location', 'sortable' => TRUE],
           ],
         ],
       ],
@@ -70,7 +68,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Features',
-        'label' => E::ts('Afreact demo table features'),
+        'label' => 'Afreact demo table features',
         'api_entity' => 'Individual',
         'api_params' => [
           'version' => 4,
@@ -99,11 +97,11 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Features_Table',
-        'label' => E::ts('Table features'),
+        'label' => 'Table features',
         'saved_search_id.name' => 'Afreact_Demo_Features',
         'type' => 'table',
         'settings' => [
-          'description' => E::ts('Synthetic contacts in every kind of column.'),
+          'description' => 'Synthetic contacts in every kind of column.',
           'limit' => 5,
           'placeholder' => 3,
           'classes' => ['table', 'table-striped'],
@@ -111,11 +109,11 @@ return [
           'headerCount' => TRUE,
           'sort' => [['sort_name', 'ASC']],
           'cssRules' => [['bg-warning', 'gender_id:name', '=', 'Female']],
-          'tally' => ['label' => E::ts('Total')],
+          'tally' => ['label' => 'Total'],
           'toolbar' => [
             [
               'path' => 'civicrm/contact/add?reset=1&ct=Individual',
-              'text' => E::ts('Add contact'),
+              'text' => 'Add contact',
               'icon' => 'fa-plus',
               'style' => 'primary',
               'target' => 'crm-popup',
@@ -125,17 +123,17 @@ return [
             [
               'type' => 'field',
               'key' => 'sort_name',
-              'label' => E::ts('Name'),
+              'label' => 'Name',
               'sortable' => TRUE,
               'link' => ['path' => $view, 'target' => '_blank'],
-              'title' => E::ts('View [sort_name]'),
+              'title' => 'View [sort_name]',
               'icons' => [['icon' => 'fa-user', 'side' => 'left']],
-              'tally' => ['fn' => 'COUNT', 'label' => E::ts('Count:')],
+              'tally' => ['fn' => 'COUNT', 'label' => 'Count:'],
             ],
             [
               'type' => 'field',
               'key' => 'first_name',
-              'label' => E::ts('First name'),
+              'label' => 'First name',
               'sortable' => TRUE,
               'rewrite' => '[first_name] ([gender_id:label])',
               'alignment' => 'text-right',
@@ -144,34 +142,34 @@ return [
             [
               'type' => 'field',
               'key' => 'email_primary.email',
-              'label' => E::ts('Email'),
+              'label' => 'Email',
               'sortable' => TRUE,
-              'empty_value' => E::ts('No email'),
+              'empty_value' => 'No email',
               'icons' => [['icon' => 'fa-envelope', 'side' => 'right']],
             ],
             [
               'type' => 'image',
               'key' => 'image_URL',
-              'label' => E::ts('Photo'),
+              'label' => 'Photo',
               'empty_value' => '/core/i/contact_ind.gif',
-              'image' => ['alt' => E::ts('Photo of [sort_name]'), 'width' => 16, 'height' => 16],
+              'image' => ['alt' => 'Photo of [sort_name]', 'width' => 16, 'height' => 16],
               'link' => ['path' => $view, 'target' => ''],
             ],
             [
               'type' => 'html',
               'key' => 'first_name',
-              'label' => E::ts('Markup'),
+              'label' => 'Markup',
               'rewrite' => '<em>[first_name]</em>',
             ],
             [
               'type' => 'links',
-              'label' => E::ts('Links'),
+              'label' => 'Links',
               'links' => [
-                ['path' => $view, 'text' => E::ts('View'), 'icon' => 'fa-eye', 'style' => 'info', 'target' => ''],
+                ['path' => $view, 'text' => 'View', 'icon' => 'fa-eye', 'style' => 'info', 'target' => ''],
                 [
                   'entity' => 'Individual',
                   'action' => 'update',
-                  'text' => E::ts('Edit'),
+                  'text' => 'Edit',
                   'icon' => 'fa-pencil',
                   'style' => 'warning',
                   'target' => 'crm-popup',
@@ -181,23 +179,23 @@ return [
             ],
             [
               'type' => 'buttons',
-              'label' => E::ts('Buttons'),
+              'label' => 'Buttons',
               'size' => 'btn-xs',
               'links' => [
                 [
                   'path' => $view,
-                  'text' => E::ts('Open'),
+                  'text' => 'Open',
                   'icon' => 'fa-external-link',
                   'style' => 'default',
                   'target' => '_blank',
-                  'title' => E::ts('Open [sort_name]'),
+                  'title' => 'Open [sort_name]',
                 ],
               ],
             ],
             [
               'type' => 'subsearch',
-              'label' => E::ts('Emails'),
-              'rewrite' => E::ts('Emails'),
+              'label' => 'Emails',
+              'rewrite' => 'Emails',
               'subsearch' => [
                 'search' => 'Afreact_Demo_Emails',
                 'display' => 'Afreact_Demo_Emails_Table',
@@ -207,8 +205,8 @@ return [
             ],
             [
               'type' => 'menu',
-              'text' => E::ts('Actions'),
-              'label' => E::ts('Actions'),
+              'text' => 'Actions',
+              'label' => 'Actions',
               'style' => 'default',
               'size' => 'btn-xs',
               'icon' => 'fa-bars',
@@ -216,7 +214,7 @@ return [
               'links' => [
                 [
                   'path' => $view,
-                  'text' => E::ts('View'),
+                  'text' => 'View',
                   'icon' => 'fa-eye',
                   'style' => 'default',
                   'target' => '_blank',
@@ -224,14 +222,14 @@ return [
                 [
                   'entity' => 'Individual',
                   'action' => 'update',
-                  'text' => E::ts('Edit'),
+                  'text' => 'Edit',
                   'icon' => 'fa-pencil',
                   'style' => 'default',
                   'target' => 'crm-popup',
                 ],
                 [
                   'path' => 'civicrm/contact/view/delete?reset=1&delete=1&cid=[id]',
-                  'text' => E::ts('Delete'),
+                  'text' => 'Delete',
                   'icon' => 'fa-trash',
                   'style' => 'danger',
                   'target' => 'crm-popup',
@@ -253,7 +251,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Contact_Types',
-        'label' => E::ts('Afreact demo contact types'),
+        'label' => 'Afreact demo contact types',
         'api_entity' => 'ContactType',
         'api_params' => [
           'version' => 4,
@@ -274,7 +272,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Contact_Types_Table',
-        'label' => E::ts('Contact types'),
+        'label' => 'Contact types',
         'saved_search_id.name' => 'Afreact_Demo_Contact_Types',
         'type' => 'table',
         'settings' => [
@@ -285,9 +283,9 @@ return [
           'collapsible' => 'closed',
           'sort' => [['label', 'ASC']],
           'columns' => [
-            ['type' => 'field', 'key' => 'label', 'label' => E::ts('Label')],
-            ['type' => 'field', 'key' => 'name', 'label' => E::ts('Name')],
-            ['type' => 'field', 'key' => 'parent_id:label', 'label' => E::ts('Parent')],
+            ['type' => 'field', 'key' => 'label', 'label' => 'Label'],
+            ['type' => 'field', 'key' => 'name', 'label' => 'Name'],
+            ['type' => 'field', 'key' => 'parent_id:label', 'label' => 'Parent'],
           ],
         ],
       ],

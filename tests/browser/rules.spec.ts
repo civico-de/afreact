@@ -4,7 +4,7 @@
  * af-disabled and a token default.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const render = (renderer: Renderer, suffix = "") =>
   `/civicrm/afreact/render?name=afformAfreactDemoRules&renderer=${renderer}${suffix}`;
@@ -103,7 +103,7 @@ test.afterAll(async ({ browser }) => {
   if (!contacts.length) return;
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   await api(page, "Contact", "delete", { where: [["id", "IN", contacts]], useTrash: false });
   await context.close();
 });
@@ -114,7 +114,7 @@ test.afterAll(async ({ browser }) => {
  * React keeps the loaded value until the user changes a referenced field.
  */
 test("a loaded record keeps its stored value over the token default on React", async ({ page }) => {
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   const [contact] = await api<{ id: number }>(page, "Individual", "create", {
     values: {
       first_name: "Ada",

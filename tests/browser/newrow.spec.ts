@@ -4,7 +4,7 @@
  * TypeError per input (upstream-bugs.md, "The Add row of editableRow.create throws").
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const LOAD = { timeout: 30_000 };
 const GROUP = `afreact_newrow_${Date.now().toString(36)}`;
@@ -15,7 +15,7 @@ let groupId = 0;
 test.beforeAll(async ({ browser }) => {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   const group = await api<{ id: number }>(page, "OptionGroup", "create", {
     values: { name: GROUP, title: GROUP },
   });
@@ -30,7 +30,7 @@ test.afterAll(async ({ browser }) => {
   if (!groupId) return;
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   await api(page, "OptionGroup", "delete", { where: [["id", "=", groupId]] });
   await context.close();
 });

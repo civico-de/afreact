@@ -1,9 +1,7 @@
-import { lazy, Suspense } from "react";
 import { AfreactForm } from "./afform/AfreactForm";
 import { placementOptions } from "./afform/model";
 import { popupLocation } from "./afform/popup";
 import { layoutSource } from "./afform/source";
-import { comparedPages } from "./compare/pages";
 import { AfreactSearch } from "./search/AfreactSearch";
 import { AfreactSupport } from "./support/AfreactSupport";
 import { listedForms } from "./support/listed";
@@ -36,23 +34,6 @@ class AfreactSearchElement extends ReactElement {
   }
 }
 
-// Only the comparison page uses it, so it loads as its own chunk.
-const AfreactCompare = lazy(async () => ({
-  default: (await import("./compare/AfreactCompare")).AfreactCompare,
-}));
-
-/** <afreact-compare pages='[{"label": "…", "url": "…"}, …]'> measures the listed pages. */
-class AfreactCompareElement extends ReactElement {
-  protected view() {
-    const pages = comparedPages(this.required("pages"));
-    return (
-      <Suspense fallback={<p role="status">{ts("Loading…")}</p>}>
-        <AfreactCompare pages={pages} />
-      </Suspense>
-    );
-  }
-}
-
 /** <afreact-support listed='["afformName", …]' settings="url"> reports what React cannot show per form. */
 class AfreactSupportElement extends ReactElement {
   protected view() {
@@ -67,5 +48,4 @@ class AfreactSupportElement extends ReactElement {
 
 customElements.define("afreact-form", AfreactFormElement);
 customElements.define("afreact-search", AfreactSearchElement);
-customElements.define("afreact-compare", AfreactCompareElement);
 customElements.define("afreact-support", AfreactSupportElement);

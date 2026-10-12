@@ -3,7 +3,7 @@
  * leaving for Google: the same widget, the same refusal without a response, the same values sent.
  */
 import { expect, test, type Browser, type Page, type Route } from "@playwright/test";
-import { api, AUTH, isRecord, quietApi, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, isRecord, quietApi, type Renderer } from "./harness";
 
 const FORM = "afformAfreactRecaptchaProbe";
 const LAYOUT =
@@ -36,7 +36,7 @@ const FAKE_API = `(() => {
 async function adminPage(browser: Browser): Promise<Page> {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   return page;
 }
 

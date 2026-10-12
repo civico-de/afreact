@@ -4,7 +4,7 @@
  * uses select2 and the jQuery datepicker, React native inputs).
  */
 import { expect, test, type Page, type Request } from "@playwright/test";
-import { api, AUTH, driver, PAGES, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, driver, PAGES, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 
@@ -63,7 +63,7 @@ test.afterAll(async ({ browser }) => {
   if (!ids.length) return;
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   await api(page, "Contact", "delete", { where: [["id", "IN", ids]], useTrash: false });
   await context.close();
 });

@@ -3,7 +3,7 @@
  * contacts, with the first contact's grant skipped, and the Grant rows must come out alike.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const LOAD = { timeout: 30_000 };
@@ -24,7 +24,7 @@ const contacts: Partial<Record<Renderer, number[]>> = {};
 let typeId: number | undefined;
 
 async function adminPage(page: Page) {
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
 }
 
 test.beforeAll(async ({ browser }) => {

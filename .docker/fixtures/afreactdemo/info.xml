@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<extension key="afreactdemo" type="module">
+  <file>afreactdemo</file>
+  <name>afreact demo fixture</name>
+  <description>Demo forms, searches and pages for afreact's development stack and browser tests; not part of the released extension.</description>
+  <license>Proprietary</license>
+  <maintainer>
+    <author>civico GmbH</author>
+    <email>hi@jfilter.de</email>
+  </maintainer>
+  <releaseDate>2026-10-12</releaseDate>
+  <version>1.0</version>
+  <develStage>stable</develStage>
+  <compatibility>
+    <ver>6.19</ver>
+  </compatibility>
+  <requires>
+    <ext>afreact</ext>
+  </requires>
+  <classloader>
+    <psr4 prefix="Civi\" path="Civi"/>
+  </classloader>
+  <mixins>
+    <mixin>menu-xml@1.0.0</mixin>
+    <mixin>mgd-php@2.0.0</mixin>
+  </mixins>
+</extension>

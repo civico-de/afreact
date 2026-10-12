@@ -2,12 +2,13 @@
 
 declare(strict_types = 1);
 
-namespace Civi\Afreact;
+namespace Civi\AfreactDemo;
 
-use CRM_Afreact_ExtensionUtil as E;
+use Civi\Afreact\Assets;
+use Civi\Afreact\Chrome;
 
 /**
- * Route callbacks for the demo and comparison pages.
+ * Route callbacks for the demo pages.
  *
  * Both demo pages share one markup, so chrome and structure around the forms
  * are identical and only the elements that mount the forms differ.
@@ -28,7 +29,7 @@ final class Pages {
     if (!in_array($source, Assets::SOURCES, TRUE)) {
       throw new \CRM_Core_Exception("Unknown layout source \"{$source}\".");
     }
-    \CRM_Utils_System::setTitle(E::ts('Afreact demo (React)'));
+    \CRM_Utils_System::setTitle('Afreact demo (React)');
     Assets::load();
     Assets::layouts($source, self::FORMS);
     return Chrome::page(self::demo(
@@ -42,7 +43,7 @@ final class Pages {
    * Route civicrm/afreact/angular.
    */
   public static function angular(): string {
-    \CRM_Utils_System::setTitle(E::ts('Afreact demo (Angular)'));
+    \CRM_Utils_System::setTitle('Afreact demo (Angular)');
     Chrome::angular()->addModules(self::FORMS);
     $demo = self::demo(
       'angular',
@@ -53,39 +54,18 @@ final class Pages {
     return Chrome::page('<crm-angular-js modules="' . implode(' ', self::FORMS) . '">' . $demo . '</crm-angular-js>');
   }
 
-  /**
-   * Route civicrm/afreact/compare.
-   */
-  public static function compare(): string {
-    \CRM_Utils_System::setTitle(E::ts('Afreact: React vs Angular'));
-    Assets::load();
-    $demo = static fn (string $source): string => (string) \Civi::url(
-      'current://civicrm/afreact/demo' . ($source === 'api' ? '' : "?source={$source}"),
-    );
-    $pages = [
-      ['label' => E::ts('React, layout from API'), 'url' => $demo('api')],
-      ['label' => E::ts('React, layout in page'), 'url' => $demo('page')],
-      ['label' => E::ts('React, Angular module file'), 'url' => $demo('bundle')],
-      ['label' => E::ts('Angular'), 'url' => (string) \Civi::url('current://civicrm/afreact/angular')],
-    ];
-    return Chrome::page(sprintf(
-      '<afreact-compare pages="%s"></afreact-compare>',
-      Chrome::escape(json_encode($pages, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)),
-    ));
-  }
-
   private static function demo(string $renderer, string $form, string $search): string {
     return (
       '<div id="bootstrap-theme" class="afreact-demo" data-renderer="'
       . $renderer
       . '">'
       . '<section aria-labelledby="afreact-demo-form"><h2 id="afreact-demo-form">'
-      . Chrome::escape(E::ts('Contact form'))
+      . 'Contact form'
       . '</h2>'
       . $form
       . '</section>'
       . '<section aria-labelledby="afreact-demo-search"><h2 id="afreact-demo-search">'
-      . Chrome::escape(E::ts('Contacts'))
+      . 'Contacts'
       . '</h2>'
       . $search
       . '</section>'

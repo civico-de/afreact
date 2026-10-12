@@ -5,7 +5,7 @@
  * keeps the layout position (upstream-bugs.md, "Join blocks are numbered in link order").
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const render = (renderer: Renderer, hash = "") =>
@@ -43,7 +43,7 @@ test.afterAll(async ({ browser }) => {
   if (!contacts.length) return;
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   await api(page, "Contact", "delete", { where: [["id", "IN", contacts]], useTrash: false });
   await context.close();
 });
@@ -78,7 +78,7 @@ for (const renderer of ["react", "angular"] as const) {
     });
 
     test("prefills and updates the Work record with the Home block hidden", async ({ page }) => {
-      await page.goto("/civicrm/afreact/compare");
+      await page.goto(API_PAGE);
       const address = (kind: string) => `${kind}.${RUN}${renderer}@example.org`;
       const [contact] = await api<{ id: number }>(page, "Individual", "create", {
         values: { first_name: "Jo", last_name: `JoinsUpdate${RUN}${renderer}` },

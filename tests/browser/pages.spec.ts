@@ -37,10 +37,12 @@ const RENDERERS: Renderer[] = ["angular", "react"];
 const ROUNDS = Number(process.env.PAGES_ROUNDS ?? 5);
 
 let debugBefore: unknown;
-test.beforeAll(async ({ browser }) => {
+// Per test: after a failure Playwright starts a new worker and reruns beforeAll, which would read
+// the switched-off value as the one to restore.
+test.beforeEach(async ({ browser }) => {
   debugBefore = await setDebug(browser, false);
 });
-test.afterAll(async ({ browser }) => {
+test.afterEach(async ({ browser }) => {
   await setDebug(browser, debugBefore);
 });
 

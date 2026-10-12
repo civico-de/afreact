@@ -4,7 +4,7 @@
  * the reload test measures it; url-arg is covered in Tabs.test.tsx.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const render = (renderer: Renderer) =>
@@ -22,7 +22,7 @@ test.afterAll(async ({ browser }) => {
   if (!contacts.length) return;
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   await api(page, "Contact", "delete", { where: [["id", "IN", contacts]], useTrash: false });
   await context.close();
 });

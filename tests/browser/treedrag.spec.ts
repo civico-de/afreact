@@ -3,7 +3,7 @@
  * another parent on both renderers, compared by what the API stores afterwards.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, keysListened, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, keysListened, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const NAME = `afreact_treedrag_${RUN}`;
@@ -66,7 +66,7 @@ async function stored(page: Page) {
 }
 
 async function remove(page: Page) {
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   const found = await api<{ id: number }>(page, "Navigation", "get", {
     select: ["id"],
     where: [["name", "LIKE", `${NAME}%`]],

@@ -2,8 +2,6 @@
 
 declare(strict_types = 1);
 
-use CRM_Afreact_ExtensionUtil as E;
-
 /**
  * Navigation entries as a hierarchical, draggable table and as a draggable tree, for the browser
  * tests that compare dragging on both renderers. The forms filter by name.
@@ -18,7 +16,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Nav_Tree',
-        'label' => E::ts('Afreact demo navigation tree'),
+        'label' => 'Afreact demo navigation tree',
         'api_entity' => 'Navigation',
         'api_params' => [
           'version' => 4,
@@ -39,7 +37,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Nav_Tree_Table',
-        'label' => E::ts('Navigation tree'),
+        'label' => 'Navigation tree',
         'saved_search_id.name' => 'Afreact_Demo_Nav_Tree',
         'type' => 'table',
         'settings' => [
@@ -50,8 +48,8 @@ return [
           'draggable' => 'weight',
           'sort' => [['weight', 'ASC']],
           'columns' => [
-            ['type' => 'field', 'key' => 'label', 'label' => E::ts('Label')],
-            ['type' => 'field', 'key' => 'weight', 'label' => E::ts('Order')],
+            ['type' => 'field', 'key' => 'label', 'label' => 'Label'],
+            ['type' => 'field', 'key' => 'weight', 'label' => 'Order'],
           ],
         ],
       ],
@@ -67,7 +65,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Nav_Tree_Tree',
-        'label' => E::ts('Navigation tree items'),
+        'label' => 'Navigation tree items',
         'saved_search_id.name' => 'Afreact_Demo_Nav_Tree',
         'type' => 'tree',
         'settings' => [
@@ -77,8 +75,8 @@ return [
           'draggable' => 'weight',
           'sort' => [['weight', 'ASC']],
           'columns' => [
-            ['type' => 'field', 'key' => 'label', 'label' => E::ts('Label')],
-            ['type' => 'field', 'key' => 'weight', 'label' => E::ts('Order')],
+            ['type' => 'field', 'key' => 'label', 'label' => 'Label'],
+            ['type' => 'field', 'key' => 'weight', 'label' => 'Order'],
           ],
         ],
       ],

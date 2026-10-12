@@ -3,7 +3,7 @@
  * the same organisation as its employees, and the Relationship rows must come out alike.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const LOAD = { timeout: 30_000 };
@@ -25,7 +25,7 @@ let employer = 0;
 test.beforeAll(async ({ browser }) => {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   const [organisation] = await api<{ id: number }>(page, "Organization", "create", {
     values: { organization_name: `Employer ${RUN}` },
   });
@@ -43,7 +43,7 @@ test.beforeAll(async ({ browser }) => {
 test.afterAll(async ({ browser }) => {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   const ids = [...Object.values(contacts).flat(), ...(employer ? [employer] : [])];
   if (ids.length)
     await api(page, "Contact", "delete", { where: [["id", "IN", ids]], useTrash: false });

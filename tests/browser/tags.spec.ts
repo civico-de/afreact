@@ -5,7 +5,7 @@
  * contact-type search").
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH } from "./harness";
+import { api, API_PAGE, AUTH } from "./harness";
 
 const RUN = Date.now().toString(36);
 const LOAD = { timeout: 30_000 };
@@ -19,7 +19,7 @@ let tagId = 0;
 test.beforeAll(async ({ browser }) => {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   const [tag] = await api<{ id: number }>(page, "Tag", "create", {
     values: { name: `afreact_tags_${RUN}`, label: `Afreact ${RUN}`, used_for: ["civicrm_contact"] },
   });
@@ -34,7 +34,7 @@ test.beforeAll(async ({ browser }) => {
 test.afterAll(async ({ browser }) => {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   if (contacts.length)
     await api(page, "Contact", "delete", { where: [["id", "IN", contacts]], useTrash: false });
   if (tagId) await api(page, "Tag", "delete", { where: [["id", "=", tagId]] });

@@ -3,7 +3,7 @@
  * second, renamed, and the kept tag and its taggings must come out alike. Core master only.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, quietApi, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, quietApi, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const LOAD = { timeout: 30_000 };
@@ -28,7 +28,7 @@ let mergeable = false;
 test.beforeAll(async ({ browser }) => {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   const actions = await quietApi<{ name: string }>(page, "Tag", "getActions", {
     where: [["name", "=", "merge"]],
   });
@@ -104,7 +104,7 @@ test.afterAll(async ({ browser }) => {
   if (!mergeable) return;
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   const tags = Object.values(fixture).flatMap((row) => row.tags);
   const contacts = Object.values(fixture).flatMap((row) => row.contacts);
   try {

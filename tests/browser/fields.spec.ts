@@ -4,7 +4,7 @@
  * Location stays out: the proximity filter needs a geocoding provider.
  */
 import { expect, test, type Page, type Request } from "@playwright/test";
-import { api, AUTH, isRecord, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, isRecord, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const render = (form: string, renderer: Renderer) =>
@@ -33,7 +33,7 @@ test.afterAll(async ({ browser }) => {
   if (!contacts.length) return;
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   await api(page, "Contact", "delete", { where: [["id", "IN", contacts]], useTrash: false });
   await context.close();
 });

@@ -45,6 +45,9 @@ services:
       - ..:/var/www/html/ext/afreact
       - ./init.d:/civikitchen-init.d:ro
 # END CIVIKITCHEN MANAGED app
+      # Test fixtures, as in docker-compose.yml.
+      - ./fixtures/afreactisland:/var/www/html/ext/afreactisland:ro
+      - ./fixtures/afreactdemo:/var/www/html/ext/afreactdemo:ro
 
 # BEGIN CIVIKITCHEN MANAGED db
   db:

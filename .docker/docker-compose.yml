@@ -55,6 +55,8 @@ services:
       - ..:/var/www/html/ext/afreact
       # A display type with only an Angular editor, builder panels and FormBuilder plugins, for the plugin tests.
       - ./fixtures/afreactisland:/var/www/html/ext/afreactisland:ro
+      # Demo forms, searches and pages for development and the browser tests; not released.
+      - ./fixtures/afreactdemo:/var/www/html/ext/afreactdemo:ro
       # - ../../othersibling:/var/www/html/ext/othersibling
       # First-boot provisioning hooks (seed data, API users, settings) — run
       # after install + ext:enable, in lexical order. See init.d/README.md.

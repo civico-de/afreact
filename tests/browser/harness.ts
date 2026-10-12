@@ -8,11 +8,14 @@ export const AUTH = "tests/browser/.auth/admin.json";
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** A light CiviCRM page with CRM.api4, for test setup and cleanup. */
+export const API_PAGE = "/civicrm/admin/setting/afreact";
+
 /** Sets debug_enabled and returns the previous value. */
 export async function setDebug(browser: Browser, value: unknown): Promise<unknown> {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   const [previous] = await api<{ value: unknown }>(page, "Setting", "get", {
     select: ["debug_enabled"],
   });

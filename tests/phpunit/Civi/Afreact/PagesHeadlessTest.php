@@ -4,12 +4,13 @@ declare(strict_types = 1);
 
 namespace Civi\Afreact;
 
+use Civi\AfreactDemo\Pages;
 use Civi\Test\CiviEnvBuilder;
 use Civi\Test\HeadlessInterface;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The two demo pages must differ only in the elements that mount the forms,
+ * The demo fixture's two pages must differ only in the elements that mount the forms,
  * or the comparison measures page chrome instead of renderers.
  *
  * @group headless
@@ -17,7 +18,7 @@ use PHPUnit\Framework\TestCase;
 class PagesHeadlessTest extends TestCase implements HeadlessInterface {
 
   public function setUpHeadless(): CiviEnvBuilder {
-    return ck_headless()->apply();
+    return ck_headless()->install(['afreactdemo'])->apply();
   }
 
   public function testDemoPagesDifferOnlyInTheirMountElements(): void {
@@ -63,22 +64,6 @@ class PagesHeadlessTest extends TestCase implements HeadlessInterface {
     );
     $this->expectExceptionMessage('Unknown layout source "file".');
     Pages::reactWith('file');
-  }
-
-  public function testComparePageListsEveryVariant(): void {
-    $this->assertSame(1, preg_match('#<afreact-compare pages="([^"]*)"></afreact-compare>#', Pages::compare(), $match));
-    $pages = json_decode(html_entity_decode($match[1]), TRUE, 512, JSON_THROW_ON_ERROR);
-    $this->assertIsArray($pages);
-    $patterns = [
-      '#civicrm/afreact/demo$#',
-      '#civicrm/afreact/demo[?&]source=page$#',
-      '#civicrm/afreact/demo[?&]source=bundle$#',
-      '#civicrm/afreact/angular$#',
-    ];
-    $this->assertCount(count($patterns), $pages);
-    foreach ($patterns as $index => $pattern) {
-      $this->assertMatchesRegularExpression($pattern, $pages[$index]['url']);
-    }
   }
 
 }

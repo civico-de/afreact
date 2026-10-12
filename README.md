@@ -50,7 +50,6 @@ The supported CiviCRM floor is pinned in `info.xml`.
   |---|---|---|
   | `<afreact-form>` | `name`, `source`, `options` (JSON object of a placement's arguments), `page-title` (the form the page is made of) | a FormBuilder form or search page |
   | `<afreact-search>` | `search`, `display` | a SearchKit table, list, grid, tree, batch or chart display |
-  | `<afreact-compare>` | `pages` (JSON list of `{label, url}`) | the comparison page |
   | `<afreact-support>` | `listed` (JSON list of form names), `settings` (URL) | the support report |
   | `<afreact-builder>` | `builder`, `route`, `classic`, `core-version` | a React builder (admin bundle) |
   | `<afreact-builders-report>` | `report`, `afform` (JSON findings per builder) | the support report's builder sections (admin bundle) |
@@ -164,17 +163,17 @@ core's builders: [comparison-builders.md](docs/comparison-builders.md).
 
 | Route | Content |
 |---|---|
-| `civicrm/afreact/demo` | demo forms and tables, React renderer; `?source=page` or `?source=bundle` picks the layout source |
-| `civicrm/afreact/angular` | the same forms, Angular runtime |
-| `civicrm/afreact/compare` | loads every React variant and the Angular page in iframes and compares metrics |
 | `civicrm/afreact/render?name=…&renderer=react\|angular` | any form the user may open, with the renderer named; `&options={…}` (JSON) stands for a placement's arguments, else a picker passes them (`&placement_contact_id=…`), a contact that is the only argument defaulting to the user's own |
 | `civicrm/admin/afreact` | support report |
 | `civicrm/admin/setting/afreact` | the forms React renders and the builders it takes over |
 | `civicrm/admin/afreact/search`, `civicrm/afreact/search` | React SearchKit admin and display page |
 | `civicrm/admin/afreact/afform`, `…/afform/submissions?name=…` | React FormBuilder and a form's submissions |
 
-Both demo pages share one markup; only the elements that mount the forms
-differ (`PagesHeadlessTest`). The demo forms live in `ang/`.
+The dev and CI stacks add demo pages from the `afreactdemo` fixture (see
+Development): `civicrm/afreact/demo` renders its forms and tables with React
+(`?source=page` or `?source=bundle` picks the layout source),
+`civicrm/afreact/angular` the same with the Angular runtime; both share one
+markup (`PagesHeadlessTest`).
 
 ## Documentation
 
@@ -193,9 +192,11 @@ differ (`PagesHeadlessTest`). The demo forms live in `ang/`.
 
 The dev stack is civikitchen (CiviCRM standalone, MariaDB, maildev); see the
 header of `.docker/docker-compose.yml`. First-boot hooks in `.docker/init.d/`
-seed synthetic contacts, contact sub-types and the extensions some specs
-need; `managed/` holds the demo searches; `.docker/fixtures/afreactisland`
-is a mounted extension that exercises the builder plugin contract.
+seed synthetic contacts, contact sub-types and the extensions
+some specs need. Two extensions under `.docker/fixtures/` are mounted in the dev and CI
+stacks and never released: `afreactdemo` holds the demo forms, searches and
+pages the browser tests use, `afreactisland` exercises the builder plugin
+contract.
 
 ```sh
 cd .docker && docker compose up -d        # or civikitchen's ckup for free ports
@@ -246,14 +247,13 @@ measurement rounds and the demo videos.
 | `Civi/Afreact/Assets.php`, `AttributeSchema.php` | bundle loading, the `civi.afreact.assets` event, the layouts handed to the page |
 | `Civi/Afreact/Takeover.php`, `FormPage.php`, `Placements.php`, `PlacedSnippets.php`, `Dashlets.php` | the `afreact_forms` takeover per placement |
 | `Civi/Afreact/AdminPage.php`, `Builders.php`, `BuilderRoutes.php`, `BuilderPanels.php`, `BuilderReport.php` | builder pages, takeover, plugin panels, report findings |
-| `Civi/Afreact/Pages.php`, `RenderPage.php`, `SupportPage.php`, `Chrome.php`, `xml/Menu/afreact.xml` | demo, compare, render and support routes and their shared chrome |
+| `Civi/Afreact/RenderPage.php`, `SupportPage.php`, `Chrome.php`, `xml/Menu/afreact.xml` | render and support routes and their shared chrome |
 | `settings/`, `templates/afreact/` | the two settings; page and inline templates |
-| `ang/`, `managed/` | demo forms and search pages; demo searches and displays |
 | `src/afform/` | form renderer (layout, fields, form model, conditions, expressions, layout sources, support checks) |
 | `src/search/` | SearchKit display renderer: columns, row menus, toolbar, totals, editing, tasks, pager, filters and URL keys |
 | `src/url/` | the URL hash as state for all elements of a page |
 | `src/admin/` | the React builders (`search/`, `afform/`) |
-| `src/compare/`, `src/support/` | comparison page; support report |
+| `src/compare/`, `src/support/` | load metrics the browser tests measure; support report |
 | `tests/browser/`, `tests/phpunit/` | browser tests; headless PHPUnit suite |
 | `scripts/` | type generator, inventory, core watch |
 

@@ -4,7 +4,7 @@
  * rows the filters exclude; changed filters search once typing pauses and survive a reload.
  */
 import { expect, test, type Browser, type Page, type Request } from "@playwright/test";
-import { api, AUTH, isRecord, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, isRecord, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const PREFIX = `Afreact filters ${RUN}`;
@@ -127,7 +127,7 @@ async function load(
 async function adminPage(browser: Browser): Promise<Page> {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   return page;
 }
 
@@ -196,7 +196,7 @@ test.describe("search filters", () => {
 
   test("a saved filter set searches once, after it has loaded", async ({ page }) => {
     const [set] = await (async () => {
-      await page.goto("/civicrm/afreact/compare");
+      await page.goto(API_PAGE);
       return api<{ id: number }>(page, "SearchParamSet", "create", {
         values: {
           afform_name: GROUPS,
@@ -247,7 +247,7 @@ test.describe("search filters", () => {
 
   test("stored filters come back after a reload with one search", async ({ page }) => {
     const stored = async (renderer: Renderer) => {
-      await page.goto("/civicrm/afreact/compare");
+      await page.goto(API_PAGE);
       // CRM.cache keeps the stored values in localStorage under a "CRM" prefix.
       await page.evaluate(() => {
         localStorage.removeItem("CRMafform:afsearchMyImportsMy_imports_display");

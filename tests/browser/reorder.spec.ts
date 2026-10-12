@@ -3,7 +3,7 @@
  * table has no keyboard path) and by pointer on both renderers, checked in the stored weights.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, keysListened, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, keysListened, type Renderer } from "./harness";
 
 const GROUP = "afreact_demo_order";
 const LABELS = ["Order A", "Order B", "Order C"];
@@ -23,7 +23,7 @@ async function stored(page: Page): Promise<{ label: string; weight: number }[]> 
 const order = (labels: string[]) => labels.map((label, index) => ({ label, weight: index + 1 }));
 
 async function removeGroup(page: Page) {
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   await api(page, "OptionValue", "delete", { where: [["option_group_id:name", "=", GROUP]] });
   await api(page, "OptionGroup", "delete", { where: [["name", "=", GROUP]] });
 }

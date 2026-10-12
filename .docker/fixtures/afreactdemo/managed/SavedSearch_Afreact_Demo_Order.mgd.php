@@ -2,8 +2,6 @@
 
 declare(strict_types = 1);
 
-use CRM_Afreact_ExtensionUtil as E;
-
 /**
  * A draggable table for the browser tests: the options of a group the test creates itself
  * (afreact_demo_order), so reordering them touches no other data.
@@ -18,7 +16,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Order',
-        'label' => E::ts('Afreact demo order'),
+        'label' => 'Afreact demo order',
         'api_entity' => 'OptionValue',
         'api_params' => [
           'version' => 4,
@@ -39,7 +37,7 @@ return [
       'version' => 4,
       'values' => [
         'name' => 'Afreact_Demo_Order_Table',
-        'label' => E::ts('Options'),
+        'label' => 'Options',
         'saved_search_id.name' => 'Afreact_Demo_Order',
         'type' => 'table',
         'settings' => [
@@ -49,8 +47,8 @@ return [
           'draggable' => 'weight',
           'sort' => [['weight', 'ASC']],
           'columns' => [
-            ['type' => 'field', 'key' => 'label', 'label' => E::ts('Label')],
-            ['type' => 'field', 'key' => 'weight', 'label' => E::ts('Order')],
+            ['type' => 'field', 'key' => 'label', 'label' => 'Label'],
+            ['type' => 'field', 'key' => 'weight', 'label' => 'Order'],
           ],
         ],
       ],

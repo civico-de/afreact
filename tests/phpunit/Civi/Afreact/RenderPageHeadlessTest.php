@@ -19,7 +19,7 @@ use PHPUnit\Framework\TestCase;
 class RenderPageHeadlessTest extends TestCase implements HeadlessInterface {
 
   public function setUpHeadless(): CiviEnvBuilder {
-    return ck_headless()->apply();
+    return ck_headless()->install(['afreactdemo'])->apply();
   }
 
   private const PLACED = 'afformAfreactPlacedProbe';

@@ -5,7 +5,7 @@
  * The groups, options and contact it works on are its own.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, label, pause, setDebug, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, label, pause, setDebug, type Renderer } from "./harness";
 
 const LABELS: Record<Renderer, string> = {
   angular: "CiviCRM (Angular)",
@@ -230,7 +230,7 @@ const SCENES: Scene[] = [
 ];
 
 async function removeData(page: Page) {
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   await api(page, "Group", "delete", { where: [["name", "LIKE", `${GROUP_PREFIX}%`]] });
   await api(page, "OptionValue", "delete", { where: [["option_group_id:name", "=", OPTIONS]] });
   await api(page, "OptionGroup", "delete", { where: [["name", "=", OPTIONS]] });
@@ -273,8 +273,13 @@ async function createData(page: Page) {
 }
 
 let debugBefore: unknown;
-test.beforeAll(async ({ browser }) => {
+// Per test: after a failure Playwright starts a new worker and reruns beforeAll, which would read
+// the switched-off value as the one to restore.
+test.beforeEach(async ({ browser }) => {
   debugBefore = await setDebug(browser, false);
+});
+test.afterEach(async ({ browser }) => {
+  await setDebug(browser, debugBefore);
 });
 
 for (const renderer of ["angular", "react"] as const) {
@@ -317,7 +322,6 @@ for (const renderer of ["angular", "react"] as const) {
 }
 
 test.afterAll(async ({ browser }) => {
-  await setDebug(browser, debugBefore);
   const context = await browser.newContext({ storageState: AUTH });
   await removeData(await context.newPage());
   await context.close();

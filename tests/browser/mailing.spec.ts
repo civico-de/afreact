@@ -3,7 +3,7 @@
  * contacts, and the mailing, its hidden group and the group's members must come out alike.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, AUTH, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const LOAD = { timeout: 30_000 };
@@ -26,7 +26,7 @@ const groups: number[] = [];
 test.beforeAll(async ({ browser }) => {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   for (const renderer of ["react", "angular"] as const) {
     const created = await api<{ id: number }>(page, "Individual", "save", {
       records: ["aa", "bb"].map((first) => ({
@@ -43,7 +43,7 @@ test.beforeAll(async ({ browser }) => {
 test.afterAll(async ({ browser }) => {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   if (mailings.length) await api(page, "Mailing", "delete", { where: [["id", "IN", mailings]] });
   if (groups.length) await api(page, "Group", "delete", { where: [["id", "IN", groups]] });
   const ids = Object.values(contacts).flat();

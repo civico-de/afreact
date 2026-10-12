@@ -3,7 +3,7 @@
  * and set details, and saving and deleting a set write the same records.
  */
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { api, AUTH, axeFindings, ownFindings, quietApi, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, axeFindings, ownFindings, quietApi, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const PREFIX = `Afreact sets ${RUN}`;
@@ -76,7 +76,7 @@ async function setsLike(page: Page, label: string) {
 async function adminPage(browser: Browser): Promise<Page> {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
-  await page.goto("/civicrm/afreact/compare");
+  await page.goto(API_PAGE);
   return page;
 }
 
@@ -98,7 +98,7 @@ test.describe("saved search picker", () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto("/civicrm/afreact/compare");
+    await page.goto(API_PAGE);
     await api(page, "SearchParamSet", "delete", { where: [["afform_name", "=", FORM]] });
     for (const [label, title] of [
       [`${PREFIX} B`, "Beta"],
