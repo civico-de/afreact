@@ -22,7 +22,6 @@ parameters:
 	checkUninitializedProperties: true
 	paths:
 		- Civi
-		- managed
 		- settings
 		- afreact.php
 	scanFiles:
