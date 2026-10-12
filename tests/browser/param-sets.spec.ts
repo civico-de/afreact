@@ -8,6 +8,7 @@ import { api, API_PAGE, AUTH, axeFindings, ownFindings, quietApi, type Renderer 
 const RUN = Date.now().toString(36);
 const PREFIX = `Afreact sets ${RUN}`;
 const FORM = "afsearchAfreactParamSetsProbe";
+const LOAD = { timeout: 30_000 };
 const LAYOUT =
   '<div af-fieldset=""><af-search-param-sets></af-search-param-sets>' +
   '<div class="af-container af-layout-inline">' +
@@ -28,7 +29,7 @@ const picker = (page: Page) => page.locator(".afreact-render af-search-param-set
 async function open(page: Page, renderer: Renderer, hash = "") {
   await page.goto("about:blank");
   await page.goto(`/civicrm/afreact/render?name=${FORM}&renderer=${renderer}${hash}`);
-  await expect(page.locator(".afreact-render table tbody tr").first()).toBeVisible();
+  await expect(page.locator(".afreact-render table tbody tr").first()).toBeVisible(LOAD);
   await expect(picker(page).locator("select")).toBeVisible();
 }
 

@@ -348,7 +348,8 @@ test.describe("FormBuilder editor", () => {
     await page.mouse.up();
     await expect(labels(page)).toHaveText(["Last Name", "First Name", "Middle Name", "Email"]);
 
-    await page.getByRole("button", { name: "Undo (Ctrl-Z)" }).click();
+    // dnd-kit swallows clicks for 50 ms after a drop (detach() in @dnd-kit/core); the keys undo too.
+    await page.keyboard.press("Control+z");
     await expect(labels(page)).toHaveText(before);
     const own = await center("Last Name");
     await page.mouse.move(own.x, own.y);
