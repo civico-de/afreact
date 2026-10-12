@@ -17,6 +17,8 @@ export const isListMenuTab = (tab: unknown): tab is ListMenuTab =>
 export const listMenuTabNote = (tab: unknown) =>
   `af-admin-list-menu tab=${JSON.stringify(tab ?? null)}`;
 
+export const LIST_MENU_SETTINGS_NOTE = "af-admin-list-menu outside FormBuilder's listing";
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const text = (value: unknown) => (typeof value === "string" ? value : "");
@@ -147,12 +149,7 @@ export function AdminListMenu({ node }: { node: ElementNode }) {
   if (!tab) return <Unsupported what={listMenuTabNote(node.tab)} />;
   const label = typeLabel(tab);
   const known = tab === "search" ? [] : entities();
-  if (!label || !known)
-    return (
-      <p className="crm-error" role="alert">
-        {ts("The FormBuilder settings this menu needs are not on this page.")}
-      </p>
-    );
+  if (!label || !known) return <Unsupported what={LIST_MENU_SETTINGS_NOTE} />;
   const links = tab === "search" ? (searches.data ?? null) : entityLinks(tab, known);
   const needle = filter.toLowerCase();
   const shown =

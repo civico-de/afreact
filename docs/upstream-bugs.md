@@ -859,10 +859,11 @@ as it is.
 
 **afTitle puts an h4 under the page's h1.** `af-title` on an element other
 than a fieldset or details becomes an `<h4>` (`afTitle.directive.js`),
-whatever heading came before, so the filter titles of the user accounts
-(`standaloneusers/ang/afsearchAdministerUserAccounts.aff.html`) and profiles
-(`civicrm_admin_ui/ang/afsearchProfiles.aff.html`) pages skip h2 and h3
-(axe `heading-order`, 6.18.1). Both renderers follow afTitle.
+whatever heading came before, so the titles on the user accounts
+(`standaloneusers/ang/afsearchAdministerUserAccounts.aff.html`), profiles
+(`civicrm_admin_ui/ang/afsearchProfiles.aff.html`) and CiviGrant dashboard
+(`civigrant/ang/afsearchCiviGrantDashboard.aff.html`) pages skip h2 and h3
+(axe `heading-order`, 6.18.1; the dashboard on 6.19). Both renderers follow afTitle.
 
 **Icon-only row links without a name.** A display link whose `text` is empty
 and that has no `title`, such as the edit link of the Date Preferences

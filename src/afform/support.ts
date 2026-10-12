@@ -1,4 +1,4 @@
-import { isListMenuTab, listMenuTabNote } from "./AdminListMenu";
+import { isListMenuTab, LIST_MENU_SETTINGS_NOTE, listMenuTabNote } from "./AdminListMenu";
 import { adminMenuLinks, isAdminMenu } from "./adminMenu";
 import { chartKitMissing } from "../search/ElementDisplay";
 import { parseFiltersAttribute, readsOptions, type DisplayFilters } from "../search/displayFilters";
@@ -482,7 +482,10 @@ const KIND_PROBLEMS: Record<NodeKind, (node: ElementNode, scope: Scope) => strin
   ],
   tab: (node, scope) => [tabOutsideNote(node["#tag"]), ...childProblems(node, scope)],
   adminMenu: (node) => (adminMenuLinks(node) ? [] : [ADMIN_MENU_NOTE]),
-  adminListMenu: (node) => (isListMenuTab(node.tab) ? [] : [listMenuTabNote(node.tab)]),
+  // Only React's FormBuilder listing loads the settings the menu needs, and it is no takeover.
+  adminListMenu: (node) => [
+    isListMenuTab(node.tab) ? LIST_MENU_SETTINGS_NOTE : listMenuTabNote(node.tab),
+  ],
   paramSets: (_node, scope) => (scope.filters ? [] : [PARAM_SETS_OUTSIDE_NOTE]),
   recaptcha: (_node, scope) => (scope.form ? [] : [RECAPTCHA_OUTSIDE_FORM_NOTE]),
   element: (node, scope) => [...elementProblems(node), ...childProblems(node, scope)],

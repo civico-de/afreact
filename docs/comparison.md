@@ -149,8 +149,9 @@ Angular code from elsewhere, which a React renderer cannot run:
   `af-tabset` a `selected-tab` other than a string literal
 - the message template editor's `crm-monaco`, which needs the Angular
   application it belongs to. FormBuilder's `af-admin-list-menu` renders where
-  FormBuilder's settings are on the page (its listing); a form elsewhere that
-  pulls them in through `requires: afAdmin` gets an error message instead
+  FormBuilder's settings are on the page (its listing in React's FormBuilder);
+  elsewhere, where core's runtime renders nothing for it, React notes it, and
+  so does the support report
 - include columns other than FormBuilder's placement column: a column of type
   `include` is an `ng-include` of any Angular template
 - bulk actions whose task is an extension's own Angular dialog (download,

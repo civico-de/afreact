@@ -605,8 +605,8 @@ template stays unsupported); the submissions page, which runs the default
 display core builds for the form (`SearchDisplay.getDefault` with the form in
 its context filters, as core's page compiles it; core's `api-entity` is the
 search's own and unused by the table); the gear menus with edit links on
-placed forms and displays, for users with the permission. Exit: the support report shows `afAdminFormList`
-supported; parity on the listing.
+placed forms and displays, for users with the permission. Exit: the support report notes nothing in
+`afAdminFormList` but its menu, which only React's FormBuilder listing can render; parity on the listing.
 
 **5. FormBuilder editor.**
 Core's routes (`#/create/<type>/<entity>`, `#/edit/<name>`,

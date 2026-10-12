@@ -209,12 +209,17 @@ describe("AdminListMenu", () => {
     expect(screen.queryByRole("searchbox", { hidden: true })).toBeNull();
   });
 
-  it("fails loudly without FormBuilder's settings and notes a tab it does not know", () => {
+  it("notes a tab it does not know and a page without FormBuilder's settings", () => {
+    window.CRM.vars = {};
     renderWithQuery(<AdminListMenu node={{ "#tag": "af-admin-list-menu", tab: "form" }} />);
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "The FormBuilder settings this menu needs are not on this page.",
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "Not supported by the React renderer: af-admin-list-menu outside FormBuilder's listing",
     );
-    expect(layoutProblems([{ "#tag": "af-admin-list-menu", tab: "form" }])).toEqual([]);
+    // Pages the support report describes never carry FormBuilder's settings.
+    window.CRM.vars = { afreactAdmin: ADMIN };
+    expect(layoutProblems([{ "#tag": "af-admin-list-menu", tab: "form" }])).toEqual([
+      "af-admin-list-menu outside FormBuilder's listing",
+    ]);
     expect(layoutProblems([{ "#tag": "af-admin-list-menu", tab: "system" }])).toEqual([
       'af-admin-list-menu tab="system"',
     ]);
