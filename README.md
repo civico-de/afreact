@@ -183,6 +183,7 @@ differ (`PagesHeadlessTest`). The demo forms live in `ang/`.
 | [docs/architecture.md](docs/architecture.md) | boundary, state, the first search, libraries and chunks, dashlets, the support report, the debug mode |
 | [docs/comparison.md](docs/comparison.md) | the renderer's parity gaps, improvements, differences by design, what is not implemented and why |
 | [docs/comparison-builders.md](docs/comparison-builders.md) | the builders' differences from core's SearchKit admin and FormBuilder editor |
+| [docs/afform-markup.md](docs/afform-markup.md) | the Afform markup as a language: vocabulary, attribute types, the three layout formats, what core could change for a second renderer |
 | [docs/upstream-bugs.md](docs/upstream-bugs.md) | bugs in core found on the way, by area, and what React does instead |
 | [docs/load-metrics.md](docs/load-metrics.md) | measured load times of both renderers and the layout sources |
 | [docs/testing.md](docs/testing.md) | every browser spec, the sweeps, the demo videos |
