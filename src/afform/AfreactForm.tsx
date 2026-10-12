@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api4, errorMessage, isApiError } from "../api/civi";
+import { DebugFacts, debugMode, DebugSection } from "../debug/debug";
 import { asHtml } from "../html";
 import { RouteOptionsContext } from "../search/displayFilters";
 import type { ExpressionContext } from "./expressions";
@@ -233,33 +234,80 @@ export function AfreactForm({
     queryKey,
     queryFn: () => loadForm(name, source, { search, hash }, options, client),
   });
-  if (loaded.isSuccess)
-    return (
-      <RouteOptionsContext.Provider value={options}>
-        {/* A reset loads the form afresh, so every part of it starts over. */}
-        <LoadedForm
-          // deviation:reset-reloads-form
-          key={loaded.dataUpdatedAt}
-          name={name}
-          pageTitle={pageTitle}
-          onReset={(fresh) => {
-            client.setQueryData<Loaded>(queryKey, { ...loaded.data, ...fresh });
-          }}
-          {...loaded.data}
-        />
-      </RouteOptionsContext.Provider>
-    );
   return (
-    <div className="afreact-form afform-directive" aria-busy={loaded.isPending}>
-      {loaded.isError && (
-        <div className="alert alert-danger" role="alert">
-          {errorMessage(loaded.error)}
+    <DebugSection value={ts("Form %1", { 1: name })}>
+      {debugMode() && (
+        <FormDebug name={name} source={source} options={options} location={location} />
+      )}
+      {loaded.isSuccess ? (
+        <RouteOptionsContext.Provider value={options}>
+          {/* A reset loads the form afresh, so every part of it starts over. */}
+          <LoadedForm
+            // deviation:reset-reloads-form
+            key={loaded.dataUpdatedAt}
+            name={name}
+            pageTitle={pageTitle}
+            onReset={(fresh) => {
+              client.setQueryData<Loaded>(queryKey, { ...loaded.data, ...fresh });
+            }}
+            {...loaded.data}
+          />
+        </RouteOptionsContext.Provider>
+      ) : (
+        <div className="afreact-form afform-directive" aria-busy={loaded.isPending}>
+          {loaded.isError && (
+            <div className="alert alert-danger" role="alert">
+              {errorMessage(loaded.error)}
+            </div>
+          )}
+          <p role="status" className="afreact-status">
+            {loaded.isPending ? ts("Loading…") : ""}
+          </p>
         </div>
       )}
-      <p role="status" className="afreact-status">
-        {loaded.isPending ? ts("Loading…") : ""}
-      </p>
-    </div>
+    </DebugSection>
+  );
+}
+
+/** The form's facts in the debug panel, with the same form on the render page under Angular. */
+/** The render page's own parameters, which the page's query string must not override. */
+const RENDER_PARAMETERS = new Set(["q", "name", "renderer", "options"]);
+
+function FormDebug({
+  name,
+  source,
+  options,
+  location,
+}: {
+  name: string;
+  source: LayoutSource;
+  options: Record<string, unknown> | undefined;
+  location: { search: string; hash: string };
+}) {
+  const json = options ? JSON.stringify(options) : null;
+  const query = [...new URLSearchParams(location.search)].filter(
+    ([key]) => !RENDER_PARAMETERS.has(key),
+  );
+  // The same arguments React loads the form with; "{}" keeps the render page from picking any.
+  const angular = `${window.CRM.url("civicrm/afreact/render", {
+    ...Object.fromEntries(query),
+    name,
+    renderer: "angular",
+    options: json ?? "{}",
+  })}${location.hash}`;
+  return (
+    <DebugFacts
+      facts={{
+        [ts("Layout source")]: source,
+        [ts("Placement arguments")]: json ?? [],
+      }}
+      links={[
+        {
+          label: json ? ts("Open with Angular, options %1", { 1: json }) : ts("Open with Angular"),
+          href: angular,
+        },
+      ]}
+    />
   );
 }
 

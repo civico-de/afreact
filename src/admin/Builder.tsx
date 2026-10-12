@@ -1,6 +1,9 @@
 import { Fragment, type ReactNode } from "react";
+import { DebugFacts, debugMode, DebugSection } from "../debug/debug";
 import { ClassicContext } from "./classic";
+import { foreignModules, modulesChangingBuilder } from "./foreign";
 import { firstMatch, LeaveGuardContext, useGuardedHashPath, type Pattern } from "./route";
+import { adminVars } from "./vars";
 
 export type BuilderName = "search_kit" | "afform";
 
@@ -26,7 +29,7 @@ interface BuilderProps {
   screens: Screens;
 }
 
-/** A React builder page: the screen for the hash, and a link to the same screen in core's builder. */
+/** A React builder page: the screen for the hash; the debug panel links the same screen in core's builder. */
 export function Builder({ route, classic, screens }: BuilderProps) {
   const { path: hashPath, setGuard } = useGuardedHashPath();
   // Core's routers read `#create/…` as `#/create/…`.
@@ -44,26 +47,34 @@ export function Builder({ route, classic, screens }: BuilderProps) {
   const classicHere = `${classic}${window.location.hash}`;
   return (
     <div className="afreact-builder">
-      <p className="afreact-builder-classic">
-        <a href={classicHere}>
-          <i className="crm-i fa-external-link" role="img" aria-hidden="true" />{" "}
-          {ts("Open in the classic builder")}
-        </a>
-      </p>
-      {match ? (
-        <ClassicContext value={classic}>
-          <LeaveGuardContext value={setGuard}>
-            {/* A new route is a new screen, so no state carries over between them. */}
-            <Fragment key={path}>{routed[match.name]?.render(match.params) ?? null}</Fragment>
-          </LeaveGuardContext>
-        </ClassicContext>
-      ) : (
-        <div className="messages status no-popup" role="status">
-          <i className="crm-i fa-info-circle" role="img" aria-hidden="true" />{" "}
-          {ts("This screen is not available in the React builder yet.")}{" "}
-          <a href={classicHere}>{ts("Open it in the classic builder.")}</a>
-        </div>
-      )}
+      <DebugSection value={ts("Builder")}>
+        {debugMode() && (
+          <DebugFacts
+            facts={{
+              [ts("Route")]: `${route}#${path}`,
+              [ts("Other extensions' Angular modules")]: foreignModules(),
+              [ts("Modules that change the builder")]: modulesChangingBuilder(),
+              [ts("Builder templates changed on this site")]: adminVars().changedPartials ?? [],
+              [ts("Builder panels")]: adminVars().panels ?? [],
+            }}
+            links={[{ label: ts("Open in the classic builder"), href: classicHere }]}
+          />
+        )}
+        {match ? (
+          <ClassicContext value={classic}>
+            <LeaveGuardContext value={setGuard}>
+              {/* A new route is a new screen, so no state carries over between them. */}
+              <Fragment key={path}>{routed[match.name]?.render(match.params) ?? null}</Fragment>
+            </LeaveGuardContext>
+          </ClassicContext>
+        ) : (
+          <div className="messages status no-popup" role="status">
+            <i className="crm-i fa-info-circle" role="img" aria-hidden="true" />{" "}
+            {ts("This screen is not available in the React builder yet.")}{" "}
+            <a href={classicHere}>{ts("Open it in the classic builder.")}</a>
+          </div>
+        )}
+      </DebugSection>
     </div>
   );
 }

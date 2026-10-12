@@ -2,8 +2,9 @@
 
 The React builders edit the same records as core's Angular ones: the
 SearchKit admin (searches and their displays) and the FormBuilder editor.
-Each React screen links to the same record in the classic builder, and a part
-it cannot edit shows a notice with that link instead of being dropped. The
+A part a React screen cannot edit shows a notice with a link to the same
+record in the classic builder instead of being dropped; the debug mode links
+every screen there. The
 renderer's differences are in [comparison.md](comparison.md), the bugs in
 core found on the way in [upstream-bugs.md](upstream-bugs.md). Where React
 does better than core, a section lists it under "Improvements over core", with

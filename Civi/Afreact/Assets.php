@@ -53,8 +53,9 @@ final class Assets {
       ->addStyleFile('org.civicrm.search_kit', 'css/crmSearchTasks.css')
       // What AfformMetadataInjector::preprocess() writes into afLocationInput's unit select.
       ->addVars('afreact', ['distanceUnit' => \CRM_Utils_Address::getDefaultDistanceUnit()])
-      // CRM.checkPerm() for the batch display's link to all import batches and afform_admin's edit menus.
-      ->addPermissions(['administer queues', ...self::EDIT_MENU_PERMISSIONS]);
+      // CRM.checkPerm() for the batch display's link to all import batches, afform_admin's edit
+      // menus and the debug mode.
+      ->addPermissions(['administer queues', 'view debug output', ...self::EDIT_MENU_PERMISSIONS]);
     ChartKit::addVars();
     Strings::add();
     // Once per builder: the support report asks both builders' plugins.

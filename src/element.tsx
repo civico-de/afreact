@@ -1,7 +1,11 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createRoot, type Root } from "react-dom/client";
 import { dropUnobserved, queryClient } from "./api/query";
+import { onFirstDebugEntry } from "./debug/debug";
+import { mountDebugDock } from "./debug/DebugDock";
 import { isOnlyElement, storeFor, UrlState } from "./url/UrlState";
+
+onFirstDebugEntry(mountDebugDock);
 
 /** Light-DOM custom element, so CiviCRM's theme styles the React output like any other markup. */
 export abstract class ReactElement extends HTMLElement {

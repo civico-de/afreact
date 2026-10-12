@@ -1,4 +1,5 @@
 import { useContext, useEffect, useEffectEvent, useRef, useState } from "react";
+import { useDebugFacts } from "../../../debug/debug";
 import { ClassicContext } from "../../classic";
 import { useEditor } from "../context";
 import { isElement, isShallowNode, type ShallowElement } from "../tree";
@@ -36,6 +37,7 @@ export function PluginElement({
   detailKey?: "node" | "entity";
   onChange: (node: ShallowElement) => void;
 }) {
+  useDebugFacts({ [ts("Other extensions' elements")]: [tag] });
   const host = useRef<HTMLDivElement>(null);
   const element = useRef<HTMLElement | null>(null);
   const [error, setError] = useState<string | null>(null);

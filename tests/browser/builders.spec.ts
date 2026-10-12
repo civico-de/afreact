@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { axeFindings, quietApi } from "./harness";
+import { axeFindings, debugOn, debugPanel, quietApi } from "./harness";
 
 const setBuilders = (page: import("@playwright/test").Page, builders: string[]) =>
   quietApi(page, "Setting", "set", { values: { afreact_builders: builders } });
@@ -9,11 +9,14 @@ test.describe("builder pages", () => {
     await setBuilders(page, []);
   });
 
-  test("the own route links each screen to the classic builder", async ({ page }) => {
+  test("the own route's debug panel links each screen to the classic builder", async ({ page }) => {
+    await debugOn(page);
     await page.goto("/civicrm/admin/afreact/search#/edit/1");
-    const classic = page.getByRole("link", { name: "Open in the classic builder" });
-    await expect(classic).toHaveAttribute("href", /\/civicrm\/admin\/search#\/edit\/1$/);
     expect(await axeFindings(page, "afreact-builder")).toEqual([]);
+    const classic = (await debugPanel(page)).getByRole("link", {
+      name: "Open in the classic builder",
+    });
+    await expect(classic).toHaveAttribute("href", /\/civicrm\/admin\/search#\/edit\/1$/);
   });
 
   test("the settings page offers SearchKit and FormBuilder", async ({ page }) => {
@@ -28,12 +31,15 @@ test.describe("builder pages", () => {
     page,
   }) => {
     await setBuilders(page, ["afform"]);
+    await debugOn(page);
     await page.goto("/civicrm/admin/afform#/list");
     await expect(page.locator("afreact-builder")).toBeVisible();
     await expect(page.locator("[ng-app], .ng-scope")).toHaveCount(0);
     await page.goto("/civicrm/admin/afform#/edit/afformQuickAddIndividual");
     await expect(page.locator("#afGuiEditor-canvas-body")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole("link", { name: "Open in the classic builder" })).toHaveAttribute(
+    await expect(
+      (await debugPanel(page)).getByRole("link", { name: "Open in the classic builder" }),
+    ).toHaveAttribute(
       "href",
       /\/civicrm\/admin\/afform\/classic#\/edit\/afformQuickAddIndividual$/,
     );
@@ -48,6 +54,7 @@ test.describe("builder pages", () => {
     page,
   }) => {
     await setBuilders(page, ["search_kit"]);
+    await debugOn(page);
     await page.goto("/civicrm/admin/search#/list");
     await expect(page.locator("afreact-builder")).toBeVisible();
     await expect(page.locator("[ng-app], .ng-scope")).toHaveCount(0);
@@ -57,9 +64,8 @@ test.describe("builder pages", () => {
     ).toBeVisible();
     await expect(page.locator("afreact-builder")).toHaveCount(0);
     await page.goto("/civicrm/admin/search#/list");
-    await expect(page.getByRole("link", { name: "Open in the classic builder" })).toHaveAttribute(
-      "href",
-      /\/civicrm\/admin\/search\/classic#\/list$/,
-    );
+    await expect(
+      (await debugPanel(page)).getByRole("link", { name: "Open in the classic builder" }),
+    ).toHaveAttribute("href", /\/civicrm\/admin\/search\/classic#\/list$/);
   });
 });

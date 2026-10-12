@@ -32,6 +32,7 @@ import {
   type RunPage,
 } from "./types";
 import { displayKeys, positiveInteger, sortParser, sortText, type Sort } from "./urlKeys";
+import { debugMode, useDebugFacts } from "../debug/debug";
 
 interface AfreactSearchProps {
   search: string;
@@ -231,7 +232,7 @@ function ResultDisplay({
         limit,
         sort: activeSort,
         return: `page:${page}`,
-        ...(onDebug ? { debug: true } : {}),
+        ...(onDebug || debugMode() ? { debug: true } : {}),
       });
       // Same rule as searchDisplayBaseTrait: a short first page is the whole result, no count call needed.
       if (page === 1 && (!limit || result.length < limit))
@@ -275,6 +276,10 @@ function ResultDisplay({
   useEffect(() => {
     if (rows.data?.debug) onDebug?.(rows.data.debug);
   }, [rows.data, onDebug]);
+  useDebugFacts({
+    [ts("Search displays")]: [displayKey],
+    ...(rows.data?.debug?.sql ? { [ts("SQL of %1", { 1: displayKey })]: rows.data.debug.sql } : {}),
+  });
   // Core keeps the toolbar of the last run while the next page loads.
   const [shown, setShown] = useState<RunPage | undefined>(undefined);
   if (rows.data && rows.data !== shown) setShown(rows.data);

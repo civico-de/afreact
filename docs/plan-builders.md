@@ -173,8 +173,10 @@ regardless.
   change. Before saving a search whose entity, joins, columns or group by
   changed while it has such a display, React names those displays, asks, and
   links each to the classic builder.
-- **Always reachable.** Each React builder's header links to the classic
-  builder.
+- **Reachable for debugging.** In the viewer's debug mode, the panel of
+  each React builder links the same screen in the classic builder. Where
+  React cannot go on (a screen it lacks, a save another extension blocks),
+  the notice links it for everyone.
 - **Support report.** The report at `civicrm/admin/afreact` gets a builders
   section listing the display types whose editor runs as an island, and
   what React would hand to the classic builder: display types without a

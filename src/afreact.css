@@ -16,6 +16,16 @@
 .crm-container .dropdown-menu.afreact-menu:popover-open { position: fixed; bottom: auto; overflow-y: auto; }
 .afreact-support-kind { margin: 0; font-weight: 600; }
 .afreact-support-problems { margin: 0; padding-left: 1.25rem; }
+.afreact-debug-switch { margin-block: 1rem; }
+.afreact-debug-switch legend { font-size: inherit; font-weight: bold; border: 0; margin: 0; }
+.afreact-debug-dock { position: fixed; inset-block-end: 1rem; inset-inline-end: 1rem; z-index: 10000; display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 0.5rem; }
+.afreact-debug-panel { width: min(36rem, calc(100vw - 2rem)); max-height: 60vh; overflow: auto; padding: 1rem; background: var(--crm-container-bg-color); color: var(--crm-text-color); border: 1px solid var(--crm-c-gray-300); border-radius: var(--crm-dialog-radius); box-shadow: 0 2px 12px rgb(0 0 0 / 30%); }
+.afreact-debug-panel h2 { font-size: 1.15rem; margin: 0 0 0.5rem; }
+.afreact-debug-panel h3 { font-size: 1rem; margin: 1rem 0 0.25rem; }
+.afreact-debug-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.afreact-debug-panel dt { font-weight: bold; }
+.afreact-debug-panel dd { margin: 0 0 0.5rem; overflow-wrap: anywhere; }
+.afreact-debug-panel dd ul { margin: 0; padding-inline-start: 1.25rem; }
 /* select2 sizes its search input by script and shows focus only on an open list. */
 .afreact-combobox .select2-choices .select2-search-field { flex: 1 1 8em; }
 .afreact-combobox .select2-choices .select2-search-field input.select2-input { width: 100%; }

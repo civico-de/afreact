@@ -1,6 +1,8 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api4, errorMessage } from "../api/civi";
+import { debugAllowed } from "../debug/debug";
+import { DebugSwitch } from "../debug/DebugSwitch";
 import { loadDefinition } from "../afform/source";
 import { layoutProblems, noteKind, taskDisplays } from "../afform/support";
 import type { NoteKind } from "../afform/support";
@@ -145,6 +147,7 @@ export function AfreactSupport({ listed, settings }: AfreactSupportProps) {
       <p>
         <a href={settings}>{ts("Choose the forms React renders")}</a>
       </p>
+      {debugAllowed() && <DebugSwitch />}
       {forms.isError && (
         <div className="alert alert-danger" role="alert">
           {errorMessage(forms.error)}

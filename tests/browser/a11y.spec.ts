@@ -248,7 +248,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme });
     const report = await findings(page, "/civicrm/admin/afreact", {
       scope: ".afreact-support-page",
-      ready: `/^Checked \\d+ forms/.test(document.querySelector(".afreact-support p[role=status]")?.textContent ?? "")`,
+      ready: `/^Checked \\d+ forms/.test(document.querySelector(".afreact-support > p[role=status]")?.textContent ?? "")`,
     });
     // Core's settings form in the same theme: its Save button is the apply button's twin.
     const settings = await findings(page, "/civicrm/admin/setting/afreact", {

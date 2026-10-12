@@ -207,3 +207,15 @@ export async function label(page: Page, text: string) {
     });
   }, text);
 }
+
+/** Turns the viewer's debug switch on for the page's loads from now on. */
+export const debugOn = (page: Page) =>
+  page.addInitScript(() => {
+    window.localStorage.setItem("afreact-debug", "1");
+  });
+
+/** Opens the debug panel from its floating button. */
+export async function debugPanel(page: Page): Promise<Locator> {
+  await page.getByRole("button", { name: "Debug", exact: true }).click();
+  return page.locator("#afreact-debug-panel");
+}

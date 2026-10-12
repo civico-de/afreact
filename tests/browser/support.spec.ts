@@ -14,7 +14,7 @@ const SAMPLE = [
   "afformAfreactDemoContact",
 ];
 
-const status = (page: Page) => page.locator(".afreact-support p[role=status]");
+const status = (page: Page) => page.locator(".afreact-support > p[role=status]");
 const unique = (notes: string[]) => [...new Set(notes)].sort();
 
 async function openReport(page: Page) {

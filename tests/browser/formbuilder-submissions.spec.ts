@@ -3,7 +3,7 @@
  * default display core builds for the form.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api } from "./harness";
+import { api, debugOn, debugPanel } from "./harness";
 
 const NAME = "afformAfreactSubmissionsProbe";
 const TITLE = "Afreact submissions probe";
@@ -69,6 +69,7 @@ test.describe("FormBuilder submissions", () => {
   });
 
   test("lists a form's submissions as core's page does", async ({ page }) => {
+    await debugOn(page);
     await page.goto(`/civicrm/admin/afform/submissions?name=${NAME}`);
     const angular = await table(page);
     expect(angular.title).toBe(`Submissions for ${TITLE}`);
@@ -78,7 +79,11 @@ test.describe("FormBuilder submissions", () => {
       page.locator("nav[aria-label=Breadcrumb]").getByRole("link", { name: "FormBuilder" }),
     ).toBeVisible();
     // Core's page needs the form's name too.
-    await page.getByRole("link", { name: "Open in the classic builder" }).click();
+    await (
+      await debugPanel(page)
+    )
+      .getByRole("link", { name: "Open in the classic builder" })
+      .click();
     await expect(page).toHaveURL(new RegExp(`/civicrm/admin/afform/submissions\\?name=${NAME}$`));
     expect(await table(page)).toEqual(angular);
   });

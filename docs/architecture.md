@@ -184,6 +184,23 @@ core's extensions the sections list nothing. Without FormBuilder's admin
 (afform_admin) the FormBuilder section says so, and the `afreact_builders`
 setting neither offers nor applies the FormBuilder builder.
 
+## Debug mode
+
+Users with core's `view debug output` permission switch it on for
+themselves on the support report, which needs `administer CiviCRM`; the switch lives in the browser's
+`localStorage` and changes nothing for anyone else. The builders and forms
+React renders then get a floating **Debug** button whose panel shows, per
+builder or form, what the page runs (`src/debug/`):
+
+| Section | Content |
+|---|---|
+| Builder | route, other extensions' Angular modules, those that change the builder, changed builder templates, builder panels, the Angular islands and other extensions' elements mounted, the search displays with their SQL; a link to the same screen in the classic builder |
+| Form | layout source, placement arguments, the parts React cannot show, the search displays with their SQL; a link to the same form under Angular on the render page |
+
+Parts add their facts while mounted (`useDebugFacts`), so the panel lists
+what the page shows now. In debug mode each display run asks for core's
+debug output, as SearchKit's query tab does.
+
 ## Kept Angular on purpose
 
 - Except on the dashboard, pages that place a listed form still queue its

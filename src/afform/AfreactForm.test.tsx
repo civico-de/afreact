@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { events, jquerySelection } from "../test/jquery";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
+import { debugEntries } from "../debug/debug";
 import { AfreactForm, formExpressions, redirectUrl } from "./AfreactForm";
 import type { FieldDefn, LayoutNode } from "./types";
 
@@ -430,6 +431,35 @@ describe("AfreactForm", () => {
     });
     renderWithQuery(<AfreactForm name="x" location={{ search: "", hash: "" }} />);
     expect(await screen.findByRole("alert")).toHaveTextContent("does not exist");
+  });
+
+  it("links the debug panel to the form under Angular with the arguments React loaded it with", () => {
+    vi.mocked(window.CRM.checkPerm).mockImplementation((perm) => perm === "view debug output");
+    window.localStorage.setItem("afreact-debug", "1");
+    vi.spyOn(window.CRM, "url").mockImplementation(
+      (path, query = {}) =>
+        `/${path}?${new URLSearchParams(Object.entries(query).map(([key, value]) => [key, String(value)])).toString()}`,
+    );
+    mockApi({ "Afreact.getForm": () => [] });
+    const location = { search: "?q=civicrm/x&id=5&renderer=react", hash: "#?Individual1=7" };
+    const { unmount } = renderWithQuery(<AfreactForm name="afformTest" location={location} />);
+    const links = () => debugEntries().flatMap((entry) => entry.links);
+    expect(links()).toEqual([
+      {
+        label: "Open with Angular",
+        href: "/civicrm/afreact/render?id=5&name=afformTest&renderer=angular&options=%7B%7D#?Individual1=7",
+      },
+    ]);
+    unmount();
+    renderWithQuery(
+      <AfreactForm
+        name="afformTest"
+        location={{ search: "", hash: "" }}
+        options={{ contact_id: 3 }}
+      />,
+    );
+    expect(links()[0]?.label).toBe('Open with Angular, options {"contact_id":3}');
+    window.localStorage.clear();
   });
 
   it("renders a layout the page embedded without calling getForm", async () => {

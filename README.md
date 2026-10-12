@@ -126,7 +126,8 @@ React rebuilds core's SearchKit admin (listing, search editor, display
 editors, display page) and FormBuilder (listing, form editor at core's
 `#/create/…`, `#/edit/…` and `#/clone/…` routes, submissions) at routes of
 their own ([Pages](#pages)). Both save the same records through the same
-APIv4 calls as core's builders, and each screen links to the classic one.
+APIv4 calls as core's builders. The classic builder is one link away in
+the [debug mode](docs/architecture.md#debug-mode).
 The setting `afreact_builders` lets React take over core's routes, each
 builder on its own; core's pages then move to `<route>/classic`
 (`civicrm/admin/search/classic`, `civicrm/admin/afform/classic`, …).
@@ -179,7 +180,7 @@ differ (`PagesHeadlessTest`). The demo forms live in `ang/`.
 
 | Document | Content |
 |---|---|
-| [docs/architecture.md](docs/architecture.md) | boundary, state, the first search, libraries and chunks, dashlets, the support report |
+| [docs/architecture.md](docs/architecture.md) | boundary, state, the first search, libraries and chunks, dashlets, the support report, the debug mode |
 | [docs/comparison.md](docs/comparison.md) | the renderer's parity gaps, improvements, differences by design, what is not implemented and why |
 | [docs/comparison-builders.md](docs/comparison-builders.md) | the builders' differences from core's SearchKit admin and FormBuilder editor |
 | [docs/upstream-bugs.md](docs/upstream-bugs.md) | bugs in core found on the way, by area, and what React does instead |

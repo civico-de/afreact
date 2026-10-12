@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useDebugFacts } from "../../../debug/debug";
 import { angularOf, call, foreignModules } from "../../foreign";
 import type { EditorDisplay } from "../editor";
 
@@ -88,6 +89,7 @@ interface AngularIslandProps {
  */
 export function AngularIsland(props: AngularIslandProps) {
   const { type, display, search, onChange } = props;
+  useDebugFacts({ [ts("Angular islands")]: [editorTag(type)] });
   const host = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | Error>("loading");
   // The display as both sides last agreed on, so neither echoes the other's change back.

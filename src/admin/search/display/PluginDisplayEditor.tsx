@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useId, useRef } from "react";
+import { useDebugFacts } from "../../../debug/debug";
 import { getDefaultLabel, getField, parseExpr, type SearchInfo } from "../expr";
 import type { SearchAdminMetadata } from "../meta";
 import type { EditorDisplay } from "../editor";
@@ -73,6 +74,7 @@ export function PluginDisplayEditor({
     onSettings(settings);
   });
   const tag = pluginEditorTag(display.type);
+  useDebugFacts({ [ts("Other extensions' elements")]: [tag] });
 
   useEffect(() => {
     const created = document.createElement(tag);
