@@ -1,7 +1,7 @@
 /**
  * React's form layout over the theme (css/afreact-form.css), on the large demo form: blocks keep
  * a gap, a repeat item's controls sit at its fields, a legend heads its fieldset; the undo for a
- * removed item has no axe finding.
+ * removed item and the list of a blocked submit's invalid fields have no axe finding.
  */
 import { expect, test, type Locator } from "@playwright/test";
 import { axeFindings } from "./harness";
@@ -176,7 +176,9 @@ test("the React form layout keeps to stacking blocks and the back office", async
 });
 
 // deviation:form-design-layer
-test("a repeat item's remove button and block menu sit apart", async ({ page }) => {
+test("a repeat item's remove button and block menu sit apart on its row of inputs", async ({
+  page,
+}) => {
   await page.goto(FORM);
   const about = page.getByRole("group", { name: "About you" });
   await expect(about).toBeVisible(LOAD);
@@ -194,6 +196,11 @@ test("a repeat item's remove button and block menu sit apart", async ({ page }) 
     remove.bottom <= menu.y ||
     menu.bottom <= remove.y;
   expect(apart).toBe(true);
+  const input = await box(item.getByLabel("Email Location Type"));
+  for (const control of [remove, menu]) {
+    expect(control.y).toBeGreaterThanOrEqual(input.y - 4);
+    expect(control.bottom).toBeLessThanOrEqual(input.bottom + 4);
+  }
 });
 
 for (const colorScheme of ["light", "dark"] as const)
@@ -209,4 +216,52 @@ for (const colorScheme of ["light", "dark"] as const)
     await about.getByRole("button", { name: "Remove" }).first().click();
     await expect(about.getByRole("button", { name: "Undo" })).toBeFocused();
     expect(await axeFindings(page, ".afreact-repeat-undo")).toEqual([]);
+  });
+
+for (const colorScheme of ["light", "dark"] as const)
+  // deviation:invalid-fields-listed
+  test(`a blocked submit marks only the fields it lists, keeps the focus border and has no axe finding (${colorScheme})`, async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.emulateMedia({ colorScheme });
+    await page.goto(FORM);
+    await expect(page.locator(".afreact-form")).toHaveAttribute("aria-busy", "false", LOAD);
+    // The theme fades border colours; the comparison below wants them settled.
+    await page.addStyleTag({ content: "* { transition: none !important; }" });
+    await page.getByRole("button", { name: "Become a member" }).click();
+    const summary = page.locator(".afreact-form > .alert");
+    await expect(summary.getByRole("button", { name: "Membership Type" })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "First Name" })).toBeFocused();
+    const border = (name: string) =>
+      page.getByRole("textbox", { name }).evaluate((input) => getComputedStyle(input).borderColor);
+    // The focused field keeps the focus border over the error ink.
+    expect(await border("Last Name")).not.toBe(await border("Birth Date"));
+    expect(await border("First Name")).not.toBe(await border("Last Name"));
+    // An email added after the blocked submit is not marked, though empty and required.
+    const label = (index: number) =>
+      page
+        .locator("af-field")
+        .filter({ has: page.getByRole("textbox", { name: "Email" }) })
+        .nth(index)
+        .locator(".crm-af-field-label")
+        .evaluate((element) => [
+          getComputedStyle(element).color,
+          getComputedStyle(element, "::before").content,
+        ]);
+    await page
+      .getByRole("group", { name: "About you" })
+      .getByRole("button", { name: "Add" })
+      .first()
+      .click();
+    const healthy = await page
+      .locator("af-field")
+      .filter({ hasText: "Birth Date" })
+      .locator(".crm-af-field-label")
+      .evaluate((element) => getComputedStyle(element).color);
+    expect(await label(1)).toEqual([healthy, "none"]);
+    expect(await label(0)).not.toEqual([healthy, "none"]);
+    expect(
+      await axeFindings(page, ".afreact-form > .alert, .afreact-checked .crm-af-field-label"),
+    ).toEqual([]);
   });

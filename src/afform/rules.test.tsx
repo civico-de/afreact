@@ -704,6 +704,25 @@ describe("a required reference field", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Submit" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Please fill all required fields.");
   });
+
+  it("holds no submit while af-disabled, as the browser skips a disabled control", async () => {
+    const calls = renderForm(
+      form([
+        field("first_name"),
+        field(
+          "employer_id",
+          { input_type: "EntityRef", data_type: "Integer", fk_entity: "Contact", required: true },
+          { "af-disabled": when("first_name", "=", '"lock"') },
+        ),
+      ]),
+    );
+    await userEvent.type(await screen.findByRole("textbox", { name: "first_name" }), "lock");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toBeDefined();
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
 });
 
 describe("extra fields", () => {

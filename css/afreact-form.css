@@ -15,6 +15,18 @@
 .afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn, > .crm-admin-block-context-dropdown):not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) { width: fit-content; max-width: 100%; padding-right: calc(2.25rem + var(--crm-flex-gap, 0.5rem)); }
 .afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn):has(> .crm-admin-block-context-dropdown):not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) { padding-right: calc(4.5rem + 2 * var(--crm-flex-gap, 0.5rem)); }
 #bootstrap-theme .afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn) > .crm-admin-block-context-dropdown { right: calc(2.25rem + var(--crm-flex-gap, 0.5rem)); }
+/* Both sit on the row of inputs at the item's bottom, not on its labels. */
+#bootstrap-theme .afreact-form:not(.crm-public *) [af-repeat-item]:not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) > .af-repeat-remove-btn { top: auto; bottom: 0; }
+#bootstrap-theme .afreact-form:not(.crm-public *) [af-repeat-item]:not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) > .crm-admin-block-context-dropdown { bottom: 0; height: var(--crm-input-height, 2rem); }
 /* Riverlea's front-end legend width reaches back-office forms and hides the fieldset's top border
    but for its ends; the legend takes its own width there. deviation:legend-own-width */
 .afreact-form:not(.crm-public *) fieldset.af-container > legend.af-title { width: auto; }
+/* The fields a blocked submit listed take the theme's error ink while still invalid (but for the
+   focus border), and a warning icon, seen where the ink is near the text colour. deviation:invalid-fields-listed */
+.afreact-checked :is(input, select, textarea)[data-afreact-listed]:invalid:not(:focus),
+.afreact-checked .select2-container:has([data-afreact-listed]:invalid):not(:focus-within) > .select2-choices,
+#bootstrap-theme .afreact-checked :is(input, select, textarea)[data-afreact-listed]:invalid:not(:focus),
+#bootstrap-theme .afreact-checked .select2-container:has([data-afreact-listed]:invalid):not(:focus-within) > .select2-choices { border-color: var(--crm-danger-ink-color, #a94442); }
+.afreact-checked af-field:has([data-afreact-listed]:invalid) .crm-af-field-label,
+#bootstrap-theme .afreact-checked af-field:has([data-afreact-listed]:invalid) .crm-af-field-label { color: var(--crm-danger-ink-color, #a94442); }
+.afreact-checked af-field:has([data-afreact-listed]:invalid) .crm-af-field-label::before { content: "\f071" / ""; font-family: "FontAwesome"; font-weight: normal; margin-inline-end: 0.25em; }

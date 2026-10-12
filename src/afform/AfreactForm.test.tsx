@@ -121,6 +121,32 @@ function renderForm(
   return calls;
 }
 
+const fieldsForm = (fields: LayoutNode[]): LayoutNode[] => [
+  {
+    "#tag": "af-form",
+    ctrl: "afform",
+    "#children": [
+      { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+      { "#tag": "fieldset", "af-fieldset": "Individual1", "#children": fields },
+      { "#tag": "button", "ng-click": "afform.submit()", "#children": [{ "#text": "Save" }] },
+    ],
+  },
+];
+function renderFields(fields: LayoutNode[], values: Record<string, unknown>) {
+  const calls = mockApi({
+    "Afreact.getForm": () => [
+      { name: "afformTest", title: "Test", type: "form", layout: fieldsForm(fields), strings: [] },
+    ],
+    "Afform.prefill": () => [{ name: "Individual1", values: [{ fields: values }] }],
+    "Afform.submit": () => [{}],
+  });
+  renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />);
+  return calls;
+}
+const save = async () => {
+  await userEvent.click(await screen.findByRole("button", { name: "Save" }));
+};
+
 describe("AfreactForm", () => {
   it("prefills from the route arguments and submits the edited record", async () => {
     const calls = renderForm(() => [{ message: "<p>Contact saved.</p>" }]);
@@ -168,33 +194,135 @@ describe("AfreactForm", () => {
     expect(calls.map(({ call }) => call)).not.toContain("Afform.submit");
   });
 
-  describe("a value shorter than its minlength", () => {
-    const form = (fields: LayoutNode[]): LayoutNode[] => [
-      {
-        "#tag": "af-form",
-        ctrl: "afform",
-        "#children": [
-          { "#tag": "af-entity", type: "Contact", name: "Individual1" },
-          { "#tag": "fieldset", "af-fieldset": "Individual1", "#children": fields },
-          { "#tag": "button", "ng-click": "afform.submit()", "#children": [{ "#text": "Save" }] },
-        ],
-      },
-    ];
-    function renderFields(fields: LayoutNode[], values: Record<string, unknown>) {
-      const calls = mockApi({
-        "Afreact.getForm": () => [
-          { name: "afformTest", title: "Test", type: "form", layout: form(fields), strings: [] },
-        ],
-        "Afform.prefill": () => [{ name: "Individual1", values: [{ fields: values }] }],
-        "Afform.submit": () => [{}],
-      });
-      renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />);
-      return calls;
-    }
-    const save = async () => {
-      await userEvent.click(await screen.findByRole("button", { name: "Save" }));
-    };
+  // deviation:invalid-fields-listed
+  it("lists the invalid fields above the form, each a button that focuses it", async () => {
+    const calls = renderFields(
+      [
+        field("first_name", { label: "First Name", required: true }),
+        field("last_name", { label: "Last Name" }),
+        field("gender_id", {
+          label: "Gender",
+          input_type: "Radio",
+          data_type: "Integer",
+          required: true,
+          options: [
+            { id: 1, label: "Female" },
+            { id: 2, label: "Male" },
+          ],
+        }),
+        field("email", { label: "Email", input_type: "Email" }),
+      ],
+      {},
+    );
+    const email = await screen.findByRole("textbox", { name: "Email" });
+    await userEvent.type(email, "not an address");
+    await save();
+    const alert = screen.getByRole("alert");
+    expect(within(alert).getByText("Please fill all required fields.")).toBeInTheDocument();
+    expect(
+      within(alert)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["First Name", "Gender", "Email"]);
+    expect(screen.getByRole("textbox", { name: "First Name" })).toHaveFocus();
+    expect(screen.getByRole("form", { name: "Test" })).toHaveClass("afreact-checked");
 
+    await userEvent.click(within(alert).getByRole("button", { name: "Gender" }));
+    expect(screen.getByRole("radio", { name: "Female" })).toHaveFocus();
+    await userEvent.click(within(alert).getByRole("button", { name: "Email" }));
+    expect(email).toHaveFocus();
+    expect(calls.map(({ call }) => call)).not.toContain("Afform.submit");
+
+    await userEvent.type(screen.getByRole("textbox", { name: "First Name" }), "Ada");
+    await userEvent.click(screen.getByRole("radio", { name: "Female" }));
+    await userEvent.clear(email);
+    await save();
+    await waitFor(() => {
+      expect(calls.map(({ call }) => call)).toContain("Afform.submit");
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("form", { name: "Test" })).not.toHaveClass("afreact-checked");
+  });
+
+  // deviation:invalid-fields-listed
+  it("marks only the listed fields, numbers repeated names and lists afresh for a field gone", async () => {
+    const calls = renderFields(
+      [
+        field("first_name", { label: "First Name" }),
+        field("tags", {
+          label: "Tags",
+          input_type: "CheckBox",
+          required: true,
+          options: [
+            { id: "a", label: "A" },
+            { id: "b", label: "B" },
+          ],
+        }),
+        {
+          "#tag": "div",
+          "af-join": "Email",
+          "af-repeat": "Add email",
+          min: "2",
+          "#children": [field("email", { label: "Email", input_type: "Email", required: true })],
+        },
+        {
+          "#tag": "div",
+          "af-if": `(${JSON.stringify([["Individual1[0][fields][first_name]", "!=", '"x"']])})`,
+          "#children": [field("job_title", { label: "Job Title", required: true })],
+        },
+        {
+          "#tag": "details",
+          class: "af-container",
+          "#children": [field("nick_name", { label: "Nick Name", required: true })],
+        },
+        {
+          "#tag": "div",
+          "af-if": `(${JSON.stringify([["Individual1[0][fields][first_name]", "=", '"y"']])})`,
+          "#children": [field("middle_name", { label: "Middle Name", required: true })],
+        },
+      ],
+      {},
+    );
+    await save();
+    const alert = screen.getByRole("alert");
+    expect(
+      within(alert)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Tags", "Email (1)", "Email (2)", "Job Title", "Nick Name"]);
+    for (const box of screen.getAllByRole("checkbox"))
+      expect(box).toHaveAttribute("data-afreact-listed");
+    const first = screen.getByRole("textbox", { name: "First Name" });
+    expect(first).not.toHaveAttribute("data-afreact-listed");
+
+    // A field shown after the blocked submit stays unmarked.
+    await userEvent.type(first, "y");
+    expect(screen.getByRole("textbox", { name: "Middle Name" })).not.toHaveAttribute(
+      "data-afreact-listed",
+    );
+
+    // A collapsed section opens for its field.
+    const nick = screen.getByRole("textbox", { name: "Nick Name" });
+    const details = nick.closest("details");
+    if (details) details.open = false;
+    await userEvent.click(within(alert).getByRole("button", { name: "Nick Name" }));
+    expect(details).toHaveAttribute("open");
+    expect(nick).toHaveFocus();
+
+    // Job Title has gone with its af-if: its entry lists the form afresh.
+    await userEvent.clear(first);
+    await userEvent.type(first, "x");
+    expect(screen.queryByRole("textbox", { name: "Job Title" })).not.toBeInTheDocument();
+    await userEvent.click(within(alert).getByRole("button", { name: "Job Title" }));
+    expect(
+      within(screen.getByRole("alert"))
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Tags", "Email (1)", "Email (2)", "Nick Name"]);
+    expect(calls.map(({ call }) => call)).not.toContain("Afform.submit");
+  });
+
+  describe("a value shorter than its minlength", () => {
     // deviation:minlength-message-without-marker
     it("blocks the submission and names the field, without its required marker", async () => {
       const calls = renderFields(
@@ -209,9 +337,9 @@ describe("AfreactForm", () => {
         { first_name: "Al", note: "Hi" },
       );
       await save();
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        /^First Name must be at least 3 characters\.$/,
-      );
+      expect(
+        within(screen.getByRole("alert")).getByText(/^First Name must be at least 3 characters\.$/),
+      ).toBeInTheDocument();
       const name = screen.getByRole("textbox", { name: "First Name" });
       expect(name).toHaveAttribute("minlength", "3");
       expect(name).toHaveFocus();

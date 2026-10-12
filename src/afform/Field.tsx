@@ -433,7 +433,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
             value={value}
             onChange={onChange}
             disabled={disabled}
-            labelId={labelId}
+            labelId={label ? labelId : undefined}
             helpId={describedBy}
           />
         );
@@ -444,7 +444,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
             value={value}
             onChange={onChange}
             disabled={disabled}
-            labelId={labelId}
+            labelId={label ? labelId : undefined}
             helpId={describedBy}
           />
         ) : (
@@ -571,7 +571,7 @@ function YearInput({
 }
 
 interface GroupProps extends FieldProps {
-  labelId: string;
+  labelId: string | undefined;
   helpId: string | undefined;
 }
 

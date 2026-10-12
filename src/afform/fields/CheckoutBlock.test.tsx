@@ -261,6 +261,16 @@ describe("CheckoutBlock", () => {
     });
   });
 
+  // deviation:invalid-fields-listed
+  it("lists an invalid expiry input of a blocked submit by its own name", async () => {
+    window.CRM.vars = { afreact: { afCheckout: settings } };
+    renderForm([block()], { checkout_option: "card" });
+    await userEvent.type(await screen.findByRole("textbox", { name: "Expiration year" }), "2");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    const entries = within(await screen.findByRole("alert")).getAllByRole("button");
+    expect(entries.map((entry) => entry.textContent)).toEqual(["Card Number", "Expiration year"]);
+  });
+
   it("says when the page carries no checkout settings", async () => {
     renderForm([block()], { checkout_option: "pay_later" });
     expect(await screen.findByRole("alert")).toHaveTextContent(

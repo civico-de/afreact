@@ -306,7 +306,8 @@ describe("File fields", () => {
     const calls = renderForm(form([{ ...imageField, defn: { ...image, required: true } }]));
     await userEvent.upload(await screen.findByLabelText(/Image/), png());
     // jsdom's validity does not see the chosen file.
-    vi.spyOn(HTMLInputElement.prototype, "checkValidity").mockReturnValueOnce(true);
+    const valid = document.createElement("input").validity;
+    vi.spyOn(HTMLInputElement.prototype, "validity", "get").mockReturnValueOnce(valid);
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("The form is saved");
     expect(screen.getByLabelText(/Image/)).not.toBeRequired();

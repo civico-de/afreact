@@ -159,10 +159,20 @@ function shortOf(control: Control): number {
   return length > 0 && length < control.minLength ? control.minLength : 0;
 }
 
-/** The text of the control's label, without afField's required marker. */
+/** The radios or checkboxes of one field, which its label names. */
+function groupOf(control: Control): Element | null {
+  return control.type === "radio" || control.type === "checkbox"
+    ? control.closest("[role=radiogroup], .crm-checkbox-list")
+    : null;
+}
+
+/** The text of the control's field label, without afField's required marker; else its aria-label. */
 function labelText(control: Control): string {
-  const label = control.labels?.[0]?.cloneNode(true);
-  if (!(label instanceof HTMLElement)) return "";
+  const groupLabel = groupOf(control)?.getAttribute("aria-labelledby");
+  const label = (groupLabel ? document.getElementById(groupLabel) : control.labels?.[0])?.cloneNode(
+    true,
+  );
+  if (!(label instanceof HTMLElement)) return control.getAttribute("aria-label") ?? "";
   // deviation:minlength-message-without-marker
   label.querySelector(".crm-marker")?.remove();
   return label.textContent.trim();
@@ -188,6 +198,49 @@ function invalidMessage(control: Control): string {
       : ts("One or more fields must have at least %1 characters.", { 1: minLength });
   }
   return ts("Please check all answers are valid.");
+}
+
+/** An invalid field in the message above the form, one per group of radios or checkboxes. */
+interface InvalidField {
+  name: string;
+  control: Control;
+}
+
+/** Marks the controls a blocked submit listed, for the error colours in afreact-form.css. */
+const LISTED = "data-afreact-listed";
+
+/** One entry per field; repeated names (a repeat's items) carry their position. */
+function invalidFields(controls: Control[]): InvalidField[] {
+  const fields = new Map<Element, InvalidField>();
+  for (const control of controls) {
+    const key = groupOf(control) ?? control;
+    if (!fields.has(key))
+      fields.set(key, { name: labelText(control) || ts("Field without a label"), control });
+  }
+  const listed = [...fields.values()];
+  return listed.map(({ name, control }) => {
+    const same = listed.filter((field) => field.name === name);
+    if (same.length === 1) return { name, control };
+    return {
+      name: `${name} (${same.findIndex((field) => field.control === control) + 1})`,
+      control,
+    };
+  });
+}
+
+/** Shows the control's tab and opens its collapsed sections, focuses it and lets the browser point at it. */
+function pointAt(control: Control): void {
+  // Only the browser's own checks fire `invalid`, which shows the control's tab.
+  if (control.validity.valid) control.dispatchEvent(new Event("invalid", { cancelable: true }));
+  else control.checkValidity();
+  for (
+    let section = control.closest("details");
+    section;
+    section = section.parentElement?.closest("details") ?? null
+  )
+    section.open = true;
+  control.focus();
+  control.reportValidity();
 }
 
 /** afForm's handleError(): validation messages as a warning, anything else as an error. */
@@ -330,6 +383,8 @@ function LoadedForm(props: LoadedFormProps) {
   const [failure, setFailure] = useState<{
     message: string;
     focus: boolean;
+    /** The fields a blocked submit found invalid. */
+    fields?: InvalidField[];
     /** From a draft save, whose next success takes it away. */
     draft?: boolean;
   } | null>(null);
@@ -558,24 +613,37 @@ function LoadedForm(props: LoadedFormProps) {
     shownTitle.current = title;
   }, [pageTitle, title]);
 
-  function submit() {
-    const controls = root.current?.querySelectorAll<Control>("input, select, textarea");
-    const first = [...(controls ?? [])].find(
-      (control) => !control.checkValidity() || shortOf(control) > 0,
+  /** Lists and marks the invalid fields and points at the first; their message, or null. */
+  function check(): string | null {
+    const controls = [
+      ...(root.current?.querySelectorAll<Control>("input, select, textarea") ?? []),
+    ];
+    // validity alone counts disabled controls, which the browser leaves out of its checks.
+    const invalid = controls.filter(
+      (control) => control.willValidate && (!control.validity.valid || shortOf(control) > 0),
     );
-    if (first) {
-      const message = invalidMessage(first);
-      setFailure({ message, focus: false });
+    // Only the listed fields take the error colours, not those added or shown later.
+    for (const control of controls) control.toggleAttribute(LISTED, invalid.includes(control));
+    const [first] = invalid;
+    if (!first) {
+      setFailure(null);
+      return null;
+    }
+    const message = invalidMessage(first);
+    // deviation:invalid-fields-listed
+    setFailure({ message, focus: false, fields: invalidFields(invalid) });
+    pointAt(first);
+    return message;
+  }
+
+  function submit() {
+    const message = check();
+    if (message !== null) {
       // As afForm: on CiviCRM screens a notification too, elsewhere only the browser's own.
       if (document.getElementById("crm-notification-container"))
         window.CRM.alert(asHtml(message), ts("Form Error"));
-      // Only the browser's own checks fire `invalid`, which shows the control's tab.
-      if (first.validity.valid) first.dispatchEvent(new Event("invalid", { cancelable: true }));
-      first.focus();
-      first.reportValidity();
       return;
     }
-    setFailure(null);
     setEdits((count) => count + 1);
     const response = recaptchaResponse.current;
     save.mutate({
@@ -622,8 +690,30 @@ function LoadedForm(props: LoadedFormProps) {
       )}
       {failure && (
         <div className="alert alert-danger" role="alert" tabIndex={-1} ref={summary}>
-          {/* Afform.submit joins its validation messages with line breaks. */}
-          {lines.length > 1 ? (
+          {failure.fields ? (
+            <>
+              <p>{failure.message}</p>
+              {/* list-inline drops the bullets, and with them Safari's list role. */}
+              <ul className="list-inline" role="list">
+                {failure.fields.map(({ name: label, control }, index) => (
+                  <li key={index}>
+                    <button
+                      type="button"
+                      className="btn btn-link alert-link"
+                      onClick={() => {
+                        // A field gone since (a removed item) lists the form afresh.
+                        if (control.isConnected) pointAt(control);
+                        else check();
+                      }}
+                    >
+                      {label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : /* Afform.submit joins its validation messages with line breaks. */
+          lines.length > 1 ? (
             <ul>
               {lines.map((line, index) => (
                 <li key={index}>{line}</li>
@@ -640,6 +730,7 @@ function LoadedForm(props: LoadedFormProps) {
             // A form around af-form as on core's Afform page, so Enter submits and af-form theme rules apply.
             <form
               ref={root}
+              className={failure?.fields ? "afreact-checked" : undefined}
               noValidate
               aria-label={form.title ?? undefined}
               onSubmit={(event) => {
