@@ -287,6 +287,12 @@ options and shows date and time even for a field whose `input_attrs` say
 2026-10-08; seen on the demo's birth date range). The React renderer renders
 the bounds from the field's own attributes: a date input for a date field. `deviation:date-range-bound-type`
 
+**A saved search set in the route empties entity fields.** afField's
+routeParams watcher reads `_s` for every field outside the extra fieldset, and
+an entity fieldset has no selected search set, so `#?_s=3` sets each of its
+fields that the route does not name to null. The React renderer reads `_s` in
+search fieldsets only. `deviation:route-search-set-skips-entities`
+
 ## Conditions
 
 **`IS EMPTY` reads an emptied list as filled and "No" as empty.** A

@@ -142,20 +142,21 @@ export function initialiseNodes(
       const repeats = node["af-repeat"] !== undefined;
       if (typeof fieldset === "string") {
         const base = { entity: fieldset, index: 0 };
-        if (repeats) next = ensureRepeatItems(next, base, repeatMinimum(node));
+        // afRepeat pads on init only: a route change leaves removed items removed.
+        if (!previous && repeats) next = ensureRepeatItems(next, base, repeatMinimum(node));
         // afFieldset creates its entity's item on init, so an untouched entity still submits.
-        else if (fieldset) next = ensureRepeatItems(next, base, 1);
+        else if (!previous && fieldset) next = ensureRepeatItems(next, base, 1);
         const count = repeats ? repeatCount(next, base) : 1;
         for (let index = 0; index < count; index++)
           walk(node["#children"] ?? [], { entity: fieldset, index });
       } else if (typeof join === "string" && scope) {
         const joinScope = { entity: scope.entity, index: scope.index, join };
         if (repeats) {
-          next = ensureRepeatItems(next, joinScope, repeatMinimum(node));
           const hasPrimary = findElements(node["#children"] ?? [], "af-field").some(
             (field) => field.name === "is_primary",
           );
-          if (hasPrimary) next = ensurePrimary(next, joinScope);
+          if (!previous) next = ensureRepeatItems(next, joinScope, repeatMinimum(node));
+          if (!previous && hasPrimary) next = ensurePrimary(next, joinScope);
           for (let joinIndex = 0; joinIndex < repeatCount(next, joinScope); joinIndex++)
             walk(node["#children"] ?? [], { ...joinScope, joinIndex, repeated: true });
         } else {
@@ -167,6 +168,7 @@ export function initialiseNodes(
         const { scope: at, name } = place;
         const defn = isFieldDefn(node.defn) ? node.defn : undefined;
         // A search fieldset (no entity) reads the route itself.
+        // deviation:route-search-set-skips-entities
         const given = at.entity ? routeValue(params, at, name) : undefined;
         if (previous) {
           // deviation:route-change-sets-changed-fields

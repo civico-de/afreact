@@ -2,6 +2,7 @@ import { vi } from "vitest";
 import { emptyData } from "./model";
 import {
   defaultValue,
+  followRoute,
   hasTokens,
   initialiseData,
   joinOffsets,
@@ -334,5 +335,36 @@ describe("initialiseData with route parameters", () => {
     const start = { Individual1: [{ fields: { first_name: "Prefilled", age: null }, joins: {} }] };
     const data = initialiseData(layout, start, { first_name: "Url", age: "3" });
     expect(data.Individual1?.[0]?.fields).toMatchObject({ first_name: "Prefilled", age: null });
+  });
+});
+
+describe("followRoute", () => {
+  it("leaves removed repeat items removed, as afRepeat pads only on init", () => {
+    const layout: ElementNode[] = [
+      {
+        "#tag": "fieldset",
+        "af-fieldset": "Individual1",
+        "#children": [{ ...email(), "af-repeat": "Add", min: "0" }],
+      },
+      {
+        "#tag": "fieldset",
+        "af-fieldset": "Individual2",
+        "af-repeat": "Add",
+        min: "0",
+        "#children": [field("first_name")],
+      },
+    ];
+    const start = { Individual1: [{ fields: {}, joins: { Email: [] } }], Individual2: [] };
+    const data = followRoute(layout, start, {}, { tab: "2", first_name: "Ann" });
+    expect(data).toEqual(start);
+  });
+
+  // deviation:route-search-set-skips-entities
+  it("leaves an entity's fields alone when the route names a saved search set", () => {
+    const layout: ElementNode[] = [
+      { "#tag": "fieldset", "af-fieldset": "Individual1", "#children": [field("first_name")] },
+    ];
+    const start = { Individual1: [{ fields: { first_name: "Ada" }, joins: {} }] };
+    expect(followRoute(layout, start, {}, { _s: "3" })).toEqual(start);
   });
 });
