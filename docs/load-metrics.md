@@ -4,7 +4,7 @@
 (cold: empty HTTP cache) and in one shared context (warm), rotating the order
 per round, with `debug_enabled` off. A page counts as ready when the form has
 an input and the table has a data row with a link. The React demo page runs
-once per layout source (see the README): `api` fetches the layout with
+once per layout source (see [reference.md](reference.md#how-it-works)): `api` fetches the layout with
 `Afreact.getForm`, `page` finds it in the page, `bundle` parses core's compiled
 Angular module file.
 

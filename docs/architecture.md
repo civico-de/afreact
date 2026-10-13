@@ -1,8 +1,8 @@
 # Architecture
 
 How the React renderer is built, where the Angular runtime's behaviour is
-kept and where it is not. The README says what the extension does and where
-each part lives; [comparison.md](comparison.md) lists the differences and
+kept and where it is not. [overview.md](overview.md) says what the extension
+does, [reference.md](reference.md) where each part lives; [comparison.md](comparison.md) lists the differences and
 [load-metrics.md](load-metrics.md) the measured load times.
 
 ## Boundary
@@ -19,8 +19,8 @@ dashlets stays Angular (see below).
 ## State
 
 - **URL.** Search displays keep filters, sort, page, page size and the
-  selected tab in the URL hash (the README's "Search state in the URL" has the
-  keys). Core's links use hash parameters (`#?Individual1=5`, `#?_s=3`, the
+  selected tab in the URL hash ([reference.md](reference.md#search-state-in-the-url)
+  has the keys). Core's links use hash parameters (`#?Individual1=5`, `#?_s=3`, the
   tab `url-arg`), and nuqs's built-in adapters only know the query string, so
   `src/url/` is a custom adapter over the hash: `URLSearchParams` from
   `location.hash`, `replaceState` on write, `hashchange` to read back. nuqs
