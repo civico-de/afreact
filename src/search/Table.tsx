@@ -1,4 +1,4 @@
-import type { MouseEvent, ReactNode } from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import { onButtonKey } from "../keys";
 import { BodyRows, ControlHeader, PlaceholderRows, TallyRow, useCollapse } from "./Body";
 import { InlineEditContext, type InlineEdit } from "./inlineEdit";
@@ -6,6 +6,7 @@ import { noResultsText, ServerError } from "./Items";
 import { NewRow } from "./NewRow";
 import { ReorderRows, type Reorder } from "./Reorder";
 import { hasControlColumn, headerClass, isSortable, unlabelledHeader } from "./rows";
+import { useSteadyColumns } from "./steadyColumns";
 import type { RowSelect } from "./Tasks";
 import type { DisplaySettings, Link, Row, RunPage } from "./types";
 import type { Sort } from "./urlKeys";
@@ -17,6 +18,8 @@ interface TableViewProps {
   /** The page shown, undefined while it loads or after a failed run. */
   result: RunPage | undefined;
   error: unknown;
+  /** Names the filters the rows were searched with; other filters let the columns fit anew. */
+  filtersKey: string;
   /** How many placeholders stand in for a loading page. */
   placeholders: number;
   afform?: string;
@@ -57,8 +60,14 @@ export function TableView(props: TableViewProps) {
     <TallyRow settings={settings} tally={props.tally} hidden={hidden} />
   );
   const noResults = noResultsText(settings);
+  const [table, setTable] = useState<HTMLTableElement | null>(null);
+  useSteadyColumns(
+    table,
+    JSON.stringify([props.filtersKey, settings.columns.map((column) => column.key), [...hidden]]),
+    result,
+  );
   return (
-    <table className={(settings.classes ?? []).join(" ")} aria-busy={loading}>
+    <table ref={setTable} className={(settings.classes ?? []).join(" ")} aria-busy={loading}>
       <caption className="sr-only">{label}</caption>
       <thead hidden={settings.hideThead === true}>
         <tr>

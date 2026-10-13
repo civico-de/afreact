@@ -3,7 +3,9 @@ import { afterEach, vi } from "vitest";
 import { events } from "./jquery";
 import { installDialog } from "./dialog";
 import { installIntersectionObserver } from "./intersection";
+import { animate, installMotion } from "./motion";
 import { installPopover } from "./popover";
+import { installResizeObserver } from "./resize";
 
 // CiviCRM's globals: ts() fills %1-style placeholders and picks `plural` for a `count` other
 // than 1, as Common.js does; CRM.api4 is replaced per test.
@@ -34,9 +36,11 @@ window.CRM = {
         .substring(0, len),
   },
 };
+installMotion();
 installPopover();
 installDialog();
 installIntersectionObserver();
+installResizeObserver();
 
 afterEach(() => {
   vi.mocked(window.CRM.api4).mockReset();
@@ -44,4 +48,5 @@ afterEach(() => {
   vi.mocked(window.CRM.$).mockReset().mockImplementation($);
   vi.mocked(window.CRM.alert).mockClear();
   vi.mocked(window.CRM.status).mockClear();
+  animate.mockClear();
 });

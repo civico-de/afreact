@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
+import { animate, reduceMotionOnce } from "../test/motion";
 import { memoryStore } from "../url/hash";
 import { AfreactSearch } from "./AfreactSearch";
 import type { DisplaySettings, Row } from "./types";
@@ -140,6 +141,58 @@ describe("AfreactSearch", () => {
       [["sort_name", "ASC"]],
       [["sort_name", "ASC"]],
     ]);
+  });
+
+  // deviation:page-rows-fade-in
+  it("fades in the rows of another page, also one fetched ahead, but not the first ones", async () => {
+    const calls = runs(7);
+    const fetched = (page: string) =>
+      waitFor(() => {
+        expect(calls.map(({ params }) => params.return)).toContain(page);
+      });
+    const view = (filters?: Record<string, unknown>) => (
+      <AfreactSearch search="S" display="D" settings={settings} filters={filters} />
+    );
+    const { rerender } = renderWithQuery(view());
+    await currentPage();
+    const body = screen.getByRole("table").querySelector("tbody");
+    const fades = () => animate.mock.contexts.filter((element) => element === body);
+    expect(fades()).toHaveLength(0);
+
+    await userEvent.hover(screen.getByRole("link", { name: "Next" }));
+    await fetched("page:2");
+    await userEvent.click(screen.getByRole("link", { name: "Next" }));
+    expect(screen.getByRole("link", { name: "Name 3" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(fades()).toHaveLength(1);
+    });
+
+    await userEvent.hover(screen.getByRole("link", { name: "3" }));
+    await fetched("page:3");
+    reduceMotionOnce();
+    await userEvent.click(screen.getByRole("link", { name: "3" }));
+    expect(await screen.findByRole("link", { name: "Name 5" })).toBeInTheDocument();
+    expect(fades()).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole("link", { name: "1" }));
+    expect(await screen.findByRole("link", { name: "Name 1" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(fades()).toHaveLength(2);
+    });
+
+    await userEvent.click(screen.getByRole("link", { name: "2" }));
+    expect(await screen.findByRole("link", { name: "Name 3" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(fades()).toHaveLength(3);
+    });
+
+    // New filters show placeholders instead, also when they take the display back to page 1.
+    rerender(view({ title: "b" }));
+    await waitFor(() => {
+      expect(calls.filter(({ params }) => JSON.stringify(params.filters) !== "{}")).not.toEqual([]);
+    });
+    expect(await screen.findByRole("link", { name: "Name 1" })).toBeInTheDocument();
+    expect(fades()).toHaveLength(3);
   });
 
   // deviation:page-keeps-rows

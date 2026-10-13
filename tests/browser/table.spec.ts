@@ -341,3 +341,67 @@ test("both renderers reload the display after a popup form succeeds", async ({ p
   await reloads(page, "angular");
   await reloads(page, "react");
 });
+
+// deviation:steady-column-widths
+test("a table's columns keep their place while paging", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/civicrm/afreact/demo");
+  const display = page.locator(".crm-search-display-table").first();
+  await expect(display.locator("tbody tr[data-entity-id]").first()).toBeVisible(LOAD);
+  const widths = () =>
+    display
+      .locator("table > thead > tr:first-child > th")
+      .evaluateAll((cells) => cells.map((cell) => cell.getBoundingClientRect().width));
+  const first = await widths();
+  expect(first.length).toBeGreaterThan(2);
+  // The demo's pages hold values of different lengths, which move core's columns by up to 100 px.
+  const firstRow = display.locator("tbody tr[data-entity-id]").first();
+  for (const next of [2, 3]) {
+    const before = await firstRow.getAttribute("data-entity-id");
+    await page.locator(".pagination-next a").first().click();
+    await expect(page).toHaveURL(new RegExp(`_page=${next}`));
+    await expect(display.locator("table")).toHaveAttribute("aria-busy", "false", LOAD);
+    await expect(firstRow).not.toHaveAttribute("data-entity-id", before ?? "");
+    const shown = await widths();
+    shown.forEach((width, column) => {
+      expect(
+        Math.abs(width - (first[column] ?? 0)),
+        `column ${column} on page ${next}`,
+      ).toBeLessThanOrEqual(8);
+    });
+  }
+});
+
+// deviation:steady-column-widths
+test("a table's columns fit a resized window without a ResizeObserver error", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.addEventListener("error", (event) => {
+      document.documentElement.dataset.windowErrors = `${document.documentElement.dataset.windowErrors ?? ""}${event.message}\n`;
+    });
+  });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/civicrm/afreact/demo");
+  const display = page.locator(".crm-search-display-table").first();
+  await expect(display.locator("tbody tr[data-entity-id]").first()).toBeVisible(LOAD);
+  for (const width of [1000, 760, 1280, 700]) {
+    await page.setViewportSize({ width, height: 900 });
+    // The table's room follows the window, and so do its columns.
+    await expect
+      .poll(() =>
+        display.evaluate((element) => {
+          const table = element.querySelector("table");
+          return table !== null && table.getBoundingClientRect().width <= element.clientWidth + 1;
+        }),
+      )
+      .toBe(true);
+  }
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          resolve();
+        });
+      }),
+  );
+  expect(await page.evaluate(() => document.documentElement.dataset.windowErrors ?? "")).toBe("");
+});

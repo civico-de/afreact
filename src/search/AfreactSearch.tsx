@@ -7,6 +7,7 @@ import { useUrlPrefix } from "../url/UrlState";
 import { ColumnPicker, toggledColumns, useColumnToggles } from "./ColumnPicker";
 import { useInlineEdit } from "./inlineEdit";
 import { ItemList, TreeView } from "./Items";
+import { useFreshRows } from "./freshRows";
 import { useKeptFocus } from "./keptFocus";
 import { BatchDisplay } from "./BatchDisplay";
 import {
@@ -362,6 +363,11 @@ function ResultDisplay({
   });
 
   useKeptFocus(root, loading);
+  useFreshRows(
+    root,
+    rows.data && !rows.isPlaceholderData ? JSON.stringify([activeSort, limit, page]) : null,
+    filtersKey,
+  );
 
   if (loaded.error) return <Failure error={loaded.error} />;
   if (!givenType && loadedType !== undefined && !isDisplayType(loadedType))
@@ -474,6 +480,7 @@ function ResultDisplay({
       ) : table ? (
         <TableView
           {...view}
+          filtersKey={filtersKey}
           hidden={hidden}
           activeSort={activeSort}
           onSort={toggleSort}
