@@ -194,7 +194,7 @@ are a membership sign-up and a members page built from core parts only.
 The dev stack is civikitchen (CiviCRM standalone, MariaDB, maildev); see the
 header of `.docker/docker-compose.yml`. Its profile, `.docker/profiles/dev/`,
 enables the core extensions some specs need and seeds synthetic contacts,
-memberships and contact sub-types at first boot. Two extensions under `.docker/fixtures/` are mounted in the dev and CI
+memberships, events with participants and contact sub-types at first boot. Two extensions under `.docker/fixtures/` are mounted in the dev and CI
 stacks and never released: `afreactdemo` holds the demo forms, searches and
 pages the browser tests use, `afreactisland` exercises the builder plugin
 contract.

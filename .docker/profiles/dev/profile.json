@@ -10,5 +10,5 @@
       "contribute_enable_afform_contributions": true
     }
   },
-  "scripts": ["demo-contacts.php", "demo-contact-types.php", "demo-memberships.php"]
+  "scripts": ["demo-contacts.php", "demo-contact-types.php", "demo-memberships.php", "demo-events.php"]
 }
