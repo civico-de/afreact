@@ -54,15 +54,23 @@ export function SearchRange({ id, labelId, defn, value, onChange, disabled }: Se
       "aria-label": first ? ts("%1 from", { 1: label }) : ts("%1 to", { 1: label }),
     };
   };
-  const pair = (render: (bound: Bound) => ReactNode) => (
+  const pair = (render: (bound: Bound) => ReactNode, cleared = false) => (
     <div
-      className={`form-inline ${defn.input_style ?? ""}`.trim()}
+      className={`form-inline afreact-range ${defn.input_style ?? ""}`.trim()}
       role="group"
       aria-labelledby={labelId}
     >
       {render(">=")}{" "}
       <span className="af-field-range-sep" aria-hidden="true">
-        -
+        -{/* deviation:range-dash-centred */}
+        {/* An unseen twin of the first date's clear link, styled by the theme's rules for date wrappers. */}
+        {cleared && (
+          <span className="crm-form-date-wrapper afreact-range-room">
+            <a className="crm-hover-button">
+              <i className="crm-i fa-times" />
+            </a>
+          </span>
+        )}
       </span>{" "}
       {render("<=")}
     </div>
@@ -98,18 +106,21 @@ export function SearchRange({ id, labelId, defn, value, onChange, disabled }: Se
   }
   // deviation:date-range-bound-type
   if (defn.input_type === "Date") {
-    return pair((bound) => (
-      <DateBound
-        {...input(bound)}
-        // Date.html requires the low datepicker only.
-        required={bound === ">=" && defn.required === true}
-        time={!!attrs.time}
-        value={range[bound]}
-        onChange={(next) => {
-          set(bound, next);
-        }}
-      />
-    ));
+    return pair(
+      (bound) => (
+        <DateBound
+          {...input(bound)}
+          // Date.html requires the low datepicker only.
+          required={bound === ">=" && defn.required === true}
+          time={!!attrs.time}
+          value={range[bound]}
+          onChange={(next) => {
+            set(bound, next);
+          }}
+        />
+      ),
+      true,
+    );
   }
   const numeric = defn.input_type === "Number";
   return pair((bound) => (

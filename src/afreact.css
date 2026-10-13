@@ -6,6 +6,11 @@
 .crm-container af-field .afreact-select > select.form-control:user-invalid { border-color: var(--crm-warning-color); }
 /* The native date field needs room for its format and calendar icon; the theme sizes for the datepicker. */
 .crm-container .crm-form-date-wrapper > input.crm-form-date { width: auto; }
+/* A date range's dash sits midway: after it, an unseen twin of the first date's clear link,
+   whose empty first item stands for the date and puts the theme's gap before the link. */
+.afreact-range-room { visibility: hidden; }
+.afreact-range-room::before { content: ""; }
+.afreact-range > .crm-form-date-wrapper + .af-field-range-sep { margin: 0 0.25em; }
 /* Row and toolbar menus are popovers in the top layer; the script places them under their button. */
 .crm-container .dropdown-menu.afreact-menu:popover-open { position: fixed; bottom: auto; overflow-y: auto; }
 .afreact-support-kind { margin: 0; font-weight: 600; }

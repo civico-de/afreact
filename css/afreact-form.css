@@ -10,14 +10,16 @@
 #bootstrap-theme .afreact-form:not(.crm-public *) :is(af-form, :is(fieldset, div, details).af-container:not(.af-layout-inline, .af-layout-cols), div:not([class])):not(af-field *, .af-markup *, .crm-search-display *, af-search-param-sets *, dialog *) > :not(legend, summary, .af-title, .af-field-type-hidden, .af-repeat-remove-btn, .af-repeat-add-btn, .af-repeat-copy-btn, .crm-admin-block-context-dropdown) ~ :not(.af-repeat-remove-btn, .af-repeat-add-btn, .af-repeat-copy-btn, .crm-admin-block-context-dropdown) { margin-block-start: var(--crm-l-reg, 1rem); }
 /* A repeat's add and copy buttons sit close below its last item. */
 .afreact-form:not(.crm-public *) [af-repeat-item] { margin-block-end: var(--crm-flex-gap, 0.5rem); }
-/* An item of flex rows is as wide as its fields, so afCore's remove button and the block menu
-   (placed at its right) follow them; the menu sits left of the remove button. */
-.afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn, > .crm-admin-block-context-dropdown):not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) { width: fit-content; max-width: 100%; padding-right: calc(2.25rem + var(--crm-flex-gap, 0.5rem)); }
-.afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn):has(> .crm-admin-block-context-dropdown):not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) { padding-right: calc(4.5rem + 2 * var(--crm-flex-gap, 0.5rem)); }
-#bootstrap-theme .afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn) > .crm-admin-block-context-dropdown { right: calc(2.25rem + var(--crm-flex-gap, 0.5rem)); }
-/* Both sit on the row of inputs at the item's bottom, not on its labels. */
-#bootstrap-theme .afreact-form:not(.crm-public *) [af-repeat-item]:not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) > .af-repeat-remove-btn { top: auto; bottom: 0; }
-#bootstrap-theme .afreact-form:not(.crm-public *) [af-repeat-item]:not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) > .crm-admin-block-context-dropdown { bottom: 0; height: var(--crm-input-height, 2rem); }
+/* An item of flex rows is as wide as its fields; afCore's remove button and the block menu follow its
+   last row of inputs at the theme's gap, whatever width the theme gives them. */
+.afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn, > .crm-admin-block-context-dropdown):not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--crm-flex-gap, 0.5rem); width: fit-content; max-width: 100%; }
+.afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn, > .crm-admin-block-context-dropdown):not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))):has(> .af-repeat-remove-btn):has(> .crm-admin-block-context-dropdown) { grid-template-columns: minmax(0, 1fr) auto auto; }
+.afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn, > .crm-admin-block-context-dropdown):not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) > .af-layout-inline { grid-column: 1 / -1; }
+.afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn, > .crm-admin-block-context-dropdown):not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) > .af-layout-inline:not(:has(~ .af-layout-inline)) { grid-column: 1; }
+#bootstrap-theme .afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn, > .crm-admin-block-context-dropdown):not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) > :is(.af-repeat-remove-btn, .crm-admin-block-context-dropdown) { position: static; align-self: end; height: var(--crm-input-height, 2rem); margin-block: 0; }
+/* They take the inputs' height, also where the theme makes buttons taller or spaces them apart. */
+#bootstrap-theme .afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn, > .crm-admin-block-context-dropdown):not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) > .af-repeat-remove-btn { padding-block: 0; }
+#bootstrap-theme .afreact-form:not(.crm-public *) [af-repeat-item]:has(> .af-repeat-remove-btn, > .crm-admin-block-context-dropdown):not(:has(> :not(.af-layout-inline, .af-repeat-remove-btn, .crm-admin-block-context-dropdown))) > .crm-admin-block-context-dropdown > .btn { height: 100%; margin-block: 0; }
 /* Riverlea's front-end legend width reaches back-office forms and hides the fieldset's top border
    but for its ends; the legend takes its own width there. deviation:legend-own-width */
 .afreact-form:not(.crm-public *) fieldset.af-container > legend.af-title { width: auto; }
@@ -32,3 +34,21 @@
 .afreact-checked af-field:has([data-afreact-listed]:invalid) .crm-af-field-label::before { content: "\f071" / ""; font-family: "FontAwesome"; font-weight: normal; margin-inline-end: 0.25em; }
 /* A listed field's own error text, in the theme's error ink. deviation:field-error-text */
 .afreact-field-error, #bootstrap-theme .afreact-field-error { margin: 0.25em 0 0; color: var(--crm-danger-ink-color, #a94442); }
+/* One width for single-line inputs and selects, so stacked fields line up, and two plus the gap for a range;
+   it resolves at the field, and the second selectors outrank #bootstrap-theme. deviation:form-inputs-one-width */
+@property --afreact-input-width { syntax: "<length>"; inherits: true; initial-value: 240px; }
+.afreact-form:not(.crm-public *) af-field { --afreact-input-width: var(--crm-input-width, 15em); --afreact-range-width: calc(2 * var(--afreact-input-width) + var(--crm-flex-gap, 0.5rem)); }
+.afreact-form:not(.crm-public *) af-field :is(input.form-control:not([type=checkbox], [type=radio], [type=file], [type=range], [type=color]), .afreact-select):not(.afreact-range *),
+#bootstrap-theme .afreact-form:not(.crm-public *) af-field :is(input.form-control:not([type=checkbox], [type=radio], [type=file], [type=range], [type=color]), .afreact-select):not(.afreact-range *) { width: var(--afreact-input-width); max-width: 100%; }
+/* As a flex row the range drops the spaces around its dash; the gap stands in for them. */
+#bootstrap-theme .afreact-form:not(.crm-public *) af-field .afreact-range { display: flex; align-items: center; column-gap: 0.25em; width: var(--afreact-range-width); max-width: 100%; }
+#bootstrap-theme .afreact-form:not(.crm-public *) af-field .afreact-range > :not(.af-field-range-sep) { flex: 1; width: auto; min-width: 0; }
+#bootstrap-theme .afreact-form:not(.crm-public *) af-field .afreact-range > .crm-form-date-wrapper { display: flex; align-items: center; }
+#bootstrap-theme .afreact-form:not(.crm-public *) af-field .afreact-range > .crm-form-date-wrapper > input.form-control { flex: 1; width: auto; min-width: 0; }
+/* Filter fields beside a search display stand side by side at the standard width and wrap with the
+   page; the display and any other block take a row of their own. deviation:filter-fields-row */
+.afreact-form:not(.crm-public *) :is(div, fieldset, details):has(> af-field + af-field):has(> .crm-search-display) { display: flex; flex-wrap: wrap; align-items: flex-end; column-gap: var(--crm-flex-gap, 0.5rem); }
+.afreact-form:not(.crm-public *) :is(div, fieldset, details):has(> af-field + af-field):has(> .crm-search-display) > :not(af-field) { flex: 0 0 100%; }
+.afreact-form:not(.crm-public *) :is(div, fieldset, details):has(> af-field + af-field):has(> .crm-search-display) > .af-field-type-hidden { display: none; }
+.afreact-form:not(.crm-public *) :is(div, fieldset, details):has(> af-field + af-field):has(> .crm-search-display) > af-field { width: var(--afreact-input-width); max-width: 100%; }
+.afreact-form:not(.crm-public *) :is(div, fieldset, details):has(> af-field + af-field):has(> .crm-search-display) > af-field:has(.afreact-range) { width: auto; }

@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Browser, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Locator, type Page } from "@playwright/test";
 import { asRows } from "../../src/api/civi";
 import { isReady } from "../../src/compare/metrics";
 
@@ -138,6 +138,32 @@ export async function quietApi<T>(
   const values = typeof body === "object" && body !== null && "values" in body ? body.values : null;
   return asRows<T>(values, `${entity}.${action}`);
 }
+
+/** Riverlea's streams; each sizes and colours buttons, inputs and gaps its own way. */
+export const STREAMS = ["minetta", "walbrook", "thames", "hackneybrook"];
+
+/**
+ * Pages show Riverlea's stream `stream` in place of the site's, built by RiverleaStream.render as
+ * the theme builds it; a test whose pages never loaded it fails.
+ */
+export const streamTest = test.extend<{ stream: string }>({
+  stream: ["minetta", { option: true }],
+  page: async ({ page, stream }, use) => {
+    const [rendered] = await quietApi<{ content?: unknown }>(page, "RiverleaStream", "render", {
+      where: [["name", "=", stream]],
+      darkMode: "inherit",
+    });
+    const css = rendered?.content;
+    if (typeof css !== "string") throw new Error(`Riverlea has no stream ${stream}.`);
+    let served = 0;
+    await page.route("**/civicrm/asset/builder?an=river.css*", (route) => {
+      served += 1;
+      return route.fulfill({ contentType: "text/css", body: css });
+    });
+    await use(page);
+    expect(served, `pages loaded Riverlea's ${stream}`).toBeGreaterThan(0);
+  },
+});
 
 /** Sets the forms React renders; the page is left on about:blank. */
 export async function setReactForms(page: Page, forms: string[]): Promise<void> {
