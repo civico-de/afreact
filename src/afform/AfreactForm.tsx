@@ -1,12 +1,20 @@
 import { FieldErrorsContext } from "./fields/env";
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { api4, errorMessage, isApiError } from "../api/civi";
 import { DebugFacts, debugMode, DebugSection } from "../debug/debug";
 import { asHtml } from "../html";
 import { RouteOptionsContext } from "../search/displayFilters";
 import type { ExpressionContext } from "./expressions";
-import { DisplayCountContext } from "../url/UrlState";
+import { DisplayCountContext, useHashParams } from "../url/UrlState";
 import { uploadAll, UploadsContext, type Uploads, type UploadsState } from "./fields/upload";
 import { FormContext, Nodes, type DraftStatus, type FormState } from "./Layout";
 import {
@@ -27,7 +35,7 @@ import { countDisplays } from "./SearchFieldset";
 import { loadDefinition, type LayoutSource } from "./source";
 import { useConditionalChanges } from "./conditionalChanges";
 import type { Filled } from "./fields/autofill";
-import { initialiseData, joinOffsets } from "./structure";
+import { followRoute, initialiseData, joinOffsets } from "./structure";
 import type { FormData, FormDefinition } from "./types";
 
 interface SubmitResponse {
@@ -82,6 +90,8 @@ interface Prefilled {
 
 interface Loaded extends Prefilled {
   form: FormDefinition;
+  /** The page's query string, under the route in `args`. */
+  search: string;
   args: Record<string, unknown>;
   /** afCore's routeParams, which fill empty fields. */
   params: Record<string, string>;
@@ -137,7 +147,7 @@ async function loadForm(
   const form = await loadDefinition(name, source, client);
   const args = routeArgs(location, Object.keys(entityDeclarations(form.layout)), options);
   const params = routeParams(location);
-  return { form, args, params, ...unfilled(form, params) };
+  return { form, search: location.search, args, params, ...unfilled(form, params) };
 }
 
 /** ts() looks up the form's own translations first, then CiviCRM's page-wide strings; crmUrl() is CRM.url. */
@@ -401,12 +411,13 @@ function FormDebug({
 interface LoadedFormProps extends Loaded {
   name: string;
   pageTitle: boolean;
-  onReset: (fresh: Prefilled, focused: number | null) => void;
+  onReset: (fresh: Prefilled & Pick<Loaded, "args" | "params">, focused: number | null) => void;
   focusButton: number | null;
 }
 
 function LoadedForm(props: LoadedFormProps) {
-  const { name, form, args, params, initial, pageTitle, onReset, focusButton } = props;
+  const { name, form, search, args, params, initial, pageTitle, onReset, focusButton } = props;
+  const options = useContext(RouteOptionsContext);
   const [data, setData] = useState(initial);
   const [edits, setEdits] = useState(0);
   // What the form holds by the time the prefill lands, for the async callback below.
@@ -414,6 +425,21 @@ function LoadedForm(props: LoadedFormProps) {
   useEffect(() => {
     latest.current = data;
   });
+  // deviation:route-change-sets-changed-fields
+  // The route as it changes after load: the fields it names follow, as afField watches it.
+  const hashKey = useHashParams().toString();
+  const seenHash = useRef(hashKey);
+  const routeNow = useRef(params);
+  const [route, setRoute] = useState(params);
+  useEffect(() => {
+    if (hashKey === seenHash.current) return;
+    seenHash.current = hashKey;
+    const before = routeNow.current;
+    const next = Object.fromEntries(new URLSearchParams(hashKey));
+    routeNow.current = next;
+    setRoute(next);
+    setData((current) => followRoute(form.layout, current, before, next));
+  }, [hashKey, form.layout]);
   const [closed, setClosed] = useState(props.closed);
   const [prefilled, setPrefilled] = useState(props.prefilled);
   /** The message above the form; the summary takes focus for what the server rejected. */
@@ -522,8 +548,13 @@ function LoadedForm(props: LoadedFormProps) {
     },
   });
   // Its variable is the focused button's position, taken on the click: disabled, it loses the focus.
-  const reset = useMutation<Prefilled, Error, number | null>({
-    mutationFn: () => prefillForm(name, form, args, params),
+  const reset = useMutation<Prefilled & Pick<Loaded, "args" | "params">, Error, number | null>({
+    // As afForm.loadData(), a reset takes its arguments from the route as it is now.
+    mutationFn: async () => {
+      const names = Object.keys(entityDeclarations(form.layout));
+      const fresh = routeArgs({ search, hash: `#?${hashKey}` }, names, options);
+      return { ...(await prefillForm(name, form, fresh, route)), args: fresh, params: route };
+    },
     onSuccess: onReset,
   });
   // deviation:reset-reloads-form
@@ -600,7 +631,7 @@ function LoadedForm(props: LoadedFormProps) {
     // A submit waits for a running draft save, whose files and late answer would cross it.
     submitDisabled: busy || closed !== null || reset.isPending || !prefilled || draft.isPending,
     joinOffsets: offsets,
-    routeParams: params,
+    routeParams: route,
     entities,
     formName: name,
     showSubmitButton,

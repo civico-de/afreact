@@ -129,6 +129,8 @@ export function initialiseNodes(
   start: Scope | null,
   offsets: WeakMap<ElementNode, number>,
   params: Record<string, string>,
+  /** The route before a change: only the fields whose route value changed are set then. */
+  previous?: Record<string, string>,
 ): FormData {
   let next = data;
   const walk = (children: LayoutNode[], scope: Scope | null) => {
@@ -166,6 +168,12 @@ export function initialiseNodes(
         const defn = isFieldDefn(node.defn) ? node.defn : undefined;
         // A search fieldset (no entity) reads the route itself.
         const given = at.entity ? routeValue(params, at, name) : undefined;
+        if (previous) {
+          // deviation:route-change-sets-changed-fields
+          if (defn && given !== undefined && given !== routeValue(previous, at, name))
+            next = setValue(next, at, name, defaultValue(defn, given));
+          continue;
+        }
         const value = given ?? staticDefault(defn);
         // deviation:defaults-keep-loaded-values
         if (defn && value !== undefined && getValue(next, at, name) === undefined)
@@ -181,6 +189,16 @@ export function initialiseNodes(
   };
   walk(nodes, start);
   return next;
+}
+
+/** afField's routeParams watcher: a changed route sets the fields it names anew. */
+export function followRoute(
+  layout: LayoutNode[],
+  data: FormData,
+  previous: Record<string, string>,
+  params: Record<string, string>,
+): FormData {
+  return initialiseNodes(layout, data, null, joinOffsets(layout), params, previous);
 }
 
 export function initialiseData(

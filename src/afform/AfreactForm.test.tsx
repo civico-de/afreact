@@ -1,10 +1,11 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { events, jquerySelection } from "../test/jquery";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
 import { debugEntries } from "../debug/debug";
 import { AfreactForm, formExpressions, redirectUrl } from "./AfreactForm";
+import { pageStore, type ParamStore } from "../url/hash";
 import type { FieldDefn, LayoutNode } from "./types";
 
 const field = (
@@ -140,7 +141,7 @@ const fieldsForm = (fields: LayoutNode[]): LayoutNode[] => [
     ],
   },
 ];
-function renderFields(fields: LayoutNode[], values: Record<string, unknown>) {
+function renderFields(fields: LayoutNode[], values: Record<string, unknown>, store?: ParamStore) {
   const calls = mockApi({
     "Afreact.getForm": () => [
       {
@@ -154,7 +155,7 @@ function renderFields(fields: LayoutNode[], values: Record<string, unknown>) {
     "Afform.prefill": () => [{ name: "Individual1", values: [{ fields: values }] }],
     "Afform.submit": () => [{}],
   });
-  renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />);
+  renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />, store);
   return calls;
 }
 const save = async () => {
@@ -533,6 +534,36 @@ describe("AfreactForm", () => {
         "One or more fields must have at least 4 characters.",
       );
     });
+  });
+
+  // deviation:route-change-sets-changed-fields
+  it("sets the fields whose route value changed after load, and no others", async () => {
+    const go = (hash: string) => {
+      act(() => {
+        window.history.replaceState(null, "", `${window.location.pathname}${hash}`);
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+      });
+    };
+    renderFields(
+      [field("first_name", { label: "First Name" }), field("last_name", { label: "Last Name" })],
+      {},
+      pageStore,
+    );
+    const first = await screen.findByRole("textbox", { name: "First Name" });
+    const last = screen.getByRole("textbox", { name: "Last Name" });
+    await userEvent.type(last, "Lee");
+    go("#?first_name=Ann");
+    await waitFor(() => {
+      expect(first).toHaveValue("Ann");
+    });
+    expect(last).toHaveValue("Lee");
+    await userEvent.type(first, "e");
+    go("#?first_name=Ann&last_name=Ray");
+    await waitFor(() => {
+      expect(last).toHaveValue("Ray");
+    });
+    expect(first).toHaveValue("Anne");
+    go("");
   });
 
   it("reports an invalid value apart from a missing one", async () => {

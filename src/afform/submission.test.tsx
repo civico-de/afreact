@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { jquerySelection } from "../test/jquery";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
-import { memoryStore } from "../url/hash";
+import { memoryStore, pageStore } from "../url/hash";
 import { AfreactForm } from "./AfreactForm";
 import { isElement, type LayoutNode } from "./types";
 
@@ -60,7 +60,7 @@ const values = (firstName: string) => ({
 
 function renderForm(
   handlers: Record<string, (params: Record<string, unknown>) => unknown>,
-  { autosave = false, pageTitle = false } = {},
+  { autosave = false, pageTitle = false, store = memoryStore("") } = {},
 ) {
   const calls = mockApi({
     "Afreact.getForm": () => [
@@ -84,6 +84,7 @@ function renderForm(
       location={{ search: "?Individual1=5", hash: "" }}
       pageTitle={pageTitle}
     />,
+    store,
   );
   return calls;
 }
@@ -242,6 +243,27 @@ describe("a form closed for submissions", () => {
 });
 
 describe("the reset button", () => {
+  // deviation:route-change-sets-changed-fields
+  it("loads the record the route names by then, as afForm.loadData() reads it anew", async () => {
+    const calls = renderForm({}, { store: pageStore });
+    await firstName();
+    act(() => {
+      window.history.replaceState(null, "", `${window.location.pathname}#?Individual1=7`);
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Reset" }));
+    await waitFor(() => {
+      expect(called(calls, "Afform.prefill")).toHaveLength(2);
+    });
+    expect(called(calls, "Afform.prefill")[1]).toMatchObject({
+      params: { args: { Individual1: ["7"] } },
+    });
+    act(() => {
+      window.history.replaceState(null, "", window.location.pathname);
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+  });
+
   it("prefills the form afresh", async () => {
     const calls = renderForm({});
     await userEvent.clear(await firstName());
