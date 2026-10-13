@@ -182,7 +182,7 @@ export function MinMaxItem({ api }: { api: FieldApi }) {
 
 const STEPS = [1, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001, 0.0000001, 0.00000001, 0.000000001];
 
-function EntityRefItems({ api }: { api: FieldApi }) {
+export function EntityRefItems({ api }: { api: FieldApi }) {
   const searchId = useId();
   const displayId = useId();
   const securityId = useId();
@@ -298,8 +298,16 @@ function EntityRefItems({ api }: { api: FieldApi }) {
             options={quickAdd}
             value={Array.isArray(chosen) ? chosen.map(text) : []}
             onChange={(pick) => {
-              const picked = pick(Array.isArray(chosen) ? chosen.map(text) : []);
-              api.set("input_attrs.quickAdd", picked.length ? picked.map(String) : undefined);
+              api.update((current) => {
+                const stored = getValue(current, "input_attrs.quickAdd");
+                const picked = pick(Array.isArray(stored) ? stored.map(text) : []);
+                return setValue(
+                  current,
+                  "input_attrs.quickAdd",
+                  picked.length ? picked.map(String) : undefined,
+                  api.hasDefault,
+                );
+              });
             }}
           />
         </div>

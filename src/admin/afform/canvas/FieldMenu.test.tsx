@@ -1,9 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import type { FieldApi } from "./Field";
-import { DefaultItems, MinMaxItem } from "./FieldMenu";
-import { withLocal } from "./fieldModel";
+import { DefaultItems, EntityRefItems, MinMaxItem } from "./FieldMenu";
+import { mockApi, renderWithQuery } from "../../../test/render";
+import { getValue, withLocal } from "./fieldModel";
 import { fieldApi } from "./testField";
 
 let latest: FieldApi["state"] | undefined;
@@ -76,5 +77,52 @@ describe("DefaultItems", () => {
     expect(latest?.local.afform_default).toBe("now +5 day");
     fireEvent.change(offset, { target: { value: "-3" } });
     expect(latest?.local.afform_default).toBe("now -3 day");
+  });
+});
+
+describe("EntityRefItems", () => {
+  afterEach(() => {
+    delete window.CRM.config?.quickAdd;
+  });
+
+  it("keeps both quick-add removals batched into one render", async () => {
+    window.CRM.config = {
+      ...window.CRM.config,
+      quickAdd: [
+        { entity: "Individual", path: "civicrm/quick/person", title: "New Person", icon: "" },
+        { entity: "Organization", path: "civicrm/quick/org", title: "New Org", icon: "" },
+      ],
+    };
+    let state: FieldApi["state"] | undefined;
+    function Quick() {
+      const base = fieldApi(
+        { name: "contact_id", input_type: "EntityRef", data_type: "Integer", input_attrs: {} },
+        { input_attrs: { quickAdd: ["civicrm/quick/person", "civicrm/quick/org"] } },
+      );
+      const [current, setCurrent] = useState(base.state);
+      state = current;
+      return (
+        <ul>
+          <EntityRefItems
+            api={{
+              ...base,
+              state: current,
+              update: setCurrent,
+              fkEntity: { entity: "Contact", label: "Contact" },
+            }}
+          />
+        </ul>
+      );
+    }
+    mockApi({});
+    renderWithQuery(<Quick />);
+    const first = await screen.findByRole("button", { name: "Remove New Person" });
+    const second = screen.getByRole("button", { name: "Remove New Org" });
+    act(() => {
+      fireEvent.click(first);
+      fireEvent.click(second);
+    });
+    expect(state && getValue(state, "input_attrs.quickAdd")).toBe("");
+    expect(screen.queryByRole("button", { name: /^Remove New/ })).not.toBeInTheDocument();
   });
 });
