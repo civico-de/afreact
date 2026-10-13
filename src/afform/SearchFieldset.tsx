@@ -300,20 +300,24 @@ function useUrlWriter(
 export function FilterFieldNode({
   node,
   fieldset,
+  rules,
 }: {
   node: ElementNode;
   fieldset: FieldsetContextValue;
+  /** The af-required and af-disabled conditions as they stand, and those it cannot read. */
+  rules: { required: boolean | undefined; disabled: boolean; errors: string[] };
 }) {
   const name = String(node.name);
-  const defn = node.defn;
-  if (!isFieldDefn(defn)) return <Unsupported what={`field ${name} without metadata`} />;
+  const given = node.defn;
+  if (!isFieldDefn(given)) return <Unsupported what={`field ${name} without metadata`} />;
+  const defn = { ...given, required: rules.required ?? given.required };
   const field = { name, defn };
   const { state, dispatch } = fieldset;
   const operator = operatorOf(field, state.operators);
   const current = state.values[name];
   const value =
     operator && !writesWhole(defn) ? (isRecord(current) ? current[operator] : undefined) : current;
-  const unknown = unknownFilterAttributes(node);
+  const unknown = [...unknownFilterAttributes(node), ...rules.errors];
   const label = defn.label === false ? name : (defn.label ?? name);
   return createElement(
     "af-field",
@@ -336,7 +340,7 @@ export function FilterFieldNode({
         <Field
           defn={defn}
           value={value}
-          disabled={false}
+          disabled={rules.disabled}
           onChange={(next) => {
             dispatch({ type: "input", field, value: next });
           }}

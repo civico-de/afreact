@@ -94,7 +94,16 @@ const FIELD_ATTRIBUTES = new Set([
   "af-if",
 ]);
 /** Attributes of an af-field inside a search fieldset; `class` goes onto the field element. */
-const FILTER_ATTRIBUTES = new Set(["#tag", "#children", "name", "defn", "class", "af-if"]);
+const FILTER_ATTRIBUTES = new Set([
+  "#tag",
+  "#children",
+  "name",
+  "defn",
+  "class",
+  "af-required",
+  "af-disabled",
+  "af-if",
+]);
 /**
  * Attributes of a search display element: the display's names and settings, and what Afform's
  * metadata injector adds for Angular's bindings (the same names again, the entity).
@@ -357,7 +366,11 @@ function filterFieldProblems(node: ElementNode): string[] {
   const name = String(node.name);
   const defn = node.defn;
   if (!isFieldDefn(defn)) return [`field ${name} without metadata`];
-  const unknown = unknownFilterAttributes(node);
+  const unknown = [
+    ...unknownFilterAttributes(node),
+    ...conditionProblem(node, "af-required"),
+    ...conditionProblem(node, "af-disabled"),
+  ];
   const problems = unknown.length ? [fieldAttributesNote(unknown, name)] : [];
   const label = defn.label === false ? name : (defn.label ?? name);
   if (defn.search_range && !RANGE_TYPES.has(defn.input_type)) problems.push(searchRangeNote(label));

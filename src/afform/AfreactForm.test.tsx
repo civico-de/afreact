@@ -869,7 +869,7 @@ describe("AfreactForm", () => {
       "Angular expression {{ total }}",
       "<crm-search-display-map>",
       "search display settings without columns",
-      "af-required on first_name",
+      'af-required="x" on first_name',
       "field last_name without metadata",
     ]);
     expect(screen.queryByText("never shown")).not.toBeInTheDocument();

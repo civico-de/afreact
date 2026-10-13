@@ -607,10 +607,22 @@ function FieldNode({ node }: { node: ElementNode }) {
   const place = fieldPlace(node, useContext(ScopeContext));
   const hidden = useContext(HiddenContext);
   const filters = useSearchFieldset();
+  const form = useForm();
   const defn = node.defn;
   const scope = place?.scope ?? null;
   const name = place?.name ?? String(node.name);
-  if (filters && !scope) return <FilterFieldNode node={node} fieldset={filters} />;
+  if (filters && !scope) {
+    const required = conditionResult(node, form, "af-required");
+    const disabled = conditionResult(node, form, "af-disabled");
+    const rules = {
+      required: required && "value" in required ? required.value : undefined,
+      disabled: !!disabled && "value" in disabled && disabled.value,
+      errors: [required, disabled].flatMap((result) =>
+        result && "error" in result ? [result.error] : [],
+      ),
+    };
+    return <FilterFieldNode node={node} fieldset={filters} rules={rules} />;
+  }
   if (!scope || !isFieldDefn(defn)) return <Unsupported what={missingFieldNote(name)} />;
   if (hidden !== null) return <DroppedField scope={scope} name={name} defn={defn} />;
   return <VisibleField node={node} scope={scope} name={name} defn={defn} />;

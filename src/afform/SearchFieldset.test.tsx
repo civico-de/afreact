@@ -86,6 +86,22 @@ describe("SearchFieldset", () => {
     delete window.CRM.cache;
   });
 
+  it("applies af-required and af-disabled on a filter", async () => {
+    const holds = JSON.stringify([["1", "=", "1"]]);
+    renderSearch(
+      "",
+      searchForm(
+        {},
+        [display("Groups")],
+        [{ ...field("name", { label: "Name" }), "af-required": holds, "af-disabled": holds }],
+      ),
+    );
+    const input = await screen.findByRole("textbox", { name: "Name" });
+    expect(input).toBeRequired();
+    expect(input).toBeDisabled();
+    expect(screen.queryByRole("note")).toBeNull();
+  });
+
   it("searches once with the field defaults on first load", async () => {
     const { runs } = renderSearch("");
     expect(await screen.findByRole("cell", { name: "Row" })).toBeInTheDocument();
