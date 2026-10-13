@@ -108,9 +108,11 @@ export function fieldClasses(defn: FieldDefn): string {
   return defn.input_attrs?.multiple ? `${type} af-field-type-multiple` : type;
 }
 
-/** Option IDs keep their type (e.g. 2, not "2") so the submission matches Angular's. */
-function optionById(options: FieldOption[], raw: string): FieldOption["id"] | undefined {
-  return options.find((option) => String(option.id) === raw)?.id;
+/** afField's getSetSelect(): a chosen option is typed by the field's data type, not the option ID. */
+function selectValue(defn: FieldDefn, raw: string): string | number | boolean {
+  if (defn.data_type === "Boolean") return raw === "true";
+  if (defn.data_type === "Integer" || defn.data_type === "Float") return Number(raw);
+  return raw;
 }
 
 /** afField makes Boolean options truly boolean and supplies Yes/No when there are none. */
@@ -126,9 +128,12 @@ function fieldOptions(defn: FieldDefn): FieldOption[] {
       ];
 }
 
-/** "2026-09-29 14:30:00" <-> "2026-09-29T14:30" for datetime-local inputs. */
+/** "2026-09-29 14:30:00" <-> "2026-09-29T14:30" for datetime-local; a bare date shows midnight. */
 export function toLocalDateTime(value: unknown): string {
-  return typeof value === "string" ? value.replace(" ", "T").slice(0, 16) : "";
+  if (typeof value !== "string") return "";
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? `${value}T00:00`
+    : value.replace(" ", "T").slice(0, 16);
 }
 export function fromLocalDateTime(value: string): string | null {
   return value ? `${value.replace("T", " ")}:00` : null;
@@ -141,9 +146,9 @@ function dateFormatKind(format: boolean | string | undefined): "year" | "month" 
   return typeof format === "string" && !format.toLowerCase().includes("d") ? "month" : "date";
 }
 
-/** The year ("1990") or month ("1990-05") of a stored "1990-05-17", or "" for anything else. */
-function datePrefix(value: unknown, length: 4 | 7): string {
-  const match = typeof value === "string" ? /^\d{4}-\d{2}/.exec(value) : null;
+/** The year, month or day ("1990-05-17") of a stored date or datetime, or "" for anything else. */
+function datePrefix(value: unknown, length: 4 | 7 | 10): string {
+  const match = typeof value === "string" ? /^\d{4}-\d{2}(-\d{2})?/.exec(value) : null;
   return match ? match[0].slice(0, length) : "";
 }
 
@@ -362,7 +367,8 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                 {...common}
                 type="date"
                 className="form-control crm-form-text crm-form-date"
-                value={textValue(value)}
+                // The datepicker shows the date part of a datetime.
+                value={datePrefix(value, 10)}
                 onChange={(event) => {
                   onChange(event.target.value || emptied(required, false));
                 }}
@@ -406,7 +412,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                   onChange={(event) => {
                     onChange(
                       [...event.target.selectedOptions].map((option) =>
-                        optionById(options, option.value),
+                        selectValue(defn, option.value),
                       ),
                     );
                   }}
@@ -423,7 +429,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                   onChange={(event) => {
                     onChange(
                       // deviation:boolean-select-cleared-null
-                      event.target.value === "" ? null : optionById(options, event.target.value),
+                      event.target.value === "" ? null : selectValue(defn, event.target.value),
                     );
                   }}
                 >

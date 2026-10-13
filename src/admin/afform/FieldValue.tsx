@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { AutocompleteItem } from "../../afform/fields/autocomplete";
 import { formatValue, type ConditionField } from "../search/condition";
 import { EntityRef, OptionSelect } from "../search/SearchInput";
@@ -48,6 +49,8 @@ function conditionField(field: GuiField): ConditionField {
 /** afGuiFieldValue: the value input for a field in the builder. */
 export function FieldValue({ id, field, op, value, onChange }: FieldValueProps) {
   const editor = useEditor();
+  // The text typed, such as "1." on the way to "1.5", while the value is the one it gave.
+  const [draft, setDraft] = useState<{ text: string; at: unknown } | null>(null);
   const multi = op
     ? op === "IN" || op === "NOT IN"
     : !!field.serialize || field.data_type === "Array";
@@ -153,9 +156,18 @@ export function FieldValue({ id, field, op, value, onChange }: FieldValueProps) 
       id={id}
       className="form-control"
       type={field.data_type === "Integer" && !multi ? "number" : "text"}
-      value={Array.isArray(value) ? value.join(",") : text(value)}
+      value={
+        draft && draft.at === value
+          ? draft.text
+          : Array.isArray(value)
+            ? value.join(",")
+            : text(value)
+      }
       onChange={(event) => {
-        set(event.target.value);
+        const typed = event.target.value;
+        const next = formatValue(condition, op, undefined, typed);
+        setDraft({ text: typed, at: next });
+        onChange(next);
       }}
     />
   );

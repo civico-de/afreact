@@ -227,10 +227,24 @@ describe("Field", () => {
     expect(screen.getByRole("textbox", { name: "Website" })).toBeDisabled();
   });
 
+  it("types select values by the field's data type, not the option IDs", async () => {
+    const options = [
+      { id: 1, label: "A" },
+      { id: 2, label: "B" },
+    ];
+    const text = setup({ input_type: "Select", data_type: "String", options });
+    await userEvent.selectOptions(screen.getByRole("combobox"), "B");
+    const multi = setup({ input_type: "Select", options, input_attrs: { multiple: true } }, [1]);
+    await userEvent.selectOptions(screen.getByRole("listbox"), "B");
+    expect(text).toEqual(["2"]);
+    expect(multi).toEqual([["1", "2"]]);
+  });
+
   it("returns the typed IDs of a multi-select", async () => {
     const values = setup(
       {
         input_type: "Select",
+        data_type: "Integer",
         options: [
           { id: 1, label: "A" },
           { id: 2, label: "B" },
@@ -416,6 +430,16 @@ describe("Field", () => {
     expect(input).toHaveValue("2026-09-29T14:30");
     await userEvent.clear(input);
     expect(values).toEqual([""]);
+  });
+
+  it("shows a prefilled date without a time in a datetime input", () => {
+    setup({ input_type: "Date", input_attrs: { time: true } }, "2026-09-29");
+    expect(screen.getByLabelText("Field")).toHaveValue("2026-09-29T00:00");
+  });
+
+  it("shows the date of a prefilled datetime in a date-only input", () => {
+    setup({ input_type: "Date", data_type: "Timestamp" }, "2026-09-29 14:30:00");
+    expect(screen.getByLabelText("Field")).toHaveValue("2026-09-29");
   });
 
   // deviation:native-date-inputs
