@@ -597,7 +597,7 @@ function BatchEditor({
           </tfoot>
         )}
       </table>
-      {settings.pager && rows !== null && (
+      {settings.pager && all.length > 0 && (
         <Pager
           settings={settings.pager}
           rowCount={all.length}

@@ -339,6 +339,14 @@ describe("batch rows", () => {
     expect(screen.getByRole("button", { name: "Save Changes" })).toBeEnabled();
   });
 
+  it("shows no pager without rows", async () => {
+    show([], {}, { ...settings, limit: 2, pager: {} });
+    await waitFor(() => {
+      expect(document.querySelector(".crm-search-loading-placeholder")).toBeNull();
+    });
+    expect(screen.queryByRole("navigation")).toBeNull();
+  });
+
   it("pages through the rows on the client", async () => {
     show([row(1), row(2), row(3)], {}, { ...settings, limit: 2, pager: {} });
     await screen.findByRole("textbox", { name: "Source, Row 2" });
