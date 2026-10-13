@@ -13,6 +13,7 @@ import { api4, errorMessage, isApiError } from "../api/civi";
 import { DebugFacts, debugMode, DebugSection } from "../debug/debug";
 import { asHtml } from "../html";
 import { RouteOptionsContext } from "../search/displayFilters";
+import { isRecord } from "../search/searchTasks";
 import type { ExpressionContext } from "./expressions";
 import { DisplayCountContext, useHashParams } from "../url/UrlState";
 import { uploadAll, UploadsContext, type Uploads, type UploadsState } from "./fields/upload";
@@ -129,6 +130,14 @@ async function prefillForm(
     return { initial, closed: errorMessage(error), prefilled: true };
   }
 }
+
+/** JSON with every object's keys sorted, so the same data reads the same however it was built. */
+const keyOrderFree = (value: unknown) =>
+  JSON.stringify(value, (_key, item: unknown) =>
+    isRecord(item)
+      ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)))
+      : item,
+  );
 
 /** The form before its prefill: route values and defaults in place, nothing loaded yet. */
 function unfilled(form: FormDefinition, params: Record<string, string>): Prefilled {
@@ -571,7 +580,10 @@ function LoadedForm(props: LoadedFormProps) {
       const filled = prefilledData(form, latest.current, records, params);
       setData(filled);
       setEdits((count) => count + 1);
-      setDraftSaved(JSON.stringify([filled, 0]));
+      // What was typed meanwhile and kept is a change no draft holds yet.
+      const pristine = prefilledData(form, initial, records, params);
+      const kept = keyOrderFree(filled) !== keyOrderFree(pristine);
+      setDraftSaved(JSON.stringify([kept ? pristine : filled, 0]));
       setPrefilled(true);
     },
     onError: (error) => {
@@ -745,7 +757,8 @@ function LoadedForm(props: LoadedFormProps) {
     });
   }
 
-  if (saved?.message) {
+  // postProcess() leaves for a redirect before it would show a message.
+  if (saved?.message && !saved.redirect) {
     // The admin's HTML, with submitted values escaped by the server (Civi/Afreact/ConfirmationMessage.php).
     // deviation:confirmation-takes-focus
     // It takes the focus of the submit button it replaces.

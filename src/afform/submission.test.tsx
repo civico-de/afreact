@@ -209,6 +209,22 @@ describe("the prefill", () => {
     expect(called(calls, "Afform.prefill")).toHaveLength(1);
   });
 
+  // deviation:prefill-without-overlay
+  it("counts what was typed meanwhile as a change a draft can save", async () => {
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const bare = [{ name: "Individual1", values: [{ fields: { id: 5 } }] }];
+    renderForm({ "Afform.prefill": () => held.then(() => bare) });
+    await userEvent.type(await firstName(), "Bea");
+    release?.();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Save Draft" })).toBeEnabled();
+    });
+    expect(await firstName()).toHaveValue("Bea");
+  });
+
   it("holds the draft and reset buttons while it is out, also after typing", async () => {
     const calls = renderForm({ "Afform.prefill": () => new Promise<never>(() => {}) });
     await userEvent.type(await firstName(), "B");

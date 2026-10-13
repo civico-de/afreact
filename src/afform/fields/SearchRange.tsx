@@ -77,6 +77,7 @@ export function SearchRange({ id, labelId, defn, value, onChange, disabled }: Se
       <span className="afreact-select">
         <select
           {...input(bound)}
+          required={defn.required === true}
           className="form-control"
           value={boundText(range[bound])}
           onChange={(event) => {
@@ -100,6 +101,8 @@ export function SearchRange({ id, labelId, defn, value, onChange, disabled }: Se
     return pair((bound) => (
       <DateBound
         {...input(bound)}
+        // Date.html requires the low datepicker only.
+        required={bound === ">=" && defn.required === true}
         time={!!attrs.time}
         value={range[bound]}
         onChange={(next) => {
@@ -137,6 +140,7 @@ interface DateBoundProps {
   id: string;
   disabled: boolean;
   "aria-label": string;
+  required: boolean;
   time: boolean;
   value: unknown;
   onChange: (value: string | null) => void;

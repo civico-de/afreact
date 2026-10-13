@@ -685,14 +685,15 @@ describe("AfreactForm", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
   });
 
-  it("follows a redirect and stays busy", async () => {
-    renderForm(() => [{ redirect: "#done" }]);
+  it("follows a redirect and stays busy, without a message beside it", async () => {
+    renderForm(() => [{ redirect: "#done", message: "<p>Thanks</p>" }]);
     await userEvent.click(await screen.findByRole("button", { name: "Save" }));
     await waitFor(() => {
       expect(window.location.hash).toBe("#done");
     });
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     expect(screen.getByText("Saving…")).toBeInTheDocument();
+    expect(screen.queryByText("Thanks")).not.toBeInTheDocument();
     window.location.hash = "";
   });
 

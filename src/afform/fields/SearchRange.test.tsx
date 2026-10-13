@@ -141,6 +141,29 @@ describe("search ranges", () => {
     await lastRun({ birth_date: { ">=": "1990-05-17" } });
   });
 
+  it("marks a required range as Date.html and Select.html do: the low date, both selects", async () => {
+    renderSearch([
+      field("birth_date", {
+        label: "Birth date",
+        input_type: "Date",
+        data_type: "Date",
+        required: true,
+      }),
+      field("priority", {
+        label: "Priority",
+        input_type: "Select",
+        data_type: "Integer",
+        required: true,
+        options: [{ id: 1, label: "Low" }],
+      }),
+    ]);
+    await screen.findByRole("cell", { name: "Row" });
+    expect(screen.getByLabelText("Birth date from")).toBeRequired();
+    expect(screen.getByLabelText("Birth date to")).not.toBeRequired();
+    expect(screen.getByRole("combobox", { name: "Priority from" })).toBeRequired();
+    expect(screen.getByRole("combobox", { name: "Priority to" })).toBeRequired();
+  });
+
   // deviation:search-range-typed-ids
   it("searches a select range with typed option ids", async () => {
     const { lastRun } = renderSearch([
