@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   compat:
-    uses: jfilter/civikitchen/.github/workflows/extension-ci.yml@v1
+    uses: civico-de/civikitchen/.github/workflows/extension-ci.yml@v1
     with:
       bun: true
       js_tests: true
@@ -21,6 +21,6 @@ jobs:
       # Supported minors at their newest patch; each must be on civikitchen's
       # CK_STANDALONE_EXTRA_MINORS once its successor ships.
       matrix_images: >-
-        ghcr.io/jfilter/civikitchen:standalone-6.19,
-        ghcr.io/jfilter/civikitchen:standalone-beta,
-        ghcr.io/jfilter/civikitchen:standalone-master
+        ghcr.io/civico-de/civikitchen:standalone-6.19,
+        ghcr.io/civico-de/civikitchen:standalone-beta,
+        ghcr.io/civico-de/civikitchen:standalone-master

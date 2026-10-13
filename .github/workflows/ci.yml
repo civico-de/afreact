@@ -35,12 +35,12 @@ permissions:
 # No inputs: the workflow reads the extension key from info.xml itself.
 jobs:
   ci:
-    uses: jfilter/civikitchen/.github/workflows/extension-ci.yml@v1
+    uses: civico-de/civikitchen/.github/workflows/extension-ci.yml@v1
 # END CIVIKITCHEN MANAGED caller
     with:
       bun: true
       js_tests: true
       playwright: true
       # The floor in info.xml, frozen at its .0, beside the current release.
-      matrix_images: ghcr.io/jfilter/civikitchen:standalone-6.19.0
+      matrix_images: ghcr.io/civico-de/civikitchen:standalone-6.19.0
       matrix_playwright: true
