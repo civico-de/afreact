@@ -29,6 +29,18 @@ function savedRecord(route: Route): Record<string, unknown> | undefined {
   return record;
 }
 
+/** Afform.convert, as the builder calls it. */
+async function convertLayout(page: Page, layout: unknown, from: string, to: string) {
+  const [converted] = await api<{ layout: unknown }>(page, "Afform", "convert", {
+    layout,
+    from,
+    to,
+    formatWhitespace: true,
+  });
+  if (!converted) throw new Error("Afform.convert returned nothing.");
+  return converted.layout;
+}
+
 /** Any other request that would write a form. */
 const writesForm = (route: Route) =>
   /Afform\/(save|create|update|delete|revert)/.test(route.request().url());
@@ -155,7 +167,15 @@ test("every form saves back unedited as core's builder would, without a notice",
         // The one edit made to enable saving, taken back.
         if (sent.description !== `${before}${SUFFIX}`) found.push(`${name}: description sent`);
         sent.description = stored.description;
-        const { differs } = formRoundTrip(stored, sent, {
+        // The builder sends its layout as HTML. Both sides are read back from HTML, so markup
+        // compares without the indentation each conversion gives it.
+        const shallow = async (layout: unknown, from: string) => {
+          const html = from === "html" ? layout : await convertLayout(page, layout, from, "html");
+          return convertLayout(page, html, "html", "shallow");
+        };
+        const compared = { ...stored, layout: await shallow(stored.layout, "shallow") };
+        if (typeof sent.layout === "string") sent.layout = await shallow(sent.layout, "html");
+        const { differs } = formRoundTrip(compared, sent, {
           blocks: blocks.map((block) => block.directive_name),
           confirmationType,
         });
