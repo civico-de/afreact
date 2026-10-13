@@ -96,8 +96,16 @@ export function NumberInput({
         key={value}
         defaultValue={value}
         onBlur={(event) => {
-          const next = event.target.valueAsNumber;
-          if (next !== value) onCommit(Number.isNaN(next) ? 0 : next);
+          const input = event.target;
+          const next = input.value === "" ? 0 : input.valueAsNumber;
+          // deviation:number-input-rejects-invalid
+          // An unfinished entry such as "1e" also reads as "", but marks the input as bad.
+          const bad = input.validity.badInput || !Number.isInteger(next);
+          if (bad || (next < min && input.value !== "")) {
+            input.value = value === undefined ? "" : String(value);
+            return;
+          }
+          if (next !== value) onCommit(next);
         }}
       />
     </>

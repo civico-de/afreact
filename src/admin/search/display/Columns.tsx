@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Menu } from "../../../search/Menu";
 import type { ColumnDefaults } from "../expr";
 import type { Editing } from "./common";
@@ -56,11 +56,24 @@ export function Columns(props: ColumnsProps) {
       if (col) change(col, d);
     });
   };
+  const id = useId();
+  const moved = useRef<{ to: number; up: boolean } | null>(null);
+  useEffect(() => {
+    // deviation:builder-reorder-buttons
+    // Moving remounts the column, so focus follows it to its new place.
+    if (moved.current === null) return;
+    const at = String(moved.current.to);
+    const order = moved.current.up ? ["up", "down"] : ["down", "up"];
+    moved.current = null;
+    const buttons = order.map((dir) => document.getElementById(`${id}-${dir}-${at}`));
+    buttons.find((b) => b instanceof HTMLButtonElement && !b.disabled)?.focus();
+  });
   const move = (from: number, to: number) => {
+    moved.current = { to, up: to < from };
     edit((d) => {
       const list = [...columnsOf(d.settings)];
-      const [moved] = list.splice(from, 1);
-      if (moved) list.splice(to, 0, moved);
+      const [column] = list.splice(from, 1);
+      if (column) list.splice(to, 0, column);
       d.settings.columns = list;
     });
   };
@@ -134,6 +147,7 @@ export function Columns(props: ColumnsProps) {
                   type="button"
                   className="btn btn-xs"
                   // deviation:builder-reorder-buttons
+                  id={`${id}-up-${String(index)}`}
                   disabled={index === 0}
                   aria-label={ts("Move %1 up", { 1: label })}
                   onClick={() => {
@@ -145,6 +159,7 @@ export function Columns(props: ColumnsProps) {
                 <button
                   type="button"
                   className="btn btn-xs"
+                  id={`${id}-down-${String(index)}`}
                   disabled={index === columns.length - 1}
                   aria-label={ts("Move %1 down", { 1: label })}
                   onClick={() => {
