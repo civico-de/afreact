@@ -85,6 +85,7 @@ interface ColumnToggles {
 export function useColumnToggles(
   columns: Column[] | undefined,
   saved: Record<string, string> | undefined,
+  savedSet: string | null,
   runKey: string,
 ) {
   const [state, setState] = useState<ColumnToggles>({
@@ -96,8 +97,8 @@ export function useColumnToggles(
   // Worked out during render, so this render's run already asks for the right columns.
   let current = state;
   if (current.runKey !== runKey) current = { ...current, runKey, fetchedHidden: current.hidden };
-  // A newly loaded saved set decides afresh (onAfformReset()).
-  const savedKey = JSON.stringify(saved ?? {});
+  // Another saved set, or one newly loaded, decides afresh (onAfformReset()).
+  const savedKey = JSON.stringify([savedSet, saved ?? {}]);
   if (columns && current.savedKey !== savedKey) {
     const fromSet = hiddenBySavedSet(columns, saved ?? {});
     current = { ...current, savedKey, hidden: fromSet, fetchedHidden: fromSet };

@@ -53,6 +53,8 @@ interface AfreactSearchProps {
   enabled?: boolean;
   /** The columns a loaded saved filter set shows, key or label to label; empty for all. */
   savedColumns?: Record<string, string>;
+  /** The selected saved set: choosing another one applies its columns afresh. */
+  savedSet?: string | null;
   /** Takes the labels of each run's own filters, which core puts before the page title. */
   onLabels?: (labels: string[]) => void;
   /** Takes a table's picked columns, for a saved filter set to keep. */
@@ -156,6 +158,7 @@ function ResultDisplay({
   typed = filters,
   enabled = true,
   savedColumns,
+  savedSet = null,
   onLabels,
   onColumns,
   inline,
@@ -205,6 +208,7 @@ function ResultDisplay({
   const toggles = useColumnToggles(
     settings?.columns,
     savedColumns,
+    savedSet,
     JSON.stringify([params, activeSort, limit, page]),
   );
   const { hidden, params: columnParams } = toggles;

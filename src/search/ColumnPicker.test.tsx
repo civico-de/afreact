@@ -63,7 +63,7 @@ const settings: DisplaySettings = {
   tally: { footer: true },
 };
 
-function setup(savedColumns?: Record<string, string>) {
+function setup(savedColumns?: Record<string, string>, savedSet: string | null = null) {
   const calls = mockApi({
     "SearchDisplay.run": (params) => {
       if (params.return === "row_count") return Object.assign([], { count: 2 });
@@ -81,14 +81,24 @@ function setup(savedColumns?: Record<string, string>) {
       ];
     },
   });
-  renderWithQuery(
-    <AfreactSearch search="S" display="D" settings={settings} savedColumns={savedColumns} />,
+  const view = (set: string | null) => (
+    <AfreactSearch
+      search="S"
+      display="D"
+      settings={settings}
+      savedColumns={savedColumns}
+      savedSet={set}
+    />
   );
+  const { rerender } = renderWithQuery(view(savedSet));
   const pages = () =>
     calls
       .filter(({ params }) => String(params.return).startsWith("page:"))
       .map(({ params }) => [params.return, params.toggleColumns]);
-  return { pages };
+  const select = (set: string | null) => {
+    rerender(view(set));
+  };
+  return { pages, select };
 }
 
 const headers = () =>
@@ -160,5 +170,14 @@ describe("ColumnPicker", () => {
     await waitFor(() => {
       expect(pages()).toEqual([["page:1", [0, 2]]]);
     });
+  });
+
+  it("shows the set's columns again when another set is chosen, as onAfformReset() does", async () => {
+    const { select } = setup({}, "1");
+    await screen.findByText("Ada page:1");
+    await userEvent.click(box("Email"));
+    expect(headers()).toEqual(["Name", "Phone"]);
+    select("2");
+    expect(headers()).toEqual(["Name", "Email", "Phone"]);
   });
 });

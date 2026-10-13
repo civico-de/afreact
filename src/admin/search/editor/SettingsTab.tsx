@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { EntityTags } from "../../widgets/EntityTags";
+import { useCoreHas } from "../../version";
 import type { EditorSearch } from "../editor";
 
 interface SettingsTabProps {
@@ -21,6 +22,8 @@ export function SettingsTab({
   onChange,
   onToggleEntitySet,
 }: SettingsTabProps) {
+  // SavedSearch.timeout arrived with 6.20; an older core drops it on save.
+  const hasTimeout = useCoreHas({ "6.20": "6.20.alpha1" });
   const id = useId();
   return (
     <>
@@ -37,20 +40,22 @@ export function SettingsTab({
           }}
         />
       </div>
-      <div className="form-group">
-        <label htmlFor={`${id}-timeout`}>{ts("Query Timeout (seconds)")}</label>
-        <input
-          id={`${id}-timeout`}
-          type="number"
-          min={0}
-          className="form-control six"
-          placeholder={ts("Site default")}
-          value={search.timeout ?? ""}
-          onChange={(event) => {
-            onChange({ timeout: event.target.value === "" ? null : Number(event.target.value) });
-          }}
-        />
-      </div>
+      {hasTimeout && (
+        <div className="form-group">
+          <label htmlFor={`${id}-timeout`}>{ts("Query Timeout (seconds)")}</label>
+          <input
+            id={`${id}-timeout`}
+            type="number"
+            min={0}
+            className="form-control six"
+            placeholder={ts("Site default")}
+            value={search.timeout ?? ""}
+            onChange={(event) => {
+              onChange({ timeout: event.target.value === "" ? null : Number(event.target.value) });
+            }}
+          />
+        </div>
+      )}
       <div className="form-group">
         <label htmlFor={`${id}-expires`}>{ts("Search Expiry Date")}</label>
         <div className="input-group">

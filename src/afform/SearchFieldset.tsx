@@ -405,6 +405,7 @@ export function FieldsetDisplay({ node, formName, onLabels }: FieldsetDisplayPro
         type={displayTypeOf(node["#tag"]) ?? "table"}
         settings={check.settings}
         savedColumns={savedColumnsOf(fieldset?.columns, `${search}.${display}`)}
+        savedSet={fieldset?.setId ?? null}
         // The form also outside a fieldset, so its markup filters apply. deviation:display-outside-fieldset-form
         afform={formName}
         filters={merged(fieldset?.state.applied)}

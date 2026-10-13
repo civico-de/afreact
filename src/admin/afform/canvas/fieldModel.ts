@@ -46,7 +46,9 @@ const drill = (root: unknown, path: string[]): unknown => {
 // deviation:field-defn-read-only
 export function getProp(state: FieldState, prop: string): unknown {
   const path = prop.split(".");
-  return drill(plainLiteral(state.local), path) ?? drill(state.base, path);
+  // An own null wins too: it switches off what the metadata gives, such as its help text.
+  const own = drill(plainLiteral(state.local), path);
+  return own === undefined ? drill(state.base, path) : own;
 }
 
 /** propIsset(). */

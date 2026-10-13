@@ -9,6 +9,7 @@ import {
   getValue,
   inputTypeCanBe,
   localDefn,
+  propIsset,
   setValue,
   toggleDefaultItem,
   toggleMultiple,
@@ -60,6 +61,14 @@ describe("getSet()", () => {
     const state = field({ local: { label: new TsCall("ts('Sex')", "Sex") } });
     expect(getProp(state, "label")).toBe("Sex");
     expect(getValue(field({ local: { required: false } }), "required")).toBe("");
+  });
+
+  it("takes the element's own null over the metadata, which switches its help text off", () => {
+    const state = field({ base: { ...base(), help_pre: "Meta help" } });
+    expect(propIsset(state, "help_pre")).toBe(true);
+    const off = setValue(state, "help_pre", null, false);
+    expect(off.local).toEqual({ help_pre: null });
+    expect(propIsset(off, "help_pre")).toBe(false);
   });
 
   // deviation:field-defn-read-only
