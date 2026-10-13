@@ -101,6 +101,8 @@ them out. The markup meets SearchKit only in the display element and its
 Angular remains where SearchKit lets extensions bring their own: display
 types, column type `include` (an `ng-include`) and bulk actions with their
 own dialogs.
+[searchkit-format.md](searchkit-format.md) describes the SearchKit side in
+full.
 
 ## What the React renderer reads
 
