@@ -744,6 +744,8 @@ export function IconsConfig({
   const id = useId();
   const list = icons ?? [];
   const iconFields = iconFieldOptions(ctx);
+  // pickIcon(): a field icon turns into a chosen one only once an icon is picked.
+  const [picking, setPicking] = useState<number | null>(null);
   const ruleFields: PickerOption[] = [
     ...getSelectFields(ctx.meta, ctx.search).map((f) => ({
       ...f,
@@ -771,12 +773,16 @@ export function IconsConfig({
             <select
               className="form-control crm-auto-width"
               aria-label={ts("Source of %1", { 1: name })}
-              value={icon.field ?? ""}
+              value={picking === index ? "" : (icon.field ?? "")}
               onChange={(event) => {
                 const value = event.target.value;
+                if (!value) {
+                  setPicking(index);
+                  return;
+                }
+                setPicking(null);
                 set(index, (target) => {
-                  if (value) setIconField(target, value);
-                  else setIconClass(target, target.icon ?? "fa-star");
+                  setIconField(target, value);
                 });
               }}
             >
@@ -787,15 +793,17 @@ export function IconsConfig({
               ))}
               <option value="">{ts("Choose Icon...")}</option>
             </select>
-            {icon.icon !== undefined && (
+            {(icon.icon !== undefined || picking === index) && (
               <IconPicker
                 label={name}
                 required
-                value={icon.icon}
+                value={icon.icon ?? ""}
                 onChange={(value) => {
-                  set(index, (target) => {
-                    setIconClass(target, value);
-                  });
+                  setPicking(null);
+                  if (value)
+                    set(index, (target) => {
+                      setIconClass(target, value);
+                    });
                 }}
               />
             )}{" "}
@@ -998,6 +1006,13 @@ export interface SubsearchFilter {
 }
 
 /** A subsearch filter's new field, or without one the filter removed. */
+/** $onInit: a filter holding both keeps its value, unless it is null or a parent field is set. */
+export const filterMode = (filter: SubsearchFilter): "value" | "field" =>
+  "value" in filter &&
+  (!("parent_field" in filter) || (filter.value !== null && filter.parent_field === null))
+    ? "value"
+    : "field";
+
 export const changeFilterField = (
   filters: SubsearchFilter[],
   index: number,
@@ -1304,7 +1319,7 @@ function SubsearchCondition({
   onChange: (filter: SubsearchFilter) => void;
 }) {
   const id = useId();
-  const mode = "value" in filter && !("parent_field" in filter) ? "value" : "field";
+  const mode = filterMode(filter);
   const field = filter.subsearch_field
     ? getField(ctx.meta, filter.subsearch_field, search)
     : undefined;

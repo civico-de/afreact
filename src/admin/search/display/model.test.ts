@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { metadata as meta } from "../../../test/searchMetadata";
 import {
+  dateFormatChoice,
   addCol,
   addCssRule,
   changeLimit,
@@ -405,5 +406,17 @@ describe("link groups on open", () => {
     expect(buttons?.links?.[0]).not.toHaveProperty("condition");
     expect(field).toEqual({ type: "field", key: "id", link: { path: "civicrm/x" } });
     expect(keys(draft.settings.toolbar?.[0] ?? {})).toEqual(all);
+  });
+});
+
+describe("date format", () => {
+  it('reads core\'s null or empty "Default" as the default, not as another format', () => {
+    for (const format of [undefined, null, ""])
+      expect(
+        dateFormatChoice({ type: "field", key: "created_date", format }, { short: "Short" }),
+      ).toBe("");
+    expect(dateFormatChoice({ type: "field", key: "created_date", format: "%Y" }, {})).toBe(
+      "other",
+    );
   });
 });

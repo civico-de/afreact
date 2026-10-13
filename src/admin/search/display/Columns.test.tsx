@@ -1,8 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { metadata as meta } from "../../../test/searchMetadata";
+import { IconsConfig } from "./ColumnFields";
 import { Columns } from "./Columns";
 import type { DisplayContext, Draft } from "./model";
 
@@ -52,5 +53,21 @@ describe("columns", () => {
     expect(screen.getByRole("button", { name: "Move Contact ID down" })).toHaveFocus();
     await user.keyboard("{Enter}");
     expect(screen.getByRole("button", { name: "Move Contact ID up" })).toHaveFocus();
+  });
+});
+
+describe("icons", () => {
+  it("keeps a field icon until an icon is picked, as pickIcon() does", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn<(icons: unknown[]) => void>();
+    render(
+      <IconsConfig
+        ctx={ctx}
+        icons={[{ field: "contact_type:icon", side: "left" }]}
+        onChange={onChange}
+      />,
+    );
+    await user.selectOptions(screen.getByRole("combobox", { name: "Source of Icon 1" }), "");
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

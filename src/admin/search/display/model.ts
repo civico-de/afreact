@@ -334,7 +334,8 @@ export function setSuffix(col: AdminColumn, value: string): void {
 }
 
 export function dateFormatChoice(col: AdminColumn, formats: Record<string, string>): string {
-  if (col.format === undefined) return "";
+  // Core's select writes null for "Default"; an empty string reads the same.
+  if (col.format === undefined || col.format === null || col.format === "") return "";
   return typeof col.format === "string" && col.format in formats ? col.format : "other";
 }
 

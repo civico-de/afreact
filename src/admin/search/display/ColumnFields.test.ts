@@ -1,4 +1,4 @@
-import { changeFilterField } from "./ColumnFields";
+import { changeFilterField, filterMode } from "./ColumnFields";
 
 describe("changeFilterField", () => {
   const filters = [
@@ -15,5 +15,16 @@ describe("changeFilterField", () => {
     expect(changeFilterField(filters, 0, null)).toEqual([
       { subsearch_field: "status_id", value: 1 },
     ]);
+  });
+});
+
+describe("filterMode", () => {
+  it("reads a filter with a value and a null parent field as a value, as $onInit does", () => {
+    expect(filterMode({ subsearch_field: "s", value: "Completed", parent_field: null })).toBe(
+      "value",
+    );
+    expect(filterMode({ subsearch_field: "s", value: null, parent_field: null })).toBe("field");
+    expect(filterMode({ subsearch_field: "s", value: 1, parent_field: "id" })).toBe("field");
+    expect(filterMode({ subsearch_field: "s", value: 1 })).toBe("value");
   });
 });
