@@ -32,7 +32,10 @@ export function headerClass(column: Column, sortable: boolean): string | undefin
   return classes.length ? classes.join(" ") : undefined;
 }
 
-/** A name for screen readers where core leaves a header empty, as it does over link columns. */
+/**
+ * A name for screen readers where core leaves a header empty, as it does over link columns.
+ * deviation:table-header-names
+ */
 export function unlabelledHeader(column: Column, index: number): string | null {
   if (column.label) return null;
   return ["links", "buttons", "menu"].includes(column.type)

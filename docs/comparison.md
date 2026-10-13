@@ -53,6 +53,7 @@ that no longer excuses anything fails the test. It measures React without
 
 | Area | Angular | React | Pinned by |
 |---|---|---|---|
+| Empty table headers | a links, buttons or menu column, or one without a label, has an empty `<th>` | the header names the column for screen readers: "Actions", or "Column n" `deviation:table-header-names` | `src/search/rows.test.ts`: "names headers core leaves empty, and no others" |
 | Character count of a text area with `maxlength` | "n / max" below the field, not tied to it | the same count, which describes the text area (`aria-describedby`): a screen reader reads it with the field, not on each keystroke `deviation:textarea-count-describes` | `src/afform/Field.test.tsx`: "counts the characters of a text area with a maximum and describes the field by the count" |
 | Clear links | `<a>` without `href`, not reachable by keyboard | same link with `role="button"`, focusable, Enter and Space `deviation:clear-link-button` | `src/afform/Field.test.tsx`: "clears an optional radio from the keyboard" |
 | Required text holding only spaces | ngModel trims it to empty and marks the field `ng-invalid-required`; the browser sees text and shows no hint | same model and alert; the control reports "This field is required." as a custom validity message, the browser's hint for that field `deviation:blank-required-validity` | `src/afform/Field.test.tsx`: "leaves a required field holding only spaces invalid and its value unset" |

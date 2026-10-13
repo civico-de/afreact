@@ -51,6 +51,7 @@ describe("headerClass", () => {
 });
 
 describe("unlabelledHeader", () => {
+  // deviation:table-header-names
   it("names headers core leaves empty, and no others", () => {
     expect(unlabelledHeader({ type: "links", label: "" }, 3)).toBe("Actions");
     expect(unlabelledHeader({ type: "menu" }, 3)).toBe("Actions");
