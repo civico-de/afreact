@@ -145,14 +145,15 @@ export function TabsetElement({ path, node, scope, handle, label }: ElementProps
   const editor = useEditor();
   const ops = useNodeOps(path, node);
   const base = useId();
+  // The selected tab's place among the tabs; text between them takes no place.
   const [selected, setSelected] = useState(0);
   const isPages = !!textAttribute(node, "page-nav-buttons");
   const tabs = (node["#children"] ?? []).flatMap((child, index) =>
     isElement(child) ? [{ tab: child, index }] : [],
   );
-  const count = node["#children"]?.length ?? 0;
-  const active = Math.min(selected, Math.max(count - 1, 0));
-  const activeTab = tabs.find(({ index }) => index === active);
+  const position = Math.min(selected, Math.max(tabs.length - 1, 0));
+  const activeTab = tabs.at(position);
+  const active = activeTab?.index ?? -1;
   const addTab = () => {
     ops.edit((current) => ({
       ...current,
@@ -161,7 +162,7 @@ export function TabsetElement({ path, node, scope, handle, label }: ElementProps
         { "#tag": "af-tab", title: isPages ? ts("New Page") : ts("New Tab"), "#children": [] },
       ],
     }));
-    setSelected(count);
+    setSelected(tabs.length);
   };
   return (
     <div className="af-gui-container af-gui-tabset">
@@ -190,7 +191,7 @@ export function TabsetElement({ path, node, scope, handle, label }: ElementProps
           label={isPages ? ts("Pages") : ts("Tab Set")}
           active={String(active)}
           onSelect={(key) => {
-            setSelected(Number(key));
+            setSelected(tabs.findIndex(({ index }) => String(index) === key));
           }}
           items={tabs.map(({ tab, index }) => {
             const icon = textAttribute(tab, "icon");
@@ -220,7 +221,7 @@ export function TabsetElement({ path, node, scope, handle, label }: ElementProps
             {(close) => (
               <TabMenu
                 ops={ops}
-                tabIndex={active}
+                tabIndex={activeTab.index}
                 onDeleted={() => {
                   close();
                   setSelected(0);
@@ -251,29 +252,29 @@ export function TabsetElement({ path, node, scope, handle, label }: ElementProps
       )}
       {isPages && (
         <div className="crm-buttons">
-          {active > 0 && (
+          {position > 0 && (
             <button
               type="button"
               className="crm-button crm-button-back"
               onClick={() => {
-                setSelected(active - 1);
+                setSelected(position - 1);
               }}
             >
               <i className="crm-i fa-angle-left" role="img" aria-hidden="true" /> {ts("Back")}
             </button>
           )}
-          {active + 1 < count && (
+          {position + 1 < tabs.length && (
             <button
               type="button"
               className="crm-button crm-button-next"
               onClick={() => {
-                setSelected(active + 1);
+                setSelected(position + 1);
               }}
             >
               <i className="crm-i fa-angle-right" role="img" aria-hidden="true" /> {ts("Next")}
             </button>
           )}
-          {active + 1 === count && (
+          {position + 1 === tabs.length && (
             <span className="crm-button crm-button-submit">
               <InlineEdit
                 label={ts("Submit button text")}

@@ -318,6 +318,19 @@ export function withMax(node: ShallowElement, max: number | null): ShallowElemen
   return max === null ? withoutAttributes(next, ["max"]) : { ...next, max: String(max) };
 }
 
+/** The maximum as a limit: 0 means none, as in afRepeat. */
+const limitOf = (node: ShallowElement) => {
+  const max = intOf(textAttribute(node, "max"));
+  return max && max > 0 ? max : null;
+};
+
+/** Whether the minimum exceeds the maximum, as while one bound is being typed. */
+const boundsCross = (node: ShallowElement) => {
+  const min = intOf(textAttribute(node, "min"));
+  const max = limitOf(node);
+  return min !== null && max !== null && min > max;
+};
+
 const numberOf = (text: string): number | null => {
   const value = parseInt(text, 10);
   return Number.isNaN(value) ? null : value;
@@ -658,8 +671,11 @@ function RepeatButton({
   );
 }
 
-/** The repeat entries: on or off, the range, and how many show at first. */
-function RepeatMenuItems({ ops, repeatMax }: { ops: NodeOps; repeatMax: number | null }) {
+/**
+ * The repeat entries: on or off, the range, and how many show at first. A bound meets the
+ * other when its input is left, not per keystroke. deviation:repeat-bounds-on-blur
+ */
+export function RepeatMenuItems({ ops, repeatMax }: { ops: NodeOps; repeatMax: number | null }) {
   const id = useId();
   const repeating = "af-repeat" in ops.node;
   const shown = textAttribute(ops.node, "af-repeat-default") ?? "";
@@ -689,7 +705,13 @@ function RepeatMenuItems({ ops, repeatMax }: { ops: NodeOps; repeatMax: number |
             value={textAttribute(ops.node, "min") ?? ""}
             onChange={(event) => {
               const value = numberOf(event.target.value);
-              ops.edit((node) => withMin(node, value));
+              ops.edit((node) =>
+                value ? { ...node, min: String(value) } : withoutAttributes(node, ["min"]),
+              );
+            }}
+            onBlur={() => {
+              if (boundsCross(ops.node))
+                ops.edit((node) => withMin(node, intOf(textAttribute(node, "min"))));
             }}
           />{" "}
           -{" "}
@@ -705,7 +727,13 @@ function RepeatMenuItems({ ops, repeatMax }: { ops: NodeOps; repeatMax: number |
             value={textAttribute(ops.node, "max") ?? ""}
             onChange={(event) => {
               const value = numberOf(event.target.value);
-              ops.edit((node) => withMax(node, value));
+              ops.edit((node) =>
+                value === null ? withoutAttributes(node, ["max"]) : { ...node, max: String(value) },
+              );
+            }}
+            onBlur={() => {
+              if (boundsCross(ops.node))
+                ops.edit((node) => withMax(node, intOf(textAttribute(node, "max"))));
             }}
           />
         </span>
@@ -720,6 +748,7 @@ function RepeatMenuItems({ ops, repeatMax }: { ops: NodeOps; repeatMax: number |
               className="form-control"
               placeholder={filled(textAttribute(ops.node, "min")) ?? "1"}
               min="0"
+              max={limitOf(ops.node) ?? undefined}
               step="1"
               value={shown}
               onChange={(event) => {

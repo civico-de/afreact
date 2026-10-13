@@ -114,13 +114,25 @@ describe("useDebounced", () => {
     expect(second).toHaveBeenCalledExactlyOnceWith("z");
   });
 
-  it("drops pending typing on unmount", () => {
+  it("commits pending typing once on unmount", () => {
     const { commit, result, unmount } = setup();
     act(() => {
-      result.current.onChange("gone");
+      result.current.onChange("kept");
     });
     unmount();
     vi.advanceTimersByTime(2000);
-    expect(commit).not.toHaveBeenCalled();
+    expect(commit).toHaveBeenCalledExactlyOnceWith("kept");
+  });
+
+  it("commits nothing on unmount once the typing is committed", () => {
+    const { commit, result, unmount } = setup();
+    act(() => {
+      result.current.onChange("done");
+    });
+    act(() => {
+      result.current.onBlur();
+    });
+    unmount();
+    expect(commit).toHaveBeenCalledExactlyOnceWith("done");
   });
 });

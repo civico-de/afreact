@@ -52,6 +52,14 @@ describe("repeatMinimum", () => {
     expect(repeatMinimum({ "#tag": "div", "af-repeat-default": "" })).toBe(1);
     expect(repeatMinimum({ "#tag": "div", "af-repeat-default": "2", min: "1" })).toBe(2);
   });
+
+  // deviation:repeat-default-within-max
+  it("shows no more items at first than the maximum allows", () => {
+    expect(repeatMinimum({ "#tag": "div", "af-repeat-default": "4", max: "3" })).toBe(3);
+    expect(repeatMinimum({ "#tag": "div", "af-repeat-default": "2", max: "3" })).toBe(2);
+    expect(repeatMinimum({ "#tag": "div", "af-repeat-default": "4", max: "" })).toBe(4);
+    expect(repeatMinimum({ "#tag": "div", "af-repeat-default": "4", max: "0" })).toBe(4);
+  });
 });
 
 describe("staticDefault", () => {

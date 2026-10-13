@@ -50,4 +50,14 @@ describe("savedFrom", () => {
     expect(busy.saved).toEqual({ label: "b", id: 7 });
     expect(isDirty(busy)).toBe(true);
   });
+
+  it("gives the states undo and redo reach what the save assigned", () => {
+    const start = initialHistory<{ label: string; name?: string }>({ label: "a" });
+    const sent = historyReducer(start, { type: "change", update: (s) => ({ ...s, label: "b" }) });
+    const merge = (s: { label: string; name?: string }) => ({ ...s, name: "afformNew" });
+    const saved = historyReducer(sent, { type: "savedFrom", sent: sent.present, merge });
+    const undone = historyReducer(saved, { type: "undo" });
+    expect(undone.present).toEqual({ label: "a", name: "afformNew" });
+    expect(historyReducer(undone, { type: "redo" }).present).toEqual(saved.present);
+  });
 });

@@ -9,11 +9,16 @@ import { SettingsTab } from "./SettingsTab";
 
 let latest: AfformDefinition | undefined;
 let replace: (afform: AfformDefinition) => void = () => undefined;
+let hide: () => void = () => undefined;
 
 function Harness({ initial, meta = META }: { initial: AfformDefinition; meta?: EditorMeta }) {
   const [afform, setAfform] = useState(initial);
+  const [shown, setShown] = useState(true);
   latest = afform;
   replace = setAfform;
+  hide = () => {
+    setShown(false);
+  };
   const api: EditorApi = {
     meta,
     afform,
@@ -28,11 +33,7 @@ function Harness({ initial, meta = META }: { initial: AfformDefinition; meta?: E
     saveBlocked: null,
     openDialog: () => undefined,
   };
-  return (
-    <EditorContext value={api}>
-      <SettingsTab />
-    </EditorContext>
-  );
+  return <EditorContext value={api}>{shown && <SettingsTab />}</EditorContext>;
 }
 
 describe("SettingsTab", () => {
@@ -91,6 +92,18 @@ describe("SettingsTab", () => {
     await userEvent.click(route);
     await userEvent.keyboard("probe");
     expect(route).toHaveValue("civicrm/probe");
+  });
+
+  it("keeps a route typed just before the settings give way to another tab", async () => {
+    renderWithQuery(<Harness initial={{ type: "form", title: "Probe", layout: [] }} />);
+    const route = screen.getByTitle('Path must begin with "civicrm/"');
+    await userEvent.click(route);
+    await userEvent.keyboard("probe");
+    expect(latest?.server_route).toBeUndefined();
+    act(() => {
+      hide();
+    });
+    expect(latest?.server_route).toBe("civicrm/probe");
   });
 
   // deviation:navigation-weight-negative

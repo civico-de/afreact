@@ -324,8 +324,10 @@ function Placement() {
           }))}
           value={afform.placement ?? []}
           disabled={unreadable.length > 0}
-          onChange={(placement) => {
-            editor.change((current) => withPlacement(current, editor.meta, placement.map(String)));
+          onChange={(pick) => {
+            editor.change((current) =>
+              withPlacement(current, editor.meta, pick(current.placement ?? []).map(String)),
+            );
           }}
         />
         {unreadable.length > 0 && (
@@ -369,16 +371,20 @@ function Placement() {
                     label: option.text,
                   }))}
                   value={list(filters[filter.name])}
-                  onChange={(values) => {
-                    editor.change((current) => ({
-                      ...current,
-                      placement_filters: {
-                        ...(current.placement_filters && !Array.isArray(current.placement_filters)
+                  onChange={(pick) => {
+                    editor.change((current) => {
+                      const stored =
+                        current.placement_filters && !Array.isArray(current.placement_filters)
                           ? current.placement_filters
-                          : {}),
-                        [filter.name]: values.map(String),
-                      },
-                    }));
+                          : {};
+                      return {
+                        ...current,
+                        placement_filters: {
+                          ...stored,
+                          [filter.name]: pick(list(stored[filter.name])).map(String),
+                        },
+                      };
+                    });
                   }}
                 />
               </div>
@@ -792,8 +798,11 @@ export function SettingsTab() {
                   })),
                 )}
                 value={list(afform.permission)}
-                onChange={(permission) => {
-                  editor.change((current) => ({ ...current, permission: permission.map(String) }));
+                onChange={(pick) => {
+                  editor.change((current) => ({
+                    ...current,
+                    permission: pick(list(current.permission)).map(String),
+                  }));
                 }}
               />{" "}
               <label className="sr-only" htmlFor={`${id}-operator`}>

@@ -344,6 +344,13 @@ from the code, not run), including a loaded record's `id` and its
 records are primary. The React renderer copies the values without `id` and
 with `is_primary` off. `deviation:repeat-copy-new-record`
 
+**A repeat shows more items at first than its maximum.** `afRepeat` adds items
+up to `af-repeat-default` (or `min`) without looking at `max`, so a block set to
+show 4 with a maximum of 3 opens with 4, one past what the form allows, and the
+builder's "Initially show" input takes any number. React opens with at most
+`max` items and marks a larger "Initially show" invalid.
+`deviation:repeat-default-within-max`
+
 ## File uploads
 
 **A failed upload still completes the submit.** afForm's uploader calls
@@ -983,6 +990,27 @@ numeric text only and keeps an empty or non-numeric default as it is. `deviation
 their white text on the theme's grey badge falls to about 2:1, below the 4.5:1
 that WCAG asks (6.19, axe-core in the dialog). React shows them at full
 opacity. `deviation:condition-badge-contrast`
+
+**Typing a repeat bound overwrites the other one.** A block's minimum and
+maximum apply each keystroke at once (`getSetMin`/`getSetMax` in
+`afGuiContainer.component.js`), so typing a maximum of 12 over a minimum of 2
+passes through 1 and leaves the minimum at 1. React lets a bound be typed
+freely and moves the other bound to meet it once the input is left.
+`deviation:repeat-bounds-on-blur`
+
+**Typing a field's maximum below its minimum's first digit loses it.** A number
+field's minimum and maximum (and a multi-select's option count) are clamped on
+each keystroke (`onChangeMin`/`onChangeMax` in `afGuiField.component.js`), so
+with a minimum of 10, typing a maximum of 20 turns the "2" into 10 and ends at
+100. React keeps what is typed and brings a bound past the other back to it
+once the input is left. `deviation:field-bounds-on-blur`
+
+**A negative relative date offset cannot be typed.** While the offset input
+holds only "-", Angular hands `defaultDateOffset` no number, which writes
+`'+' + newValue` into the default, so the stored default stops being a valid
+relative date until a digit follows. React leaves the stored offset alone while
+the input holds no number and keeps the "-" on show.
+`deviation:date-offset-minus`
 
 **The "New Submission Form" choices are not sorted.** `afAdminListMenu`
 sorts the primary entities with `_.sortBy(links, 'Label')`, a key the links

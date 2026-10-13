@@ -440,18 +440,22 @@ export function PaletteAdd({
 export function useDebounced(value: string, commit: (value: string) => void) {
   const [draft, setDraft] = useState<{ text: string; pending: boolean } | null>(null);
   const timer = useRef<number | undefined>(undefined);
+  const pending = useRef<string | null>(null);
   const latest = useRef(commit);
   useEffect(() => {
     latest.current = commit;
   });
+  // An input that goes away, as when another tab opens, keeps what was typed into it.
   useEffect(
     () => () => {
       window.clearTimeout(timer.current);
+      if (pending.current !== null) latest.current(pending.current);
     },
     [],
   );
   const flush = (text: string) => {
     window.clearTimeout(timer.current);
+    pending.current = null;
     setDraft(null);
     latest.current(text);
   };
@@ -459,6 +463,7 @@ export function useDebounced(value: string, commit: (value: string) => void) {
     value: draft?.text ?? value,
     onChange: (text: string) => {
       setDraft({ text, pending: true });
+      pending.current = text;
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(() => {
         flush(text);

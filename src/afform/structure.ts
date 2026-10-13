@@ -40,12 +40,18 @@ export function joinOffsets(layout: LayoutNode[]): WeakMap<ElementNode, number> 
   return offsets;
 }
 
-/** Initial item count of an af-repeat, as afRepeat computes it. */
+/**
+ * Initial item count of an af-repeat, as afRepeat computes it, but never past `max`, which
+ * afRepeat overshoots. deviation:repeat-default-within-max
+ */
 export function repeatMinimum(node: ElementNode): number {
   const raw = node["af-repeat-default"];
   const fallback = raw === undefined || raw === "" || Number.isNaN(Number(raw)) ? 1 : Number(raw);
   const min = Number(node.min ?? 0);
-  return Math.max(fallback, Number.isNaN(min) ? 0 : min);
+  const count = Math.max(fallback, Number.isNaN(min) ? 0 : min);
+  // A max of 0 means no limit, as in afRepeat.
+  const max = Number(node.max);
+  return max > 0 ? Math.min(count, max) : count;
 }
 
 /** afForm's identifyTokens(): [Entity.index.field] references in a default. */

@@ -59,7 +59,13 @@ export function historyReducer<T>(history: History<T>, action: HistoryAction<T>)
       const present = Object.is(history.present, action.sent)
         ? saved
         : action.merge(history.present);
-      return { ...history, present, saved };
+      // What the server assigned, such as a new record's name, holds for undo and redo too.
+      return {
+        past: history.past.map(action.merge),
+        present,
+        future: history.future.map(action.merge),
+        saved,
+      };
     }
     case "adopt": {
       const present = action.update(history.present);

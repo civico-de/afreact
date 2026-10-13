@@ -139,22 +139,22 @@ function StyleItem({ api }: { api: FieldApi }) {
   );
 }
 
-/** Min and max: a number's bounds, or how many options a multi-select takes. */
-function MinMaxItem({ api }: { api: FieldApi }) {
+/**
+ * Min and max: a number's bounds, or how many options a multi-select takes. A bound is met
+ * with the other when its input is left, not per keystroke. deviation:field-bounds-on-blur
+ */
+export function MinMaxItem({ api }: { api: FieldApi }) {
   const attrs = api.state.local.input_attrs;
   const own = (key: string) => (isRecord(attrs) ? text(attrs[key]) : "");
   const set = (key: "min" | "max", value: number | undefined) => {
-    api.update((state) => {
-      const other = getProp(state, key === "min" ? "input_attrs.max" : "input_attrs.min");
-      // onChangeMin()/onChangeMax(): a bound past the other one takes the other's value.
-      const clamped =
-        value === undefined || typeof other !== "number"
-          ? value
-          : key === "min"
-            ? Math.min(value, other)
-            : Math.max(value, other);
-      return withLocal(state, ["input_attrs", key], clamped);
-    });
+    api.update((state) => withLocal(state, ["input_attrs", key], value));
+  };
+  // onChangeMin()/onChangeMax(): a bound past the other one takes the other's value.
+  const meet = (key: "min" | "max") => {
+    const value = getProp(api.state, `input_attrs.${key}`);
+    const other = getProp(api.state, key === "min" ? "input_attrs.max" : "input_attrs.min");
+    if (typeof value !== "number" || typeof other !== "number") return;
+    if (key === "min" ? value > other : value < other) set(key, other);
   };
   return (
     <li>
@@ -168,6 +168,9 @@ function MinMaxItem({ api }: { api: FieldApi }) {
               value={own(key)}
               onChange={(event) => {
                 set(key, numberOf(event.target.value));
+              }}
+              onBlur={() => {
+                meet(key);
               }}
             />
           </label>
@@ -294,7 +297,8 @@ function EntityRefItems({ api }: { api: FieldApi }) {
             placeholder={ts("Quick Add")}
             options={quickAdd}
             value={Array.isArray(chosen) ? chosen.map(text) : []}
-            onChange={(picked) => {
+            onChange={(pick) => {
+              const picked = pick(Array.isArray(chosen) ? chosen.map(text) : []);
               api.set("input_attrs.quickAdd", picked.length ? picked.map(String) : undefined);
             }}
           />
@@ -314,7 +318,7 @@ function EntityRefItems({ api }: { api: FieldApi }) {
 }
 
 /** The default value: how a date's is given, and the value itself. */
-function DefaultItems({ api }: { api: FieldApi }) {
+export function DefaultItems({ api }: { api: FieldApi }) {
   const typeId = useId();
   const valueId = useId();
   const offsetId = useId();
@@ -324,6 +328,12 @@ function DefaultItems({ api }: { api: FieldApi }) {
   const relative = text(getValue(state, "afform_default")).split(" ");
   const offset = Number.parseInt(relative[1] ?? "0", 10);
   const plural = Math.abs(offset) !== 1;
+  // The text typed, while the stored offset is still the one it was typed over or gave.
+  const [offsetDraft, setOffsetDraft] = useState<{ text: string; at?: string } | null>(null);
+  const signed = (typed: string) => {
+    const value = Number(typed);
+    return value < 0 ? String(value) : `+${String(value)}`;
+  };
   const setRelative = (index: number, value: string) => {
     const next = [...relative];
     next[index] = value;
@@ -365,10 +375,22 @@ function DefaultItems({ api }: { api: FieldApi }) {
             id={offsetId}
             className="form-control"
             type="number"
-            value={Number.isNaN(offset) ? "" : offset}
+            value={
+              offsetDraft && offsetDraft.at === relative[1]
+                ? offsetDraft.text
+                : Number.isNaN(offset)
+                  ? ""
+                  : offset
+            }
             onChange={(event) => {
-              const value = Number(event.target.value);
-              setRelative(1, value < 0 ? String(value) : `+${String(value)}`);
+              const typed = event.target.value;
+              // A lone "-" reads as empty; it stays on show until a digit follows.
+              // deviation:date-offset-minus
+              setOffsetDraft({ text: typed, at: typed === "" ? relative[1] : signed(typed) });
+              if (typed !== "") setRelative(1, signed(typed));
+            }}
+            onBlur={() => {
+              setOffsetDraft(null);
             }}
           />{" "}
           <select
@@ -484,9 +506,11 @@ function SearchItems({ api }: { api: FieldApi }) {
                 (option) => option.id !== state.fieldName,
               )}
               value={others}
-              onChange={(picked) => {
-                const names = [state.fieldName, ...picked.map(String)];
-                ops.edit((node) => ({ ...node, name: names.join(",") }));
+              onChange={(pick) => {
+                ops.edit((node) => {
+                  const current = (textAttribute(node, "name") ?? "").split(",").slice(1);
+                  return { ...node, name: [state.fieldName, ...pick(current)].join(",") };
+                });
               }}
             />
           </div>
