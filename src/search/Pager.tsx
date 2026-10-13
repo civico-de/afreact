@@ -16,6 +16,8 @@ interface PagerProps {
   limit: number;
   onPage: (page: number) => void;
   onLimit: (limit: number) => void;
+  /** Loads a page the pointer or focus has reached, ahead of its click. */
+  onPrefetch?: (page: number) => void;
   /** Rows selected for bulk actions. */
   selected?: number;
 }
@@ -28,8 +30,10 @@ export function Pager({
   limit,
   onPage,
   onLimit,
+  onPrefetch,
   selected = 0,
 }: PagerProps) {
+  const paging = { onPage, onPrefetch };
   const pages = limit ? Math.max(1, Math.ceil(rowCount / limit)) : 1;
   const shown = !settings.hide_single || pages > 1;
   return (
@@ -48,13 +52,8 @@ export function Pager({
               className="pagination-prev"
               label="⬅"
               name={ts("Previous")}
-              onSelect={
-                page > 1
-                  ? () => {
-                      onPage(page - 1);
-                    }
-                  : null
-              }
+              to={page > 1 ? page - 1 : null}
+              {...paging}
             />
             {pageLinks(page, pages).map((link, index) => (
               <PageItem
@@ -62,26 +61,16 @@ export function Pager({
                 className="pagination-page"
                 label={link.label}
                 current={link.active}
-                onSelect={
-                  link.active
-                    ? null
-                    : () => {
-                        onPage(link.number);
-                      }
-                }
+                to={link.active ? null : link.number}
+                {...paging}
               />
             ))}
             <PageItem
               className="pagination-next"
               label="⮕"
               name={ts("Next")}
-              onSelect={
-                page < pages
-                  ? () => {
-                      onPage(page + 1);
-                    }
-                  : null
-              }
+              to={page < pages ? page + 1 : null}
+              {...paging}
             />
           </ul>
         </nav>
@@ -146,12 +135,23 @@ interface PageItemProps {
   label: string;
   name?: string;
   current?: boolean;
-  onSelect: (() => void) | null;
+  /** The page the entry opens; null for the current page or an edge. */
+  to: number | null;
+  onPage: (page: number) => void;
+  onPrefetch: ((page: number) => void) | undefined;
 }
 
 /** An entry of SearchKit's pager; the theme styles its links and spans, so an inactive entry is a span. */
-function PageItem({ className, label, name, current = false, onSelect }: PageItemProps) {
-  const state = current ? " active" : onSelect ? "" : " disabled";
+function PageItem({
+  className,
+  label,
+  name,
+  current = false,
+  to,
+  onPage,
+  onPrefetch,
+}: PageItemProps) {
+  const state = current ? " active" : to === null ? " disabled" : "";
   const content = name ? (
     <>
       <span aria-hidden="true">{label}</span>
@@ -162,12 +162,19 @@ function PageItem({ className, label, name, current = false, onSelect }: PageIte
   );
   return (
     <li className={className + state}>
-      {onSelect ? (
+      {to !== null ? (
+        // deviation:next-page-prefetched
         <a
           href="#"
           onClick={(event) => {
             event.preventDefault();
-            onSelect();
+            onPage(to);
+          }}
+          onPointerEnter={() => {
+            onPrefetch?.(to);
+          }}
+          onFocus={() => {
+            onPrefetch?.(to);
           }}
         >
           {content}

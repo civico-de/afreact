@@ -222,24 +222,42 @@ function ResultDisplay({
   // The count and totals ignore sort, page and page size, so they are asked once per set of filters.
   // deviation:row-count-keyed-filters
   const countKey = ["SearchDisplay", "count", params];
-  const rowsKey = ["SearchDisplay", "run", params, activeSort, limit, page, columnParams];
+  const pageKey = (number: number, columns = columnParams) => [
+    "SearchDisplay",
+    "run",
+    params,
+    activeSort,
+    limit,
+    number,
+    columns,
+  ];
+  const fetchPage = async (number: number, columns = columnParams) => {
+    const result: ApiResult<Row> = await api4<Row>("SearchDisplay", "run", {
+      ...params,
+      ...columns,
+      limit,
+      sort: activeSort,
+      return: `page:${number}`,
+      ...(onDebug || debugMode() ? { debug: true } : {}),
+    });
+    // Same rule as searchDisplayBaseTrait: a short first page is the whole result, no count call needed.
+    if (number === 1 && (!limit || result.length < limit))
+      client.setQueryData(countKey, result.length);
+    return runPage(result);
+  };
+  const rowsKey = pageKey(page);
   const rows = useQuery({
     queryKey: rowsKey,
-    queryFn: async () => {
-      const result: ApiResult<Row> = await api4<Row>("SearchDisplay", "run", {
-        ...params,
-        ...columnParams,
-        limit,
-        sort: activeSort,
-        return: `page:${page}`,
-        ...(onDebug || debugMode() ? { debug: true } : {}),
-      });
-      // Same rule as searchDisplayBaseTrait: a short first page is the whole result, no count call needed.
-      if (page === 1 && (!limit || result.length < limit))
-        client.setQueryData(countKey, result.length);
-      return runPage(result);
-    },
+    queryFn: () => fetchPage(page),
     enabled: !!settings && enabled && runFilters !== null,
+    // deviation:page-keeps-rows
+    // Another page, sort or size of the same search and columns keeps the rows on show meanwhile.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery &&
+      JSON.stringify([previousQuery.queryKey[2], previousQuery.queryKey[6]]) ===
+        JSON.stringify([params, columnParams])
+        ? previous
+        : undefined,
   });
   const counted = useQuery({
     queryKey: countKey,
@@ -335,9 +353,15 @@ function ResultDisplay({
     return <Unsupported what={`display type ${loadedType}`} />;
   if (!settings) return <p role="status">{ts("Loading…")}</p>;
   const label = loaded.data?.label ?? "";
-  // A failed run shows no rows and no count, as searchDisplayBaseTrait does.
-  const result = loading || rows.error ? undefined : rows.data;
+  // A failed run shows no rows and no count, as searchDisplayBaseTrait does; kept rows stay meanwhile.
+  const result = (loading && !rows.isPlaceholderData) || rows.error ? undefined : rows.data;
   const setPage = (next: number) => void setUrl({ page: next === 1 ? null : next });
+  // deviation:next-page-prefetched
+  const prefetch = (number: number) =>
+    void client.prefetchQuery({
+      queryKey: pageKey(number, toggles.nextParams),
+      queryFn: () => fetchPage(number, toggles.nextParams),
+    });
   const onSearch = () => {
     // A click searches again even when the filters are the same.
     if (submitted && JSON.stringify(submitted.filters) === JSON.stringify(typed))
@@ -363,12 +387,16 @@ function ResultDisplay({
   const pager = type === "tree" ? false : settings.pager;
   const unsupported = [...unsupportedFeatures(stored ?? settings, shown, type), ...tasks.notes];
   const failed = counted.error ?? tallied.error ?? tasks.error ?? reorder.error;
+  const lastRows = shown?.rows.length ?? 0;
   const view = {
     settings,
     label,
     loading,
     result,
     error: rows.error,
+    // deviation:placeholders-page-tall
+    // As many placeholders as the page last on show had rows, so the display keeps its height.
+    placeholders: lastRows > 0 ? lastRows : (settings.placeholder ?? 5),
     afform,
     onLinkClick: tasks.onRowLink,
     inlineEdit,
@@ -408,6 +436,8 @@ function ResultDisplay({
       <p role="status" className="sr-only">
         {inlineEdit.announcement}
       </p>
+      {/* deviation:kept-rows-progress */}
+      {loading && result && <div className="afreact-search-progress" aria-hidden="true" />}
       {type === "tree" ? (
         <TreeView {...view} reorder={reorder} />
       ) : table ? (
@@ -434,6 +464,7 @@ function ResultDisplay({
           limit={limit}
           selected={tasks.selected}
           onPage={setPage}
+          onPrefetch={prefetch}
           onLimit={(next) => {
             void setUrl({ limit: next === settings.limit ? null : next, page: null });
           }}

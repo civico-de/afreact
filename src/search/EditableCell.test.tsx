@@ -48,7 +48,9 @@ function setup(
     "SearchDisplay.run": (params) =>
       params.return === "tally"
         ? [{}]
-        : Object.assign([row(value, shown)], { editable: { [key]: editInfo(info) } }),
+        : params.return === "row_count"
+          ? Object.assign([], { count: 2 })
+          : Object.assign([row(value, shown)], { editable: { [key]: editInfo(info) } }),
     // By default the server returns the row with the saved value, shown as "Saved".
     "SearchDisplay.inlineEdit":
       inlineEdit ?? ((params) => [row(Object.values(params.values ?? {})[0], "Saved")]),
@@ -298,6 +300,21 @@ describe("in-place editing", () => {
     await userEvent.type(field(), "s{Enter}");
     await waitFor(() => {
       expect(runs().filter(({ params }) => params.return === "page:1")).toHaveLength(2);
+    });
+  });
+
+  // deviation:next-page-prefetched
+  it("loads a page fetched ahead afresh once a save changed the page on show", async () => {
+    const { runs } = setup({ value_key: "job_title" }, "Pilot", {
+      settings: { limit: 1, pager: {} },
+    });
+    await userEvent.hover(await screen.findByRole("link", { name: "Next" }));
+    await open();
+    await userEvent.type(field(), "s{Enter}");
+    await screen.findByRole("button", { name: edit("Saved") });
+    await userEvent.click(screen.getByRole("link", { name: "Next" }));
+    await waitFor(() => {
+      expect(runs().filter(({ params }) => params.return === "page:2")).toHaveLength(2);
     });
   });
 

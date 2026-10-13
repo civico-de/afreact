@@ -1,4 +1,4 @@
-import { useQueryClient, type QueryClient, type QueryKey } from "@tanstack/react-query";
+import { hashKey, useQueryClient, type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import { api4, errorMessage } from "../api/civi";
 import type { Column, EditableInfo, Row, RunPage } from "./types";
@@ -92,12 +92,20 @@ export function mergeRow(old: Row, fresh: Row): Row {
 const runs = new WeakMap<RunPage, RunPage>();
 const runOf = (page: RunPage) => runs.get(page) ?? page;
 
-/** Changes the cached page in place of a reload; it still counts as the run it came from. */
+/**
+ * Changes the cached page in place of a reload; it still counts as the run it came from. The
+ * other cached pages of the run may have shifted with it, so they load afresh when shown.
+ */
 export function writePage(client: QueryClient, key: QueryKey, change: (page: RunPage) => RunPage) {
   const old = client.getQueryData<RunPage>(key);
   if (!old) return;
   const next = client.setQueryData<RunPage>(key, change(old));
   if (next) runs.set(next, runOf(old));
+  const own = hashKey(key);
+  client.removeQueries({
+    queryKey: key.slice(0, 3),
+    predicate: (query) => query.queryHash !== own,
+  });
 }
 
 export interface CellTarget {

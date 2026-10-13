@@ -90,6 +90,66 @@ describe("list display", () => {
     expect(within(links!).getByRole("link", { name: "View 1" })).toHaveAttribute("href", "/view/1");
   });
 
+  // deviation:page-keeps-rows
+  it("keeps a grid's boxes on show, inert, while the next page loads", async () => {
+    let release = () => {};
+    mockApi({
+      "SearchDisplay.run": async (params) => {
+        if (params.return === "row_count") return Object.assign([], { count: 4 });
+        if (params.return === "page:1") return [row(1), row(2)];
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        return [row(3), row(4)];
+      },
+    });
+    renderWithQuery(
+      <AfreactSearch
+        search="S"
+        display="D"
+        type="grid"
+        settings={{ columns, limit: 2, pager: {} }}
+      />,
+    );
+    const grid = await screen.findByRole("list", { name: "" });
+    await userEvent.click(await screen.findByRole("link", { name: "Next" }));
+    await waitFor(() => {
+      expect(grid).toHaveAttribute("aria-busy", "true");
+    });
+    expect(grid).toHaveAttribute("inert");
+    expect(within(grid).getByText("Item 1")).toBeInTheDocument();
+    expect(grid.querySelector(".crm-search-loading-placeholder")).toBeNull();
+    release();
+    expect(await within(grid).findByText("Item 3")).toBeInTheDocument();
+    expect(grid).not.toHaveAttribute("inert");
+  });
+
+  // deviation:placeholders-page-tall
+  it("shows as many grid placeholders as the grid last on show had boxes", async () => {
+    let release = () => {};
+    mockApi({
+      "SearchDisplay.run": async (params) => {
+        if (JSON.stringify(params.filters) !== "{}")
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+        return [row(1), row(2), row(3)];
+      },
+    });
+    const view = (filters?: Record<string, unknown>) => (
+      <AfreactSearch search="S" display="D" type="grid" settings={{ columns }} filters={filters} />
+    );
+    const { rerender } = renderWithQuery(view());
+    const grid = await screen.findByRole("list", { name: "" });
+    await within(grid).findByText("Item 3");
+    rerender(view({ label: "b" }));
+    await waitFor(() => {
+      expect(grid.querySelectorAll(".crm-search-loading-placeholder")).toHaveLength(3);
+    });
+    release();
+    expect(await within(grid).findByText("Item 1")).toBeInTheDocument();
+  });
+
   it("numbers an ol list and shows placeholders while loading", async () => {
     let release = () => {};
     const held = new Promise<void>((resolve) => {

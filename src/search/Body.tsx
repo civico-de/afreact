@@ -203,12 +203,14 @@ function ToggleCollapse({ count, collapsed, onToggle }: ToggleCollapseProps) {
 export function PlaceholderRows({
   settings,
   hidden = NONE,
+  count = settings.placeholder ?? 5,
 }: {
   settings: DisplaySettings;
   hidden?: ReadonlySet<number>;
+  count?: number;
 }) {
   const control = hasControlColumn(settings);
-  return Array.from({ length: settings.placeholder ?? 5 }, (_, placeholder) => (
+  return Array.from({ length: count }, (_, placeholder) => (
     <tr key={placeholder}>
       {control && (
         <td>

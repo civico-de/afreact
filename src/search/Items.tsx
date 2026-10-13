@@ -37,6 +37,8 @@ interface ItemsProps {
   /** The page shown, undefined while it loads or after a failed run. */
   result: RunPage | undefined;
   error: unknown;
+  /** How many placeholders stand in for a loading page. */
+  placeholders: number;
   afform?: string;
   onLinkClick: OnLinkClick;
   inlineEdit: InlineEdit;
@@ -107,49 +109,51 @@ export function ItemList({ type, ...props }: ItemsProps & { type: "list" | "grid
   const role = grid ? "listitem" : undefined;
   const sections = sectionStarts(result?.rows ?? [], settings.section_group_by);
   const noResults = noResultsText(settings);
-  const items = loading
-    ? Array.from({ length: settings.placeholder ?? 5 }, (_, index) =>
-        createElement(
-          item,
-          // crmSearchDisplayGridLoading.html sizes each placeholder box.
-          { key: index, role, style: grid ? { width: "100px", height: "50px" } : undefined },
-          <div className="crm-search-loading-placeholder" />,
-        ),
-      )
-    : (result?.rows ?? []).flatMap((row, index) => [
-        ...(sections.has(row)
-          ? [
-              createElement(
-                item,
-                {
-                  key: `header-${String(row.key ?? index)}`,
-                  role,
-                  className: grid
-                    ? "crm-search-display-grid-header-item"
-                    : "crm-search-display-group-header-item",
-                },
-                <SectionHeader value={sections.get(row)} tag={settings.header_tag} />,
-              ),
-            ]
-          : []),
-        createElement(
-          item,
-          {
-            // Grouped rows have no key; core writes an empty id for them.
-            key: row.key ?? index,
-            role,
-            "data-entity-id": row.key ?? "",
-            className: [`crm-search-display-${type}item`, row.cssClass].filter(Boolean).join(" "),
-          },
-          <ItemColumns
-            row={row}
-            settings={settings}
-            subsearch={result?.subsearch ?? {}}
-            afform={props.afform}
-            onLinkClick={props.onLinkClick}
-          />,
-        ),
-      ]);
+  // deviation:page-keeps-rows
+  const items =
+    loading && !result
+      ? Array.from({ length: props.placeholders }, (_, index) =>
+          createElement(
+            item,
+            // crmSearchDisplayGridLoading.html sizes each placeholder box.
+            { key: index, role, style: grid ? { width: "100px", height: "50px" } : undefined },
+            <div className="crm-search-loading-placeholder" />,
+          ),
+        )
+      : (result?.rows ?? []).flatMap((row, index) => [
+          ...(sections.has(row)
+            ? [
+                createElement(
+                  item,
+                  {
+                    key: `header-${String(row.key ?? index)}`,
+                    role,
+                    className: grid
+                      ? "crm-search-display-grid-header-item"
+                      : "crm-search-display-group-header-item",
+                  },
+                  <SectionHeader value={sections.get(row)} tag={settings.header_tag} />,
+                ),
+              ]
+            : []),
+          createElement(
+            item,
+            {
+              // Grouped rows have no key; core writes an empty id for them.
+              key: row.key ?? index,
+              role,
+              "data-entity-id": row.key ?? "",
+              className: [`crm-search-display-${type}item`, row.cssClass].filter(Boolean).join(" "),
+            },
+            <ItemColumns
+              row={row}
+              settings={settings}
+              subsearch={result?.subsearch ?? {}}
+              afform={props.afform}
+              onLinkClick={props.onLinkClick}
+            />,
+          ),
+        ]);
   return (
     <>
       <InlineEditContext value={props.inlineEdit}>
@@ -163,6 +167,7 @@ export function ItemList({ type, ...props }: ItemsProps & { type: "list" | "grid
             role: grid ? "list" : undefined,
             "aria-label": label || undefined,
             "aria-busy": loading,
+            inert: loading && !!result,
             style: !grid && settings.symbol ? { listStyle: settings.symbol } : undefined,
           },
           items,
@@ -290,7 +295,7 @@ export function TreeView(props: ItemsProps) {
     <>
       {loading ? (
         <ul aria-busy="true">
-          {Array.from({ length: settings.placeholder ?? 5 }, (_, index) => (
+          {Array.from({ length: props.placeholders }, (_, index) => (
             <li key={index}>
               <div className="crm-search-loading-placeholder" />
             </li>

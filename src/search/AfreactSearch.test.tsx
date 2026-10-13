@@ -109,6 +109,154 @@ describe("AfreactSearch", () => {
     expect(calls.map(({ params }) => params.return)).toEqual(["page:1", "row_count", "page:2"]);
   });
 
+  // deviation:next-page-prefetched
+  it("loads a page once the pointer or focus reaches its link, so its click shows it at once", async () => {
+    const calls = runs(7);
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+    await currentPage();
+    const table = screen.getByRole("table");
+    await userEvent.hover(screen.getByRole("link", { name: "Next" }));
+    await waitFor(() => {
+      expect(calls.map(({ params }) => params.return)).toContain("page:2");
+    });
+    screen.getByRole("link", { name: "3" }).focus();
+    await waitFor(() => {
+      expect(calls.map(({ params }) => params.return)).toContain("page:3");
+    });
+    await userEvent.click(screen.getByRole("link", { name: "Next" }));
+    expect(table).toHaveAttribute("aria-busy", "false");
+    expect(within(table).getByRole("link", { name: "Name 3" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("link", { name: "3" }));
+    expect(within(table).getByRole("link", { name: "Name 5" })).toBeInTheDocument();
+    expect(calls.map(({ params }) => params.return)).toEqual([
+      "page:1",
+      "row_count",
+      "page:2",
+      "page:3",
+    ]);
+    expect(calls.map(({ params }) => params.sort)).toEqual([
+      [["sort_name", "ASC"]],
+      undefined,
+      [["sort_name", "ASC"]],
+      [["sort_name", "ASC"]],
+    ]);
+  });
+
+  // deviation:page-keeps-rows
+  it("keeps a page's rows on show, inert, until the next arrives; new filters show placeholders", async () => {
+    const held: (() => void)[] = [];
+    mockApi({
+      "SearchDisplay.run": async (params) => {
+        if (params.return === "row_count") return Object.assign([], { count: 5 });
+        const page = Number(String(params.return).replace("page:", ""));
+        if (page > 1 || JSON.stringify(params.filters) !== "{}")
+          await new Promise<void>((resolve) => {
+            held.push(resolve);
+          });
+        return [page * 2 - 1, page * 2].filter((id) => id <= 5).map(row);
+      },
+    });
+    const view = (filters?: Record<string, unknown>) => (
+      <AfreactSearch search="S" display="D" settings={settings} filters={filters} />
+    );
+    const { rerender } = renderWithQuery(view());
+    const table = await screen.findByRole("table");
+    await currentPage();
+    const body = table.querySelector("tbody");
+
+    await userEvent.click(screen.getByRole("link", { name: "Next" }));
+    await waitFor(() => {
+      expect(table).toHaveAttribute("aria-busy", "true");
+    });
+    expect(body).toHaveAttribute("inert");
+    expect(within(table).getByText("Name 1")).toBeInTheDocument();
+    expect(table.querySelector(".crm-search-loading-placeholder")).toBeNull();
+    held.shift()?.();
+    expect(await screen.findByRole("link", { name: "Name 3" })).toBeInTheDocument();
+    expect(table).toHaveAttribute("aria-busy", "false");
+    expect(body).not.toHaveAttribute("inert");
+
+    rerender(view({ title: "b" }));
+    await waitFor(() => {
+      expect(table.querySelector(".crm-search-loading-placeholder")).not.toBeNull();
+    });
+    expect(within(table).queryByText("Name 3")).not.toBeInTheDocument();
+    held.shift()?.();
+    expect(await screen.findByRole("link", { name: "Name 1" })).toBeInTheDocument();
+  });
+
+  // deviation:kept-rows-progress
+  it("shows a progress bar over kept rows only, hidden from assistive tech", async () => {
+    const held: (() => void)[] = [];
+    mockApi({
+      "SearchDisplay.run": async (params) => {
+        if (params.return === "row_count") return Object.assign([], { count: 5 });
+        const page = Number(String(params.return).replace("page:", ""));
+        if (page > 1 || JSON.stringify(params.filters) !== "{}")
+          await new Promise<void>((resolve) => {
+            held.push(resolve);
+          });
+        return [page * 2 - 1, page * 2].filter((id) => id <= 5).map(row);
+      },
+    });
+    const view = (filters?: Record<string, unknown>) => (
+      <AfreactSearch search="S" display="D" settings={settings} filters={filters} />
+    );
+    const { container, rerender } = renderWithQuery(view());
+    await currentPage();
+    const progress = () => container.querySelector(".afreact-search-progress");
+    expect(progress()).toBeNull();
+
+    await userEvent.click(screen.getByRole("link", { name: "Next" }));
+    await waitFor(() => {
+      expect(progress()).toHaveAttribute("aria-hidden", "true");
+    });
+    held.shift()?.();
+    expect(await screen.findByRole("link", { name: "Name 3" })).toBeInTheDocument();
+    expect(progress()).toBeNull();
+
+    // Placeholders show the loading themselves.
+    rerender(view({ title: "b" }));
+    await waitFor(() => {
+      expect(container.querySelector(".crm-search-loading-placeholder")).not.toBeNull();
+    });
+    expect(progress()).toBeNull();
+    held.shift()?.();
+    expect(await screen.findByRole("link", { name: "Name 1" })).toBeInTheDocument();
+  });
+
+  // deviation:placeholders-page-tall
+  it("shows as many placeholder rows as the page last on show had rows", async () => {
+    const held: (() => void)[] = [];
+    mockApi({
+      "SearchDisplay.run": async (params) => {
+        if (params.return === "row_count") return Object.assign([], { count: 3 });
+        const page = Number(String(params.return).replace("page:", ""));
+        if (JSON.stringify(params.filters) !== "{}")
+          await new Promise<void>((resolve) => {
+            held.push(resolve);
+          });
+        return [page * 2 - 1, page * 2].filter((id) => id <= 3).map(row);
+      },
+    });
+    const view = (filters?: Record<string, unknown>) => (
+      <AfreactSearch search="S" display="D" settings={settings} filters={filters} />
+    );
+    const { rerender } = renderWithQuery(view());
+    const table = await screen.findByRole("table");
+    await currentPage();
+    await userEvent.click(screen.getByRole("link", { name: "Next" }));
+    expect(await screen.findByRole("link", { name: "Name 3" })).toBeInTheDocument();
+
+    rerender(view({ title: "b" }));
+    await waitFor(() => {
+      expect(table.querySelectorAll("tbody tr")).toHaveLength(1);
+    });
+    expect(table.querySelectorAll(".crm-search-loading-placeholder")).toHaveLength(3);
+    held.shift()?.();
+    expect(await screen.findByRole("link", { name: "Name 1" })).toBeInTheDocument();
+  });
+
   it("toggles the sort direction of a column and stays on the page, as core's setSort", async () => {
     const calls = runs(5);
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);

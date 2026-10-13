@@ -107,6 +107,8 @@ export function useColumnToggles(
   return {
     hidden,
     params: columns ? toggleColumnsParam(columns, fetchedHidden) : {},
+    /** The columns the next run asks for. */
+    nextParams: columns ? toggleColumnsParam(columns, hidden) : {},
     pick: (next: ReadonlySet<number>) => {
       const refetch = [...fetchedHidden].some((index) => !next.has(index));
       setState({ ...current, hidden: next, fetchedHidden: refetch ? next : fetchedHidden });

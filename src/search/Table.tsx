@@ -17,6 +17,8 @@ interface TableViewProps {
   /** The page shown, undefined while it loads or after a failed run. */
   result: RunPage | undefined;
   error: unknown;
+  /** How many placeholders stand in for a loading page. */
+  placeholders: number;
   afform?: string;
   hidden: ReadonlySet<number>;
   activeSort: Sort;
@@ -122,9 +124,12 @@ export function TableView(props: TableViewProps) {
         </tr>
         {tally && tally.header && tallyRow}
       </thead>
-      {/* Core swaps the rows for placeholders while a run loads. */}
-      <tbody>
-        {loading && <PlaceholderRows settings={settings} hidden={hidden} />}
+      {/* Core swaps the rows for placeholders while a run loads; kept rows wait, inert. */}
+      {/* deviation:page-keeps-rows */}
+      <tbody inert={loading && !!result}>
+        {loading && !result && (
+          <PlaceholderRows settings={settings} hidden={hidden} count={props.placeholders} />
+        )}
         {result?.rows.length === 0 && noResults !== null && (
           <tr>
             <td colSpan={columnCount}>
