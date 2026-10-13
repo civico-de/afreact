@@ -341,6 +341,8 @@ function Editor({
     });
   };
 
+  // deviation:undo-field-menu-toggle
+  // Undo and redo only move in the history; the redrawn canvas records no step of its own.
   const travel = (target: AfformDefinition | undefined, action: "undo" | "redo") => {
     dispatch({ type: action });
     const tab = target && selections.current.get(target);

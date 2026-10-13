@@ -269,6 +269,33 @@ test.describe("FormBuilder editor", () => {
     await expect(label).toHaveText("First Name");
   });
 
+  // deviation:undo-field-menu-toggle
+  test("undoes and redoes a toggle from a field's menu by the buttons", async ({ page }) => {
+    await page.goto(EDITOR);
+    const field = page.locator("#afGuiEditor-canvas-body .af-gui-field").first();
+    const marker = field.locator(".af-gui-field-required");
+    const undo = page.getByRole("button", { name: "Undo (Ctrl-Z)" });
+    const redo = page.getByRole("button", { name: "Redo (Ctrl-Shift-Z)" });
+    const required = async () => {
+      await field.getByRole("button", { name: "Configure" }).first().click();
+      return field.getByRole("button", { name: "Required" });
+    };
+    const toggle = await required();
+    const before = await toggle.getAttribute("aria-pressed");
+    await toggle.click();
+    await expect(toggle).not.toHaveAttribute("aria-pressed", before ?? "false");
+
+    // The first click on Undo, the menu still open, undoes the toggle.
+    await undo.click();
+    await expect(redo).toBeEnabled();
+    await expect(await required()).toHaveAttribute("aria-pressed", before ?? "false");
+    await page.keyboard.press("Escape");
+    await redo.click();
+    await expect(redo).toBeDisabled();
+    await expect(await required()).not.toHaveAttribute("aria-pressed", before ?? "false");
+    await expect(marker).toHaveCount(before === "true" ? 0 : 1);
+  });
+
   test("moves a field by keyboard with the grip on its bar", async ({ page }) => {
     await page.goto(EDITOR);
     await expect(labels(page).first()).toHaveText("First Name");

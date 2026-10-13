@@ -1082,6 +1082,14 @@ layout tab without leaving edit mode, so the edited markup stays pending and
 the next save applies it over the undone form (6.19, read from the code, not
 run). React disables undo and redo while the markup is being edited. `deviation:undo-off-while-markup`
 
+**Undo cannot take back a toggle from a field's menu.** One click on, for
+example, Required in a field's menu records two undo steps, both with the
+field required. Undo goes back to the first; drawing the canvas again changes
+the form once more, which the deep watcher records as a new step and so drops
+the redo. Every further Undo repeats this, so the toggle never goes back and
+Redo stays disabled (6.19, seen in the browser on a new Individual form). React
+records one step per change, and undo and redo only move in the history. `deviation:undo-field-menu-toggle`
+
 **Edits made during a save count as saved.** When `Afform.save` returns,
 `doSave()` marks the snapshot current at that moment as saved, which includes
 edits made while the request ran; the button shows "Saved" and leaving the
