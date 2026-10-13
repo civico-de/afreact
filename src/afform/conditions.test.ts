@@ -27,6 +27,9 @@ describe("evaluate", () => {
     expect(evaluate("'it\\'s'", data)).toBe("it's");
     expect(evaluate("true", data)).toBe(true);
     expect(evaluate("5", data)).toBe(5);
+    expect([".5", "5.", "+5", "-.5e1"].map((text) => evaluate(text, data))).toEqual([
+      0.5, 5, 5, -5,
+    ]);
     expect(evaluate('["a",2]', data)).toEqual(["a", 2]);
     expect(evaluate("Individual1[0][fields][first_name]", data)).toBe("Ada");
     expect(evaluate("Individual1[0]['fields'][\"age\"]", data)).toBe(36);

@@ -50,6 +50,8 @@ export function evaluate(expression: unknown, data: FormData): unknown {
   const text = expression.trim();
   if (text === "") return undefined;
   if (/^'(?:[^'\\]|\\.)*'$/.test(text)) return literal(text);
+  // $parse reads numbers JSON does not, such as .5, 5. and +5.
+  if (/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(text)) return Number(text);
   if (!PATH.test(text) || text === "true" || text === "false" || text === "null") {
     const value: unknown = JSON.parse(text);
     return value;
