@@ -517,7 +517,8 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
           }}
         >
           <i className="crm-i fa-ban" aria-hidden="true" />
-          <span className="sr-only">{ts("Remove")}</span>
+          {/* deviation:repeat-remove-named */}
+          <span className="sr-only">{ts("Remove item %1", { 1: position + 1 })}</span>
         </button>
       )}
     </div>

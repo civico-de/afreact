@@ -52,7 +52,9 @@ function renderPeople(children: LayoutNode[], prefill: () => unknown = () => [])
 const people = () => [...document.querySelectorAll<HTMLElement>("fieldset > [af-repeat-item]")];
 /** A person's own ⊘, after those of its emails. */
 const removePerson = (person: HTMLElement) =>
-  within(person).getAllByRole("button", { name: "Remove" }).at(-1)!;
+  within(person)
+    .getAllByRole("button", { name: /^Remove item/ })
+    .at(-1)!;
 const undo = () => screen.queryByRole("button", { name: "Undo" });
 
 // deviation:repeat-remove-undo
@@ -104,7 +106,9 @@ describe("undo of a removed repeat item", () => {
     await screen.findByRole("form");
     await userEvent.click(screen.getByRole("button", { name: "Add person" }));
     await userEvent.click(within(people()[1]!).getByRole("button", { name: "Add email" }));
-    await userEvent.click(within(people()[1]!).getAllByRole("button", { name: "Remove" })[0]!);
+    await userEvent.click(
+      within(people()[1]!).getAllByRole("button", { name: /^Remove item/ })[0]!,
+    );
     expect(within(people()[1]!).getByRole("button", { name: "Undo" })).toHaveFocus();
 
     await userEvent.click(removePerson(people()[0]!));

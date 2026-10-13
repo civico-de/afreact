@@ -222,7 +222,7 @@ describe("File fields", () => {
     ]);
     await userEvent.click(await screen.findByRole("button", { name: "Add" }));
     await userEvent.upload(screen.getAllByLabelText("Image")[1]!, png("second.png"));
-    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
+    await userEvent.click(screen.getAllByRole("button", { name: /^Remove item/ })[0]!);
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
 
     await waitFor(() => {
@@ -253,7 +253,7 @@ describe("File fields", () => {
     ]);
     await userEvent.click(await screen.findByRole("button", { name: "Add" }));
     await userEvent.upload(screen.getAllByLabelText("Image")[1]!, png("second.png"));
-    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[1]!);
+    await userEvent.click(screen.getAllByRole("button", { name: /^Remove item/ })[1]!);
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     expect(screen.getByText("second.png")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
@@ -285,7 +285,7 @@ describe("File fields", () => {
     ]);
     await userEvent.click(await screen.findByRole("button", { name: "Add" }));
     await userEvent.upload(screen.getAllByLabelText("Image")[1]!, png("second.png"));
-    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[1]!);
+    await userEvent.click(screen.getAllByRole("button", { name: /^Remove item/ })[1]!);
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     await userEvent.click(screen.getByRole("button", { name: "Remove file second.png" }));
     expect(screen.getAllByLabelText("Image")[1]).toHaveFocus();
@@ -318,7 +318,7 @@ describe("File fields", () => {
     ]);
     await userEvent.click(await screen.findByRole("button", { name: "Add" }));
     await userEvent.upload(screen.getAllByLabelText("Image")[1]!, png("second.png"));
-    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[1]!);
+    await userEvent.click(screen.getAllByRole("button", { name: /^Remove item/ })[1]!);
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     await userEvent.click(await screen.findByRole("button", { name: "Replace second.png" }));
@@ -356,7 +356,7 @@ describe("File fields", () => {
     const [, , first, second] = screen.getAllByLabelText("Scan");
     await userEvent.upload(first!, png("one.png"));
     await userEvent.upload(second!, png("two.png"));
-    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[1]!);
+    await userEvent.click(screen.getAllByRole("button", { name: /^Remove item/ })[1]!);
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
 
@@ -382,8 +382,8 @@ describe("File fields", () => {
     );
     await userEvent.click(await screen.findByRole("button", { name: "Add" }));
     await userEvent.upload(screen.getAllByLabelText("Scan")[1]!, png("two.png"));
-    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
-    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await userEvent.click(screen.getAllByRole("button", { name: /^Remove item/ })[0]!);
+    await userEvent.click(screen.getByRole("button", { name: /^Remove item/ }));
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     expect(screen.getByText("two.png")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
@@ -423,7 +423,7 @@ describe("File fields", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Add" }));
     await userEvent.upload(screen.getAllByLabelText("Image")[0]!, png("first.png"));
     await userEvent.upload(screen.getAllByLabelText("Image")[1]!, png("second.png"));
-    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[1]!);
+    await userEvent.click(screen.getAllByRole("button", { name: /^Remove item/ })[1]!);
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("first.png could not be uploaded");

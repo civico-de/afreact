@@ -48,7 +48,11 @@ export function TableView(props: TableViewProps) {
   const directionOf = (key: string | undefined) =>
     activeSort.find(([sorted]) => sorted === key)?.[1] ?? null;
   const tally = settings.tally;
-  const columnCount = settings.columns.length + (hasControlColumn(settings) ? 1 : 0);
+  // A full-width row spans the header's cells: shown columns, controls and the header tools.
+  const columnCount =
+    settings.columns.filter((_, index) => !hidden.has(index)).length +
+    (hasControlColumn(settings) ? 1 : 0) +
+    (props.headerTools ? 1 : 0);
   const tallyRow = !!result?.rows.length && !!tally && (
     <TallyRow settings={settings} tally={props.tally} hidden={hidden} />
   );

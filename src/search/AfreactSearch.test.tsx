@@ -358,6 +358,27 @@ describe("AfreactSearch", () => {
     expect(screen.queryByText("30 results")).not.toBeInTheDocument();
   });
 
+  // deviation:page-past-end-clamped
+  it("moves a page past the last one to the last page once the count is in", async () => {
+    const store = memoryStore("#?_page=5");
+    runs(5);
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />, store);
+    expect(await screen.findByRole("link", { name: "Name 5" })).toBeInTheDocument();
+    expect(await currentPage()).toHaveTextContent("3");
+    expect(store.params().get("_page")).toBe("3");
+  });
+
+  // deviation:results-announced
+  it("announces loading, then the result count", async () => {
+    runs(5);
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+    const status = () => screen.getAllByRole("status").map((region) => region.textContent);
+    expect(status()).toContain("Loading…");
+    await waitFor(() => {
+      expect(status()).toContain("Search finished: 5 results");
+    });
+  });
+
   it("takes a short first page as the whole result without a count call", async () => {
     const calls = runs(1);
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);

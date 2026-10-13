@@ -250,6 +250,11 @@ export function addRepeatItem(data: FormData, scope: Scope): FormData {
 function copied(record: Values): Values {
   const { id: _id, ...rest } = structuredClone(record);
   if ("is_primary" in rest) rest.is_primary = false;
+  // deviation:repeat-copy-stored-file
+  // The server keeps a stored file only on its own record, so the copy offers an empty chooser.
+  for (const [field, value] of Object.entries(rest)) {
+    if (isRecord(value) && "file_name" in value) delete rest[field];
+  }
   return rest;
 }
 

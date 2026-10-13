@@ -49,7 +49,11 @@ const contactForm: LayoutNode[] = [
               {
                 "#tag": "afblock-contact-email",
                 "#children": [
-                  field("email", { label: "Email", input_type: "Email", required: true }),
+                  field("email", {
+                    label: "Email",
+                    input_type: "Email",
+                    required: true,
+                  }),
                   field("is_primary", {
                     label: "Primary",
                     input_type: "CheckBox",
@@ -128,14 +132,24 @@ const fieldsForm = (fields: LayoutNode[]): LayoutNode[] => [
     "#children": [
       { "#tag": "af-entity", type: "Contact", name: "Individual1" },
       { "#tag": "fieldset", "af-fieldset": "Individual1", "#children": fields },
-      { "#tag": "button", "ng-click": "afform.submit()", "#children": [{ "#text": "Save" }] },
+      {
+        "#tag": "button",
+        "ng-click": "afform.submit()",
+        "#children": [{ "#text": "Save" }],
+      },
     ],
   },
 ];
 function renderFields(fields: LayoutNode[], values: Record<string, unknown>) {
   const calls = mockApi({
     "Afreact.getForm": () => [
-      { name: "afformTest", title: "Test", type: "form", layout: fieldsForm(fields), strings: [] },
+      {
+        name: "afformTest",
+        title: "Test",
+        type: "form",
+        layout: fieldsForm(fields),
+        strings: [],
+      },
     ],
     "Afform.prefill": () => [{ name: "Individual1", values: [{ fields: values }] }],
     "Afform.submit": () => [{}],
@@ -250,7 +264,11 @@ describe("AfreactForm", () => {
       [
         field("first_name", { label: "First Name", required: true }),
         field("last_name", { label: "Last Name", required: true }),
-        field("email", { label: "Email", input_type: "Email", help_post: "Work address" }),
+        field("email", {
+          label: "Email",
+          input_type: "Email",
+          help_post: "Work address",
+        }),
         field("nick_name", { label: "Nick Name", required: true }),
       ],
       { nick_name: "Al" },
@@ -297,7 +315,13 @@ describe("AfreactForm", () => {
           "af-join": "Email",
           "af-repeat": "Add email",
           min: "2",
-          "#children": [field("email", { label: "Email", input_type: "Email", required: true })],
+          "#children": [
+            field("email", {
+              label: "Email",
+              input_type: "Email",
+              required: true,
+            }),
+          ],
         },
         {
           "#tag": "div",
@@ -366,7 +390,11 @@ describe("AfreactForm", () => {
             required: true,
             input_attrs: { minlength: 3 },
           }),
-          field("note", { label: "Note", input_type: "TextArea", input_attrs: { minlength: 5 } }),
+          field("note", {
+            label: "Note",
+            input_type: "TextArea",
+            input_attrs: { minlength: 5 },
+          }),
         ],
         { first_name: "Al", note: "Hi" },
       );
@@ -392,7 +420,12 @@ describe("AfreactForm", () => {
 
     it("measures the trimmed text, as ng-minlength does", async () => {
       const calls = renderFields(
-        [field("first_name", { label: "First Name", input_attrs: { minlength: 3 } })],
+        [
+          field("first_name", {
+            label: "First Name",
+            input_attrs: { minlength: 3 },
+          }),
+        ],
         { first_name: "Ada" },
       );
       const name = await screen.findByRole("textbox", { name: "First Name" });
@@ -408,8 +441,15 @@ describe("AfreactForm", () => {
     it("lets an empty value through and leaves minlength off other input types", async () => {
       const calls = renderFields(
         [
-          field("first_name", { label: "First Name", input_attrs: { minlength: 3 } }),
-          field("email", { label: "Email", input_type: "Email", input_attrs: { minlength: 30 } }),
+          field("first_name", {
+            label: "First Name",
+            input_attrs: { minlength: 3 },
+          }),
+          field("email", {
+            label: "Email",
+            input_type: "Email",
+            input_attrs: { minlength: 30 },
+          }),
         ],
         { email: "ada@example.org" },
       );
@@ -495,7 +535,12 @@ describe("AfreactForm", () => {
   it("announces the save as afForm does and closes the popup it sits in", async () => {
     const dialog = vi.fn(() => popup);
     const trigger = vi.fn(() => popup);
-    const popup = jquerySelection({ length: 1, data: () => "", trigger, dialog });
+    const popup = jquerySelection({
+      length: 1,
+      data: () => "",
+      trigger,
+      dialog,
+    });
     vi.mocked(window.CRM.$).mockReturnValue(popup);
     renderForm(() => [{ saved: true }]);
     await userEvent.click(await screen.findByRole("button", { name: "Save" }));
@@ -562,7 +607,7 @@ describe("AfreactForm", () => {
   it("adds and removes email records within min and max and moves the primary flag", async () => {
     renderForm(() => [{}], "");
     await screen.findByRole("form");
-    expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Remove item/ })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Add email" }));
     expect(screen.getAllByRole("textbox", { name: "Email" })).toHaveLength(2);
     expect(screen.queryByRole("button", { name: "Add email" })).not.toBeInTheDocument();
@@ -573,7 +618,7 @@ describe("AfreactForm", () => {
     expect(first).not.toBeChecked();
     expect(second).toBeChecked();
 
-    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
+    await userEvent.click(screen.getAllByRole("button", { name: /^Remove item/ })[0]!);
     expect(screen.getAllByRole("textbox", { name: "Email" })).toHaveLength(1);
 
     // The primary record went; afField's watcher makes the first one primary again.
@@ -596,7 +641,7 @@ describe("AfreactForm", () => {
     await userEvent.type(second!, "b@example.org");
 
     // The primary record goes, so the flag moves to the one left; Undo moves it back.
-    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
+    await userEvent.click(screen.getAllByRole("button", { name: /^Remove item/ })[0]!);
     const undo = screen.getByRole("button", { name: "Undo" });
     expect(undo).toHaveFocus();
     expect(undo).toHaveAccessibleDescription("Removed.");
@@ -612,9 +657,9 @@ describe("AfreactForm", () => {
     const [primary, other] = screen.getAllByRole("radio", { name: "Primary" });
     expect(primary).toBeChecked();
     expect(other).not.toBeChecked();
-    expect(screen.getAllByRole("button", { name: "Remove" })[0]).toHaveFocus();
+    expect(screen.getAllByRole("button", { name: /^Remove item/ })[0]).toHaveFocus();
 
-    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[1]!);
+    await userEvent.click(screen.getAllByRole("button", { name: /^Remove item/ })[1]!);
     expect(screen.getByRole("button", { name: "Undo" })).toHaveFocus();
     await userEvent.type(screen.getByRole("textbox", { name: "Email" }), "x");
     expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
@@ -679,7 +724,9 @@ describe("AfreactForm", () => {
         <AfreactForm name="afsearchTest" source="page" location={{ search: "", hash: "" }} />,
       );
       // The default normaliser would turn the non-breaking space into a plain one.
-      const text = await screen.findByText("a\u00a0b", { normalizer: (value) => value });
+      const text = await screen.findByText("a\u00a0b", {
+        normalizer: (value) => value,
+      });
       expect(text).toBeInTheDocument();
       expect(calls).toEqual([]);
     } finally {
@@ -690,7 +737,11 @@ describe("AfreactForm", () => {
   it("renders a search page without prefill and flags what it cannot render", async () => {
     const layout: LayoutNode[] = [
       { "#comment": "note" },
-      { "#tag": "div", "af-if": "x", "#children": [{ "#text": "never shown" }] },
+      {
+        "#tag": "div",
+        "af-if": "x",
+        "#children": [{ "#text": "never shown" }],
+      },
       { "#text": "{{ total }}" },
       { "#tag": "crm-search-display-map", "#children": [] },
       { "#tag": "crm-search-display-table", settings: { limit: 5 } },
@@ -706,7 +757,13 @@ describe("AfreactForm", () => {
     ];
     const calls = mockApi({
       "Afreact.getForm": () => [
-        { name: "afsearchTest", title: "Search", type: "search", layout, strings: [] },
+        {
+          name: "afsearchTest",
+          title: "Search",
+          type: "search",
+          layout,
+          strings: [],
+        },
       ],
     });
     renderWithQuery(<AfreactForm name="afsearchTest" location={{ search: "", hash: "" }} />);
@@ -737,7 +794,13 @@ describe("AfreactForm", () => {
     ];
     mockApi({
       "Afreact.getForm": () => [
-        { name: "afformTest", title: "Attrs", type: "form", layout, strings: [] },
+        {
+          name: "afformTest",
+          title: "Attrs",
+          type: "form",
+          layout,
+          strings: [],
+        },
       ],
       "Afform.prefill": () => [],
     });
@@ -768,7 +831,13 @@ describe("AfreactForm", () => {
     for (const update of [false, true]) {
       mockApi({
         "Afreact.getForm": () => [
-          { name: "afformTest", title: "Ids", type: "form", layout: layout(update), strings: [] },
+          {
+            name: "afformTest",
+            title: "Ids",
+            type: "form",
+            layout: layout(update),
+            strings: [],
+          },
         ],
         "Afform.prefill": () => [],
       });
@@ -813,7 +882,13 @@ describe("AfreactForm", () => {
     ];
     const calls = mockApi({
       "Afreact.getForm": () => [
-        { name: "afformTest", title: "Mixed", type: "form", layout, strings: [] },
+        {
+          name: "afformTest",
+          title: "Mixed",
+          type: "form",
+          layout,
+          strings: [],
+        },
       ],
       "Afform.prefill": () => [],
       "SearchDisplay.run": () => [{ key: 1, columns: [{ val: 1 }] }],
@@ -834,7 +909,11 @@ describe("AfreactForm", () => {
     // afRepeat.html's line break keeps the buttons apart.
     expect(add.nextSibling?.textContent).toBe(" ");
     expect(add.nextElementSibling).toBe(screen.getByRole("button", { name: "Copy" }));
-    expect(visibleText(screen.getAllByRole("button", { name: "Remove" })[0]!)).toBe("");
+    expect(visibleText(screen.getAllByRole("button", { name: /^Remove item/ })[0]!)).toBe("");
+    // deviation:repeat-remove-named
+    expect(
+      screen.getAllByRole("button", { name: /^Remove item/ }).map((b) => b.textContent),
+    ).toEqual(["Remove item 1", "Remove item 2"]);
     await userEvent.click(add);
     expect(
       screen
@@ -858,12 +937,21 @@ describe("AfreactForm", () => {
         "search-name": "S",
         "display-name": "D",
         "total-count": "totalCount",
-        settings: { columns: [{ type: "field", key: "id", label: "ID" }], pager: false },
+        settings: {
+          columns: [{ type: "field", key: "id", label: "ID" }],
+          pager: false,
+        },
       },
     ];
     mockApi({
       "Afreact.getForm": () => [
-        { name: "afsearchTest", title: "Search", type: "search", layout, strings: [] },
+        {
+          name: "afsearchTest",
+          title: "Search",
+          type: "search",
+          layout,
+          strings: [],
+        },
       ],
       "SearchDisplay.run": () => [{ key: 1, columns: [{ val: 1 }] }],
     });
@@ -874,12 +962,21 @@ describe("AfreactForm", () => {
 
   it("renders line breaks and rules the layout lists with an empty child list", async () => {
     const layout: LayoutNode[] = [
-      { "#tag": "p", "#children": [{ "#text": "a" }, { "#tag": "br", "#children": [] }] },
+      {
+        "#tag": "p",
+        "#children": [{ "#text": "a" }, { "#tag": "br", "#children": [] }],
+      },
       { "#tag": "hr", class: "wide", "#children": [] },
     ];
     mockApi({
       "Afreact.getForm": () => [
-        { name: "afsearchTest", title: "Search", type: "search", layout, strings: [] },
+        {
+          name: "afsearchTest",
+          title: "Search",
+          type: "search",
+          layout,
+          strings: [],
+        },
       ],
     });
     const { container } = renderWithQuery(

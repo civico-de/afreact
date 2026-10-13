@@ -196,6 +196,19 @@ describe("repeats", () => {
     data = setValue(setValue(data, scope, "id", 5), scope, "first_name", "Ada");
     expect(copyRepeatItem(data, scope).Individual1?.[1]?.fields).toEqual({ first_name: "Ada" });
   });
+
+  // deviation:repeat-copy-stored-file
+  it("leaves a stored file out of a copy, which the server would not save on it", () => {
+    let data = ensureRepeatItems(emptyData(["Individual1"]), joinScope, 1);
+    const first = { ...joinScope, joinIndex: 0 };
+    const file = { id: 7, file_name: "cv.pdf", icon: "fa-file-pdf-o" };
+    data = setValue(setValue(data, first, "attachment", file), first, "label", "CV");
+    expect(emails(copyRepeatItem(data, joinScope))[1]).toEqual({ label: "CV" });
+
+    const scope = { entity: "Individual1", index: 0 };
+    data = setValue(data, scope, "image", { id: 3, file_name: "me.png" });
+    expect(copyRepeatItem(data, scope).Individual1?.[1]?.fields).toEqual({});
+  });
 });
 
 describe("primary records", () => {

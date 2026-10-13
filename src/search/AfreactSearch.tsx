@@ -19,6 +19,7 @@ import { useAutoOpen, useFormSuccess } from "./links";
 import { Pager, SearchButton } from "./Pager";
 import { useReorder } from "./Reorder";
 import { runPage, settingsOf, unsupportedFeatures } from "./rows";
+import { resultCount } from "./selection";
 import { TableView, type HeaderTools } from "./Table";
 import { useTasks } from "./Tasks";
 import { DisplayHeader } from "./Toolbar";
@@ -312,6 +313,16 @@ function ResultDisplay({
   // Before the first click of a search button nothing loads.
   const loading = rows.isFetching || (rows.isPending && enabled && runFilters !== null);
   const rowCount = rows.error ? null : (counted.data ?? null);
+  // deviation:page-past-end-clamped
+  // A page past the last one, after rows left the result or from an old link, moves to the last.
+  const lastPage =
+    limit && rowCount !== null && !counted.isFetching
+      ? Math.max(1, Math.ceil(rowCount / limit))
+      : null;
+  useEffect(() => {
+    if (lastPage !== null && page > lastPage)
+      void setUrl({ page: lastPage === 1 ? null : lastPage });
+  }, [lastPage, page, setUrl]);
   const tasks = useTasks({
     search: runSearch,
     display: runDisplay,
@@ -430,8 +441,13 @@ function ResultDisplay({
           )
         }
       />
+      {/* deviation:results-announced */}
       <p role="status" className="sr-only">
-        {loading ? ts("Loading…") : ""}
+        {loading
+          ? ts("Loading…")
+          : result && rowCount !== null
+            ? ts("Search finished: %1", { 1: resultCount(rowCount, 0) })
+            : ""}
       </p>
       <p role="status" className="sr-only">
         {inlineEdit.announcement}

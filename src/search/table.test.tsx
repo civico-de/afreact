@@ -53,6 +53,24 @@ describe("AfreactSearch table features", () => {
     ).toEqual([true, true, false]);
   });
 
+  it("spans the empty-result row across the header's cells, without hidden columns", async () => {
+    runs(() => []);
+    const tools = { column: () => null, end: null, endLabel: "Tools" };
+    renderWithQuery(
+      <AfreactSearch
+        search="S"
+        display="D"
+        settings={{ columns, toggleColumns: true }}
+        savedColumns={{ name: "Name" }}
+        headerTools={tools}
+      />,
+    );
+    const cell = (await screen.findByText(/./, { selector: ".alert-info" })).closest("td");
+    const headers = screen.getAllByRole("columnheader");
+    expect(headers).toHaveLength(2);
+    expect(cell).toHaveAttribute("colspan", String(headers.length));
+  });
+
   // deviation:keyless-rows
   it("renders grouped rows, which have no key, with an empty id and no selection or editing", async () => {
     const grouped = (val: string): Row => ({ columns: [{ val }, { val: "" }, { links: [] }] });

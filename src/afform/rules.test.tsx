@@ -579,7 +579,7 @@ describe("live rules", () => {
     const second = screen.getAllByRole("textbox", { name: "email" })[1]!;
     await userEvent.clear(second);
     await userEvent.type(second, "mine@example.org");
-    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
+    await userEvent.click(screen.getAllByRole("button", { name: /^Remove item/ })[0]!);
     await userEvent.type(box("first_name"), "ada");
     expect(box("email")).toHaveValue("mine@example.org");
   });
@@ -602,7 +602,7 @@ describe("live rules", () => {
     await screen.findByRole("textbox", { name: "first_name" });
     const last = screen.getAllByRole("textbox", { name: "signature_text" })[2]!;
     await userEvent.type(last, "mine");
-    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
+    await userEvent.click(screen.getAllByRole("button", { name: /^Remove item/ })[0]!);
     await userEvent.type(box("first_name"), "ada");
     const [first, second, third] = screen.getAllByRole("textbox", { name: "signature_text" });
     expect(first).toHaveValue("ada");
