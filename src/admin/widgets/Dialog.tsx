@@ -1,5 +1,23 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
+/**
+ * On unmount, focus goes back to the element focused at open, or, when that sat in a popover menu
+ * that is gone, to the menu's button. `deviation:dialog-return-focus`
+ */
+export function useReturnFocus() {
+  useEffect(() => {
+    const opener = document.activeElement;
+    const menuId = opener?.closest("[popover]")?.id;
+    const menuButton = [...document.querySelectorAll("[popovertarget]")].find(
+      (button) => menuId && button.getAttribute("popovertarget") === menuId,
+    );
+    return () => {
+      const target = opener?.isConnected ? opener : menuButton;
+      if (target instanceof HTMLElement && target.isConnected) target.focus();
+    };
+  }, []);
+}
+
 /** crm-dialog as a native modal dialog: Escape closes it, focus returns to the opener. */
 export function Dialog({
   title,
@@ -19,6 +37,7 @@ export function Dialog({
 }) {
   const titleId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
+  useReturnFocus();
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
   });

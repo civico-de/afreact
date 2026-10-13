@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useReturnFocus } from "./Dialog";
 
 interface ConfirmDialogProps {
   title: string;
@@ -21,6 +22,7 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const titleId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
+  useReturnFocus();
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
   });
