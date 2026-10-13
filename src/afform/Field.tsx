@@ -503,7 +503,12 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
       case "Range":
         return <Range {...{ id, defn, value, onChange, disabled, describedBy }} />;
       case "Location":
-        return <Location {...{ id, labelId, value, onChange, disabled, describedBy }} />;
+        return (
+          <Location
+            {...{ id, labelId, value, onChange, disabled, describedBy }}
+            required={defn.required === true}
+          />
+        );
       case "CheckoutBlock":
         return (
           <CheckoutBlock

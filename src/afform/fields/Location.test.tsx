@@ -111,3 +111,18 @@ describe("Location fields", () => {
     );
   });
 });
+
+// deviation:required-rich-text-location
+it("requires a distance and an address when the field is required", () => {
+  window.CRM.vars = { afreact: { distanceUnit: "km" } };
+  render(
+    <Field
+      defn={{ ...proximity, required: true }}
+      value={null}
+      disabled={false}
+      onChange={vi.fn<(value: unknown) => void>()}
+    />,
+  );
+  expect(screen.getByRole("spinbutton", { name: "Distance" })).toBeRequired();
+  expect(screen.getByRole("textbox", { name: "Address" })).toBeRequired();
+});

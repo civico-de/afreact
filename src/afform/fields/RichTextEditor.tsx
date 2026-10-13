@@ -75,6 +75,8 @@ export function RichTextEditor({
         name={defn.name}
         className={defn.input_style ?? undefined}
         disabled={disabled}
+        // deviation:required-rich-text-location
+        required={defn.required === true}
         aria-describedby={describedBy}
         aria-invalid={invalid}
         value={text}

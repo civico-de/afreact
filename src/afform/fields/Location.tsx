@@ -7,6 +7,7 @@ interface LocationProps {
   onChange: (value: unknown) => void;
   disabled: boolean;
   describedBy: string | undefined;
+  required: boolean;
 }
 
 /** The value of the Address proximity filter (AddressGetSpecProvider). */
@@ -25,7 +26,15 @@ function isLocation(value: unknown): value is LocationValue {
  * null before. The address counts on leaving its input, as in core.
  * deviation:location-inputs-labelled
  */
-export function Location({ id, labelId, value, onChange, disabled, describedBy }: LocationProps) {
+export function Location({
+  id,
+  labelId,
+  value,
+  onChange,
+  disabled,
+  describedBy,
+  required,
+}: LocationProps) {
   const unit = window.CRM.vars?.afreact?.distanceUnit;
   const [values, setValues] = useState<LocationValue>(() =>
     isLocation(value) ? value : { distance: null, distance_unit: unit ?? "", address: "" },
@@ -63,6 +72,8 @@ export function Location({ id, labelId, value, onChange, disabled, describedBy }
         aria-label={ts("Distance")}
         aria-describedby={describedBy}
         disabled={disabled}
+        // deviation:required-rich-text-location
+        required={required}
         value={values.distance ?? ""}
         onChange={(event) => {
           update({ distance: event.target.value === "" ? null : Number(event.target.value) });
@@ -85,6 +96,7 @@ export function Location({ id, labelId, value, onChange, disabled, describedBy }
         placeholder={ts("Street, City, State, Country")}
         aria-label={ts("Address")}
         disabled={disabled}
+        required={required}
         value={address}
         onChange={(event) => {
           setAddress(event.target.value);

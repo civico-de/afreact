@@ -137,6 +137,12 @@ code, not run). The React renderer restores the field values only. It sends
 
 ## Fields and filters
 
+**A required rich text or proximity field can be submitted empty.**
+`fields/RichTextEditor.html` and `afLocationInput` set no `ng-required`, so
+the form shows the required marker but sends the empty field; only the server
+rejects it. React marks the textarea, the distance and the address required.
+`deviation:required-rich-text-location`
+
 **"Choose undefined first".** When a chained select's control field is empty,
 afField looks the control field's label up among its neighbours and puts
 `Choose %1 first` in the placeholder. If that field has no label or sits

@@ -134,3 +134,17 @@ describe("RichTextEditor", () => {
     expect(onChange).toHaveBeenLastCalledWith("a");
   });
 });
+
+// deviation:required-rich-text-location
+it("keeps a required editor invalid while it is empty", () => {
+  mockEditor();
+  const { container } = render(
+    <Field
+      defn={{ ...defn, required: true }}
+      value=""
+      disabled={false}
+      onChange={vi.fn<(value: unknown) => void>()}
+    />,
+  );
+  expect(container.querySelector("textarea")?.validity.valueMissing).toBe(true);
+});
