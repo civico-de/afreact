@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { EntityTags } from "../../widgets/EntityTags";
 import { useCoreHas } from "../../version";
-import type { EditorSearch } from "../editor";
+import { SAVED_SEARCH_FIELDS, type EditorSearch } from "../editor";
 
 interface SettingsTabProps {
   search: EditorSearch;
@@ -22,8 +22,8 @@ export function SettingsTab({
   onChange,
   onToggleEntitySet,
 }: SettingsTabProps) {
-  // SavedSearch.timeout arrived with 6.20; an older core drops it on save.
-  const hasTimeout = useCoreHas({ "6.20": "6.20.alpha1" });
+  // An older core drops a field it lacks on save, so it is not offered there.
+  const hasTimeout = useCoreHas(SAVED_SEARCH_FIELDS.timeout ?? {});
   const id = useId();
   return (
     <>

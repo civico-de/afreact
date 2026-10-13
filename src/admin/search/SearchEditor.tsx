@@ -7,7 +7,7 @@ import type { RunDebug } from "../../search/types";
 import { splitHash } from "../../url/hash";
 import { isDirty, useHistory } from "../history";
 import { LeaveGuardContext, navigate, useLeaveGuard } from "../route";
-import { useCoreHas } from "../version";
+import { CoreVersion, useCoreHas } from "../version";
 import {
   addDisplay,
   cloneDisplay,
@@ -86,12 +86,16 @@ function createOptions() {
   };
 }
 
-async function loadSearch(meta: SearchAdminMetadata, route: EditorRoute): Promise<EditorSearch> {
+async function loadSearch(
+  meta: SearchAdminMetadata,
+  route: EditorRoute,
+  version: string,
+): Promise<EditorSearch> {
   if (route.mode === "create") return newSearch(meta, route.entity, createOptions());
   const [raw] = await api4<Record<string, unknown>>(
     "SavedSearch",
     "get",
-    loadParams(route.id, route.mode),
+    loadParams(route.id, route.mode, version),
   );
   if (!raw) throw new Error(ts("Saved search %1 not found.", { 1: route.id }));
   const search = normalize(raw);
@@ -102,11 +106,13 @@ async function loadSearch(meta: SearchAdminMetadata, route: EditorRoute): Promis
 export function SearchEditor(route: EditorRoute) {
   const pageLoaded = usePageLoaded();
   const meta = useSearchMetadata();
+  const version = useContext(CoreVersion);
   const loaded = useQuery({
     queryKey: ["SavedSearch", "editor", route],
     queryFn: () => {
       if (!meta.data) throw new Error(ts("The SearchKit metadata is not loaded."));
-      return loadSearch(meta.data, route);
+      if (version === null) throw new Error("SearchEditor needs the builder's core version");
+      return loadSearch(meta.data, route, version);
     },
     enabled: !!meta.data,
     gcTime: 0,

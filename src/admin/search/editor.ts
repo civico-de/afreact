@@ -1,5 +1,6 @@
 import { getEntity, type ApiParams, type SearchInfo } from "./expr";
 import type { SearchAdminMetadata } from "./meta";
+import { coreHas } from "../version";
 
 export interface SmartGroup {
   id?: number;
@@ -43,18 +44,23 @@ const TAG_JOIN = [
   ["id", "=", "entity_tag.entity_id"],
 ];
 
+/** The SavedSearch fields the editor reads and saves, each with the core it arrived in (coreHas()). */
+export const SAVED_SEARCH_FIELDS: Record<string, Record<string, string>> = {
+  label: {},
+  description: {},
+  api_entity: {},
+  api_params: {},
+  form_values: {},
+  is_template: {},
+  expires_date: {},
+  timeout: { "6.20": "6.20.alpha1" },
+};
+
 /** The SavedSearch.get core's edit and clone routes resolve, with groups and displays chained. */
-export function loadParams(id: number, mode: "edit" | "clone"): object {
-  const base = [
-    "label",
-    "description",
-    "api_entity",
-    "api_params",
-    "form_values",
-    "is_template",
-    "expires_date",
-    "timeout",
-  ];
+export function loadParams(id: number, mode: "edit" | "clone", version: string): object {
+  const base = Object.keys(SAVED_SEARCH_FIELDS).filter((field) =>
+    coreHas(version, SAVED_SEARCH_FIELDS[field] ?? {}),
+  );
   const tags = "GROUP_CONCAT(DISTINCT entity_tag.tag_id) AS tag_id";
   const where = [["saved_search_id", "=", "$id"]];
   return {

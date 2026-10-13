@@ -31,10 +31,10 @@ const saved = (over: Partial<EditorSearch> = {}): EditorSearch => ({
 
 describe("loading", () => {
   it("chains groups and displays for editing, only display basics for cloning", () => {
-    const edit = loadParams(7, "edit");
+    const edit = loadParams(7, "edit", "6.20.0");
     expect(edit).toMatchObject({ where: [["id", "=", 7]], groupBy: ["id"] });
     expect(JSON.stringify(edit)).toContain('"groups":["Group","get"');
-    const clone = loadParams(7, "clone");
+    const clone = loadParams(7, "clone", "6.20.0");
     expect(JSON.stringify(clone)).not.toContain("groups");
     expect(JSON.stringify(clone)).toContain('"select":["label","type","settings"]');
   });

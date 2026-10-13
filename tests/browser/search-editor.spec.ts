@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
-import { loadParams } from "../../src/admin/search/editor";
+import { loadParams, SAVED_SEARCH_FIELDS } from "../../src/admin/search/editor";
+import { coreHas } from "../../src/admin/version";
 import { searchRoundTrip } from "../../src/admin/search/roundTrip";
 import { api, axeFindings, ownFindings } from "./harness";
 
@@ -230,9 +231,30 @@ test.describe("SearchKit search editor", () => {
   });
 });
 
+const coreVersion = async (page: Page) => {
+  const version = await page.locator("[core-version]").first().getAttribute("core-version");
+  if (!version) throw new Error("The builder page names no core version.");
+  return version;
+};
+
+test("reads and saves exactly the SavedSearch fields the running core has", async ({ page }) => {
+  await page.goto("/civicrm/admin/afreact/search#/list");
+  const version = await coreVersion(page);
+  const known = new Set(
+    (await api<{ name: string }>(page, "SavedSearch", "getFields", { select: ["name"] })).map(
+      (field) => field.name,
+    ),
+  );
+  const wrong = Object.entries(SAVED_SEARCH_FIELDS)
+    .filter(([name, since]) => coreHas(version, since) !== known.has(name))
+    .map(([name]) => name);
+  expect(wrong).toEqual([]);
+});
+
 // Reports IDs and paths only: a search's conditions can hold personal data.
 test("every search on the site saves back unedited as core's editor would", async ({ page }) => {
   await page.goto("/civicrm/admin/afreact/search#/list");
+  const version = await coreVersion(page);
   const ids = await api<{ id: number }>(page, "SavedSearch", "get", { select: ["id"] });
   const found: string[] = [];
   for (const { id } of ids) {
@@ -240,7 +262,7 @@ test("every search on the site saves back unedited as core's editor would", asyn
       page,
       "SavedSearch",
       "get",
-      loadParams(id, "edit"),
+      loadParams(id, "edit", version),
     );
     try {
       if (!record) throw new Error("not loaded");
