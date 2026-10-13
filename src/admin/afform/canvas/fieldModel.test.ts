@@ -57,6 +57,13 @@ describe("getSet()", () => {
     expect(setValue(state, "input_attrs.placeholder", "", false).local).toEqual({});
   });
 
+  it("keeps a nested value emptied over a filled metadata value", () => {
+    const state = field({ base: base({ input_attrs: { placeholder: "Meta" } }) });
+    expect(setValue(state, "input_attrs.placeholder", "", false).local).toEqual({
+      input_attrs: { placeholder: "" },
+    });
+  });
+
   it("reads the element's own value over the metadata's, translating ts() calls", () => {
     const state = field({ local: { label: new TsCall("ts('Sex')", "Sex") } });
     expect(getProp(state, "label")).toBe("Sex");

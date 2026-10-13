@@ -81,7 +81,7 @@ function setPath(defn: LiteralObject, path: string[], value: Literal | undefined
   }
   const child = out[head];
   const next = setPath(isLiteralObject(child) ? child : {}, rest, value);
-  if (Object.values(next).every(isEmptyValue)) delete out[head];
+  if (value === undefined && Object.values(next).every(isEmptyValue)) delete out[head];
   else out[head] = next;
   return out;
 }
