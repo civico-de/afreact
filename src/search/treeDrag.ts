@@ -87,7 +87,8 @@ export function treeMove(
       : parentRow
         ? rest.indexOf(parentRow) + 1
         : 0;
-  const parentKey = parentRow?.key ?? null;
+  // Among its shown siblings the item keeps its parent, also one the page leaves out.
+  const parentKey = same ? (moved.data?.[parentField] ?? null) : (parentRow?.key ?? null);
   rest.splice(at, 0, { ...moved, data: { ...moved.data, [parentField]: parentKey } });
   return { rows: rest, values: { [weightField]: weight, [parentField]: parentKey } };
 }

@@ -76,7 +76,9 @@ describe("treeMove", () => {
     expect(onto?.values).toEqual({ weight: 5, parent_id: null });
     const away = treeMove(rows, 8, 1, "weight", "parent_id");
     expect(keys(away?.rows ?? [])).toEqual([1, 8, 2, 3, 4, 5, 6, 7]);
-    expect(away?.values).toEqual({ weight: 11, parent_id: null });
+    // Reordered among the top items, it stays under its own parent.
+    expect(away?.values).toEqual({ weight: 11, parent_id: 42 });
+    expect(away?.rows[1]?.data?.parent_id).toBe(42);
   });
 
   it("names a row that is not on the page", () => {

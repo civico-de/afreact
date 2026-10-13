@@ -587,8 +587,15 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
     Object.fromEntries(fields.map((field) => [field.name, initialBatchValue(field)])),
   );
   // The entered values join the batch's own, as crmSearchTaskApiBatch writes them into params.
+  const preset = running.apiBatch.params?.values;
   const apiBatch = fields.length
-    ? { ...running.apiBatch, params: { ...running.apiBatch.params, values } }
+    ? {
+        ...running.apiBatch,
+        params: {
+          ...running.apiBatch.params,
+          values: { ...(isRecord(preset) ? preset : {}), ...values },
+        },
+      }
     : running.apiBatch;
   const [progress, setProgress] = useState<{ percent: number; first: number; last: number } | null>(
     null,

@@ -486,6 +486,8 @@ describe("AfreactSearch bulk actions", () => {
         action: "save",
         runMsg: "Adding soft credits...",
         idField: "contribution_id",
+        // The task's own values go along with the entered ones.
+        params: { values: { is_current: true } },
         fields: [
           {
             name: "amount",
@@ -553,8 +555,20 @@ describe("AfreactSearch bulk actions", () => {
     });
     expect(named(calls, "ContributionSoft.save")[0]?.params).toEqual({
       records: [
-        { amount: 12.5, contact_id: 5, soft_credit_type_id: 1, contribution_id: 1 },
-        { amount: 12.5, contact_id: 5, soft_credit_type_id: 1, contribution_id: 3 },
+        {
+          amount: 12.5,
+          contact_id: 5,
+          soft_credit_type_id: 1,
+          contribution_id: 1,
+          is_current: true,
+        },
+        {
+          amount: 12.5,
+          contact_id: 5,
+          soft_credit_type_id: 1,
+          contribution_id: 3,
+          is_current: true,
+        },
       ],
     });
     expect(checkbox("Name 1")).not.toBeChecked();
