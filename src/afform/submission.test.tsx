@@ -207,6 +207,14 @@ describe("the prefill", () => {
     expect(screen.getByRole("button", { name: "Save Draft" })).toBeDisabled();
     expect(called(calls, "Afform.prefill")).toHaveLength(1);
   });
+
+  it("holds the draft and reset buttons while it is out, also after typing", async () => {
+    const calls = renderForm({ "Afform.prefill": () => new Promise<never>(() => {}) });
+    await userEvent.type(await firstName(), "B");
+    expect(screen.getByRole("button", { name: "Save Draft" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reset" })).toBeDisabled();
+    expect(called(calls, "Afform.submitDraft")).toEqual([]);
+  });
 });
 
 describe("a form closed for submissions", () => {
@@ -255,6 +263,19 @@ describe("the reset button", () => {
       expect(await firstName()).not.toBe(before);
     });
     expect(screen.getByRole("status")).toHaveTextContent("");
+  });
+
+  // deviation:reset-reloads-form
+  it("keeps the focus on the reset button of the form drawn anew", async () => {
+    renderForm({});
+    const before = await firstName();
+    await userEvent.click(screen.getByRole("button", { name: "Reset" }));
+    await waitFor(async () => {
+      expect(await firstName()).not.toBe(before);
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Reset" })).toHaveFocus();
+    });
   });
 });
 

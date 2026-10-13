@@ -319,6 +319,8 @@ export function AfreactForm({
     queryKey,
     queryFn: () => loadForm(name, source, { search, hash }, options, client),
   });
+  /** The position among the form's reset buttons of the one focused when a reset started. */
+  const [resetFocus, setResetFocus] = useState<number | null>(null);
   return (
     <DebugSection value={ts("Form %1", { 1: name })}>
       {debugMode() && (
@@ -332,7 +334,9 @@ export function AfreactForm({
             key={loaded.dataUpdatedAt}
             name={name}
             pageTitle={pageTitle}
-            onReset={(fresh) => {
+            focusButton={resetFocus}
+            onReset={(fresh, focused) => {
+              setResetFocus(focused);
               client.setQueryData<Loaded>(queryKey, { ...loaded.data, ...fresh });
             }}
             {...loaded.data}
@@ -397,11 +401,12 @@ function FormDebug({
 interface LoadedFormProps extends Loaded {
   name: string;
   pageTitle: boolean;
-  onReset: (fresh: Prefilled) => void;
+  onReset: (fresh: Prefilled, focused: number | null) => void;
+  focusButton: number | null;
 }
 
 function LoadedForm(props: LoadedFormProps) {
-  const { name, form, args, params, initial, pageTitle, onReset } = props;
+  const { name, form, args, params, initial, pageTitle, onReset, focusButton } = props;
   const [data, setData] = useState(initial);
   const [edits, setEdits] = useState(0);
   // What the form holds by the time the prefill lands, for the async callback below.
@@ -516,10 +521,17 @@ function LoadedForm(props: LoadedFormProps) {
       setDraftFailed(failed);
     },
   });
-  const reset = useMutation({
+  // Its variable is the focused button's position, taken on the click: disabled, it loses the focus.
+  const reset = useMutation<Prefilled, Error, number | null>({
     mutationFn: () => prefillForm(name, form, args, params),
     onSuccess: onReset,
   });
+  // deviation:reset-reloads-form
+  // The form drawn anew gives the focus back to the button that reset it.
+  useEffect(() => {
+    if (focusButton === null) return;
+    host.current?.querySelectorAll<HTMLElement>("[data-afreact-reset]")[focusButton]?.focus();
+  }, [focusButton]);
   // deviation:prefill-without-overlay
   // The form shows before its prefill; the loaded records land over what it holds by then.
   const prefill = useMutation({
@@ -599,7 +611,9 @@ function LoadedForm(props: LoadedFormProps) {
     toggled: conditional.toggled,
     ...(isForm(form) && {
       reset: () => {
-        reset.mutate();
+        const buttons = [...(host.current?.querySelectorAll("[data-afreact-reset]") ?? [])];
+        const focused = buttons.findIndex((button) => button === document.activeElement);
+        reset.mutate(focused < 0 ? null : focused);
       },
       draft: {
         status: draftStatus,
@@ -617,6 +631,7 @@ function LoadedForm(props: LoadedFormProps) {
   const autosave =
     !!form.autosave_draft &&
     showSubmitButton &&
+    prefilled &&
     closed === null &&
     (!!window.CRM.config?.cid || new URLSearchParams(window.location.search).has("_aff"));
   const submitted = save.isPending || save.isSuccess;

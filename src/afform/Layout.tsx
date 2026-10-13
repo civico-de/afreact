@@ -887,9 +887,11 @@ interface FormButtonProps {
   onClick?: () => void;
   /** afForm's text and icon for a draft being saved or saved. */
   shown?: { text: string; icon: string };
+  /** Marks a reset button, which takes the focus back once the form is drawn anew. */
+  reset?: boolean;
 }
 
-function FormButton({ node, disabled, onClick, shown }: FormButtonProps) {
+function FormButton({ node, disabled, onClick, shown, reset }: FormButtonProps) {
   const icon = shown?.icon ?? (typeof node["crm-icon"] === "string" ? node["crm-icon"] : null);
   return (
     <button
@@ -897,6 +899,7 @@ function FormButton({ node, disabled, onClick, shown }: FormButtonProps) {
       className={typeof node.class === "string" ? node.class : "btn btn-primary"}
       disabled={disabled}
       onClick={onClick}
+      data-afreact-reset={reset ? "" : undefined}
     >
       {icon && <i className={`crm-i ${icon}`} aria-hidden="true" />}{" "}
       {shown?.text ?? <Nodes nodes={node["#children"] ?? []} />}
@@ -922,7 +925,7 @@ function DraftButton({ node }: { node: ElementNode }) {
   return (
     <FormButton
       node={node}
-      disabled={form.disabled || draft.status !== "unsaved"}
+      disabled={form.disabled || !form.prefilled || draft.status !== "unsaved"}
       onClick={draft.save}
       shown={shown}
     />
@@ -932,7 +935,14 @@ function DraftButton({ node }: { node: ElementNode }) {
 function ResetButton({ node }: { node: ElementNode }) {
   const form = useForm();
   if (!form.reset) return <Unsupported what={buttonOutsideFormNote("reset")} />;
-  return <FormButton node={node} disabled={form.disabled} onClick={form.reset} />;
+  return (
+    <FormButton
+      node={node}
+      disabled={form.disabled || !form.prefilled}
+      onClick={form.reset}
+      reset
+    />
+  );
 }
 
 function SearchNode({ node }: { node: ElementNode }) {
