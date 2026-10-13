@@ -127,7 +127,8 @@ export function FieldsTab({ meta, search, firstLocked, onChange }: FieldsTabProp
                   >
                     <i className="crm-i fa-arrow-down" role="img" aria-hidden="true" />
                   </button>
-                  {select.length > 1 && (
+                  {/* deviation:smart-group-column-kept */}
+                  {select.length > 1 && !(firstLocked && index === 0) && (
                     <button
                       type="button"
                       className="btn btn-xs"

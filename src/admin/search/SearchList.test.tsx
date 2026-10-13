@@ -156,4 +156,23 @@ describe("SearchList", () => {
       });
     });
   });
+
+  // deviation:inline-edit-returns-focus
+  it("returns focus to the label's edit button after saving or cancelling", async () => {
+    vi.mocked(window.CRM.checkPerm).mockImplementation((perm) => perm === "administer search_kit");
+    mockApi({
+      "SavedSearch.get": () => counted([search], 1),
+      "SearchSegment.get": () => counted([], 0),
+      "Tag.get": () => [],
+      "SavedSearch.update": () => [{ id: 7 }],
+    });
+    const user = userEvent.setup();
+    renderWithQuery(<SearchList />);
+    await user.click(await screen.findByRole("button", { name: /Newsletter/ }));
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name: /Newsletter/ })).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: /Newsletter/ }));
+    await user.type(screen.getByRole("textbox", { name: "Edit Label" }), "s{Enter}");
+    expect(screen.getByRole("button", { name: /Newsletter/ })).toHaveFocus();
+  });
 });

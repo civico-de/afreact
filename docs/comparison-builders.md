@@ -44,6 +44,7 @@ and group by as core's editor saves them. `docs/testing.md` lists the rest.
 | Pasting a page route | focusing the empty Page Route offers "civicrm/"; a whole path pasted after it doubles the start ("civicrm/civicrm/…"), so the form route leads nowhere | a pasted path that already begins with "civicrm/" replaces the offered start `deviation:route-paste-replaces-offer` | `src/admin/afform/palette/SettingsTab.test.tsx`: "takes a whole path pasted into the offered start of a page route" |
 | Dialog focus on close | jQuery UI dialogs return focus to the element that opened them; when that element has gone, focus falls to the page | dialogs and confirmations return focus to the element focused when they opened; when that sat in a menu that has since closed, to the menu's button `deviation:dialog-return-focus` | `src/admin/widgets/Dialog.test.tsx`, `src/admin/search/dialogs.test.tsx` |
 | Display limit, page size and placeholder count | an entry that breaks the field's `min` or `step` ("1.5", "-5") leaves the model empty, so the limit drops to 0 and the pager switches off | such an entry is not saved; the field shows the saved number again. An emptied field still means 0 `deviation:number-input-rejects-invalid` | `src/admin/search/display/common.test.tsx` |
+| Deleting a canvas element | the element and its menu go; focus falls to the page | focus moves to the grip of the element that took its place, else of the one before, else of its container `deviation:delete-keeps-focus` | `src/admin/afform/canvas/common.test.tsx` |
 | Removing an entity | the entity and its fieldsets go at once; other entities' data, conditions and tokens that name it stay and point at nothing | when the form still names the entity elsewhere, a confirmation lists those places before removing it; otherwise it goes at once `deviation:remove-entity-references` | `src/admin/afform/model.test.ts`, `src/admin/afform/palette/EntityTab.test.tsx` |
 
 ### Differences by design
@@ -71,6 +72,7 @@ and group by as core's editor saves them. `docs/testing.md` lists the rest.
 | Area | Angular | React | Pinned by |
 |---|---|---|---|
 | Relative date offset in a condition ("Before now", "After now") | a number input bound to the offset through an Angular number model | the typed text stays on show; only a whole number of 1 or more is stored, and leaving the input brings back the last stored offset, so a cleared input or a typed "1.5" or "-5" never stores 0, a fraction or a negative offset `deviation:relative-date-offset-draft` | `src/admin/search/SearchInput.test.tsx` |
+| Editing a label or description in the search listing | the editable cell focuses its input when it opens; once saved or cancelled the input goes and the focus falls to the page | the focus returns to the cell's edit button after saving, Escape or Cancel `deviation:inline-edit-returns-focus` | `src/admin/search/SearchList.test.tsx`: "returns focus to the label's edit button after saving or cancelling" |
 
 ### Differences by design
 

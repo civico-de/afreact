@@ -23,6 +23,30 @@ export interface NodeOps {
   remove: () => void;
 }
 
+const handlePath = (handle: Element) => (handle.getAttribute("data-path") ?? "").split(".");
+
+/**
+ * Focuses the grip of the element that took the removed one's place, else of the one before,
+ * else of its container. deviation:delete-keeps-focus
+ */
+function focusAfterRemove(path: NodePath) {
+  const parent = path.slice(0, -1).join(".");
+  const index = path.at(-1) ?? 0;
+  requestAnimationFrame(() => {
+    const handles = [...document.querySelectorAll<HTMLElement>(".afreact-drag-handle[data-path]")];
+    const siblings = handles.filter((handle) => {
+      const steps = handlePath(handle);
+      return steps.length === path.length && steps.slice(0, -1).join(".") === parent;
+    });
+    const indexOf = (handle: HTMLElement) => Number(handlePath(handle).at(-1));
+    const target =
+      siblings.find((handle) => indexOf(handle) >= index) ??
+      siblings.filter((handle) => indexOf(handle) < index).at(-1) ??
+      handles.find((handle) => handle.getAttribute("data-path") === parent);
+    target?.focus();
+  });
+}
+
 export function useNodeOps(path: NodePath, node: ShallowElement): NodeOps {
   const editor = useEditor();
   return {
@@ -33,6 +57,7 @@ export function useNodeOps(path: NodePath, node: ShallowElement): NodeOps {
     },
     remove: () => {
       editor.change((afform) => removeAt(afform, editor.meta, path));
+      focusAfterRemove(path);
     },
   };
 }

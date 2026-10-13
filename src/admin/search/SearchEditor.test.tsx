@@ -122,6 +122,16 @@ it("counts a new smart group as saved once the save went through", async () => {
   expect(recordParam(groups[2]).records).toEqual([expect.objectContaining({ title: "G" })]);
 });
 
+it("offers to save a clone before anything in it changed", async () => {
+  window.location.hash = "#/clone/5";
+  mockApi({ "SavedSearch.get": () => [stored] });
+  renderWithQuery(<SearchEditor mode="clone" id={5} />);
+  expect(await screen.findByRole("textbox", { name: "Saved Search label" })).toHaveValue(
+    "Members (copy)",
+  );
+  expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+});
+
 describe("structuralRisk", () => {
   const search = (select: string[]): EditorSearch => ({
     id: 5,

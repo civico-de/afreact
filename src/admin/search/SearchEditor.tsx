@@ -301,7 +301,8 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
   const [debug, setDebug] = useState<RunDebug | null>(null);
   const [exporting, setExporting] = useState(false);
   const [goto, setGoto] = useState<number | null>(null);
-  const dirty = isDirty(history) || groupExists !== savedGroup || (create && !search.id);
+  // A new search or a clone has no record yet, so it can be saved untouched.
+  const dirty = isDirty(history) || groupExists !== savedGroup || !search.id;
   const changed = isDirty(history) || groupExists !== savedGroup;
   useLeaveGuard(changed);
 

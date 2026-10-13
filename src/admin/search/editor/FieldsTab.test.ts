@@ -1,6 +1,8 @@
+import { render, screen } from "@testing-library/react";
+import { createElement } from "react";
 import { describe, expect, it } from "vitest";
 import { metadata as meta } from "../../../test/searchMetadata";
-import { selectableFields } from "./FieldsTab";
+import { FieldsTab, selectableFields } from "./FieldsTab";
 
 const search = {
   api_entity: "Contact",
@@ -14,5 +16,16 @@ describe("selectableFields", () => {
     expect(ids).toContain("display_name");
     expect(ids).not.toContain("id");
     expect(ids).not.toContain("gender_id:label");
+  });
+});
+
+describe("FieldsTab", () => {
+  // deviation:smart-group-column-kept
+  it("keeps the smart group's contact column from being removed", () => {
+    render(
+      createElement(FieldsTab, { meta, search, firstLocked: true, onChange: () => undefined }),
+    );
+    expect(screen.queryByRole("button", { name: /^Remove Contact ID/ })).toBeNull();
+    expect(screen.getAllByRole("button", { name: /^Remove / })).toHaveLength(1);
   });
 });

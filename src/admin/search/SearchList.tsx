@@ -687,6 +687,12 @@ function InlineText({
   onSave: (value: string) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
+  const editing = useRef(false);
+  // deviation:inline-edit-returns-focus
+  const close = () => {
+    editing.current = true;
+    setDraft(null);
+  };
   if (!editable) return <>{value}</>;
   if (draft === null)
     return (
@@ -694,6 +700,10 @@ function InlineText({
         type="button"
         className="btn btn-link afreact-inline-edit"
         title={title}
+        ref={(button) => {
+          if (button && editing.current) button.focus();
+          editing.current = false;
+        }}
         onClick={() => {
           setDraft(value);
         }}
@@ -709,7 +719,7 @@ function InlineText({
         event.preventDefault();
         if (required && !draft.trim()) return;
         if (draft !== value) onSave(draft);
-        setDraft(null);
+        close();
       }}
     >
       <input
@@ -724,7 +734,7 @@ function InlineText({
           setDraft(event.target.value);
         }}
         onKeyDown={(event) => {
-          if (event.key === "Escape") setDraft(null);
+          if (event.key === "Escape") close();
         }}
       />
       <button type="submit" className="btn btn-xs btn-primary" title={ts("Save")}>
@@ -735,9 +745,7 @@ function InlineText({
         type="button"
         className="btn btn-xs btn-secondary"
         title={ts("Cancel")}
-        onClick={() => {
-          setDraft(null);
-        }}
+        onClick={close}
       >
         <i className="crm-i fa-times" role="img" aria-hidden="true" />
         <span className="sr-only">{ts("Cancel")}</span>

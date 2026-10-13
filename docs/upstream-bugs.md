@@ -990,6 +990,12 @@ joins. `deviation:join-removal-prunes-expressions`
 for a plain field, so a grouping by a function has an orphaned label. afreact
 captions such a row as a named group instead. `deviation:groupby-function-caption`
 
+**The smart group's contact column can be removed.** The results preview
+locks a smart group's first column, which holds the members' contact IDs, but
+the Select Fields tab still offers its remove button, so the next column takes
+its place whether or not it holds contacts. afreact offers no remove button
+for that column on either tab. `deviation:smart-group-column-kept`
+
 **Selected columns stay selectable.** `fieldsForSelect()` passes a
 `disabledIf` callback without a `return`, so fields already in the select
 are never disabled; picking one does nothing because `addParam()` skips
