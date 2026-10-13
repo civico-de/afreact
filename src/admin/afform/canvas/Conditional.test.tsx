@@ -269,6 +269,63 @@ describe("ConditionalMenuItem", () => {
     ]);
   });
 
+  const twoRules = () => {
+    const rule = (value: string) => ["Individual1[0][fields][first_name]", "=", `"${value}"`];
+    const rules = [rule("Ada"), rule("Bea")];
+    render(
+      <Harness initial={form({ ...FIELD, "af-if": `(${JSON.stringify(rules)})` })}>
+        {(api) => <Entry api={api} />}
+      </Harness>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Edit Conditional Rules/ }));
+    const panel = screen.getAllByRole("tabpanel")[0]!;
+    const moveFirstDown = () => {
+      fireEvent.click(within(panel).getAllByRole("button", { name: "Move Given name down" })[0]!);
+    };
+    return { rule, panel, moveFirstDown };
+  };
+
+  const appliedRule = (): unknown => {
+    fireEvent.click(screen.getByRole("button", { name: /Apply Changes/ }));
+    return JSON.parse((screen.getByTestId("af-if").textContent ?? "").replace(/^\(|\)$/g, ""));
+  };
+
+  it("keeps a field picked on a rule that is moved before the pick is reported", async () => {
+    const { rule, panel, moveFirstDown } = twoRules();
+    const picker = (await within(panel).findAllByRole("combobox", { name: "Field" }))[0]!;
+    fireEvent.click(picker);
+    fireEvent.change(picker, { target: { value: "Gender" } });
+    const option = await screen.findByRole("option", { name: /Gender/ });
+    act(() => {
+      fireEvent.click(option);
+      moveFirstDown();
+    });
+    expect(appliedRule()).toEqual([
+      rule("Bea"),
+      ["Individual1[0][fields][gender_id:name]", "=", '"Ada"'],
+    ]);
+  });
+
+  it("keeps a field added before a move in the same update", async () => {
+    const { rule, panel, moveFirstDown } = twoRules();
+    const picker = await within(panel).findByRole("combobox", { name: "Select field" });
+    fireEvent.click(picker);
+    fireEvent.change(picker, { target: { value: "Gender" } });
+    const option = await screen.findByRole("option", { name: /Gender/ });
+    act(() => {
+      fireEvent.click(option);
+      // A change elsewhere renders the dialog, which reports the pick without applying it yet.
+      const operator = within(panel).getAllByRole("combobox", { name: "Operator for Given name" });
+      fireEvent.change(operator[1]!, { target: { value: "!=" } });
+      moveFirstDown();
+    });
+    expect(appliedRule()).toEqual([
+      ["Individual1[0][fields][first_name]", "!=", '"Bea"'],
+      rule("Ada"),
+      ["Individual1[0][fields][gender_id:name]", "=", '""'],
+    ]);
+  });
+
   // deviation:condition-clause-move-buttons
   it("moves a rule into the group below it with a button instead of dragging", () => {
     const rule = (value: string) => ["Individual1[0][fields][first_name]", "=", `"${value}"`];

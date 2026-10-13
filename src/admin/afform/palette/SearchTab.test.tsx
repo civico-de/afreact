@@ -1,9 +1,11 @@
-import { screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { mockApi, renderWithQuery } from "../../../test/render";
 import { EditorContext, formEntities, type EditorApi } from "../context";
 import type { AfformDefinition, EditorMeta } from "../meta";
 import { CONTRIBUTIONS, META } from "../testMeta";
+import { nodeAt } from "../tree";
 import { SearchTab } from "./SearchTab";
 
 const searchForm = (filters: string): AfformDefinition => ({
@@ -267,5 +269,44 @@ describe("SearchTab", () => {
     const filters = screen.getByRole("button", { name: "Hidden Filters" });
     await userEvent.click(filters);
     expect(filters).toHaveAccessibleDescription("1 filter");
+  });
+
+  it("keeps both removals when two filter rows are cleared in one batch", async () => {
+    let latest = searchForm(
+      "{financial_type_id: routeParams.financial_type_id, contact_id: routeParams.contact_id}",
+    );
+    function Stateful() {
+      const [afform, setAfform] = useState(latest);
+      latest = afform;
+      const api: EditorApi = {
+        meta: META,
+        afform,
+        entities: formEntities(afform, META),
+        change: (update) => {
+          setAfform(update);
+        },
+        selected: null,
+        select: () => undefined,
+        addMeta: () => undefined,
+        removeEntity: () => undefined,
+        saveBlocked: null,
+        openDialog: () => undefined,
+      };
+      return (
+        <EditorContext value={api}>
+          <SearchTab display={{ key: "contributions.table", path: [0, 0], fieldsetPath: [0] }} />
+        </EditorContext>
+      );
+    }
+    renderWithQuery(<Stateful />);
+    await screen.findByRole("combobox", { name: "Add filter" });
+    const [first, second] = screen.getAllByRole("button", { name: "Clear Filter field" });
+    if (!first || !second) throw new Error("Expected two filter rows.");
+    act(() => {
+      fireEvent.click(first);
+      fireEvent.click(second);
+    });
+    const display = nodeAt(latest.layout, [0, 0]);
+    expect(display && "#tag" in display ? display.filters : "missing").toBeUndefined();
   });
 });

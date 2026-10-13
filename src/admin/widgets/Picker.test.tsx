@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { vi } from "vitest";
 import { Picker } from "./Picker";
 
@@ -40,6 +41,32 @@ test("lists options under their group's heading and picks one from a group", asy
   expect(within(list).getAllByRole("option")).toHaveLength(4);
   await userEvent.click(within(second).getByRole("option", { name: "First Name" }));
   expect(onChange).toHaveBeenCalledWith(["Individual2.0.first_name"]);
+});
+
+test("applies two removals batched into one render to the latest list", async () => {
+  function Multi() {
+    const [value, setValue] = useState<(string | number)[]>(["token", "Individual1.0.last_name"]);
+    return (
+      <Picker
+        id="pick"
+        label="Fields"
+        placeholder="Search"
+        options={options}
+        value={value}
+        onChange={setValue}
+      />
+    );
+  }
+  render(<Multi />);
+  const first = await screen.findByRole("button", { name: "Remove Submission JWT" });
+  const second = screen.getByRole("button", { name: "Remove Last Name" });
+  act(() => {
+    fireEvent.click(first);
+    fireEvent.click(second);
+  });
+  await waitFor(() => {
+    expect(screen.queryByRole("button", { name: /^Remove / })).not.toBeInTheDocument();
+  });
 });
 
 test("filters by a group's name", async () => {

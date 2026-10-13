@@ -6,7 +6,7 @@ import {
   type Operator,
 } from "../../search/condition";
 import { ClauseMoveButtons } from "../../widgets/ClauseMove";
-import { isClauseGroup, type ClausePath } from "../../widgets/clauseTree";
+import { clausePath, isClauseGroup, type ClausePath } from "../../widgets/clauseTree";
 import { Dialog } from "../../widgets/Dialog";
 import { NgElement } from "../../widgets/NgElement";
 import { Picker, type PickerOption } from "../../widgets/Picker";
@@ -345,6 +345,20 @@ function updateAt(
   );
 }
 
+/** The tree with `clause` edited where the tree now holds it, after moves reported earlier. */
+function editClause(
+  root: unknown[],
+  clause: unknown[],
+  update: (clause: unknown[]) => unknown[],
+): unknown[] {
+  const path = clausePath(root, clause);
+  const index = path?.at(-1);
+  if (!path || index === undefined) return root;
+  return updateAt(root, path.slice(0, -1), (list) =>
+    list.map((c, i) => (i === index && Array.isArray(c) ? update(c) : c)),
+  );
+}
+
 /** afGuiClause: a group of conditions joined by one conjunction, with nested groups. */
 function ClauseGroup({
   root,
@@ -384,7 +398,7 @@ function ClauseGroup({
         )}
         {list.map((clause, index) => {
           if (!Array.isArray(clause)) return null;
-          const clausePath = [...path, index];
+          const childPath = [...path, index];
           const badge = index === 0 && !onDeleteGroup ? label : names[op];
           const head: unknown = clause[0];
           const name = isClauseGroup(clause)
@@ -397,14 +411,7 @@ function ClauseGroup({
               </span>
               {/* deviation:condition-clause-move-buttons */}
               <ClauseMoveButtons
-                tree={{
-                  root,
-                  path,
-                  skip: 0,
-                  onChange: (next) => {
-                    onChange(() => next);
-                  },
-                }}
+                tree={{ root, path, skip: 0, onChange }}
                 index={index}
                 name={name}
               />
@@ -412,7 +419,7 @@ function ClauseGroup({
                 <ClauseGroup
                   root={root}
                   list={clause[1]}
-                  path={clausePath}
+                  path={childPath}
                   op={clause[0]}
                   choices={choices}
                   onChange={onChange}
@@ -425,8 +432,8 @@ function ClauseGroup({
                   clause={clause}
                   name={name}
                   choices={choices}
-                  onChange={(next) => {
-                    setList((current) => current.map((c, i) => (i === index ? next : c)));
+                  onChange={(update) => {
+                    onChange((latest) => editClause(latest, clause, update));
                   }}
                   onRemove={() => {
                     remove(index);
@@ -491,7 +498,7 @@ function ClauseRow({
   clause: unknown[];
   name: string;
   choices: FieldChoices;
-  onChange: (clause: unknown[]) => void;
+  onChange: (update: (clause: unknown[]) => unknown[]) => void;
   onRemove: () => void;
 }) {
   const id = useId();
@@ -512,7 +519,7 @@ function ClauseRow({
           const next = picked[0];
           // Clearing the field removes the clause.
           if (next === undefined) onRemove();
-          else onChange(fitClause([String(next), ...clause.slice(1)], choices.defns));
+          else onChange((c) => fitClause([String(next), ...c.slice(1)], choices.defns));
         }}
       />{" "}
       <Condition id={id} clause={clause} field={field} name={name} onChange={onChange} />{" "}
@@ -541,13 +548,13 @@ function Condition({
   clause: unknown[];
   field: GuiField | undefined;
   name: string;
-  onChange: (clause: unknown[]) => void;
+  onChange: (update: (clause: unknown[]) => unknown[]) => void;
 }) {
   const allowed = allowedOperators(conditionField(field), operators());
   const op = typeof clause[1] === "string" ? clause[1] : "";
   const { value, readable } = parseValue(clause[2]);
   const setValue = (next: unknown) => {
-    onChange([clause[0], op, JSON.stringify(next)]);
+    onChange((c) => [c[0], c[1], JSON.stringify(next)]);
   };
   const between = op === "BETWEEN" || op === "NOT BETWEEN";
   // A field no longer on the form is compared as text, as core's input does without a field.
@@ -560,7 +567,8 @@ function Condition({
         aria-label={ts("Operator for %1", { 1: name })}
         value={op}
         onChange={(event) => {
-          onChange(withAfOperator(clause, event.target.value));
+          const picked = event.target.value;
+          onChange((c) => withAfOperator(c, picked));
         }}
       >
         {allowed.map((operator) => (

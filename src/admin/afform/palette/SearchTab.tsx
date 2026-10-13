@@ -247,12 +247,15 @@ export function SearchTab({ display: placed }: { display: FormSearchDisplay }) {
     ...option,
     id: String(option.id),
   }));
-  const writeFilters = (next: DisplayFilter[]) => {
-    const text = stringifyDisplayFilters(next);
+  // Applies the edit to the form's latest filters, so edits batched into one render all land.
+  const writeFilters = (edit: (current: DisplayFilter[]) => DisplayFilter[]) => {
     editor.change((afform) =>
-      editNode(afform, editor.meta, placed.path, (node) =>
-        text ? { ...node, filters: text } : withoutAttributes(node, ["filters"]),
-      ),
+      editNode(afform, editor.meta, placed.path, (node) => {
+        const current = readDisplayFilters(textAttribute(node, "filters"));
+        if (!("filters" in current)) return node;
+        const text = stringifyDisplayFilters(edit(current.filters));
+        return text ? { ...node, filters: text } : withoutAttributes(node, ["filters"]);
+      }),
     );
   };
   const editFieldset = (update: (node: ShallowElement) => ShallowElement) => {
@@ -295,10 +298,11 @@ export function SearchTab({ display: placed }: { display: FormSearchDisplay }) {
               (option) => option.id === filter.name || !inUse(option.id),
             )}
             onChange={(next) => {
-              writeFilters(
+              // A field is used by one filter only, so its name finds the row in the latest list.
+              writeFilters((current) =>
                 next
-                  ? filters.map((each, at) => (at === index ? next : each))
-                  : filters.filter((_, at) => at !== index),
+                  ? current.map((each) => (each.name === filter.name ? next : each))
+                  : current.filter((each) => each.name !== filter.name),
               );
             }}
           />
@@ -315,8 +319,8 @@ export function SearchTab({ display: placed }: { display: FormSearchDisplay }) {
             single
             onChange={([name]) => {
               if (name !== undefined)
-                writeFilters([
-                  ...filters,
+                writeFilters((current) => [
+                  ...current,
                   { name: String(name), value: String(name), mode: "routeParams" },
                 ]);
             }}

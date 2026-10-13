@@ -489,8 +489,9 @@ function ListingTab({ tab }: { tab: SearchTab }) {
               placeholder={ts("Filter by package...")}
               options={moduleOptions}
               value={filters.modules}
-              onChange={(modules) => {
-                update({ modules: modules.map(String) });
+              onChange={(pick) => {
+                setFilters((f) => ({ ...f, modules: pick(f.modules).map(String) }));
+                setPage(1);
               }}
             />
           </span>
@@ -506,8 +507,9 @@ function ListingTab({ tab }: { tab: SearchTab }) {
             placeholder={ts("Filter by entity...")}
             options={entityOptions}
             value={filters.entities}
-            onChange={(entities) => {
-              update({ entities: entities.map(String) });
+            onChange={(pick) => {
+              setFilters((f) => ({ ...f, entities: pick(f.entities).map(String) }));
+              setPage(1);
             }}
           />
         </span>
@@ -523,8 +525,9 @@ function ListingTab({ tab }: { tab: SearchTab }) {
               placeholder={ts("Filter by tags...")}
               options={tagOptions}
               value={filters.tags}
-              onChange={(tags) => {
-                update({ tags: tags.map(Number) });
+              onChange={(pick) => {
+                setFilters((f) => ({ ...f, tags: pick(f.tags).map(Number) }));
+                setPage(1);
               }}
             />
           </span>

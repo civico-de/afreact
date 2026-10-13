@@ -202,9 +202,9 @@ export function EntityEditor(props: Editing & { adopt: (change: (draft: Draft) =
           placeholder={ts("administer CiviCRM")}
           options={permissions}
           value={s.entity_permission ?? []}
-          onChange={(picked) => {
+          onChange={(pick) => {
             edit((d) => {
-              setEntityPermission(d.settings, picked.map(String));
+              setEntityPermission(d.settings, pick(d.settings.entity_permission ?? []).map(String));
             });
           }}
         />

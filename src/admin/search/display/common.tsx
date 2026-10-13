@@ -907,8 +907,9 @@ export function LinkConditions({
                   placeholder={ts("Permission")}
                   options={permissions}
                   value={Array.isArray(clause[2]) ? clause[2].map(String) : []}
-                  onChange={(picked) => {
-                    set(index, [head, clause[1], picked.map(String)]);
+                  onChange={(pick) => {
+                    const current = Array.isArray(clause[2]) ? clause[2].map(String) : [];
+                    set(index, [head, clause[1], pick(current).map(String)]);
                   }}
                 />
               </>

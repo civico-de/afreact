@@ -37,7 +37,14 @@ interface ClauseEditorProps {
 /** crmSearchClause: a group of conditions joined by one conjunction, with nested groups. */
 export function ClauseEditor(props: ClauseEditorProps) {
   const { clauses, onChange, op, skip = 0, onDeleteGroup } = props;
-  const tree = props.tree ?? { root: clauses, path: [], skip, onChange };
+  const tree = props.tree ?? {
+    root: clauses,
+    path: [],
+    skip,
+    onChange: (update: (root: unknown[]) => unknown[]) => {
+      onChange(update(clauses));
+    },
+  };
   const id = useId();
   const names = conjunctions();
   const groupLabel = props.label ?? ts("%1 group", { 1: names[op] ?? op });

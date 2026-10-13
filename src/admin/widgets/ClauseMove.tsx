@@ -1,5 +1,7 @@
 import {
   canMoveClause,
+  clauseAt,
+  clausePath,
   moveClause,
   movedClausePath,
   type ClausePath,
@@ -15,7 +17,8 @@ export interface ClauseTree {
   path: ClausePath;
   /** Leading top-level entries that are not clauses. */
   skip: number;
-  onChange: (root: unknown[]) => void;
+  /** Applied to the latest tree, so changes queued before a move are kept. */
+  onChange: (update: (root: unknown[]) => unknown[]) => void;
 }
 
 /**
@@ -81,9 +84,16 @@ export function ClauseMoveButtons({
       name={name}
       canMove={(direction) => canMoveClause(tree.root, path, direction, tree.skip)}
       onMove={(direction) => {
-        const to = movedClausePath(tree.root, path, direction, tree.skip);
-        tree.onChange(moveClause(tree.root, path, direction, tree.skip));
-        return to && clauseKey(to);
+        const clause = clauseAt(tree.root, path);
+        tree.onChange((latest) => {
+          // The clause moves from where the latest tree holds it.
+          const from = clausePath(latest, clause);
+          if (!from) return latest;
+          const to = movedClausePath(latest, from, direction, tree.skip);
+          if (to) focusMovedItem(clauseKey(to), direction);
+          return moveClause(latest, from, direction, tree.skip);
+        });
+        return null;
       }}
     />
   );

@@ -15,16 +15,15 @@ export interface PickerOption {
   group?: string;
 }
 
-interface PickerProps {
+type PickerValue = (string | number)[];
+
+interface PickerBase {
   id: string;
   label: string;
   placeholder: string;
   options: PickerOption[];
-  value: (string | number)[];
-  onChange: (value: (string | number)[]) => void;
+  value: PickerValue;
   className?: string;
-  /** One value: choosing replaces it. */
-  single?: boolean;
   /** Names the input with an sr-only label, for pickers without a visible one. */
   hiddenLabel?: boolean;
   /** The caller renders its own <label htmlFor={id}>. */
@@ -36,6 +35,20 @@ interface PickerProps {
   disabled?: boolean;
 }
 
+/** One value: choosing replaces it. */
+interface SinglePickerProps extends PickerBase {
+  single: true;
+  onChange: (value: PickerValue) => void;
+}
+
+/** Several values: each pick or removal is applied to the caller's latest list. */
+interface MultiPickerProps extends PickerBase {
+  single?: false;
+  onChange: (update: (current: PickerValue) => PickerValue) => void;
+}
+
+type PickerProps = SinglePickerProps | MultiPickerProps;
+
 const itemOf = (option: PickerOption): AutocompleteItem => ({
   id: option.id,
   label: option.label,
@@ -46,21 +59,21 @@ const itemOf = (option: PickerOption): AutocompleteItem => ({
 });
 
 /** A select over a fixed list, as crm-ui-select over local data: the runtime's combobox. */
-export function Picker({
-  id,
-  label,
-  placeholder,
-  options,
-  value,
-  onChange,
-  className,
-  single = false,
-  hiddenLabel = false,
-  externalLabel = false,
-  clearable = false,
-  openOnMount = false,
-  disabled = false,
-}: PickerProps) {
+export function Picker(props: PickerProps) {
+  const {
+    id,
+    label,
+    placeholder,
+    options,
+    value,
+    className,
+    hiddenLabel = false,
+    externalLabel = false,
+    clearable = false,
+    openOnMount = false,
+    disabled = false,
+  } = props;
+  const single = props.single === true;
   const byId = new Map(options.map((option) => [String(option.id), option]));
   const selected = value.flatMap((v) => {
     const option = byId.get(String(v));
@@ -105,10 +118,13 @@ export function Picker({
               .map(itemOf);
           }}
           onSelect={(item) => {
-            onChange(single ? [item.id] : [...value, item.id]);
+            if (props.single) props.onChange([item.id]);
+            else props.onChange((current) => [...current, item.id]);
           }}
           onRemove={(item) => {
-            onChange(value.filter((v) => String(v) !== String(item.id)));
+            const keep = (list: PickerValue) => list.filter((v) => String(v) !== String(item.id));
+            if (props.single) props.onChange(keep(value));
+            else props.onChange(keep);
           }}
         />
       </Suspense>
@@ -119,7 +135,7 @@ export function Picker({
           aria-label={ts("Clear %1", { 1: label })}
           title={ts("Clear")}
           onClick={() => {
-            onChange([]);
+            if (props.single) props.onChange([]);
           }}
         >
           <i className="crm-i fa-times" role="img" aria-hidden="true" />

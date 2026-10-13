@@ -38,6 +38,20 @@ function withGroup(
   );
 }
 
+/** The path of `clause` itself, found by identity, or null where the tree no longer holds it. */
+export function clausePath(clauses: unknown[], clause: unknown): ClausePath | null {
+  for (const [index, entry] of clauses.entries()) {
+    if (entry === clause) return [index];
+    const inner = isClauseGroup(entry) ? clausePath(entry[1], clause) : null;
+    if (inner) return [index, ...inner];
+  }
+  return null;
+}
+
+/** The clause at `path`. */
+export const clauseAt = (clauses: unknown[], path: ClausePath): unknown =>
+  groupAt(clauses, path.slice(0, -1))[path.at(-1) ?? -1];
+
 /** Where a step from `path` lands: a group, and the index the clause goes before as counted while it is still in place. */
 function target(
   clauses: unknown[],
