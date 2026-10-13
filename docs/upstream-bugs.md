@@ -1161,7 +1161,7 @@ the admin's language: one save in a German admin session writes "Vorname"
 into the form as its source text for every language, and a packaged form
 becomes a local override with fixed strings (6.19, run with a translation
 given to `CRM.strings`). React keeps the attribute's text and saves
-`shallow`; `formbuilder-editor.spec.ts` saves such a form with a translated
+the `shallow` layout as HTML; `formbuilder-editor.spec.ts` saves such a form with a translated
 page and checks the attribute is stored unchanged. `deviation:save-keeps-ts-calls`
 
 **Saving a form drops values the editor cannot resolve, or fails.** The same
@@ -1171,6 +1171,13 @@ string, and the `deep` save of that string fails with a server error, so the
 form cannot be saved at all (6.19, run). React keeps both texts; the same
 test covers them. `deviation:save-keeps-unread-attributes`
 
+**A Contribution form saved as a `shallow` layout fails.** `Afform.save`
+takes `layoutFormat: "shallow"`, but the contribution service's pre-save
+check builds its form model from any array layout as if it were `deep`, so
+the entity's `actions` is still a string and the save ends in a server error
+("Cannot access offset of type string on string", 6.19, run). React converts
+the layout to HTML with `Afform.convert` and saves that, which the check
+parses itself. `deviation:save-sends-html`
 
 **The markup tab turns `ts()` into `null`.** Applying edited markup converts
 it `deep`, where `CRM_Utils_JS::decode()` reads `{label: ts('Given name')}`

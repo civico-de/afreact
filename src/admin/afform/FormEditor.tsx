@@ -17,6 +17,7 @@ import { GenericElement, SearchDisplayElement } from "./canvas/Embedded";
 import { FieldElement } from "./canvas/Field";
 import { RenderContext, type RenderElement } from "./canvas/common";
 import { TabsetElement } from "./canvas/Tabset";
+import { saveAfform } from "./save";
 import { blockEntity, canvasNodes, EditorContext, formEntities, type EditorApi } from "./context";
 import { useMarkup } from "./Markup";
 import {
@@ -440,13 +441,9 @@ function Editor({
       return;
     }
     // deviation:save-keeps-ts-calls deviation:save-keeps-unread-attributes
-    await api4<AfformDefinition>("Afform", "save", {
-      layoutFormat: "shallow",
-      formatWhitespace: true,
-      records: [savePayload(sent)],
-    })
-      .then(([saved]) => {
-        if (!saved?.name) throw new Error("Afform.save returned no name.");
+    await saveAfform<AfformDefinition>(savePayload(sent))
+      .then((saved) => {
+        if (!saved.name) throw new Error("Afform.save returned no name.");
         const name = saved.name;
         dispatch({ type: "savedFrom", sent, merge: (state) => ({ ...state, name }) });
         if (!sent.name) window.history.replaceState(window.history.state, "", `#/edit/${name}`);

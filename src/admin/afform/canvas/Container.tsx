@@ -6,6 +6,7 @@ import { Dropdown } from "../../widgets/Dropdown";
 import { IconDialog } from "../../widgets/IconPicker";
 import { InlineEdit } from "../../widgets/InlineEdit";
 import { useEditor, type EditorApi } from "../context";
+import { saveAfform } from "../save";
 import { nodeDefn } from "../fields";
 import { encodeLiteral, isLiteralObject, type Literal } from "../literal";
 import { getField, type AdminData, type AfformDefinition, type BlockMeta } from "../meta";
@@ -201,16 +202,6 @@ export function CanvasBody({
       </div>
     </ScopeContext>
   );
-}
-
-async function saveBlock(record: Record<string, unknown>): Promise<BlockMeta> {
-  const [saved] = await api4<BlockMeta>("Afform", "save", {
-    layoutFormat: "shallow",
-    formatWhitespace: true,
-    records: [record],
-  });
-  if (!saved) throw new Error("Afform.save returned nothing.");
-  return saved;
 }
 
 const inFlight = new Map<string, Promise<AdminData>>();
@@ -533,7 +524,7 @@ function SaveBlockDialog({
     setSaving(true);
     setError(null);
     const record = { ...initial, title, name: update && original ? original.name : null };
-    saveBlock(record).then(onSaved, (failure: unknown) => {
+    saveAfform<BlockMeta>(record).then(onSaved, (failure: unknown) => {
       setError(errorMessage(failure));
       setSaving(false);
     });

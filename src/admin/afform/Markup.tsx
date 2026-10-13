@@ -1,22 +1,11 @@
 import { useState, type ReactNode } from "react";
-import { api4, errorMessage } from "../../api/civi";
+import { errorMessage } from "../../api/civi";
 import { Dialog } from "../widgets/Dialog";
 import type { AfformDefinition } from "./meta";
 import { findElements } from "./model";
 import { Monaco } from "./Monaco";
+import { convert } from "./save";
 import { isShallowNode, withoutMarks, type ShallowNode } from "./tree";
-
-/** Afform.convert: a layout from one format into another. */
-async function convert(layout: unknown, from: string, to: string): Promise<unknown> {
-  const [result] = await api4<{ layout: unknown }>("Afform", "convert", {
-    layout,
-    from,
-    to,
-    formatWhitespace: true,
-  });
-  if (!result) throw new Error("Afform.convert returned nothing.");
-  return result.layout;
-}
 
 /** isValidLayout(): nodes throughout, and a form's one af-form kept. */
 export function validLayout(type: string, layout: unknown): layout is ShallowNode[] {
