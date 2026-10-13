@@ -304,7 +304,7 @@ only its icon, and the add button only the `af-repeat` value, which may be
 empty; `crm-icon` hides the icon from assistive technology, so screen readers
 meet a button without a name (`master` as of 2026-10-05; read from the code,
 not run). The React renderer shows the same content and adds a screen-reader
-name, "Add" or "Remove". `deviation:repeat-button-names`
+name, "Add" or "Remove item n". `deviation:repeat-button-names`
 
 **Join blocks are numbered in link order.** afJoin takes its record index
 from a counter in afFieldset each time it links (`afJoin.directive.js`,
@@ -343,6 +343,15 @@ from the code, not run), including a loaded record's `id` and its
 `is_primary`, so the copy and the original submit under one ID and two join
 records are primary. The React renderer copies the values without `id` and
 with `is_primary` off. `deviation:repeat-copy-new-record`
+
+**A copied repeat item shows a file it will not save.** `copyItem()` copies a
+stored file's `{id, file_name}` into the new item, so its field shows the
+original's file, while `AbstractProcessor::preprocessSubmittedValues()` drops
+an unchanged file and gives a new join record an empty placeholder; the copy
+is saved without the file it displayed (read from the code, not run). The
+React renderer leaves stored files out of a copy, whose field offers an empty
+chooser. A chosen but not yet uploaded file is never copied, in core or React.
+`deviation:repeat-copy-stored-file`
 
 **A repeat shows more items at first than its maximum.** `afRepeat` adds items
 up to `af-repeat-default` (or `min`) without looking at `max`, so a block set to
@@ -452,6 +461,12 @@ the state with the country, and a country without states frees the required
 select. `deviation:billing-state-follows-country`
 
 ## Search displays
+
+**A page past the last one stays empty.** `searchDisplayBaseTrait` keeps
+`page` when a reload or an old link leaves it beyond the last page, e.g. after
+the only row of the last page was deleted: the display shows "no results"
+while the count says otherwise, and the pager marks no page as current.
+React moves to the last page once the count is in. `deviation:page-past-end-clamped`
 
 **The row count of the first search survives a filter typed right after
 it.** `runSearch()` in `searchDisplayBaseTrait` asks for the count in a
@@ -962,6 +977,18 @@ buttons per item. `deviation:segment-item-move-buttons`
 but the watcher calls it without the old and new select, so nothing is pruned
 and the next run sorts or filters by a column that no longer exists. afreact
 prunes both when a column goes. `deviation:removed-column-prunes-sort`
+
+**Removing a join leaves aggregates and groupings on it.** `removeJoinStuff()`
+drops only select entries that start with `alias.`, so a column such as
+`GROUP_CONCAT(alias.email) AS …` stays, and `groupBy` is never touched; the
+next run fails on a field of a join that no longer exists. afreact drops every
+select and group-by expression that refers to the removed join or its nested
+joins. `deviation:join-removal-prunes-expressions`
+
+**A function grouping's label points at nothing.** Each group-by row has
+`<label for="crm-search-groupBy-N">`, but the input with that id renders only
+for a plain field, so a grouping by a function has an orphaned label. afreact
+captions such a row as a named group instead. `deviation:groupby-function-caption`
 
 **Selected columns stay selectable.** `fieldsForSelect()` passes a
 `disabledIf` callback without a `return`, so fields already in the select

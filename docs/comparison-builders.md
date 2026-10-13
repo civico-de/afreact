@@ -65,6 +65,12 @@ and group by as core's editor saves them. `docs/testing.md` lists the rest.
 
 ## SearchKit builder
 
+### Improvements over core
+
+| Area | Angular | React | Pinned by |
+|---|---|---|---|
+| Relative date offset in a condition ("Before now", "After now") | a number input bound to the offset through an Angular number model | the typed text stays on show; only a whole number of 1 or more is stored, and leaving the input brings back the last stored offset, so a cleared input or a typed "1.5" or "-5" never stores 0, a fraction or a negative offset `deviation:relative-date-offset-draft` | `src/admin/search/SearchInput.test.tsx` |
+
 ### Differences by design
 
 | Area | Angular | React |

@@ -96,7 +96,11 @@ const clauseUsesJoin = (clause: unknown, alias: string): boolean => {
   return Array.isArray(clause[1]) && clause[1].some((sub: unknown) => clauseUsesJoin(sub, alias));
 };
 
-/** removeJoinStuff: a join's columns, conditions, nested joins and label leave with it. */
+const exprUsesJoin = (expr: string, alias: string): boolean =>
+  new RegExp(`(^|[^\\w.])${alias}\\.`).test(expr.split(" AS ")[0] ?? expr);
+
+/** removeJoinStuff: a join's columns, conditions, groupings, nested joins and label leave with it. */
+// deviation:join-removal-prunes-expressions
 function withoutJoinParts(
   meta: SearchAdminMetadata,
   search: SearchInfo,
@@ -113,7 +117,10 @@ function withoutJoinParts(
     ...search,
     api_params: {
       ...params,
-      select: params.select.filter((col) => !gone.some((a) => col.startsWith(`${a}.`))),
+      select: params.select.filter((col) => !gone.some((a) => exprUsesJoin(col, a))),
+      ...(params.groupBy
+        ? { groupBy: params.groupBy.filter((expr) => !gone.some((a) => exprUsesJoin(expr, a))) }
+        : {}),
       ...(params.where ? { where: params.where.filter((clause) => !uses(clause)) } : {}),
       ...(params.join
         ? { join: params.join.filter((clause) => !nested.includes(aliasOf(clause))) }

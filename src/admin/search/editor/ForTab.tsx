@@ -289,8 +289,22 @@ export function GroupBy({ meta, search, onChange }: GroupByProps) {
     <fieldset className="crm-search-groupbys">
       <legend className="sr-only">{ts("Group By")}</legend>
       {groupBy.map((expr, index) => (
-        <div className="form-inline crm-search-groupby" key={`${expr}-${String(index)}`}>
-          <label htmlFor={`${id}-${String(index)}`}>{ts("Group By")}</label>{" "}
+        <div
+          className="form-inline crm-search-groupby"
+          key={`${expr}-${String(index)}`}
+          // A function grouping has no field picker, so its caption names the whole row.
+          // deviation:groupby-function-caption
+          {...(hasFunction(expr)
+            ? { role: "group", "aria-labelledby": `${id}-${String(index)}-caption` }
+            : {})}
+        >
+          {hasFunction(expr) ? (
+            <span id={`${id}-${String(index)}-caption`} className="control-label">
+              {ts("Group By")}
+            </span>
+          ) : (
+            <label htmlFor={`${id}-${String(index)}`}>{ts("Group By")}</label>
+          )}{" "}
           <FunctionEditor
             meta={meta}
             search={search}

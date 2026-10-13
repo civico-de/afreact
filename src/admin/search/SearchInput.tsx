@@ -372,6 +372,9 @@ function DateInput({
   const timestamp = field.data_type === "Timestamp";
   const current = text(value);
   const relative = relativeParts(current);
+  // Typed text stays while it is not a whole offset of 1 or more; leaving restores the last one.
+  // deviation:relative-date-offset-draft
+  const [offsetDraft, setOffsetDraft] = useState<{ text: string; at: string } | null>(null);
   return (
     <span className="form-group afreact-date-input">
       <select
@@ -427,9 +430,22 @@ function DateInput({
             type="number"
             min={1}
             step={1}
-            value={Number.isNaN(relative.number) ? "" : relative.number}
+            value={
+              offsetDraft?.at === current
+                ? offsetDraft.text
+                : Number.isNaN(relative.number)
+                  ? ""
+                  : relative.number
+            }
             onChange={(event) => {
-              onChange(relativeValue(current, Number(event.target.value), relative.unit));
+              const typed = event.target.value;
+              const whole = /^\d+$/.test(typed) && Number(typed) >= 1;
+              const next = whole ? relativeValue(current, Number(typed), relative.unit) : current;
+              setOffsetDraft({ text: typed, at: next });
+              if (whole) onChange(next);
+            }}
+            onBlur={() => {
+              setOffsetDraft(null);
             }}
           />
           <select

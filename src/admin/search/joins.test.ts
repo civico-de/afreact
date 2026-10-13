@@ -111,6 +111,22 @@ describe("removing and changing joins", () => {
     expect(after.form_values?.join).toEqual({});
   });
 
+  // deviation:join-removal-prunes-expressions
+  it("drops aggregated columns and groupings that use a removed join", () => {
+    const grouped = search({
+      select: [
+        "id",
+        "GROUP_CONCAT(DISTINCT Contact_Email_contact_id_01.email) AS GROUP_CONCAT_email",
+        "COUNT(id) AS COUNT_id",
+      ],
+      join: [[EMAIL, "LEFT"]],
+      groupBy: ["id", "Contact_Email_contact_id_01.location_type_id"],
+    });
+    const after = removeJoin(meta, grouped, 0);
+    expect(after.api_params.select).toEqual(["id", "COUNT(id) AS COUNT_id"]);
+    expect(after.api_params.groupBy).toEqual(["id"]);
+  });
+
   it("keeps the parent when a nested join goes", () => {
     const after = removeJoin(meta, joined, 1);
     expect(after.api_params.join).toEqual([[EMAIL, "LEFT"]]);
