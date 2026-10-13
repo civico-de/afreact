@@ -124,7 +124,6 @@ export function BodyRows({
                       column={column}
                       cell={cell}
                       data={row.data}
-                      colIndex={index}
                       subsearch={subsearch}
                       afform={afform}
                       onLinkClick={(link, event) => {

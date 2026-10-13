@@ -22,8 +22,6 @@ export interface CellProps {
   cell: CellData;
   /** The row's raw values, which include templates read. */
   data?: Record<string, unknown>;
-  /** Position of the column; core's templates pick some icons by it. */
-  colIndex: number;
   /** Subsearch display settings the run sent along. */
   subsearch: Record<string, SubsearchDisplay>;
   afform?: string;
@@ -85,17 +83,17 @@ function Value({ value, color }: { value: unknown; color: string | null | undefi
   );
 }
 
-function FieldValue({ cell, colIndex }: CellProps) {
+function FieldValue({ cell }: CellProps) {
   const left = cell.icons?.left ?? [];
   const right = cell.icons?.right ?? [];
   const colors = cell.colors ?? [];
   if (!Array.isArray(cell.val)) {
-    // The single-value template reads the right icon at the column's position, as core does.
+    // deviation:single-value-right-icon
     return (
       <span>
         {" "}
         <Icon name={left[0]} /> <Value value={cell.val} color={colors[0]} />{" "}
-        <Icon name={right[colIndex]} />{" "}
+        <Icon name={right[0]} />{" "}
       </span>
     );
   }
@@ -227,7 +225,7 @@ function MenuColumn({ column, cell, onLinkClick }: CellProps) {
 }
 
 /** colType/subsearch.html: the nested display loads once its disclosure first opens. */
-function SubsearchColumn({ cell, colIndex, subsearch, afform }: CellProps) {
+function SubsearchColumn({ cell, subsearch, afform }: CellProps) {
   const [opened, setOpened] = useState(false);
   const info = cell.subsearch;
   if (!info) return null;
@@ -235,7 +233,7 @@ function SubsearchColumn({ cell, colIndex, subsearch, afform }: CellProps) {
     <>
       {" "}
       <Icon name={cell.icons?.left?.[0]} /> {cellText(cell.val)}{" "}
-      <Icon name={cell.icons?.right?.[colIndex]} />{" "}
+      <Icon name={cell.icons?.right?.[0]} />{" "}
     </>
   );
   const nested = (

@@ -474,6 +474,11 @@ select. `deviation:billing-state-follows-country`
 
 ## Search displays
 
+**A right icon on a single value shows only in the first column.** The
+field and subsearch templates read `icons.right[$index]`, where `$index` is
+the column's position, while the run sends the icon at index 0: a right icon
+on any later column never shows. React reads index 0. `deviation:single-value-right-icon`
+
 **A page past the last one stays empty.** `searchDisplayBaseTrait` keeps
 `page` when a reload or an old link leaves it beyond the last page, e.g. after
 the only row of the last page was deleted: the display shows "no results"

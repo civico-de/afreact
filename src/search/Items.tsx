@@ -69,7 +69,6 @@ function ItemColumns({ row, settings, subsearch, afform, onLinkClick }: ColumnsP
               column={column}
               cell={cell}
               data={row.data}
-              colIndex={index}
               subsearch={subsearch}
               afform={afform}
               onLinkClick={(link, event) => {

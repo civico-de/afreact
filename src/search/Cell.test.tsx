@@ -10,14 +10,7 @@ import type { CellData, Column, Link } from "./types";
 function cell(column: Column, data: CellData, extra: Partial<CellProps> = {}) {
   const clicked = vi.fn<CellProps["onLinkClick"]>();
   const { container } = render(
-    <Cell
-      column={column}
-      cell={data}
-      colIndex={0}
-      subsearch={{}}
-      onLinkClick={clicked}
-      {...extra}
-    />,
+    <Cell column={column} cell={data} subsearch={{}} onLinkClick={clicked} {...extra} />,
   );
   return { container, clicked };
 }
@@ -26,10 +19,11 @@ const icons = (container: HTMLElement) =>
   [...container.querySelectorAll(".crm-i")].map((icon) => icon.className);
 
 describe("field columns", () => {
-  it("shows a value between its icons, the right one read at the column's position", () => {
+  // deviation:single-value-right-icon
+  it("shows a value between its icons, the right one read at the value's position", () => {
     const { container } = cell(
       { type: "field", key: "name" },
-      { val: "Ada", icons: { left: ["fa-user"], right: ["fa-star", "fa-other"] } },
+      { val: "Ada", icons: { left: ["fa-user"], right: ["fa-star"] } },
     );
     expect(container).toHaveTextContent("Ada");
     expect(icons(container)).toEqual(["crm-i fa-user", "crm-i fa-star"]);
@@ -143,7 +137,6 @@ describe("other column types", () => {
         <Cell
           column={{ type }}
           cell={{ val: "Enable", links: [task, { url: "/view", text: "View" }] }}
-          colIndex={0}
           subsearch={{}}
           onLinkClick={onLinkClick}
         />,
@@ -261,7 +254,6 @@ describe("subsearch columns", () => {
                 <Cell
                   column={{ type: "subsearch" }}
                   cell={entry}
-                  colIndex={0}
                   subsearch={sent}
                   afform="afsearchTest"
                   onLinkClick={vi.fn<CellProps["onLinkClick"]>()}
