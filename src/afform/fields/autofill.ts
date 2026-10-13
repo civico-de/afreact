@@ -1,5 +1,11 @@
 import { api4 } from "../../api/civi";
-import { applyPrefill, firstPrefilled, type EntityDeclaration, type PrefillItem } from "../model";
+import {
+  applyPrefill,
+  firstPrefilled,
+  mergeJoins,
+  type EntityDeclaration,
+  type PrefillItem,
+} from "../model";
 import type { EntityItem, FormData, Scope, Values } from "../types";
 
 type Join = Record<string, Values>;
@@ -149,7 +155,7 @@ function replaceRecord(
   const entityItem = (items[index] ??= { fields: {}, joins: {} });
   if (join === undefined) {
     entityItem.fields = record;
-    entityItem.joins = clearJoins ? {} : { ...entityItem.joins, ...joins };
+    entityItem.joins = clearJoins ? {} : mergeJoins(entityItem.joins, joins);
     return next;
   }
   const records = ((entityItem.joins ??= {})[join] ??= []);

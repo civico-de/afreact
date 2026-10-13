@@ -170,7 +170,7 @@ export function applyPrefill(
 type Joins = NonNullable<EntityItem["joins"]>;
 
 /** angular.merge over join records: by index, loaded fields over current ones, null replacing. */
-function mergeJoins(current: Joins | undefined, loaded: Joins | undefined): Joins {
+export function mergeJoins(current: Joins | undefined, loaded: Joins | undefined): Joins {
   const joins = { ...current };
   for (const [name, records] of Object.entries(loaded ?? {})) {
     const merged = [...(current?.[name] ?? [])];

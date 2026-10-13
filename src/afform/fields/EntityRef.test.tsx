@@ -288,6 +288,44 @@ describe("EntityRef", () => {
     });
   });
 
+  it("merges the selected record's join records into the ones typed, by position", async () => {
+    const text = (name: string, label: string): LayoutNode => ({
+      "#tag": "af-field",
+      name,
+      defn: { name, label, input_type: "Text", data_type: "String" },
+    });
+    renderForm(
+      form([
+        entityRef("id", { label: "Existing", input_attrs: { autofill: "update" } }),
+        {
+          "#tag": "div",
+          "af-join": "Email",
+          "#children": [text("email", "Email"), text("signature_text", "Signature")],
+        },
+      ]),
+      {
+        "Contact.autocomplete": () => rows([ADA]),
+        "Afform.prefill": ({ fillMode }) =>
+          fillMode === "entity"
+            ? [
+                {
+                  name: "Individual1",
+                  values: [{ fields: { id: 1 }, joins: { Email: [{ email: "a@example.org" }] } }],
+                },
+              ]
+            : [],
+      },
+    );
+    await userEvent.type(await screen.findByRole("textbox", { name: "Signature" }), "Sig");
+    const input = screen.getByRole("combobox", { name: "Existing" });
+    await userEvent.type(input, "a");
+    await userEvent.click(await screen.findByRole("option", { name: "Ada" }));
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Email" })).toHaveValue("a@example.org");
+    });
+    expect(screen.getByRole("textbox", { name: "Signature" })).toHaveValue("Sig");
+  });
+
   it("fills a related entity the prefill of the selected record returns too", async () => {
     const firstName = (label: string): LayoutNode => ({
       "#tag": "af-field",
