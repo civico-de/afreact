@@ -1,4 +1,11 @@
-import { useId, useState, type InputHTMLAttributes, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useId,
+  useState,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from "react";
 import { onButtonKey } from "../keys";
 import { ChainSelect } from "./fields/ChainSelect";
 import { CheckoutBlock } from "./fields/CheckoutBlock";
@@ -213,13 +220,21 @@ function CharacterCount({ id, length, max }: { id: string; length: number; max: 
   );
 }
 
+/** The error text of each field a blocked submit listed, by the field's `data-afreact-field`. */
+export const FieldErrorsContext = createContext<ReadonlyMap<string, string>>(new Map());
+
 export function Field({ defn, value, onChange, disabled, operator }: FieldProps) {
   const id = useId();
   const helpId = `${id}-help`;
   const labelId = `${id}-label`;
+  const errorId = `${id}-error`;
   const label = defn.label === false ? undefined : (defn.label ?? defn.name);
   const required = defn.required === true;
-  const describedBy = defn.help_post ? helpId : undefined;
+  // deviation:field-error-text
+  const error = useContext(FieldErrorsContext).get(id);
+  const describedBy =
+    [error !== undefined && errorId, defn.help_post && helpId].filter(Boolean).join(" ") ||
+    undefined;
   // deviation:url-input-disabled
   const common = {
     id,
@@ -522,10 +537,19 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
       {operator ? (
         <div className="input-group">
           {operator}
-          <div className="crm-af-field">{control}</div>
+          <div className="crm-af-field" data-afreact-field={id}>
+            {control}
+          </div>
         </div>
       ) : (
-        <div className="crm-af-field">{control}</div>
+        <div className="crm-af-field" data-afreact-field={id}>
+          {control}
+        </div>
+      )}
+      {error !== undefined && (
+        <p id={errorId} className="afreact-field-error">
+          {error}
+        </p>
       )}
       {defn.help_post && (
         <p id={helpId} className="crm-af-field-help-post">

@@ -1,7 +1,8 @@
 /**
  * React's form layout over the theme (css/afreact-form.css), on the large demo form: blocks keep
  * a gap, a repeat item's controls sit at its fields, a legend heads its fieldset; the undo for a
- * removed item and the list of a blocked submit's invalid fields have no axe finding.
+ * removed item, the list of a blocked submit's invalid fields and their own error texts have no
+ * axe finding.
  */
 import { expect, test, type Locator } from "@playwright/test";
 import { axeFindings } from "./harness";
@@ -261,7 +262,14 @@ for (const colorScheme of ["light", "dark"] as const)
       .evaluate((element) => getComputedStyle(element).color);
     expect(await label(1)).toEqual([healthy, "none"]);
     expect(await label(0)).not.toEqual([healthy, "none"]);
+    // deviation:field-error-text
+    await expect(page.getByRole("textbox", { name: "First Name" })).toHaveAccessibleDescription(
+      "This field is required.",
+    );
     expect(
-      await axeFindings(page, ".afreact-form > .alert, .afreact-checked .crm-af-field-label"),
+      await axeFindings(
+        page,
+        ".afreact-form > .alert, .afreact-checked .crm-af-field-label, .afreact-field-error",
+      ),
     ).toEqual([]);
   });

@@ -7,6 +7,7 @@ import { RouteOptionsContext } from "../search/displayFilters";
 import type { ExpressionContext } from "./expressions";
 import { DisplayCountContext } from "../url/UrlState";
 import { uploadAll, UploadsContext, type Uploads, type UploadsState } from "./fields/upload";
+import { FieldErrorsContext } from "./Field";
 import { FormContext, Nodes, type DraftStatus, type FormState } from "./Layout";
 import {
   applyPrefill,
@@ -199,6 +200,35 @@ function invalidMessage(control: Control): string {
   }
   return ts("Please check all answers are valid.");
 }
+
+/** The field's own error text: why its control is invalid. */
+function fieldMessage(control: Control): string {
+  const { validity } = control;
+  // The renderer's own checks bring their text.
+  if (validity.customError) return control.validationMessage;
+  if (validity.valueMissing) return ts("This field is required.");
+  const minLength = shortOf(control);
+  if (minLength) return ts("Enter at least %1 characters.", { 1: minLength });
+  if (control.type === "email") return ts("Please enter a valid email address.");
+  if (control.type === "url") return ts("Please enter a valid URL.");
+  if (control.type === "number") return ts("Please enter a valid number.");
+  if (/^(date|datetime-local|month|time)$/.test(control.type))
+    return ts("Please enter a valid date.");
+  return ts("Please enter a valid value.");
+}
+
+/** The error text of each field with a listed control still invalid, by its `data-afreact-field`. */
+function fieldErrors(root: Element | null): ReadonlyMap<string, string> {
+  const errors = new Map<string, string>();
+  for (const control of root?.querySelectorAll<Control>(`[${LISTED}]`) ?? []) {
+    const field = control.closest("[data-afreact-field]")?.getAttribute("data-afreact-field");
+    const invalid = control.willValidate && (!control.validity.valid || shortOf(control) > 0);
+    if (field && invalid && !errors.has(field)) errors.set(field, fieldMessage(control));
+  }
+  return errors;
+}
+
+const NO_ERRORS: ReadonlyMap<string, string> = new Map();
 
 /** An invalid field in the message above the form, one per group of radios or checkboxes. */
 interface InvalidField {
@@ -604,6 +634,15 @@ function LoadedForm(props: LoadedFormProps) {
     if (failure?.focus) summary.current?.focus();
   }, [failure]);
 
+  // deviation:field-error-text
+  // Each listed field tells why it is invalid, until an edit makes it valid.
+  const [errors, setErrors] = useState(NO_ERRORS);
+  useEffect(() => {
+    const next = fieldErrors(root.current);
+    const same = (map: ReadonlyMap<string, string>) => JSON.stringify([...map]);
+    setErrors((was) => (same(was) === same(next) ? was : next));
+  }, [data, failure]);
+
   // deviation:title-labels-cleared
   const title = titleWithLabels(form.title ?? "", labels) || "CiviCRM";
   const shownTitle = useRef((form.title ?? "") || "CiviCRM");
@@ -742,11 +781,13 @@ function LoadedForm(props: LoadedFormProps) {
               }}
             >
               <UploadsContext.Provider value={uploadsState}>
-                {createElement(
-                  "af-form",
-                  closed === null ? null : { className: "disabled" },
-                  <Nodes nodes={form.layout} />,
-                )}
+                <FieldErrorsContext.Provider value={errors}>
+                  {createElement(
+                    "af-form",
+                    closed === null ? null : { className: "disabled" },
+                    <Nodes nodes={form.layout} />,
+                  )}
+                </FieldErrorsContext.Provider>
               </UploadsContext.Provider>
             </form>
           ) : (

@@ -244,6 +244,40 @@ describe("AfreactForm", () => {
     expect(screen.getByRole("form", { name: "Test" })).not.toHaveClass("afreact-checked");
   });
 
+  // deviation:field-error-text
+  it("tells under each listed field why it is invalid, until an edit makes it valid", async () => {
+    renderFields(
+      [
+        field("first_name", { label: "First Name", required: true }),
+        field("last_name", { label: "Last Name", required: true }),
+        field("email", { label: "Email", input_type: "Email", help_post: "Work address" }),
+        field("nick_name", { label: "Nick Name", required: true }),
+      ],
+      { nick_name: "Al" },
+    );
+    const email = await screen.findByRole("textbox", { name: "Email" });
+    await userEvent.type(email, "not an address");
+    await save();
+    const first = screen.getByRole("textbox", { name: "First Name" });
+    expect(first).toHaveAccessibleDescription("This field is required.");
+    expect(email).toHaveAccessibleDescription("Please enter a valid email address. Work address");
+    expect(screen.getByRole("textbox", { name: "Nick Name" })).not.toHaveAccessibleDescription();
+
+    await userEvent.type(first, "Ada");
+    await waitFor(() => {
+      expect(first).not.toHaveAccessibleDescription();
+    });
+    expect(screen.queryAllByText("This field is required.")).toHaveLength(1);
+    expect(screen.getByRole("textbox", { name: "Last Name" })).toHaveAccessibleDescription(
+      "This field is required.",
+    );
+    // Emptied again, a listed field tells so again, as its marking.
+    await userEvent.clear(first);
+    await waitFor(() => {
+      expect(first).toHaveAccessibleDescription("This field is required.");
+    });
+  });
+
   // deviation:invalid-fields-listed
   it("marks only the listed fields, numbers repeated names and lists afresh for a field gone", async () => {
     const calls = renderFields(
