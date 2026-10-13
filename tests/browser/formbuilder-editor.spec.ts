@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
-import { api, axeFindings, isRecord, keysListened, quietApi } from "./harness";
+import { api, axeFindings, coreBuilders, isRecord, keysListened, quietApi } from "./harness";
+
+coreBuilders();
 
 const EDITOR = "/civicrm/admin/afreact/afform#/edit/afformQuickAddIndividual";
 const CREATE = "/civicrm/admin/afreact/afform#/create/form/Individual";

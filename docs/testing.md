@@ -11,7 +11,9 @@ CIVICRM_BASE_URL=http://localhost:8080 bun run test:e2e
 
 Specs that compare React with core's builders open core's routes; they turn
 `afreact_builders` off for their run (`coreBuilders()` in the harness) and
-restore the stack's value afterwards.
+restore the stack's value afterwards. A run cut short leaves it off; the
+profile's value comes back with
+`cv api4 Setting.set +v 'afreact_builders=["search_kit","afform"]'`.
 
 ## Browser specs
 

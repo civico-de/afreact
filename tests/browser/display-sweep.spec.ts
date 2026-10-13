@@ -5,7 +5,9 @@
  */
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { diffPaths } from "../../src/admin/search/roundTrip";
-import { api } from "./harness";
+import { api, coreBuilders } from "./harness";
+
+coreBuilders();
 
 const pages = { angular: "/civicrm/admin/search", react: "/civicrm/admin/afreact/search" };
 const SUFFIX = " (sweep)";
