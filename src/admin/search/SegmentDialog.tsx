@@ -16,6 +16,7 @@ import {
   type Segment,
   type SegmentItem,
 } from "./segment";
+import { useReturnFocus } from "../widgets/Dialog";
 
 interface SegmentDialogProps {
   /** An existing segment; without it a new one, for `entity` when given. */
@@ -54,6 +55,8 @@ export function SegmentDialog({ id, entity, onClose }: SegmentDialogProps) {
     draft ?? loaded.data ?? (id === undefined && meta.data ? fresh(entity ?? "") : null);
   const options = useFieldOptions(segment?.entity_name);
 
+  // deviation:dialog-return-focus
+  useReturnFocus();
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
   });

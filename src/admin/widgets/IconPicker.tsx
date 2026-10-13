@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
+import { useReturnFocus } from "./Dialog";
 
 interface IconList {
   icons: string[];
@@ -119,6 +120,8 @@ export function IconDialog({
   const [search, setSearch] = useState("");
   const [transform, setTransform] = useState(initial);
   const icons = useIcons(true);
+  // deviation:dialog-return-focus
+  useReturnFocus();
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
   });

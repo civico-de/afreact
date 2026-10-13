@@ -4,6 +4,7 @@ import { errorMessage } from "../../api/civi";
 import { exportOutput, loadExport, typeLabel, type ExportType } from "./exchange";
 import type { ListedSearch } from "./listing";
 import { searchAdminSettings } from "./meta";
+import { useReturnFocus } from "../widgets/Dialog";
 
 interface ExportDialogProps {
   search: Pick<
@@ -28,6 +29,8 @@ export function ExportDialog({ search, onClose }: ExportDialogProps) {
   const shown = types ?? loaded.data ?? null;
   const output = shown ? exportOutput(shown) : "";
 
+  // deviation:dialog-return-focus
+  useReturnFocus();
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
   });

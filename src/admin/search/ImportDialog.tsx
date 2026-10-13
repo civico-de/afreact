@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { errorMessage } from "../../api/civi";
 import { parseImport, previewImport, runImport, type ImportCheck } from "./exchange";
 import { searchAdminSettings, useRefreshSearchMetadata } from "./meta";
+import { useReturnFocus } from "../widgets/Dialog";
 
 /** crmSearchAdminImport's debounce. */
 const CHECK_DELAY_MS = 500;
@@ -22,6 +23,8 @@ export function ImportDialog({ onClose }: { onClose: (imported: boolean) => void
   const afformEnabled = "org.civicrm.afform" in searchAdminSettings().modules;
   const refreshMetadata = useRefreshSearchMetadata();
 
+  // deviation:dialog-return-focus
+  useReturnFocus();
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
   });

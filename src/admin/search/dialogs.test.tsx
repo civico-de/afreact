@@ -1,7 +1,8 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { mockApi, renderWithQuery } from "../../test/render";
+import { IconDialog } from "../widgets/IconPicker";
 import { ExportDialog } from "./ExportDialog";
 import { ImportDialog } from "./ImportDialog";
 import { SearchCondition } from "./SearchCondition";
@@ -252,5 +253,59 @@ describe("SearchInput dates", () => {
       />,
     );
     expect(document.querySelector<HTMLSelectElement>("#d")?.value).toBe("fixed");
+  });
+});
+
+// deviation:dialog-return-focus
+describe("focus on close", () => {
+  function Opener({ dialog }: { dialog: (close: () => void) => ReactNode }) {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(true);
+          }}
+        >
+          Open
+        </button>
+        {open &&
+          dialog(() => {
+            setOpen(false);
+          })}
+      </>
+    );
+  }
+  const search = {
+    id: 1,
+    name: "s",
+    label: "S",
+    api_entity: "Contact",
+    api_params: { version: 4 },
+    display_name: [],
+  };
+  const dialogs: [string, (close: () => void) => ReactNode][] = [
+    ["import", (close) => <ImportDialog onClose={close} />],
+    ["export", (close) => <ExportDialog search={search} onClose={close} />],
+    ["segment", (close) => <SegmentDialog entity="Contact" onClose={close} />],
+    [
+      "icon",
+      (close) => (
+        <IconDialog label="Icon" transform="" required={false} onPick={close} onCancel={close} />
+      ),
+    ],
+  ];
+
+  it.each(dialogs)("goes back to the opener when the %s dialog closes", async (_, dialog) => {
+    mockApi({ "SavedSearch.export": () => [] });
+    renderWithQuery(<Opener dialog={dialog} />);
+    const opener = screen.getByRole("button", { name: "Open" });
+    await userEvent.click(opener);
+    fireEvent(await screen.findByRole("dialog"), new Event("close"));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(opener).toHaveFocus();
   });
 });
