@@ -373,10 +373,21 @@ function ResultDisplay({
       queryKey: pageKey(number, toggles.nextParams),
       queryFn: () => fetchPage(number, toggles.nextParams),
     });
+  const searchAgain = () => {
+    const before = client.getQueryState(countKey)?.dataUpdatedAt;
+    void client.invalidateQueries({ queryKey: tallyKey });
+    // The click returns to page 1, so that page is the one to load afresh.
+    void client
+      .fetchQuery({ queryKey: pageKey(1), queryFn: () => fetchPage(1), staleTime: 0 })
+      .then(() => {
+        // A short first page has counted itself, as on the first search.
+        if (client.getQueryState(countKey)?.dataUpdatedAt === before)
+          void client.invalidateQueries({ queryKey: countKey });
+      });
+  };
   const onSearch = () => {
-    // A click searches again even when the filters are the same.
-    if (submitted && JSON.stringify(submitted.filters) === JSON.stringify(typed))
-      void rows.refetch();
+    // onClickSearchButton(): a click searches, counts and tallies again, also with the same filters.
+    if (submitted && JSON.stringify(submitted.filters) === JSON.stringify(typed)) searchAgain();
     setSubmitted({ filters: typed });
     setPage(1);
   };

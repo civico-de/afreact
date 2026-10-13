@@ -243,7 +243,14 @@ export function useTasks(options: TasksOptions) {
       notSupported(`task ${name} (a grouped row has no record to act on)`);
       return;
     }
-    const opener = event.currentTarget;
+    // deviation:row-menu-task-focus
+    // An item of a row's menu hides with its menu, so focus returns to the menu's button.
+    const item = event.currentTarget;
+    const menu = item
+      .closest("[popover]")
+      ?.closest(".btn-group")
+      ?.querySelector<HTMLButtonElement>("button[popovertarget]");
+    const opener = menu ?? item;
     client
       .fetchQuery({ queryKey, queryFn: loadTasks })
       .then((tasks) => {

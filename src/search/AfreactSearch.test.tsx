@@ -671,6 +671,58 @@ describe("AfreactSearch", () => {
       expect(calls.map(({ params }) => params.filters)).toEqual([{ title: "x" }, { title: "x" }]);
     });
 
+    it("counts again on a click of the search button with the same filters", async () => {
+      let total = 5;
+      mockApi({
+        "SearchDisplay.run": (params) =>
+          params.return === "row_count" ? Object.assign([], { count: total }) : [row(1), row(2)],
+      });
+      renderWithQuery(
+        <AfreactSearch
+          search="S"
+          display="D"
+          settings={{ ...settings, button: "Search" }}
+          filters={{ title: "x" }}
+        />,
+      );
+      const button = await screen.findByRole("button", { name: "Search" });
+      await userEvent.click(button);
+      expect(await screen.findByText("5 results")).toBeInTheDocument();
+      total = 7;
+      await userEvent.click(button);
+      expect(await screen.findByText("7 results")).toBeInTheDocument();
+    });
+
+    it("loads page 1 afresh on a click of the search button from a later page", async () => {
+      const returns: unknown[] = [];
+      mockApi({
+        "SearchDisplay.run": (params) => {
+          returns.push(params.return);
+          return params.return === "row_count" ? Object.assign([], { count: 4 }) : [row(1), row(2)];
+        },
+      });
+      renderWithQuery(
+        <AfreactSearch
+          search="S"
+          display="D"
+          settings={{ ...settings, button: "Search", limit: 2, pager: {} }}
+          filters={{ title: "x" }}
+        />,
+      );
+      const button = await screen.findByRole("button", { name: "Search" });
+      await userEvent.click(button);
+      await userEvent.click(await screen.findByRole("link", { name: "2" }));
+      await waitFor(() => {
+        expect(returns).toContain("page:2");
+      });
+      const before = returns.length;
+      await userEvent.click(button);
+      await waitFor(() => {
+        expect(returns.slice(before)).toContain("page:1");
+      });
+      expect(returns.slice(before)).not.toContain("page:2");
+    });
+
     it("changes the page size once typing pauses", async () => {
       const calls = runs(5);
       const store = memoryStore("");

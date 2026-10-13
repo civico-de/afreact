@@ -917,6 +917,32 @@ describe("AfreactSearch bulk actions", () => {
     expect(selectAll()).toHaveAttribute("aria-checked", "true");
   });
 
+  // deviation:row-menu-task-focus
+  it("returns the focus to a row menu's button after its task's dialog", async () => {
+    const links = [{ task: "delete", text: "Delete" }];
+    serve({
+      rows: [row(1, { columns: [{ val: "Name 1" }, { links }] })],
+      handlers: { "Contact.delete": () => counted(1) },
+    });
+    const menuColumn = Object.assign({ type: "menu" as const, label: "Menu" }, { links });
+    renderWithQuery(
+      <AfreactSearch search="S" display="D" settings={{ columns: [...columns, menuColumn] }} />,
+    );
+    const toggle = await screen.findByRole("button", { name: "Row Actions" });
+    toggle.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: "Delete", hidden: true })).toHaveFocus();
+    });
+    await userEvent.keyboard("{Enter}");
+    const dialog = await screen.findByRole("dialog", { name: "Delete Contacts" });
+    within(dialog).getByRole("button", { name: "Delete Contacts" }).focus();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Row Actions" })).toHaveFocus();
+    });
+  });
+
   describe("download", () => {
     /** The URL and the `params` field of the download request. */
     function sentDownload(fetchMock: Mock<typeof fetch>) {
