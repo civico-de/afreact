@@ -63,7 +63,7 @@ final class ConfirmationMessage extends AutoSubscriber {
       }
       $response[$key] = preg_replace_callback(
         self::PLACEHOLDER,
-        static fn (array $token): string => $encode($submit->replaceTokens($token[0])),
+        static fn (array $match): string => $encode($submit->replaceTokens($match[0])),
         $template,
       ) ?? throw new \RuntimeException("Confirmation {$key}: " . preg_last_error_msg());
     }
