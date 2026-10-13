@@ -1,4 +1,5 @@
-import { useId } from "react";
+import { useId, useState } from "react";
+import { ConfirmDialog } from "../../widgets/ConfirmDialog";
 import { Picker } from "../../widgets/Picker";
 import { PartNotice, PluginElement } from "../canvas/plugins";
 import {
@@ -15,7 +16,7 @@ import { plainLiteral } from "../fields";
 import { FieldValue } from "../FieldValue";
 import { encodeLiteral, isLiteralObject, toLiteral, type Literal } from "../literal";
 import { getField, type Behavior, type GuiField } from "../meta";
-import { jsAttribute, textAttribute, withAttribute } from "../model";
+import { entityReferences, jsAttribute, textAttribute, withAttribute } from "../model";
 import type { ShallowElement } from "../tree";
 import {
   HelpLink,
@@ -580,6 +581,7 @@ export function EntityTab({ entity, link }: { entity: FormEntity; link: string |
   const configurable = editor.afform.type === "form" && entity.path !== null;
   const path = entity.path;
   const label = editor.meta.gui.entities[entity.type]?.label ?? entity.type;
+  const [references, setReferences] = useState<string[] | null>(null);
   return (
     <form
       className="afreact-palette-sections"
@@ -608,13 +610,39 @@ export function EntityTab({ entity, link }: { entity: FormEntity; link: string |
             title={ts("Remove %1", { 1: label })}
             aria-label={ts("Remove %1", { 1: entity.label })}
             onClick={() => {
-              editor.removeEntity(entity.name);
+              // deviation:remove-entity-references
+              const found = entityReferences(editor.afform, entity.name);
+              if (found.length) setReferences(found);
+              else editor.removeEntity(entity.name);
             }}
           >
             <i className="crm-i fa-trash" role="img" aria-hidden="true" />
           </button>
         )}
       </PanelHead>
+      {references && (
+        <ConfirmDialog
+          title={ts("Remove %1", { 1: entity.label })}
+          confirmLabel={ts("Remove")}
+          onConfirm={() => {
+            setReferences(null);
+            editor.removeEntity(entity.name);
+          }}
+          onCancel={() => {
+            setReferences(null);
+          }}
+        >
+          <p>{ts("The form still refers to %1 here:", { 1: entity.name })}</p>
+          <ul>
+            {references.map((where) => (
+              <li key={where}>
+                <code>{where}</code>
+              </li>
+            ))}
+          </ul>
+          <p>{ts("These references stay and will point at nothing.")}</p>
+        </ConfirmDialog>
+      )}
       {editor.afform.type !== "block" && <EntityValues entity={entity} />}
       {configurable && (
         <PaletteSection

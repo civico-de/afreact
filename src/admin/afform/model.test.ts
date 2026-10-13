@@ -1,4 +1,5 @@
 import {
+  entityReferences,
   addEntity,
   backfillEntities,
   canvasPath,
@@ -275,5 +276,56 @@ describe("FormBuilder model", () => {
       canvasPath({ ...NEW_FORM.definition, layout: [{ "#tag": "crm-monaco" }] }),
     ).toThrow("This form has no af-form element, so the builder cannot edit it.");
     expect(canvasPath({ ...NEW_FORM.definition, type: "block", layout: [] })).toEqual([]);
+  });
+});
+
+// deviation:remove-entity-references
+describe("entityReferences", () => {
+  const layout = (children: ShallowNode[]) => ({
+    type: "form",
+    title: "Probe",
+    layout: [{ "#tag": "af-form", ctrl: "afform", "#children": children }],
+  });
+  const individual2 = [
+    { "#tag": "af-entity", type: "Individual", name: "Individual2" },
+    { "#tag": "fieldset", "af-fieldset": "Individual2", "#children": [] },
+  ];
+
+  it("lists entity data, conditions and tokens that name the entity", () => {
+    const afform = layout([
+      ...individual2,
+      {
+        "#tag": "af-entity",
+        type: "Activity",
+        name: "Activity1",
+        data: "{source_contact_id: 'Individual2'}",
+      },
+      {
+        "#tag": "fieldset",
+        "af-fieldset": "Activity1",
+        "#children": [
+          { "#tag": "div", "af-if": '[["Individual2.0.first_name","=","A"]]', "#children": [] },
+          { "#tag": "p", "#children": [{ "#text": "Hello [Individual2.0.first_name]" }] },
+        ],
+      },
+    ]);
+    expect(entityReferences(afform, "Individual2")).toEqual([
+      "af-entity Activity1 data",
+      "div af-if",
+      "text",
+    ]);
+  });
+
+  it("finds nothing once only the entity's own elements name it", () => {
+    const afform = layout([
+      ...individual2,
+      {
+        "#tag": "af-entity",
+        type: "Individual",
+        name: "Individual20",
+        data: "{x: 'Individual20'}",
+      },
+    ]);
+    expect(entityReferences(afform, "Individual2")).toEqual([]);
   });
 });

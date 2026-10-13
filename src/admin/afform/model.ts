@@ -263,6 +263,34 @@ export function removeEntity(afform: AfformDefinition, name: string): AfformDefi
   return { ...afform, layout: prune(afform.layout) };
 }
 
+/**
+ * Where a form still names entity `name` once it is removed: entity data, conditions, tokens.
+ * deviation:remove-entity-references
+ */
+export function entityReferences(afform: AfformDefinition, name: string): string[] {
+  const word = new RegExp(`(^|[^\\w])${name}($|[^\\w])`);
+  const found: string[] = [];
+  const visit = (nodes: ShallowNode[]) => {
+    for (const node of nodes) {
+      if (!isElement(node)) {
+        if ("#text" in node && word.test(node["#text"])) found.push(ts("text"));
+        continue;
+      }
+      const where =
+        node["#tag"] === "af-entity" || node["#tag"] === "af-field"
+          ? `${node["#tag"]} ${textAttribute(node, "name") ?? ""}`
+          : node["#tag"];
+      for (const [key, value] of Object.entries(node)) {
+        if (key !== "#children" && typeof value === "string" && word.test(value))
+          found.push(key === "#markup" ? where : `${where} ${key}`);
+      }
+      if (node["#children"]) visit(node["#children"]);
+    }
+  };
+  visit(removeEntity(afform, name).layout);
+  return [...new Set(found)];
+}
+
 /** A form's af-entity elements with the values core's runtime infers backfilled. */
 export function backfillEntities(afform: AfformDefinition): AfformDefinition {
   const backfilled = (nodes: ShallowNode[]): ShallowNode[] =>

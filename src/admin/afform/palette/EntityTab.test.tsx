@@ -10,7 +10,15 @@ import { EntityTab } from "./EntityTab";
 
 let latest: AfformDefinition | undefined;
 
-function Harness({ initial, meta = META }: { initial: AfformDefinition; meta?: EditorMeta }) {
+function Harness({
+  initial,
+  meta = META,
+  remove = () => undefined,
+}: {
+  initial: AfformDefinition;
+  meta?: EditorMeta;
+  remove?: (name: string) => void;
+}) {
   const [afform, setAfform] = useState(initial);
   latest = afform;
   const entities = formEntities(afform, meta);
@@ -24,7 +32,7 @@ function Harness({ initial, meta = META }: { initial: AfformDefinition; meta?: E
     selected: null,
     select: () => undefined,
     addMeta: () => undefined,
-    removeEntity: () => undefined,
+    removeEntity: remove,
     saveBlocked: null,
     openDialog: () => undefined,
   };
@@ -116,5 +124,31 @@ describe("EntityTab", () => {
     );
     expect(screen.getByRole("group", { name: "Individual Fields" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Autofill")).not.toBeInTheDocument();
+  });
+});
+
+// deviation:remove-entity-references
+describe("removing the entity", () => {
+  it("removes an entity nothing else names at once", async () => {
+    const remove = vi.fn<(name: string) => void>();
+    renderWithQuery(<Harness initial={form()} remove={remove} />);
+    await userEvent.click(screen.getByRole("button", { name: "Remove Individual1" }));
+    expect(remove).toHaveBeenCalledWith("Individual1");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("names where the form still refers to the entity before removing it", async () => {
+    const remove = vi.fn<(name: string) => void>();
+    const initial = form();
+    const [root] = initial.layout;
+    if (!root || !("#children" in root) || !Array.isArray(root["#children"])) throw new Error();
+    root["#children"].push({ "#tag": "div", "af-if": '[["Individual1.0.first_name","=","A"]]' });
+    renderWithQuery(<Harness initial={initial} remove={remove} />);
+    await userEvent.click(screen.getByRole("button", { name: "Remove Individual1" }));
+    const dialog = screen.getByRole("dialog", { name: "Remove Individual1" });
+    expect(dialog).toHaveTextContent("div af-if");
+    expect(remove).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    expect(remove).toHaveBeenCalledWith("Individual1");
   });
 });
