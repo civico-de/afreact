@@ -426,6 +426,7 @@ function LoadedForm(props: LoadedFormProps) {
     setFailure({ message: errorMessage(error), focus: true });
   };
   const [uploads] = useState<Uploads>(() => new Map());
+  const [restoredFiles] = useState(() => new Map<string, File>());
   const [uploading, setUploading] = useState<string | null>(null);
   /** Counts the files chosen or removed, which change the form without changing its data. */
   const [fileChanges, setFileChanges] = useState(0);
@@ -542,12 +543,13 @@ function LoadedForm(props: LoadedFormProps) {
   const uploadsState = useMemo<UploadsState>(
     () => ({
       pending: uploads,
+      restored: restoredFiles,
       retry: retry?.retry ?? null,
       changed: () => {
         setFileChanges((count) => count + 1);
       },
     }),
-    [uploads, retry],
+    [uploads, restoredFiles, retry],
   );
   const offsets = useMemo(() => joinOffsets(form.layout), [form]);
   const entities = useMemo(() => entityDeclarations(form.layout), [form]);

@@ -599,7 +599,10 @@ interface GroupProps extends FieldProps {
   helpId: string | undefined;
 }
 
-/** fields/Radio.html: one label per option, and a clear button while a value is set. */
+/**
+ * fields/Radio.html: one label per option, and a clear button while a value is set. The radios
+ * form a group named by the field's label. deviation:radio-group-named
+ */
 function RadioGroup({ defn, value, onChange, disabled, labelId, helpId }: GroupProps) {
   const name = useId();
   return (

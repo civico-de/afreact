@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { vi } from "vitest";
@@ -269,6 +269,21 @@ describe("Field", () => {
     expect(screen.getByRole("radio", { name: "Yes" })).toBeRequired();
   });
 
+  // deviation:radio-group-named
+  it("groups a field's radios under the field's label and help", () => {
+    setup({
+      input_type: "Radio",
+      help_post: "Pick one",
+      options: [
+        { id: 1, label: "A" },
+        { id: 2, label: "B" },
+      ],
+    });
+    const group = screen.getByRole("radiogroup", { name: "Field" });
+    expect(group).toHaveAccessibleDescription("Pick one");
+    expect(within(group).getAllByRole("radio")).toHaveLength(2);
+  });
+
   // deviation:clear-link-button
   it("clears an optional radio from the keyboard", async () => {
     const values = setup(
@@ -504,7 +519,7 @@ describe("Field", () => {
     for (const input_type of INPUT_TYPES) {
       const { unmount } = renderWithQuery(
         <UploadsContext.Provider
-          value={{ pending: new Map(), retry: null, changed: () => undefined }}
+          value={{ pending: new Map(), restored: new Map(), retry: null, changed: () => undefined }}
         >
           <FieldEnvContext.Provider value={env}>
             <Harness

@@ -21,6 +21,8 @@ export interface UploadTarget {
 
 export interface PendingUpload {
   file: File;
+  /** The field by item path and name, which outlasts its remount after an undone removal. */
+  owner: string;
   /** Read when the upload starts: removing an earlier repeat item moves the field's record. */
   target: () => UploadTarget;
   /** Shows the stored file in the field. */
@@ -34,6 +36,8 @@ export type Uploads = Map<string, PendingUpload>;
 
 export interface UploadsState {
   pending: Uploads;
+  /** Files of an undone repeat-item removal, by owner, until their fields take them back. */
+  restored: Map<string, File>;
   /** The fields whose upload failed after the records were saved; only these stay editable. */
   retry: ReadonlySet<string> | null;
   /** A file was chosen or removed, a change no draft holds yet. */

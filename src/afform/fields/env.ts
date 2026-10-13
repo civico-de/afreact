@@ -23,6 +23,9 @@ export interface FieldEnv {
   onSelect?: (id: unknown) => Promise<void>;
 }
 
+/** Names the entity item the layout is in by its item key, which a removal leaves unchanged. */
+export const ItemPathContext = createContext("");
+
 export const FieldEnvContext = createContext<FieldEnv | null>(null);
 
 export function useFieldEnv(): FieldEnv {

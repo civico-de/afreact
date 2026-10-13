@@ -6,6 +6,7 @@ import { mockApi, renderWithQuery } from "../../test/render";
 import { AfreactForm } from "../AfreactForm";
 import type { PrefillItem } from "../model";
 import { layoutProblems } from "../support";
+import { isRecord } from "../../search/searchTasks";
 import type { FieldDefn, LayoutNode } from "../types";
 import { FieldEnvContext } from "./env";
 import { FileField } from "./File";
@@ -228,6 +229,211 @@ describe("File fields", () => {
       expect(fetchMock).toHaveBeenCalledOnce();
     });
     expect(sent(fetchMock)).toMatchObject({ params: { entityIndex: 0 }, file: "second.png" });
+  });
+
+  // deviation:repeat-remove-undo
+  it("brings a removed item's chosen file back with Undo and uploads it", async () => {
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(respond(200, { values: [] })));
+    vi.stubGlobal("fetch", fetchMock);
+    renderForm([
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "af-repeat": "Add",
+            "#children": [imageField],
+          },
+          submitButton,
+        ],
+      },
+    ]);
+    await userEvent.click(await screen.findByRole("button", { name: "Add" }));
+    await userEvent.upload(screen.getAllByLabelText("Image")[1]!, png("second.png"));
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[1]!);
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(screen.getByText("second.png")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledOnce();
+    });
+    expect(sent(fetchMock)).toMatchObject({ params: { entityIndex: 1 }, file: "second.png" });
+  });
+
+  it("drops a restored file with its Remove file button", async () => {
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(respond(200, { values: [] })));
+    vi.stubGlobal("fetch", fetchMock);
+    renderForm([
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "af-repeat": "Add",
+            "#children": [imageField],
+          },
+          submitButton,
+        ],
+      },
+    ]);
+    await userEvent.click(await screen.findByRole("button", { name: "Add" }));
+    await userEvent.upload(screen.getAllByLabelText("Image")[1]!, png("second.png"));
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[1]!);
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove file second.png" }));
+    expect(screen.getAllByLabelText("Image")[1]).toHaveFocus();
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Saved");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("offers a file chooser again when a restored file that was uploaded is replaced", async () => {
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(respond(200, { values: [{ ...stored, file_name: "second.png" }] })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderForm([
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "af-repeat": "Add",
+            "#children": [imageField],
+          },
+          submitButton,
+        ],
+      },
+    ]);
+    await userEvent.click(await screen.findByRole("button", { name: "Add" }));
+    await userEvent.upload(screen.getAllByLabelText("Image")[1]!, png("second.png"));
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[1]!);
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Replace second.png" }));
+
+    expect(screen.getAllByLabelText("Image")[1]).toHaveFocus();
+    expect(
+      screen.queryByRole("button", { name: "Remove file second.png" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("brings each join block's file back to its own block with Undo", async () => {
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(respond(200, { values: [] })));
+    vi.stubGlobal("fetch", fetchMock);
+    const scan = { ...imageField, defn: { ...image, label: "Scan" } };
+    renderForm([
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "af-repeat": "Add",
+            "#children": [
+              { "#tag": "div", "af-join": "Attachment", "#children": [scan] },
+              { "#tag": "div", "af-join": "Attachment", "#children": [scan] },
+            ],
+          },
+          submitButton,
+        ],
+      },
+    ]);
+    await userEvent.click(await screen.findByRole("button", { name: "Add" }));
+    const [, , first, second] = screen.getAllByLabelText("Scan");
+    await userEvent.upload(first!, png("one.png"));
+    await userEvent.upload(second!, png("two.png"));
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[1]!);
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+    const files = [sent(fetchMock, 0), sent(fetchMock, 1)].map(({ params, file }) => ({
+      joinIndex: isRecord(params) ? params.joinIndex : null,
+      file,
+    }));
+    expect(files.sort((a, b) => a.file.localeCompare(b.file))).toEqual([
+      { joinIndex: 0, file: "one.png" },
+      { joinIndex: 1, file: "two.png" },
+    ]);
+  });
+
+  it("brings a repeated join's file back with Undo after an earlier item was removed", async () => {
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(respond(200, { values: [] })));
+    vi.stubGlobal("fetch", fetchMock);
+    const scan = { ...imageField, defn: { ...image, label: "Scan" } };
+    renderForm(
+      form([{ "#tag": "div", "af-join": "Attachment", "af-repeat": "Add", "#children": [scan] }]),
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Add" }));
+    await userEvent.upload(screen.getAllByLabelText("Scan")[1]!, png("two.png"));
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(screen.getByText("two.png")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledOnce();
+    });
+    expect(sent(fetchMock)).toMatchObject({ params: { joinIndex: 0 }, file: "two.png" });
+  });
+
+  it("uploads a restored file once, also when another file's upload is retried", async () => {
+    const fetchMock = vi.fn<typeof fetch>((_url, init) => {
+      const file = init?.body instanceof globalThis.FormData ? init.body.get("file") : null;
+      return Promise.resolve(
+        file instanceof File && file.name === "first.png"
+          ? respond(500, { error_message: "Timeout" })
+          : respond(200, { values: [{ ...stored, file_name: "second.png" }] }),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderForm([
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "af-repeat": "Add",
+            "#children": [imageField],
+          },
+          submitButton,
+        ],
+      },
+    ]);
+    await userEvent.click(await screen.findByRole("button", { name: "Add" }));
+    await userEvent.upload(screen.getAllByLabelText("Image")[0]!, png("first.png"));
+    await userEvent.upload(screen.getAllByLabelText("Image")[1]!, png("second.png"));
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[1]!);
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("first.png could not be uploaded");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+    const files = fetchMock.mock.calls.map((_, call) => sent(fetchMock, call).file);
+    expect(files.filter((file) => file === "second.png")).toHaveLength(1);
   });
 
   // deviation:failed-upload-retry

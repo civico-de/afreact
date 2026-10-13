@@ -2,8 +2,8 @@ import { useContext, useEffect, useId, useRef, useState } from "react";
 import { onButtonKey } from "../../keys";
 import type { FieldDefn } from "../types";
 import { Unsupported } from "../Unsupported";
-import { useFieldEnv } from "./env";
-import { isFileInfo, UploadsContext } from "./upload";
+import { ItemPathContext, useFieldEnv } from "./env";
+import { isFileInfo, UploadsContext, type PendingUpload } from "./upload";
 
 interface FileFieldProps {
   id: string;
@@ -34,9 +34,49 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
   useEffect(() => {
     latest.current = { onChange, env };
   });
+  const owner = `${useContext(ItemPathContext)}/${env.joinEntity ?? ""}.${env.fieldName}`;
+  // deviation:repeat-remove-undo
+  // A file input cannot be refilled: an undone removal's file shows by name instead.
+  const [restored, setRestored] = useState(() => uploads?.restored.get(owner) ?? null);
+  const [dropped, setDropped] = useState(false);
+
+  const upload = (file: File): PendingUpload => ({
+    file,
+    owner,
+    target: () => {
+      const { modelName, fieldName, joinEntity, entityIndex, joinIndex } = latest.current.env;
+      if (entityIndex === undefined) throw new Error(fileOutsideFormNote(defn));
+      const join = joinEntity ?? null;
+      return {
+        modelName,
+        fieldName,
+        joinEntity: join,
+        entityIndex,
+        // deviation:first-join-upload-index
+        joinIndex: joinIndex ?? null,
+      };
+    },
+    onUploaded: (uploaded) => {
+      latest.current.onChange(uploaded);
+    },
+    // The submit drops a draft's file on a join record it creates.
+    // deviation:draft-join-file-reupload
+    again: () => !!latest.current.env.joinEntity && !latest.current.env.values.id,
+  });
+  const takeBack = useRef(upload);
+  useEffect(() => {
+    takeBack.current = upload;
+  });
 
   // A field that leaves the form (af-if) takes its file along.
   const pending = uploads?.pending;
+  const enqueued = useRef<File | null>(null);
+  useEffect(() => {
+    if (!restored || enqueued.current === restored) return;
+    enqueued.current = restored;
+    uploads?.restored.delete(owner);
+    pending?.set(key, takeBack.current(restored));
+  }, [restored, uploads, pending, owner, key]);
   useEffect(
     () => () => {
       pending?.delete(key);
@@ -45,8 +85,8 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
   );
   useEffect(() => {
     // deviation:file-replace-button
-    if (replaced && !stored) input.current?.focus();
-  }, [replaced, stored]);
+    if ((replaced && !stored) || dropped) input.current?.focus();
+  }, [replaced, stored, dropped]);
 
   if (!uploads || env.entityIndex === undefined)
     return <Unsupported what={fileOutsideFormNote(defn)} />;
@@ -59,6 +99,7 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
       // Both keys empty: the server then clears the field on the entity and on a join record.
       // deviation:replace-join-file-clears
       onChange({ id: null, file_name: null });
+      setRestored(null);
       setReplaced(true);
     };
     return (
@@ -92,6 +133,28 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
     );
   }
   const retrying = uploads.retry?.has(key) === true;
+  if (restored && !retrying) {
+    const drop = () => {
+      uploads.pending.delete(key);
+      uploads.changed();
+      setRestored(null);
+      setDropped(true);
+    };
+    return (
+      <span id={id}>
+        {restored.name}{" "}
+        <button
+          type="button"
+          className="btn btn-xs btn-default"
+          aria-label={ts("Remove file %1", { 1: restored.name })}
+          disabled={disabled}
+          onClick={drop}
+        >
+          {ts("Remove file")}
+        </button>
+      </span>
+    );
+  }
   const chooser = (
     <input
       ref={input}
@@ -108,28 +171,7 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
           uploads.pending.delete(key);
           return;
         }
-        uploads.pending.set(key, {
-          file,
-          target: () => {
-            const { modelName, fieldName, joinEntity, entityIndex, joinIndex } = latest.current.env;
-            if (entityIndex === undefined) throw new Error(fileOutsideFormNote(defn));
-            const join = joinEntity ?? null;
-            return {
-              modelName,
-              fieldName,
-              joinEntity: join,
-              entityIndex,
-              // deviation:first-join-upload-index
-              joinIndex: joinIndex ?? null,
-            };
-          },
-          onUploaded: (uploaded) => {
-            latest.current.onChange(uploaded);
-          },
-          // The submit drops a draft's file on a join record it creates.
-          // deviation:draft-join-file-reupload
-          again: () => !!latest.current.env.joinEntity && !latest.current.env.values.id,
-        });
+        uploads.pending.set(key, upload(file));
       }}
     />
   );

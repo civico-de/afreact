@@ -15,7 +15,8 @@ import { interpolate, type ExpressionContext } from "./expressions";
 import { ClearButton, Field, fieldClasses } from "./Field";
 import { loadSelected } from "./fields/autofill";
 import { TokenContext, withTokens } from "./Markup";
-import { FieldEnvContext, type FieldEnv } from "./fields/env";
+import { FieldEnvContext, ItemPathContext, type FieldEnv } from "./fields/env";
+import { UploadsContext } from "./fields/upload";
 import {
   addRepeatItem,
   copyRepeatItem,
@@ -108,8 +109,6 @@ export type DraftStatus = "pristine" | "unsaved" | "saving" | "saved";
 
 export const FormContext = createContext<FormState | null>(null);
 const ScopeContext = createContext<Scope | null>(null);
-/** Names the entity item the layout is in by its item key, which a removal leaves unchanged. */
-const ItemPathContext = createContext("");
 /**
  * Inside an af-if that turned false: the data it last rendered with. Fields drop their values
  * as on afIfDestroy; a nested af-if renders what it showed then.
@@ -385,22 +384,26 @@ function SearchFieldsetNode({ node }: { node: ElementNode }) {
 function JoinNode({ node }: { node: ElementNode }) {
   const form = useForm();
   const parent = useContext(ScopeContext);
+  const path = useContext(ItemPathContext);
   if (!parent) return <Unsupported what={joinOutsideFieldsetNote(String(node["af-join"]))} />;
   const scope = { entity: parent.entity, index: parent.index, join: String(node["af-join"]) };
-  if (node["af-repeat"] === undefined) {
-    return (
-      <ScopeContext.Provider value={{ ...scope, joinIndex: form.joinOffsets.get(node) ?? 0 }}>
-        <Element node={node} />
-      </ScopeContext.Provider>
-    );
-  }
+  const offset = form.joinOffsets.get(node) ?? 0;
+  // Each join block by its place in the layout, which removing items does not shift.
   return (
-    <Repeat
-      node={node}
-      scope={scope}
-      itemScope={(joinIndex) => ({ ...scope, joinIndex, repeated: true })}
-      count={repeatCount(form.data, scope)}
-    />
+    <ItemPathContext.Provider value={`${path}/${scope.join}@${offset}`}>
+      {node["af-repeat"] === undefined ? (
+        <ScopeContext.Provider value={{ ...scope, joinIndex: offset }}>
+          <Element node={node} />
+        </ScopeContext.Provider>
+      ) : (
+        <Repeat
+          node={node}
+          scope={scope}
+          itemScope={(joinIndex) => ({ ...scope, joinIndex, repeated: true })}
+          count={repeatCount(form.data, scope)}
+        />
+      )}
+    </ItemPathContext.Provider>
   );
 }
 
@@ -448,13 +451,16 @@ interface Removal {
   keys: number[];
   before: FormData;
   edits: number;
+  /** The files chosen in the item's File fields, by owner. */
+  files: [string, File][];
 }
 
 /** af-repeat in afRepeat.html's markup: one copy of the children per item, with add/copy/remove inside the min/max bounds. */
 function Repeat({ node, scope, itemScope, count }: RepeatProps) {
   const form = useForm();
+  const uploads = useContext(UploadsContext);
   const path = useContext(ItemPathContext);
-  const id = scope.join === undefined ? scope.entity : `${path}/${scope.join}`;
+  const id = scope.join === undefined ? scope.entity : path;
   const [keys, removeKey, restoreKeys] = useItemKeys(id, count);
   // deviation:repeat-remove-undo
   // Undo stands in the removed item's place until the next change to the form.
@@ -501,7 +507,11 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
           disabled={form.disabled}
           ref={key === restored?.key ? restoredButton : undefined}
           onClick={() => {
-            setRemoval({ position, key, keys, before: form.data, edits: form.edits + 1 });
+            const inItem = `${id}#${key}/`;
+            const files = [...(uploads?.pending.values() ?? [])]
+              .filter((upload) => upload.owner.startsWith(inItem))
+              .map((upload): [string, File] => [upload.owner, upload.file]);
+            setRemoval({ position, key, keys, before: form.data, edits: form.edits + 1, files });
             removeKey(position);
             form.edit((data) => primaryKept(removeRepeatItem(data, scope, position)));
           }}
@@ -525,6 +535,7 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
           aria-describedby={undoNote}
           disabled={form.disabled}
           onClick={() => {
+            for (const [owner, file] of removal.files) uploads?.restored.set(owner, file);
             restoreKeys(removal.keys);
             setRestored({ key: removal.key });
             setRemoval(null);
