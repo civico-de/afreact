@@ -96,6 +96,7 @@ describe("EntityTab", () => {
   // deviation:relationship-autofill-clearable
   it("lets the relationship autofill be cleared, though it has a default mode", async () => {
     renderWithQuery(<Harness meta={AUTOFILL} initial={form(individual({ autofill: "user" }))} />);
+    await userEvent.click(screen.getByRole("button", { name: "Options" }));
     await userEvent.click(await screen.findByRole("button", { name: "Clear Autofill" }));
     const [root] = latest?.layout ?? [];
     expect(JSON.stringify(root)).not.toContain('"autofill"');
@@ -104,6 +105,7 @@ describe("EntityTab", () => {
   // deviation:behaviors-only-on-forms
   it("shows behaviors for a form's entity, not for a block's stand-in", async () => {
     const { unmount } = renderWithQuery(<Harness meta={AUTOFILL} initial={form()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Options" }));
     expect(await screen.findByRole("combobox", { name: "Autofill" })).toBeInTheDocument();
     unmount();
     renderWithQuery(

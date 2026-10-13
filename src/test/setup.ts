@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, vi } from "vitest";
 import { events } from "./jquery";
 import { installDialog } from "./dialog";
+import { installIntersectionObserver } from "./intersection";
 import { installPopover } from "./popover";
 
 // CiviCRM's globals: ts() fills %1-style placeholders and picks `plural` for a `count` other
@@ -35,6 +36,7 @@ window.CRM = {
 };
 installPopover();
 installDialog();
+installIntersectionObserver();
 
 afterEach(() => {
   vi.mocked(window.CRM.api4).mockReset();

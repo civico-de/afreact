@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { EditorContext, formEntities, type EditorApi } from "../context";
 import type { AfformDefinition } from "../meta";
 import { META } from "../testMeta";
@@ -54,5 +55,21 @@ describe("SearchTab", () => {
     renderTab(searchForm("{financial_type_id: 1}"));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(await screen.findByRole("combobox", { name: "Add filter" })).toBeEnabled();
+  });
+
+  // deviation:palette-sections
+  it("tells of filters it cannot read while their section is shut", async () => {
+    renderTab(searchForm("{contact_id: user_contact_id}"));
+    const filters = screen.getByRole("button", { name: "Hidden Filters" });
+    await userEvent.click(filters);
+    expect(filters).toHaveAccessibleDescription("A value is missing or invalid");
+  });
+
+  // deviation:palette-sections
+  it("counts readable filters while their section is shut", async () => {
+    renderTab(searchForm("{financial_type_id: 1}"));
+    const filters = screen.getByRole("button", { name: "Hidden Filters" });
+    await userEvent.click(filters);
+    expect(filters).toHaveAccessibleDescription("1 filter");
   });
 });

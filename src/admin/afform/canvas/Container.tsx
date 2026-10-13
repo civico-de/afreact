@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type CSSProperties } from "react";
+import { useEffect, useEffectEvent, useId, useState, type CSSProperties } from "react";
 import { api4, errorMessage } from "../../../api/civi";
 import { NgElement } from "../../widgets/NgElement";
 import { Dialog } from "../../widgets/Dialog";
@@ -8,7 +8,7 @@ import { InlineEdit } from "../../widgets/InlineEdit";
 import { useEditor, type EditorApi } from "../context";
 import { nodeDefn } from "../fields";
 import { encodeLiteral, isLiteralObject, type Literal } from "../literal";
-import { getField, type AdminData, type BlockMeta } from "../meta";
+import { getField, type AdminData, type AfformDefinition, type BlockMeta } from "../meta";
 import { filled, jsAttribute, textAttribute } from "../model";
 import {
   blockOf,
@@ -152,7 +152,7 @@ function CanvasElement({
   const render = useRenderElement();
   const label = elementLabel(editor, scope, node, type);
   const item = useCanvasItem(path, node, scope, label, shown);
-  const classes = [item.dropClass, item.dragging && "afreact-dragging"].filter(Boolean);
+  const classes = [item.dropClass, item.dragClass].filter(Boolean);
   return (
     <div ref={item.ref} className={classes.join(" ") || undefined}>
       {render(type, { path, node, scope, handle: item.handle, label })}
@@ -222,13 +222,16 @@ function loadBlock(editor: EditorApi, name: string): Promise<AdminData> {
     const skipEntities = Object.entries(editor.meta.gui.entities)
       .filter(([, entity]) => entity.fields)
       .map(([entityName]) => entityName);
-    pending = api4<AdminData>("Afform", "loadAdminData", {
-      definition: { name },
-      skipEntities,
-    })
+    // For a block deleted since the editor opened, core returns no definition, or only its locale.
+    pending = api4<
+      Omit<AdminData, "definition"> & { definition: AfformDefinition | { locale: string[] } | null }
+    >("Afform", "loadAdminData", { definition: { name }, skipEntities })
       .then(([data]) => {
         if (!data) throw new Error(`Afform.loadAdminData returned nothing for ${name}.`);
-        return data;
+        const { definition } = data;
+        if (!definition || !("layout" in definition))
+          throw new Error(ts("There is no block named %1.", { 1: name }));
+        return { ...data, definition };
       })
       .finally(() => {
         inFlight.delete(name);
@@ -239,18 +242,27 @@ function loadBlock(editor: EditorApi, name: string): Promise<AdminData> {
 }
 
 /** The block's layout, loaded where the editor does not know it yet. */
-function useBlockLayout(directive: string | null): { loading: boolean; error: string | null } {
+export function useBlockLayout(directive: string | null): {
+  loading: boolean;
+  error: string | null;
+} {
   const editor = useEditor();
   const block = directive ? editor.meta.blocks[directive] : undefined;
   const missing = !!directive && !block?.layout;
   const [error, setError] = useState<string | null>(null);
+  const name = missing ? block?.name : undefined;
+  const load = useEffectEvent((blockName: string) => loadBlock(editor, blockName));
+  const loaded = useEffectEvent((data: AdminData) => {
+    editor.addMeta(data);
+  });
+  // Loads once per block; a failure stays shown rather than retried on every editor change.
   useEffect(() => {
-    if (!missing || !block) return undefined;
+    if (!name) return undefined;
     let live = true;
     setError(null);
-    loadBlock(editor, block.name).then(
+    load(name).then(
       (data) => {
-        if (live) editor.addMeta(data);
+        if (live) loaded(data);
       },
       (failure: unknown) => {
         if (live) setError(errorMessage(failure));
@@ -259,7 +271,7 @@ function useBlockLayout(directive: string | null): { loading: boolean; error: st
     return () => {
       live = false;
     };
-  }, [editor, block, missing]);
+  }, [name]);
   return { loading: missing && !error, error: missing ? error : null };
 }
 

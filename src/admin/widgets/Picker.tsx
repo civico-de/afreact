@@ -93,9 +93,9 @@ export function Picker({
           selected={selected}
           resolving={false}
           itemText={(item) => item.label}
-          load={(input) => {
+          filter={(input) => {
             const term = input.trim().toLowerCase();
-            const items = options
+            return options
               .filter(
                 (o) =>
                   !term ||
@@ -103,11 +103,6 @@ export function Picker({
                   (o.group ?? "").toLowerCase().includes(term),
               )
               .map(itemOf);
-            return Promise.resolve({
-              items,
-              more: false,
-              context: { searchField: null, searchFields: [], previousIds: [] },
-            });
           }}
           onSelect={(item) => {
             onChange(single ? [item.id] : [...value, item.id]);

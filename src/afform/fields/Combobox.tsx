@@ -19,7 +19,7 @@ import type { AutocompleteItem, SearchContext, SearchPage } from "./autocomplete
 /** select2's quietMillis in $.fn.crmAutocomplete. */
 export const SEARCH_DELAY_MS = 250;
 
-export interface ComboboxProps {
+interface ComboboxBase {
   id: string;
   /** Names the listbox; the input is named by the field's <label>. */
   label: string | undefined;
@@ -36,8 +36,6 @@ export interface ComboboxProps {
   /** True while the records of the current value load. */
   resolving: boolean;
   itemText: (item: AutocompleteItem) => string;
-  /** Rejects with an Error carrying the server's message. */
-  load: (input: string, context: SearchContext) => Promise<SearchPage>;
   onSelect: (item: AutocompleteItem) => void;
   onRemove: (item: AutocompleteItem) => void;
   /** Takes the focus on mount, for an editor whose first input it is. */
@@ -46,6 +44,17 @@ export interface ComboboxProps {
   initialOpen?: boolean;
   invalid?: boolean;
 }
+
+/** A server search after select2's wait, or a local list filtered at once, as select2 over `data`. */
+export type ComboboxProps = ComboboxBase &
+  (
+    | {
+        /** Rejects with an Error carrying the server's message. */
+        load: (input: string, context: SearchContext) => Promise<SearchPage>;
+        filter?: undefined;
+      }
+    | { filter: (input: string) => AutocompleteItem[]; load?: undefined }
+  );
 
 interface Results {
   term: string;
@@ -139,13 +148,18 @@ export function Combobox(props: ComboboxProps) {
   const [results, setResults] = useState<Results>(NO_RESULTS);
   const input = useRef<HTMLInputElement>(null);
   const chosen = new Set(selected.map((item) => String(item.id)));
-  // select2 hides chosen records from a multi-select's results.
-  const items = multiple
-    ? results.items.filter((item) => !chosen.has(String(item.id)))
-    : results.items;
-  const single = multiple ? undefined : selected[0];
   const term = query ?? "";
-  const load = useEffectEvent(props.load);
+  const local = props.filter ? props.filter(term) : null;
+  const found = local ?? results.items;
+  // select2 hides chosen records from a multi-select's results.
+  const items = multiple ? found.filter((item) => !chosen.has(String(item.id))) : found;
+  const single = multiple ? undefined : selected[0];
+  const remote = props.load;
+  const load = useEffectEvent((searched: string, context: SearchContext) => {
+    if (!remote) throw new Error("A local list has no search to load.");
+    return remote(searched, context);
+  });
+  const isRemote = !!remote;
 
   const combobox = useCombobox<AutocompleteItem>({
     items,
@@ -179,7 +193,7 @@ export function Combobox(props: ComboboxProps) {
   const searching = isOpen && term.length >= props.minLength;
 
   useEffect(() => {
-    if (!searching) return undefined;
+    if (!searching || !isRemote) return undefined;
     let current = true;
     const timer = setTimeout(() => {
       setResults({ ...NO_RESULTS, term, loading: true });
@@ -196,16 +210,16 @@ export function Combobox(props: ComboboxProps) {
       current = false;
       clearTimeout(timer);
     };
-  }, [searching, term]);
+  }, [searching, term, isRemote]);
 
   function loadMore() {
     const { context, more, loadingMore, term: searched } = results;
-    if (!more || loadingMore || !context) return;
+    if (!more || loadingMore || !context || !remote) return;
     setResults({ ...results, loadingMore: true });
     const update = (change: (previous: Results) => Results) => {
       setResults((previous) => (previous.term === searched ? change(previous) : previous));
     };
-    props.load(searched, context).then(
+    remote(searched, context).then(
       (page) => {
         update((previous) => ({
           ...previous,
@@ -225,7 +239,7 @@ export function Combobox(props: ComboboxProps) {
     );
   }
 
-  const fresh = results.term === term && !results.loading;
+  const fresh = local !== null || (results.term === term && !results.loading);
   const message = ((): [string, string] | null => {
     if (!isOpen) return null;
     if (!searching) return ["select2-no-results", ts("Enter search term or id...")];

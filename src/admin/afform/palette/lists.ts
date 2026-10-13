@@ -19,6 +19,12 @@ export interface PaletteItem {
   key: string;
   title: string;
   node: ShallowElement;
+  /** What the entry adds, which its tile describes: a field, a block's directive or an element. */
+  field?: GuiField;
+  block?: string;
+  element?: string;
+  /** Where the entry may be dropped, when not where its list's entries may; null for anywhere. */
+  entity?: string | null;
 }
 
 export interface FieldGroup {
@@ -58,6 +64,7 @@ export function elementItems(
             key: `element:${name}`,
             title: element.title,
             node: toShallowElement(meta, element.element),
+            element: name,
           },
         ]
       : [],
@@ -87,7 +94,14 @@ export function globalBlockItems(
     block.entity_type === "*" &&
     !block.join_entity &&
     block.name !== afform.name
-      ? [{ key: `block:${directive}`, title: block.title, node: { "#tag": directive } }]
+      ? [
+          {
+            key: `block:${directive}`,
+            title: block.title,
+            node: { "#tag": directive },
+            block: directive,
+          },
+        ]
       : [],
   );
 }
@@ -129,6 +143,7 @@ export function extraFieldItems(
         key: `extra:${type.name}`,
         title: type.label,
         node: { "#tag": "af-field", defn: encodeLiteral(toLiteral(defn)) },
+        field: { name: defn.name, label: defn.label, input_type: type.name },
       },
     ];
   });
@@ -254,7 +269,8 @@ export function entityBlockItems(
     )
       return [];
     const key = `block:${directive}`;
-    if (!block.join_entity) return [{ key, title: block.title, node: { "#tag": directive } }];
+    if (!block.join_entity)
+      return [{ key, title: block.title, node: { "#tag": directive }, block: directive }];
     const joinEntity = meta.gui.entities[block.join_entity];
     if (!joinEntity) return [];
     const node: ShallowElement = {
@@ -268,7 +284,7 @@ export function entityBlockItems(
       node.min = "1";
       if (typeof joinEntity.repeat_max === "number") node.max = String(joinEntity.repeat_max);
     }
-    return [{ key, title: block.title, node }];
+    return [{ key, title: block.title, node, block: directive }];
   });
 }
 
@@ -288,6 +304,7 @@ export function entityFieldGroups(
               key: `${prefix}:${field.name}`,
               title: fieldTitle(field),
               node: { "#tag": "af-field", name: paletteName(field) },
+              field,
             },
           ]
         : [],
@@ -336,6 +353,8 @@ export function entityFieldsetItem(
     key: `fieldset:${entityName}`,
     title,
     node: toShallowElement(meta, { ...fieldset, "af-fieldset": entityName }),
+    element: "fieldset",
+    entity: null,
   };
 }
 
@@ -348,7 +367,7 @@ function searchFieldItem(field: GuiField, prefix: string, title: string): Palett
   else if (field.input_type === "Date") defn = { input_type: "Select", search_range: true };
   else if (field.options) defn = { input_type: "Select", input_attrs: { multiple: true } };
   if (defn) node.defn = encodeLiteral(toLiteral(defn));
-  return { key: `${prefix}:${field.name}`, title, node };
+  return { key: `${prefix}:${field.name}`, title, node, field };
 }
 
 /** afGuiSearch's palette: calculated fields, then each entity's fields, all blocks. */
@@ -373,7 +392,14 @@ export function searchPalette(
   }));
   const blocks = Object.entries(meta.blocks).flatMap(([directive, block]) =>
     blockMatches(search, directive, block.name, block.title)
-      ? [{ key: `block:${directive}`, title: block.title, node: { "#tag": directive } }]
+      ? [
+          {
+            key: `block:${directive}`,
+            title: block.title,
+            node: { "#tag": directive },
+            block: directive,
+          },
+        ]
       : [],
   );
   return { calculated, groups, blocks };

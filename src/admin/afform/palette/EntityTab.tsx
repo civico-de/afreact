@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId } from "react";
 import { Picker } from "../../widgets/Picker";
 import { PartNotice, PluginElement } from "../canvas/plugins";
 import {
@@ -17,7 +17,14 @@ import { encodeLiteral, isLiteralObject, toLiteral, type Literal } from "../lite
 import { getField, type Behavior, type GuiField } from "../meta";
 import { jsAttribute, textAttribute, withAttribute } from "../model";
 import type { ShallowElement } from "../tree";
-import { HelpLink, PaletteFieldset, PaletteList } from "./common";
+import {
+  HelpLink,
+  PaletteAdd,
+  PaletteList,
+  PaletteSection,
+  PanelHead,
+  usePaletteSearch,
+} from "./common";
 import {
   entityBlockInUse,
   entityBlockItems,
@@ -102,10 +109,20 @@ function EntityValues({ entity }: { entity: FormEntity }) {
   const addable = Object.values(fields)
     .filter((field) => !entityFieldInUse(editor.meta, entity.name, data, canvas, field.name, null))
     .map((field) => ({ id: field.name, label: field.label ?? field.name }));
+  const shown = Object.keys(data).filter(
+    (fieldName) =>
+      !!fields[unsuffixed(fieldName)] && !!getField(editor.meta, entity.type, fieldName),
+  );
   return (
-    <fieldset className="af-gui-entity-values">
-      <legend>{ts("Values:")}</legend>
-      {Object.keys(data).map((fieldName) => {
+    <PaletteSection
+      name="entity-values"
+      title={ts("Values")}
+      summary={
+        shown.length ? ts("1 value", { plural: "%count values", count: shown.length }) : ts("None")
+      }
+      className="af-gui-entity-values"
+    >
+      {shown.map((fieldName) => {
         const meta = fields[unsuffixed(fieldName)];
         const spec = getField(editor.meta, entity.type, fieldName);
         if (!meta || !spec) return null;
@@ -116,8 +133,9 @@ function EntityValues({ entity }: { entity: FormEntity }) {
         const set = (next: unknown) => {
           setData((current) => ({ ...current, [fieldName]: toLiteral(next) }));
         };
+        // deviation:palette-value-cards
         return (
-          <div key={fieldName}>
+          <div key={fieldName} className="afreact-value-card">
             <label className="af-gui-block-label" htmlFor={fieldId(fieldName)}>
               {meta.label ?? meta.name}:
             </label>
@@ -169,7 +187,7 @@ function EntityValues({ entity }: { entity: FormEntity }) {
               )}{" "}
               <button
                 type="button"
-                className="btn btn-link btn-xs"
+                className="btn btn-link btn-xs afreact-value-remove"
                 aria-label={ts("Remove %1", { 1: meta.label ?? meta.name })}
                 title={ts("Remove")}
                 onClick={() => {
@@ -186,7 +204,6 @@ function EntityValues({ entity }: { entity: FormEntity }) {
           </div>
         );
       })}
-      <hr />
       <div className="form-inline">
         <Picker
           id={`${id}-add-value`}
@@ -202,34 +219,41 @@ function EntityValues({ entity }: { entity: FormEntity }) {
           }}
         />
       </div>
-    </fieldset>
+    </PaletteSection>
   );
 }
 
 /** The entity's add list: its fieldset, its blocks, its and its joins' fields. */
 function EntityPalette({ entity }: { entity: FormEntity }) {
   const editor = useEditor();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = usePaletteSearch(entity.name);
   const term = search.toLowerCase();
   const canvas = canvasNodes(editor.afform);
   const data = entityData(entity.node);
-  const fieldset = entity.path && entityFieldsetItem(editor.meta, entity.name, entity.label, term);
+  const fieldset = entity.path
+    ? entityFieldsetItem(editor.meta, entity.name, entity.label, term)
+    : null;
+  const [own, ...joins] = entityFieldGroups(editor.meta, entity.name, entity.type, canvas, term);
+  // The fieldset opens the entity's own fields rather than a group of its own.
+  const groups = own
+    ? [{ ...own, items: [...(fieldset ? [fieldset] : []), ...own.items] }, ...joins]
+    : [];
   return (
-    <PaletteFieldset legend={ts("Add:")} search={search} onSearch={setSearch}>
-      <PaletteList label={ts("Elements")} items={fieldset ? [fieldset] : []} entity={null} />
+    <PaletteAdd name="entity-add" title={ts("Add")} search={search} onSearch={setSearch}>
       <PaletteList
         label={ts("Blocks")}
         items={entityBlockItems(editor.meta, editor.afform, entity.type, term)}
         entity={entity.name}
         inUse={(item) => entityBlockInUse(editor.meta, entity.name, canvas, item.node)}
       />
-      {entityFieldGroups(editor.meta, entity.name, entity.type, canvas, term).map((group) => (
+      {groups.map((group) => (
         <PaletteList
           key={group.entityName}
           label={group.label}
           items={group.items}
           entity={group.entityName}
           inUse={(item) =>
+            item !== fieldset &&
             entityFieldInUse(
               editor.meta,
               entity.name,
@@ -241,7 +265,7 @@ function EntityPalette({ entity }: { entity: FormEntity }) {
           }
         />
       ))}
-    </PaletteFieldset>
+    </PaletteAdd>
   );
 }
 
@@ -354,15 +378,6 @@ function GenericOptions({ entity, link }: { entity: FormEntity; link: string | n
               {ts("Accept ID from URL")}
             </label>
           </div>
-          {urlAutofill && security === "FBAC" && (
-            <div className="description bg-warning">
-              <i className="crm-i fa-warning" role="img" aria-hidden="true" />{" "}
-              {ts(
-                "Without Role-Based access, users of the form will be able to view and update any %1 by changing the id in the URL.",
-                { 1: label },
-              )}
-            </div>
-          )}
           {urlAutofill && (
             <div className="description">
               <p>
@@ -510,25 +525,83 @@ function BehaviorSettings({ entity, behavior }: { entity: FormEntity; behavior: 
   );
 }
 
-/** afGuiEntity: an entity's tab in the palette. */
+/** The warning on a record any user can open by its id in the URL, in view while Options are shut. */
+function exposureWarning(editor: EditorApi, entity: FormEntity) {
+  const template = editor.meta.gui.entities[entity.type]?.options_tpl ?? GENERIC_OPTIONS;
+  const exposed =
+    template === GENERIC_OPTIONS &&
+    textAttribute(entity.node, "url-autofill") === "1" &&
+    !!entityActions(entity.node).update &&
+    textAttribute(entity.node, "security") === "FBAC";
+  if (!exposed) return null;
+  return (
+    <div className="description bg-warning">
+      <i className="crm-i fa-warning" role="img" aria-hidden="true" />{" "}
+      {ts(
+        "Without Role-Based access, users of the form will be able to view and update any %1 by changing the id in the URL.",
+        { 1: editor.meta.gui.entities[entity.type]?.label ?? entity.type },
+      )}
+    </div>
+  );
+}
+
+/** What the options section holds while shut: security mode, actions, URL id and behaviors. */
+function optionsSummary(editor: EditorApi, entity: FormEntity): string | undefined {
+  const template = editor.meta.gui.entities[entity.type]?.options_tpl ?? GENERIC_OPTIONS;
+  const actions = entityActions(entity.node);
+  const names =
+    template === GENERIC_OPTIONS
+      ? { create: ts("Create"), update: ts("Update") }
+      : template === GROUP_OPTIONS
+        ? { create: ts("Subscribe"), update: ts("Unsubscribe") }
+        : null;
+  if (!names) return undefined;
+  const security = textAttribute(entity.node, "security");
+  const mode = SECURITY_MODES().find((each) => each.id === security);
+  const parts = [
+    template === GENERIC_OPTIONS ? mode?.label : undefined,
+    ...(["create", "update"] as const).filter((key) => !!actions[key]).map((key) => names[key]),
+    template === GENERIC_OPTIONS &&
+    actions.update &&
+    textAttribute(entity.node, "url-autofill") === "1"
+      ? ts("ID from URL")
+      : undefined,
+    ...(editor.meta.behaviors[entity.type] ?? [])
+      .filter((behavior) => !!textAttribute(entity.node, behavior.key))
+      .map((behavior) => behavior.title),
+  ];
+  return parts.filter((part) => part !== undefined).join(" · ") || ts("None");
+}
+
+/** afGuiEntity: an entity's tab in the palette: its values and options, then its long add list. */
 export function EntityTab({ entity, link }: { entity: FormEntity; link: string | null }) {
   const editor = useEditor();
   // deviation:behaviors-only-on-forms
   const configurable = editor.afform.type === "form" && entity.path !== null;
+  const path = entity.path;
   const label = editor.meta.gui.entities[entity.type]?.label ?? entity.type;
   return (
-    <>
-      <form
-        className="af-gui-columns crm-flex-box"
-        onSubmit={(event) => {
-          event.preventDefault();
-        }}
+    <form
+      className="afreact-palette-sections"
+      onSubmit={(event) => {
+        event.preventDefault();
+      }}
+    >
+      <PanelHead
+        icon={editor.meta.gui.entities[entity.type]?.icon ?? "fa-cube"}
+        label={entity.label}
+        renameLabel={ts("Label of %1", { 1: entity.name })}
+        onRename={
+          configurable && path
+            ? (next) => {
+                editor.change((afform) =>
+                  editNode(afform, editor.meta, path, (node) => ({ ...node, label: next })),
+                );
+              }
+            : undefined
+        }
       >
-        {editor.afform.type !== "block" && <EntityValues entity={entity} />}
-        <EntityPalette entity={entity} />
-      </form>
-      {configurable && (
-        <>
+        {configurable && (
           <button
             type="button"
             className="btn btn-sm btn-danger-outline af-gui-remove-entity"
@@ -540,18 +613,26 @@ export function EntityTab({ entity, link }: { entity: FormEntity; link: string |
           >
             <i className="crm-i fa-trash" role="img" aria-hidden="true" />
           </button>
-          <fieldset>
-            <legend>{ts("Options")}</legend>
-            <EntityOptions entity={entity} link={link} />
-          </fieldset>
+        )}
+      </PanelHead>
+      {editor.afform.type !== "block" && <EntityValues entity={entity} />}
+      {configurable && (
+        <PaletteSection
+          name="entity-options"
+          title={ts("Options")}
+          summary={optionsSummary(editor, entity)}
+          note={exposureWarning(editor, entity)}
+        >
+          <EntityOptions entity={entity} link={link} />
           {(editor.meta.behaviors[entity.type] ?? []).map((behavior) => (
             <fieldset key={behavior.key}>
               <legend>{behavior.title}</legend>
               <BehaviorSettings entity={entity} behavior={behavior} />
             </fieldset>
           ))}
-        </>
+        </PaletteSection>
       )}
-    </>
+      <EntityPalette entity={entity} />
+    </form>
   );
 }

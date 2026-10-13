@@ -1,21 +1,26 @@
 import {
   DndContext,
   DragOverlay,
+  getClientRect,
   KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
+  useDndContext,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
   type Active,
   type Announcements,
+  type ClientRect,
   type CollisionDetection,
   type KeyboardCoordinateGetter,
   type Modifier,
   type Over,
   type UniqueIdentifier,
 } from "@dnd-kit/core";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { insertAt, moveTo, useEditor, type EditorApi } from "../context";
 import type { AfformDefinition } from "../meta";
 import type { NodePath, ShallowElement } from "../tree";
@@ -177,9 +182,11 @@ interface DropState {
   how: "before" | "after" | "end" | "refused";
   /** The dragged element's label while a drag runs. */
   dragging: string;
+  /** A pointer drag takes the element out of the layout while it would land elsewhere. */
+  pointer: boolean;
 }
 
-const idle: DropState = { mark: null, how: "before", dragging: "" };
+const idle: DropState = { mark: null, how: "before", dragging: "", pointer: false };
 
 const DropContext = createContext<DropState>(idle);
 
@@ -192,6 +199,36 @@ const besidePointer: Modifier = ({ transform, activatorEvent, activeNodeRect }) 
         y: transform.y + activatorEvent.clientY - activeNodeRect.top + 12,
       }
     : transform;
+
+const measured = new WeakMap<HTMLElement, ClientRect>();
+
+/** The element's box; while a drag takes it out of the layout, the box it had. */
+const measureDraggable = (element: HTMLElement) => {
+  const kept = measured.get(element);
+  if (kept && !element.getClientRects().length) return kept;
+  const rect = getClientRect(element);
+  measured.set(element, rect);
+  return rect;
+};
+
+/** A copy of the dragged element or palette entry, drawn beside the pointer. */
+function DragCopy() {
+  const { activeNode } = useDndContext();
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!activeNode || !box.current) return;
+    const copy = activeNode.cloneNode(true);
+    if (!(copy instanceof HTMLElement)) return;
+    for (const each of [copy, ...copy.querySelectorAll("[id]")]) each.removeAttribute("id");
+    copy.classList.remove("afreact-dragging", "afreact-drag-place");
+    box.current.style.width = `${activeNode.offsetWidth}px`;
+    box.current.replaceChildren(copy);
+    // The gap where the element lands takes its size.
+    document.body.style.setProperty("--afreact-drag-width", `${activeNode.offsetWidth}px`);
+    document.body.style.setProperty("--afreact-drag-height", `${activeNode.offsetHeight}px`);
+  }, [activeNode]);
+  return <div ref={box} className="afreact-drag-copy" aria-hidden="true" inert />;
+}
 
 /** The canvas and the palette as one drag-and-drop area, by pointer or keyboard. */
 export function CanvasDnd({ children }: { children: ReactNode }) {
@@ -248,6 +285,11 @@ export function CanvasDnd({ children }: { children: ReactNode }) {
     <DndContext
       sensors={sensors}
       collisionDetection={canvasCollision}
+      // The gap where an element lands moves the layout, so the targets are measured as it moves.
+      measuring={{
+        droppable: { strategy: MeasuringStrategy.Always },
+        draggable: { measure: measureDraggable },
+      }}
       accessibility={{
         announcements,
         screenReaderInstructions: {
@@ -259,22 +301,29 @@ export function CanvasDnd({ children }: { children: ReactNode }) {
         // A move hands the old place to another element; onDragEnd focuses the moved one.
         restoreFocus: false,
       }}
-      onDragStart={({ active }) => {
+      onDragStart={({ active, activatorEvent }) => {
         stepped = null;
         document.body.classList.add("af-gui-dragging");
-        setState({ ...idle, dragging: sourceOf(active)?.label ?? "" });
+        setState({
+          ...idle,
+          dragging: sourceOf(active)?.label ?? "",
+          pointer: activatorEvent instanceof PointerEvent,
+        });
       }}
-      onDragOver={({ active, over }) => {
+      onDragOver={({ active, over, activatorEvent }) => {
         const drop = resolve(active, over);
         const target = targetOf(over);
-        const dragging = sourceOf(active)?.label ?? "";
+        const base = {
+          dragging: sourceOf(active)?.label ?? "",
+          pointer: activatorEvent instanceof PointerEvent,
+        };
         const last = target?.shown.at(-1);
-        if (!drop || !target || !over || drop.stays) setState({ ...idle, dragging });
-        else if (!drop.ok) setState({ mark: over.id, how: "refused", dragging });
-        else if (target.kind === "item") setState({ mark: over.id, how: "before", dragging });
-        // The end of a list shows as a line after its last drawn item.
-        else if (last === undefined) setState({ mark: over.id, how: "end", dragging });
-        else setState({ mark: itemId([...target.scope.path, last]), how: "after", dragging });
+        if (!drop || !target || !over || drop.stays) setState({ ...idle, ...base });
+        else if (!drop.ok) setState({ mark: over.id, how: "refused", ...base });
+        else if (target.kind === "item") setState({ mark: over.id, how: "before", ...base });
+        // The end of a list opens its gap after its last drawn item.
+        else if (last === undefined) setState({ mark: over.id, how: "end", ...base });
+        else setState({ mark: itemId([...target.scope.path, last]), how: "after", ...base });
       }}
       onDragEnd={({ active, over, activatorEvent }) => {
         document.body.classList.remove("af-gui-dragging");
@@ -298,14 +347,13 @@ export function CanvasDnd({ children }: { children: ReactNode }) {
       }}
     >
       <DropContext value={state}>{children}</DropContext>
-      <DragOverlay dropAnimation={null} modifiers={[besidePointer]}>
-        {state.dragging && (
-          <div className="afreact-drag-chip" aria-hidden="true">
-            <i className="crm-i fa-arrows" role="img" />
-            {state.dragging}
-          </div>
-        )}
-      </DragOverlay>
+      {/* Core draws its copy inside the canvas, whose styles lay it out. */}
+      {createPortal(
+        <DragOverlay dropAnimation={null} modifiers={[besidePointer]}>
+          {state.dragging && <DragCopy />}
+        </DragOverlay>,
+        document.getElementById("afGuiEditor-canvas-body") ?? document.body,
+      )}
     </DndContext>
   );
 }
@@ -343,6 +391,12 @@ export function useCanvasItem(
     },
     dragging: drag.isDragging,
     dropClass: state.mark === id ? `afreact-drop-${state.how}` : "",
+    // Core takes the element out of the layout while it would land elsewhere.
+    dragClass: !drag.isDragging
+      ? ""
+      : state.pointer && state.mark !== null && state.how !== "refused"
+        ? "afreact-dragging afreact-dragged-away"
+        : `afreact-dragging${state.pointer ? " afreact-drag-place" : ""}`,
   };
 }
 

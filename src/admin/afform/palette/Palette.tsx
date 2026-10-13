@@ -1,10 +1,10 @@
 import { useId, useState } from "react";
 import { api4, errorMessage } from "../../../api/civi";
 import { Dropdown } from "../../widgets/Dropdown";
-import { InlineEdit } from "../../widgets/InlineEdit";
 import { TabList, TabPanel, type TabItem } from "../../widgets/Tabs";
-import { editNode, useEditor, type FormEntity } from "../context";
+import { useEditor } from "../context";
 import type { FormSearchDisplay } from "../nodes";
+import { PaletteMemoryContext, usePaletteMemory } from "./common";
 import { ElementsTab } from "./ElementsTab";
 import { EntityTab } from "./EntityTab";
 import { SearchTab } from "./SearchTab";
@@ -172,8 +172,9 @@ export function scrollToEntity(name: string) {
   const fieldset = document
     .getElementById("afGuiEditor-canvas-body")
     ?.querySelector(`.af-gui-container-type-fieldset[data-entity="${CSS.escape(name)}"]`);
+  if (!fieldset) return;
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  fieldset?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
+  fieldset.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
 }
 
 const SETTINGS = "settings";
@@ -198,8 +199,7 @@ export function Palette({
   const base = useId();
   const configurable = editor.afform.type === "form";
   const active = editor.selected ?? SETTINGS;
-  const editable = (entity: FormEntity) =>
-    configurable && active === entity.name && entity.path !== null;
+  const memory = usePaletteMemory();
   const spinner = <i className="crm-i fa-spin fa-spinner" role="img" aria-hidden="true" />;
   const items: TabItem[] = [
     {
@@ -236,11 +236,7 @@ export function Palette({
         key: entity.name,
         title: entity.label,
         className: "fluid-width-tab",
-        label: editable(entity) ? (
-          <>
-            {icon} <span className="sr-only">{entity.label}</span>
-          </>
-        ) : (
+        label: (
           <>
             {icon} <span>{entity.label}</span>
           </>
@@ -267,7 +263,6 @@ export function Palette({
     }),
   ];
   const selectedEntity = editor.entities.find((entity) => entity.name === active);
-  const labelPath = selectedEntity && editable(selectedEntity) ? selectedEntity.path : null;
   const selectedDisplay = displays.find((display) => display.key === active);
   return (
     <div id="afGuiEditor-palette-config" className="panel panel-default">
@@ -287,18 +282,6 @@ export function Palette({
             }
           }}
         />
-        {selectedEntity && labelPath && (
-          <InlineEdit
-            className="afreact-tab-label"
-            label={ts("Label of %1", { 1: selectedEntity.name })}
-            value={selectedEntity.label}
-            onChange={(label) => {
-              editor.change((afform) =>
-                editNode(afform, editor.meta, labelPath, (node) => ({ ...node, label })),
-              );
-            }}
-          />
-        )}
         {loading.length > 0 && <span role="status">{spinner}</span>}
         {(configurable || editor.afform.type === "search") && (
           <ul className="nav nav-tabs afreact-palette-add" role="none">
@@ -313,12 +296,16 @@ export function Palette({
         )}
       </div>
       <TabPanel base={base} tab={active} active={active} className="panel-body">
-        {active === SETTINGS && <SettingsTab />}
-        {active === EXTRA && <ElementsTab />}
-        {selectedEntity && <EntityTab entity={selectedEntity} link={link} />}
-        {selectedDisplay && editor.meta.searchDisplays[selectedDisplay.key] && (
-          <SearchTab display={selectedDisplay} />
-        )}
+        <PaletteMemoryContext value={memory}>
+          {active === SETTINGS && <SettingsTab />}
+          {active === EXTRA && <ElementsTab />}
+          {selectedEntity && (
+            <EntityTab key={selectedEntity.name} entity={selectedEntity} link={link} />
+          )}
+          {selectedDisplay && editor.meta.searchDisplays[selectedDisplay.key] && (
+            <SearchTab key={selectedDisplay.key} display={selectedDisplay} />
+          )}
+        </PaletteMemoryContext>
       </TabPanel>
     </div>
   );

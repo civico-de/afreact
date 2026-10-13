@@ -17,6 +17,7 @@ import {
   searchPalette,
   unreadableFilters,
   withPlacement,
+  type PaletteItem,
 } from "./lists";
 
 const form = (children: ShallowNode[] = [], extra: Partial<AfformDefinition> = {}) => ({
@@ -64,6 +65,7 @@ describe("palette elements", () => {
     expect(elementItems(META, form(), "")).toEqual([
       {
         key: "element:submit",
+        element: "submit",
         title: "Submit Button",
         node: {
           "#tag": "button",
@@ -76,6 +78,7 @@ describe("palette elements", () => {
       },
       {
         key: "element:pages",
+        element: "pages",
         title: "Pages",
         node: {
           "#tag": "af-tabset",
@@ -111,7 +114,12 @@ describe("palette elements", () => {
       },
     });
     expect(globalBlockItems(meta, form(), "")).toEqual([
-      { key: "block:afblock-notice", title: "Notice", node: { "#tag": "afblock-notice" } },
+      {
+        key: "block:afblock-notice",
+        title: "Notice",
+        node: { "#tag": "afblock-notice" },
+        block: "afblock-notice",
+      },
     ]);
     expect(globalBlockItems(meta, form([], { name: "afblockNotice" }), "")).toEqual([]);
     expect(globalBlockItems(meta, form(), "notice")).toHaveLength(1);
@@ -135,6 +143,7 @@ describe("extra fields", () => {
         "#tag": "af-field",
         defn: "{data_type: 'String', label: 'Extra Text', input_type: 'Text', name: 'text3'}",
       },
+      field: { name: "text3", label: "Extra Text", input_type: "Text" },
     });
     expect(nodeDefn(items[1]?.node ?? field(""))).toEqual({
       data_type: "String",
@@ -234,9 +243,15 @@ describe("entityBlockInUse", () => {
 describe("entityBlockItems", () => {
   it("offers the entity type's blocks, a join's wrapped in its repeat container", () => {
     expect(entityBlockItems(META, form(), "Individual", "")).toEqual([
-      { key: "block:afblock-name", title: "Name", node: { "#tag": "afblock-name" } },
+      {
+        key: "block:afblock-name",
+        title: "Name",
+        node: { "#tag": "afblock-name" },
+        block: "afblock-name",
+      },
       {
         key: "block:afblock-email",
+        block: "afblock-email",
         title: "Email Block",
         node: {
           "#tag": "div",
@@ -249,6 +264,7 @@ describe("entityBlockItems", () => {
       },
       {
         key: "block:afblock-phone",
+        block: "afblock-phone",
         title: "Phone Block",
         node: {
           "#tag": "div",
@@ -262,6 +278,7 @@ describe("entityBlockItems", () => {
       },
       {
         key: "block:afblock-address",
+        block: "afblock-address",
         title: "Address Block",
         node: { "#tag": "div", "af-join": "Address", "#children": [{ "#tag": "afblock-address" }] },
       },
@@ -301,9 +318,18 @@ describe("entityBlockItems", () => {
   });
 });
 
+/** The entries without the field each carries, which the tests check by name. */
+const withoutFields = <T extends { items: PaletteItem[] }>(group: T) => ({
+  ...group,
+  items: group.items.map(({ key, title, node }) => ({ key, title, node })),
+});
+
 describe("entityFieldGroups", () => {
   it("lists the entity's fields, then each join placed in its fieldsets", () => {
-    expect(entityFieldGroups(META, "Individual1", "Individual", CANVAS, "")).toEqual([
+    const groups = entityFieldGroups(META, "Individual1", "Individual", CANVAS, "");
+    for (const item of groups.flatMap((group) => group.items))
+      expect(item.key.endsWith(`:${item.field?.name ?? "?"}`)).toBe(true);
+    expect(groups.map(withoutFields)).toEqual([
       {
         entityName: "Individual1",
         entityType: "Individual",
@@ -365,14 +391,16 @@ describe("entityFieldGroups", () => {
 describe("searchPalette", () => {
   it("makes filter fields multi-selects or date ranges, with the join's prefix", () => {
     const palette = searchPalette(META, CONTRIBUTIONS, "");
-    expect(palette.calculated).toEqual([
+    for (const item of [...palette.calculated, ...palette.groups.flatMap((group) => group.items)])
+      expect(item.key.endsWith(`:${item.field?.name ?? "?"}`)).toBe(true);
+    expect(withoutFields({ items: palette.calculated }).items).toEqual([
       {
         key: ":GROUP_COUNT_id",
         title: "Count",
         node: { "#tag": "af-field", name: "GROUP_COUNT_id" },
       },
     ]);
-    expect(palette.groups).toEqual([
+    expect(palette.groups.map(withoutFields)).toEqual([
       {
         entityName: "",
         entityType: "Contribution",

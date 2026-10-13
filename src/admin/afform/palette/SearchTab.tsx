@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId } from "react";
 import { Dropdown } from "../../widgets/Dropdown";
 import { Picker } from "../../widgets/Picker";
 import { editNode, useEditor } from "../context";
@@ -14,7 +14,7 @@ import {
 } from "../nodes";
 import { searchDisplayFields } from "../searchDisplay";
 import { nodeAt, type ShallowElement } from "../tree";
-import { PaletteFieldset, PaletteList } from "./common";
+import { PaletteAdd, PaletteList, PaletteSection, PanelHead, usePaletteSearch } from "./common";
 import { placementEntities, searchBlockInUse, searchFieldInUse, searchPalette } from "./lists";
 import { MenuLink } from "../../widgets/MenuLink";
 
@@ -59,8 +59,9 @@ function FilterRow({
         ? ts("Value")
         : (placements.find((each) => each.key === filter.value)?.label ?? filter.value);
   const field = getField(editor.meta, filterEntity(display, filter.name), filter.name);
+  // deviation:palette-value-cards
   return (
-    <div className="form-inline">
+    <div className="form-inline afreact-value-card">
       <Picker
         id={`${id}-name`}
         label={ts("Filter field")}
@@ -159,7 +160,7 @@ function FilterRow({
 export function SearchTab({ display: placed }: { display: FormSearchDisplay }) {
   const editor = useEditor();
   const id = useId();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = usePaletteSearch(placed.key);
   const display = editor.meta.searchDisplays[placed.key];
   if (!display) throw new Error(`No settings for search display ${placed.key}.`);
   const element = elementAt(editor.afform.layout, placed.path);
@@ -186,9 +187,23 @@ export function SearchTab({ display: placed }: { display: FormSearchDisplay }) {
   const palette = searchPalette(editor.meta, display, search.toLowerCase());
   const storeValues = !!textAttribute(fieldset, "store-values");
   return (
-    <div className="af-gui-columns crm-flex-box">
-      <fieldset className="af-gui-entity-values">
-        <legend>{ts("Hidden Filters:")}</legend>
+    <form
+      className="afreact-palette-sections"
+      onSubmit={(event) => {
+        event.preventDefault();
+      }}
+    >
+      <PanelHead icon={display["type:icon"] ?? "fa-table"} label={display.label} />
+      <PaletteSection
+        name="search-filters"
+        title={ts("Hidden Filters")}
+        summary={
+          filters.length
+            ? ts("1 filter", { plural: "%count filters", count: filters.length })
+            : ts("None")
+        }
+        className="af-gui-entity-values"
+      >
         {"error" in read && (
           <div className="alert alert-danger" role="alert">
             {ts("These filters cannot be read, so they cannot be edited here: %1", {
@@ -214,7 +229,6 @@ export function SearchTab({ display: placed }: { display: FormSearchDisplay }) {
             }}
           />
         ))}
-        <hr />
         <div className="form-inline">
           <Picker
             id={`${id}-add-filter`}
@@ -234,8 +248,31 @@ export function SearchTab({ display: placed }: { display: FormSearchDisplay }) {
             }}
           />
         </div>
-      </fieldset>
-      <PaletteFieldset legend={ts("Form Filters:")} search={search} onSearch={setSearch}>
+      </PaletteSection>
+      <PaletteSection
+        name="search-options"
+        title={ts("Options")}
+        summary={storeValues ? ts("Remember Filters") : ts("None")}
+      >
+        <label>
+          {ts("Remember Filters")}{" "}
+          <input
+            type="checkbox"
+            checked={storeValues}
+            onChange={() => {
+              editFieldset((node) =>
+                storeValues
+                  ? withoutAttributes(node, ["store-values"])
+                  : { ...node, "store-values": "1" },
+              );
+            }}
+          />
+        </label>
+        <p className="help-block">
+          {ts("Filter fields will retain their value when the same user revisits the form.")}
+        </p>
+      </PaletteSection>
+      <PaletteAdd name="search-add" title={ts("Form Filters")} search={search} onSearch={setSearch}>
         <PaletteList
           label={ts("Blocks")}
           items={palette.blocks}
@@ -257,27 +294,7 @@ export function SearchTab({ display: placed }: { display: FormSearchDisplay }) {
             inUse={(item) => inUse(textAttribute(item.node, "name") ?? "")}
           />
         ))}
-      </PaletteFieldset>
-      <fieldset>
-        <legend>{ts("Options")}</legend>
-        <label>
-          {ts("Remember Filters")}{" "}
-          <input
-            type="checkbox"
-            checked={storeValues}
-            onChange={() => {
-              editFieldset((node) =>
-                storeValues
-                  ? withoutAttributes(node, ["store-values"])
-                  : { ...node, "store-values": "1" },
-              );
-            }}
-          />
-        </label>
-        <p className="help-block">
-          {ts("Filter fields will retain their value when the same user revisits the form.")}
-        </p>
-      </fieldset>
-    </div>
+      </PaletteAdd>
+    </form>
   );
 }

@@ -39,6 +39,25 @@ describe("SettingsTab", () => {
     mockApi({ "Navigation.get": () => [] });
   });
 
+  it("checks the post-submit page by the pattern browsers apply", () => {
+    renderWithQuery(
+      <Harness
+        initial={{
+          type: "form",
+          title: "Probe",
+          layout: [],
+          submit_enabled: true,
+          confirmation_type: "redirect_to_url",
+          redirect: "nonsense",
+        }}
+      />,
+    );
+    const redirect = screen.getByTitle(/^Post-Submit Page must be/);
+    if (!(redirect instanceof HTMLInputElement))
+      throw new Error("The post-submit page is no input.");
+    expect(redirect.validity.patternMismatch).toBe(true);
+  });
+
   // deviation:menu-item-title-label
   it("labels the menu item's title apart from the form's", () => {
     renderWithQuery(

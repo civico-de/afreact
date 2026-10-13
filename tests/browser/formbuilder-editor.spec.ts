@@ -2,12 +2,29 @@ import { expect, test, type Page } from "@playwright/test";
 import { api, axeFindings, isRecord, keysListened, quietApi } from "./harness";
 
 const EDITOR = "/civicrm/admin/afreact/afform#/edit/afformQuickAddIndividual";
+const CREATE = "/civicrm/admin/afreact/afform#/create/form/Individual";
 const PROBE = "afformAfreactEditorProbe";
 const JOIN_BLOCK = "afblockAfreactJoinProbe";
 const ANY_ENTITY_BLOCK = "Afreact any entity probe";
 const LAYOUT =
   '<af-form ctrl="afform"><af-entity type="Individual" name="Individual1" actions="{create: true, update: true}" security="RBAC" />' +
   '<fieldset af-fieldset="Individual1" class="af-container"><af-field name="first_name" /><af-field name="last_name" /></fieldset>' +
+  '<button class="af-button btn btn-primary" crm-icon="fa-check" ng-click="afform.submit()">Submit</button></af-form>';
+
+const entity = (type: string, name: string, label: string, data = "") =>
+  `<af-entity type="${type}" name="${name}" label="${label}" actions="{create: true, update: true}" security="RBAC"${data} />`;
+/** Two entities of one type and one referring to the first, with long labels. */
+const APPLICANT = "Main applicant of the household";
+const SPOUSE = "Spouse or registered partner";
+const CALL = "Intake call with the family about the membership application and its yearly fees";
+const MULTI =
+  '<af-form ctrl="afform">' +
+  entity("Individual", "Individual1", APPLICANT) +
+  entity("Individual", "Individual2", SPOUSE) +
+  entity("Activity", "Activity1", CALL, ` data="{source_contact_id: 'Individual1'}"`) +
+  '<fieldset af-fieldset="Individual1" class="af-container"><af-field name="first_name" /></fieldset>' +
+  '<fieldset af-fieldset="Individual2" class="af-container"><af-field name="last_name" /></fieldset>' +
+  '<fieldset af-fieldset="Activity1" class="af-container"><af-field name="subject" /></fieldset>' +
   '<button class="af-button btn btn-primary" crm-icon="fa-check" ng-click="afform.submit()">Submit</button></af-form>';
 
 /** Values core's editor evaluates: it saves the first translated, drops the second and fails on the third. */
@@ -76,6 +93,7 @@ test.describe("FormBuilder editor", () => {
     const palette = page.locator("#afGuiEditor-palette-config");
     const tab = (name: string) => palette.getByRole("tab", { name });
     await tab("Individual1").click();
+    await palette.getByRole("button", { name: "Options", exact: true }).click();
     const update = palette.getByRole("checkbox", { name: "Update" });
     await expect(update).not.toBeChecked();
     await update.check();
@@ -103,6 +121,7 @@ test.describe("FormBuilder editor", () => {
     await expect(changed).toBeVisible();
     const palette = page.locator("#afGuiEditor-palette");
     await palette.getByRole("tab", { name: "Individual1" }).click();
+    await palette.getByRole("button", { name: "Options", exact: true }).click();
     const update = palette.getByRole("checkbox", { name: "Update" });
     await update.uncheck();
     // In an input the keys stay the input's; outside they undo one step, and Shift redoes it.
@@ -169,37 +188,66 @@ test.describe("FormBuilder editor", () => {
       ).toEqual([]);
     });
 
-  // deviation:palette-tabs-flex-row
-  test("keeps the palette tabs on one row, shrinking only the inactive ones", async ({ page }) => {
-    const entities = ["Individual2", "Individual3", "Individual4", "Individual5"]
-      .map(
-        (name) =>
-          `<af-entity type="Individual" name="${name}" actions="{create: true, update: true}" security="RBAC" />`,
-      )
-      .join("");
-    await saveProbe(
+  // deviation:palette-tabs-wrap
+  // Riverlea replaces core's editor styles, other themes load them; the test adds them last.
+  for (const styles of ["the theme's", "core's"]) {
+    test(`wraps the palette tabs onto rows, each showing its full name, under ${styles} editor styles`, async ({
       page,
-      LAYOUT.replace('<af-form ctrl="afform">', `<af-form ctrl="afform">${entities}`),
-    );
-    await page.setViewportSize({ width: 1000, height: 800 });
-    await page.goto(`/civicrm/admin/afreact/afform#/edit/${PROBE}`);
-    const palette = page.locator("#afGuiEditor-palette");
-    await palette.getByRole("tab", { name: "Individual3" }).click();
-    const tabs = palette.getByRole("tab");
-    await expect(tabs).toHaveCount(7);
-    const boxes = await tabs.evaluateAll((all) =>
-      all.map((tab) => ({
-        top: tab.getBoundingClientRect().top,
-        clipped: tab.scrollWidth > tab.clientWidth,
-        active: tab.getAttribute("aria-selected") === "true",
-      })),
-    );
-    expect(new Set(boxes.map((box) => box.top)).size).toBe(1);
-    expect(boxes.filter((box) => box.active)).toEqual([
-      expect.objectContaining({ clipped: false }),
-    ]);
-    expect(boxes.some((box) => box.clipped)).toBe(true);
-  });
+    }) => {
+      await saveProbe(page, MULTI);
+      await page.setViewportSize({ width: 1000, height: 800 });
+      await page.goto(`/civicrm/admin/afreact/afform#/edit/${PROBE}`);
+      if (styles === "core's")
+        await page.addStyleTag({ url: "/core/ext/afform/admin/ang/afGuiEditor.css" });
+      const palette = page.locator("#afGuiEditor-palette");
+      const tabs = palette.getByRole("tab");
+      await expect(tabs).toHaveCount(5);
+      await expect(tabs).toHaveText(["Settings", "Elements", APPLICANT, SPOUSE, CALL]);
+      const boxes = await tabs.evaluateAll((all) =>
+        all.map((tab) => {
+          const item = tab.parentElement;
+          if (!item) throw new Error("No tab item");
+          const list = item.parentElement?.getBoundingClientRect();
+          const box = tab.getBoundingClientRect();
+          if (!list) throw new Error("No tab list");
+          return {
+            top: box.top,
+            bottom: box.bottom,
+            clipped:
+              box.right > list.right + 0.5 ||
+              tab.scrollWidth > tab.clientWidth ||
+              item.scrollHeight > item.clientHeight,
+          };
+        }),
+      );
+      expect(boxes.filter((box) => box.clipped)).toEqual([]);
+      expect(new Set(boxes.map((box) => box.top)).size).toBeGreaterThan(1);
+      // The panel starts below the last row of tabs.
+      const body = await palette.locator(".panel-body").boundingBox();
+      expect(body?.y).toBeGreaterThanOrEqual(Math.max(...boxes.map((box) => box.bottom)));
+    });
+  }
+
+  for (const styles of ["the theme's", "core's"]) {
+    test(`frames the palette's search box on all sides under ${styles} editor styles`, async ({
+      page,
+    }) => {
+      await page.goto(EDITOR);
+      if (styles === "core's")
+        await page.addStyleTag({ url: "/core/ext/afform/admin/ang/afGuiEditor.css" });
+      await page.getByRole("tab", { name: "Elements" }).click();
+      const sides = await page.getByRole("searchbox", { name: "Search fields" }).evaluate((box) => {
+        const style = getComputedStyle(box);
+        return ["top", "right", "bottom", "left"].map((side) =>
+          ["width", "style", "color"]
+            .map((part) => style.getPropertyValue(`border-${side}-${part}`))
+            .join(" "),
+        );
+      });
+      expect(sides[0]).not.toMatch(/^0px|none/);
+      expect(new Set(sides).size).toBe(1);
+    });
+  }
 
   test("appends a token to a field label from the label's token menu", async ({ page }) => {
     await page.goto(EDITOR);
@@ -305,6 +353,288 @@ test.describe("FormBuilder editor", () => {
     await expect(labels(page)).toHaveText(["Middle Name", "First Name", "Last Name"]);
   });
 
+  // deviation:palette-tiles
+  test("describes each palette entry on its tile", async ({ page }) => {
+    await page.goto(EDITOR);
+    await expect(labels(page).first()).toHaveText("First Name");
+    const palette = page.locator("#afGuiEditor-palette");
+    await palette.getByRole("tab", { name: "Individual1" }).click();
+    const field = palette.getByRole("button", { name: "Middle Name", exact: true }).first();
+    await expect(field).toHaveAccessibleDescription("Single-Line Text");
+    // A block's layout loads once its tile is on show.
+    const block = palette.getByRole("button", { name: "Individual Name", exact: true });
+    await block.scrollIntoViewIfNeeded();
+    await expect(block).toHaveAccessibleDescription("First Name, Middle Name, Last Name");
+    await expect(block.locator(".crm-i")).toHaveClass(/\bfa-user\b/);
+
+    await palette.getByRole("tab", { name: "Elements" }).click();
+    const submit = palette.getByRole("button", { name: "Submit Button", exact: true });
+    await expect(submit).toHaveAccessibleDescription("Submits the form");
+    await expect(submit.locator(".crm-i")).toHaveClass(/\bfa-check\b/);
+  });
+
+  // deviation:palette-sections
+  test("parts an entity's tab into sections, the add list full width and unboxed", async ({
+    page,
+  }) => {
+    await saveProbe(page, MULTI);
+    await page.goto(`/civicrm/admin/afreact/afform#/edit/${PROBE}`);
+    const palette = page.locator("#afGuiEditor-palette");
+    await palette.getByRole("tab", { name: CALL }).click();
+    const head = (name: string) => palette.getByRole("button", { name, exact: true });
+    await expect(head("Values")).toHaveAccessibleDescription("1 value");
+    await expect(head("Options")).toHaveAttribute("aria-expanded", "false");
+    await expect(head("Options")).toHaveAccessibleDescription("User-Based · Create · Update");
+    await expect(palette.getByRole("checkbox", { name: "Update" })).toBeHidden();
+    // The fieldset's tile opens the entity's own fields.
+    const own = palette.locator(".af-gui-entity-palette .afreact-palette-tile");
+    await expect(own.first()).toHaveAccessibleName(`Fieldset for ${CALL}`);
+    // Measured in one go, so no late layout shift falls between the boxes.
+    const [values, add, list] = await palette.evaluate((element) =>
+      [".af-gui-entity-values", ".af-gui-entity-palette", ".af-gui-entity-palette-select-list"].map(
+        (selector) => {
+          const part = element.querySelector(selector);
+          if (!part) throw new Error(`No ${selector}`);
+          const box = part.getBoundingClientRect();
+          return {
+            top: box.top,
+            bottom: box.bottom,
+            width: box.width,
+            inner: part.scrollHeight - part.clientHeight,
+          };
+        },
+      ),
+    );
+    if (!values || !add || !list) throw new Error("No values or add section");
+    expect(add.top).toBeGreaterThanOrEqual(values.bottom);
+    expect(add.width).toBeCloseTo(values.width, 0);
+    expect(list.inner).toBe(0);
+    const [first, second] = await Promise.all([own.nth(0).boundingBox(), own.nth(1).boundingBox()]);
+    expect(second?.y).toBe(first?.y);
+    // Core's grip and shade for plain entries stay off the tiles.
+    const date = palette.getByRole("button", { name: "Activity Date", exact: true });
+    await date.hover();
+    const hovered = await date.evaluate((tile) => {
+      const entry = tile.parentElement;
+      if (!entry || entry.matches(".disabled")) throw new Error("No enabled palette entry");
+      return [getComputedStyle(entry, "::before").content, getComputedStyle(entry).backgroundColor];
+    });
+    expect(hovered).toEqual(["none", "rgba(0, 0, 0, 0)"]);
+
+    // The search box stays in view at the end of the list.
+    const search = palette.getByRole("searchbox", { name: "Search fields" });
+    await own.last().scrollIntoViewIfNeeded();
+    expect(await palette.locator(".panel-body").evaluate((body) => body.scrollTop)).toBeGreaterThan(
+      0,
+    );
+    const [box, panel] = await Promise.all([
+      search.boundingBox(),
+      palette.locator(".panel-body").boundingBox(),
+    ]);
+    if (!box || !panel) throw new Error("No search box or panel");
+    expect(box.y).toBeGreaterThanOrEqual(panel.y);
+    expect(box.y + box.height).toBeLessThanOrEqual(panel.y + panel.height);
+  });
+
+  // deviation:palette-sections
+  test("marks what a shut section's heading told of once the section is open", async ({ page }) => {
+    await saveProbe(page, MULTI);
+    await page.goto(`/civicrm/admin/afreact/afform#/edit/${PROBE}`);
+    const palette = page.locator("#afGuiEditor-palette");
+    await palette.getByRole("tab", { name: "Settings" }).click();
+    await palette.getByRole("textbox", { name: "Page Route" }).fill("civicrm/afreact-probe");
+    await palette.getByRole("checkbox", { name: "Add to Navigation Menu" }).check();
+    const title = palette.getByRole("textbox", { name: "Menu item title" });
+    await title.fill("");
+    const placement = palette.getByRole("button", { name: "Placement Options" });
+    await placement.click();
+    await expect(placement).toHaveAccessibleDescription("A value is missing or invalid");
+    await placement.click();
+    const border = (locator: typeof title) =>
+      locator.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { color: style.borderTopColor, shadow: style.boxShadow };
+      });
+    const healthy = await border(palette.getByRole("spinbutton", { name: "Order" }));
+    const marked = await border(title);
+    expect(marked.color).not.toBe(healthy.color);
+    expect(marked.shadow).not.toBe(healthy.shadow);
+  });
+
+  test("keeps shut sections across entity tabs, and each tab its own search and fields", async ({
+    page,
+  }) => {
+    await saveProbe(page, MULTI);
+    await page.goto(`/civicrm/admin/afreact/afform#/edit/${PROBE}`);
+    const palette = page.locator("#afGuiEditor-palette");
+    const tab = (name: string) => palette.getByRole("tab", { name, exact: true });
+    const head = (name: string) => palette.getByRole("button", { name, exact: true });
+    const tile = (name: string) => palette.getByRole("button", { name, exact: true });
+    const search = palette.getByRole("searchbox", { name: "Search fields" });
+
+    await tab(APPLICANT).click();
+    await expect(head("Values")).toHaveAccessibleDescription("None");
+    await head("Values").click();
+    await head("Options").click();
+    await search.fill("Middle");
+    await expect(tile("Middle Name").first()).toBeVisible();
+    await expect(tile("Gender")).toHaveCount(0);
+
+    await tab(CALL).click();
+    await expect(head("Values")).toHaveAttribute("aria-expanded", "false");
+    await expect(palette.getByText("Added by:")).toBeHidden();
+    await expect(head("Options")).toHaveAttribute("aria-expanded", "true");
+    await expect(palette.getByRole("checkbox", { name: "Update" })).toBeVisible();
+    await expect(search).toHaveValue("");
+    await expect(tile("Activity Date")).toBeVisible();
+    await expect(tile("Middle Name")).toHaveCount(0);
+
+    await tab(SPOUSE).click();
+    await expect(search).toHaveValue("");
+    await expect(tile("Gender")).toBeVisible();
+    await tab(APPLICANT).click();
+    await expect(search).toHaveValue("Middle");
+    await expect(tile("Gender")).toHaveCount(0);
+  });
+
+  test("drops a tile only into its own entity's fieldset", async ({ page }) => {
+    await saveProbe(page, MULTI);
+    await page.goto(`/civicrm/admin/afreact/afform#/edit/${PROBE}`);
+    await expect(labels(page)).toHaveText(["First Name", "Last Name", "Subject"]);
+    const palette = page.locator("#afGuiEditor-palette");
+    await palette.getByRole("tab", { name: SPOUSE }).click();
+    await palette.getByRole("button", { name: "Middle Name", exact: true }).first().focus();
+    const status = page.locator("[aria-live]").filter({ hasText: /Middle Name/ });
+    await page.keyboard.press("Space");
+    await expect(status).toHaveText("Picked up Middle Name.");
+    await keysListened(page);
+    // Before and inside the applicant's fieldset, then the spouse's.
+    for (let step = 0; step < 4; step++) {
+      await page.keyboard.press("ArrowDown");
+      await expect(status).toHaveText("Middle Name cannot move there.");
+    }
+    await page.keyboard.press("ArrowDown");
+    await expect(status).toHaveText(`Middle Name moved to place 1 in ${SPOUSE}.`);
+    await page.keyboard.press("ArrowDown");
+    await expect(status).toHaveText(`Middle Name moved to place 2 in ${SPOUSE}.`);
+    await page.keyboard.press("ArrowDown");
+    await expect(status).toHaveText("Middle Name cannot move there.");
+    await page.keyboard.press("ArrowUp");
+    await expect(status).toHaveText(`Middle Name moved to place 2 in ${SPOUSE}.`);
+    await page.keyboard.press("Space");
+    await expect(status).toHaveText(`Middle Name dropped to place 2 in ${SPOUSE}.`);
+    await expect(labels(page)).toHaveText(["First Name", "Last Name", "Middle Name", "Subject"]);
+  });
+
+  // deviation:entity-label-in-panel-head
+  test("renames and removes an entity in its panel's head, and undo brings it back", async ({
+    page,
+  }) => {
+    await saveProbe(page, MULTI);
+    await page.goto(`/civicrm/admin/afreact/afform#/edit/${PROBE}`);
+    const palette = page.locator("#afGuiEditor-palette");
+    await palette.getByRole("tab", { name: SPOUSE }).click();
+    const name = palette.getByRole("textbox", { name: "Label of Individual2" });
+    await expect(name).toHaveText(SPOUSE);
+    await name.fill("Partner");
+    await page.keyboard.press("Enter");
+    await expect(palette.getByRole("tab", { name: "Partner" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await palette.getByRole("button", { name: "Remove Partner" }).click();
+    await expect(palette.getByRole("tab", { name: "Partner" })).toHaveCount(0);
+    await expect(palette.getByRole("tab", { name: "Settings" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(labels(page)).toHaveText(["First Name", "Subject"]);
+    await page.getByRole("button", { name: "Undo (Ctrl-Z)" }).click();
+    await expect(palette.getByRole("tab", { name: "Partner" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(labels(page)).toHaveText(["First Name", "Last Name", "Subject"]);
+  });
+
+  test("sets a value to another entity of the form", async ({ page }) => {
+    await saveProbe(page, MULTI);
+    await page.goto(`/civicrm/admin/afreact/afform#/edit/${PROBE}`);
+    const palette = page.locator("#afGuiEditor-palette");
+    await palette.getByRole("tab", { name: CALL }).click();
+    const card = palette.locator(".afreact-value-card").filter({ hasText: "Added by:" });
+    const picker = card.getByRole("combobox", { name: "Added by:" });
+    await expect(picker).toHaveValue(APPLICANT);
+    // The form's other contacts are offered beside the search, as crmAutocomplete's statics.
+    await expect(card.getByRole("button", { name: APPLICANT })).toHaveCount(0);
+    await card.getByRole("button", { name: SPOUSE }).click();
+    await expect(picker).toHaveValue(SPOUSE);
+    await expect(card.getByRole("button", { name: APPLICANT })).toBeVisible();
+  });
+
+  // deviation:palette-value-cards
+  test("shows each value as a card, its remove button in the corner", async ({ page }) => {
+    await page.goto(CREATE);
+    const palette = page.locator("#afGuiEditor-palette");
+    await palette.getByRole("tab", { name: "Individual 1" }).click();
+    const card = palette.locator(".afreact-value-card").filter({ hasText: "Contact Source" });
+    const remove = card.getByRole("button", { name: "Remove Contact Source" });
+    await expect(remove).toBeVisible();
+    const [box, button, input] = await card.evaluate((element) =>
+      [element, element.querySelector(".afreact-value-remove"), element.querySelector("input")].map(
+        (each) => {
+          const rect = each?.getBoundingClientRect();
+          if (!rect) throw new Error("No card part");
+          return { top: rect.top, bottom: rect.bottom, right: rect.right };
+        },
+      ),
+    );
+    if (!box || !button || !input) throw new Error("No card parts");
+    expect(box.right - button.right).toBeLessThan(8);
+    expect(button.bottom).toBeLessThanOrEqual(input.top);
+    await expect(card).toHaveCSS("border-top-style", "solid");
+  });
+
+  for (const colorScheme of ["light", "dark"] as const)
+    // deviation:palette-tiles
+    test(`has no axe finding on the palette tiles, value cards and a search without match (${colorScheme})`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await page.goto(CREATE);
+      const palette = page.locator("#afGuiEditor-palette");
+      await palette.getByRole("tab", { name: "Individual 1" }).click();
+      await expect(palette.locator(".afreact-tile-about").first()).toBeVisible();
+      await expect(palette.locator(".afreact-value-card")).not.toHaveCount(0);
+      expect(await axeFindings(page, ".afreact-palette-tiles")).toEqual([]);
+      // deviation:palette-value-cards
+      expect(await axeFindings(page, ".af-gui-entity-values")).toEqual([]);
+      await palette.getByRole("tab", { name: "Elements" }).click();
+      await expect(palette.getByRole("button", { name: "Submit Button" })).toBeVisible();
+      expect(await axeFindings(page, ".afreact-palette-tiles")).toEqual([]);
+      // deviation:palette-search-none
+      await palette.getByRole("searchbox", { name: "Search fields" }).fill("zzzz");
+      await expect(palette.getByRole("status")).toHaveText("Nothing matches “zzzz”.");
+      expect(await axeFindings(page, ".af-gui-entity-palette")).toEqual([]);
+    });
+
+  for (const colorScheme of ["light", "dark"] as const)
+    // deviation:palette-sections deviation:entity-label-in-panel-head deviation:palette-tabs-wrap
+    test(`has no axe finding on the palette's tabs, head and sections (${colorScheme})`, async ({
+      page,
+    }) => {
+      await saveProbe(page, MULTI);
+      await page.emulateMedia({ colorScheme });
+      await page.goto(`/civicrm/admin/afreact/afform#/edit/${PROBE}`);
+      const palette = page.locator("#afGuiEditor-palette");
+      await palette.getByRole("tab", { name: CALL }).click();
+      await expect(palette.locator(".afreact-value-card")).toHaveCount(1);
+      const parts = ".afreact-palette-heading, .afreact-panel-head, .afreact-section-head";
+      expect(await axeFindings(page, parts)).toEqual([]);
+      await palette.getByRole("button", { name: "Values", exact: true }).click();
+      expect(await axeFindings(page, parts)).toEqual([]);
+    });
+
   test("saves once when Save is clicked twice while the markup is applied", async ({ page }) => {
     await saveProbe(page, LAYOUT);
     await page.goto(`/civicrm/admin/afreact/afform#/edit/${PROBE}`);
@@ -323,30 +653,44 @@ test.describe("FormBuilder editor", () => {
   });
 
   // deviation:canvas-drag-drop
-  test("moves a field by pointer to the line shown, and not at all over its own place", async ({
+  test("moves a field by pointer to the gap shown, its copy beside the pointer, and not at all over its own place", async ({
     page,
   }) => {
     await page.goto(EDITOR);
     await expect(labels(page).first()).toHaveText("First Name");
     const before = await labels(page).allTextContents();
+    const grip = (name: string) => page.getByRole("button", { name: `Move ${name}` });
     const center = async (name: string) => {
-      const box = await page.getByRole("button", { name: `Move ${name}` }).boundingBox();
+      const box = await grip(name).boundingBox();
       if (!box) throw new Error(`No grip for ${name}`);
       return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
     };
     const marks = page.locator("#afGuiEditor-canvas-body [class*=afreact-drop-]");
+    const copy = page.locator(".afreact-drag-copy");
+    const dragged = page.locator("#afGuiEditor-canvas-body .afreact-dragging");
     const from = await center("Last Name");
     await page.mouse.move(from.x, from.y);
     await page.mouse.down();
     await page.mouse.move(from.x + 40, from.y + 12, { steps: 4 });
-    await expect(page.locator(".afreact-drag-chip")).toHaveText("Last Name");
+    await expect(copy).toContainText("Last Name");
     await expect(marks).toHaveCount(0);
+    // Over its own place the element shows as the gap it leaves.
+    await expect(dragged).toHaveClass(/afreact-drag-place/);
     const to = await center("First Name");
     await page.mouse.move(to.x + 40, to.y - 4, { steps: 8 });
     await expect(marks).toHaveClass(/afreact-drop-before/);
     await expect(marks.getByRole("button", { name: "Move First Name" })).toHaveCount(1);
+    await expect(dragged).toBeHidden();
+    const gap = await marks.evaluate((mark) => {
+      const box = getComputedStyle(mark, "::before");
+      return { content: box.content, width: parseFloat(box.width) };
+    });
+    // The gap is as wide as the element, whose copy takes its width.
+    expect(gap.content).toBe('""');
+    expect(Math.abs(gap.width - ((await copy.boundingBox())?.width ?? 0))).toBeLessThan(2);
     await page.mouse.up();
     await expect(labels(page)).toHaveText(["Last Name", "First Name", "Middle Name", "Email"]);
+    await expect(copy).toHaveCount(0);
 
     // dnd-kit swallows clicks for 50 ms after a drop (detach() in @dnd-kit/core); the keys undo too.
     await page.keyboard.press("Control+z");
@@ -355,7 +699,7 @@ test.describe("FormBuilder editor", () => {
     await page.mouse.move(own.x, own.y);
     await page.mouse.down();
     await page.mouse.move(own.x + 60, own.y + 10, { steps: 4 });
-    await expect(page.locator(".afreact-drag-chip")).toBeVisible();
+    await expect(copy).toBeVisible();
     await expect(marks).toHaveCount(0);
     await page.mouse.up();
     await expect(labels(page)).toHaveText(before);

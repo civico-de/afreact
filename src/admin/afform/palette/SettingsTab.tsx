@@ -11,7 +11,13 @@ import { FieldValue } from "../FieldValue";
 import type { AfformDefinition } from "../meta";
 import { retitle } from "../model";
 import { formTokens } from "../tokens";
-import { DebouncedInput, DebouncedTextarea, HelpLink, useDebounced } from "./common";
+import {
+  DebouncedInput,
+  DebouncedTextarea,
+  HelpLink,
+  PaletteSection,
+  useDebounced,
+} from "./common";
 import {
   hasPlacementEntities,
   placementEntities,
@@ -21,7 +27,7 @@ import {
 } from "./lists";
 
 const ROUTE_PATTERN = "^civicrm\\/[\\-0-9a-zA-Z\\/_]+$";
-const REDIRECT_PATTERN = "^((http|https):\\/\\/|\\/|civicrm\\/)[-0-9a-zA-Z\\/_.]\\S+$";
+const REDIRECT_PATTERN = "^((http|https):\\/\\/|\\/|civicrm\\/)[\\-0-9a-zA-Z\\/_.]\\S+$";
 
 const text = (value: unknown) =>
   typeof value === "string" || typeof value === "number" ? String(value) : "";
@@ -235,8 +241,11 @@ function Placement() {
       ? afform.placement_filters
       : {};
   return (
-    <fieldset>
-      <legend>{ts("Placement Options")}</legend>
+    <PaletteSection
+      name="settings-placement"
+      title={ts("Placement Options")}
+      summary={afform.server_route ?? undefined}
+    >
       <ServerRoute required={!!requires} />
       {!!afform.server_route && (
         <div className="form-group">
@@ -370,7 +379,7 @@ function Placement() {
           </div>
         </div>
       )}
-    </fieldset>
+    </PaletteSection>
   );
 }
 
@@ -414,8 +423,11 @@ function Submissions() {
   };
   const confirmation = editor.meta.admin.afform_fields.confirmation_type?.options ?? [];
   return (
-    <fieldset>
-      <legend className="form-inline">{ts("Submissions")}</legend>
+    <PaletteSection
+      name="settings-submissions"
+      title={ts("Submissions")}
+      summary={afform.submit_enabled === false ? ts("Closed") : ts("Open")}
+    >
       <p className="form-inline" role="radiogroup" aria-label={ts("Submissions")}>
         <label className="radio">
           <input
@@ -584,7 +596,7 @@ function Submissions() {
           </p>
         </div>
       )}
-    </fieldset>
+    </PaletteSection>
   );
 }
 
@@ -675,10 +687,12 @@ export function SettingsTab() {
   const operators = editor.meta.admin.afform_fields.permission_operator?.options ?? [];
   return (
     <form
+      className="afreact-palette-sections"
       onSubmit={(event) => {
         event.preventDefault();
       }}
     >
+      {/* Outside the sections: saving waits for it. */}
       <div className="form-group">
         <label htmlFor={`${id}-title`}>
           {title("title")} <span className="crm-marker">*</span>{" "}
@@ -695,90 +709,92 @@ export function SettingsTab() {
           }}
         />
       </div>
-      {/* deviation:locale-setting-label */}
-      {locales.length > 0 && (
+      <PaletteSection name="settings-general" title={ts("General")}>
+        {/* deviation:locale-setting-label */}
+        {locales.length > 0 && (
+          <div className="form-group">
+            <label htmlFor={`${id}-locale`}>
+              {title("locale")} <span className="crm-marker">*</span>
+            </label>{" "}
+            <HelpLink id="afform_locale" title={title("locale")} />
+            <Picker
+              id={`${id}-locale`}
+              label={title("locale")}
+              externalLabel
+              placeholder=""
+              options={locales.map((locale) => ({ id: locale.id, label: locale.text }))}
+              value={list(afform.locale).slice(0, 1)}
+              single
+              onChange={([locale]) => {
+                editor.change((current) => ({
+                  ...current,
+                  locale: locale === undefined ? [] : [String(locale)],
+                }));
+              }}
+            />
+          </div>
+        )}
         <div className="form-group">
-          <label htmlFor={`${id}-locale`}>
-            {title("locale")} <span className="crm-marker">*</span>
-          </label>{" "}
-          <HelpLink id="afform_locale" title={title("locale")} />
-          <Picker
-            id={`${id}-locale`}
-            label={title("locale")}
-            externalLabel
-            placeholder=""
-            options={locales.map((locale) => ({ id: locale.id, label: locale.text }))}
-            value={list(afform.locale).slice(0, 1)}
-            single
-            onChange={([locale]) => {
-              editor.change((current) => ({
-                ...current,
-                locale: locale === undefined ? [] : [String(locale)],
-              }));
+          <label htmlFor={`${id}-description`}>
+            {title("description")} <HelpLink id="description" title={title("description")} />
+          </label>
+          <DebouncedTextarea
+            id={`${id}-description`}
+            className="form-control"
+            rows={1}
+            value={text(afform.description)}
+            onCommit={(value) => {
+              editor.change((current) => ({ ...current, description: value }));
             }}
           />
         </div>
-      )}
-      <div className="form-group">
-        <label htmlFor={`${id}-description`}>
-          {title("description")} <HelpLink id="description" title={title("description")} />
-        </label>
-        <DebouncedTextarea
-          id={`${id}-description`}
-          className="form-control"
-          rows={1}
-          value={text(afform.description)}
-          onCommit={(value) => {
-            editor.change((current) => ({ ...current, description: value }));
-          }}
-        />
-      </div>
-      {afform.type !== "block" && (
-        <div className="form-group">
-          <label htmlFor={`${id}-permission`}>
-            {title("permission")} <HelpLink id="permission" title={title("permission")} />
-          </label>
-          <div className="form-inline afreact-permission-row">
-            <Picker
-              id={`${id}-permission`}
-              label={title("permission")}
-              externalLabel
-              placeholder=""
-              options={editor.meta.gui.permissions.flatMap((group) =>
-                group.children.map((permission) => ({
-                  id: permission.id,
-                  label: permission.text,
-                  description: permission.description ?? undefined,
-                  group: group.text,
-                })),
-              )}
-              value={list(afform.permission)}
-              onChange={(permission) => {
-                editor.change((current) => ({ ...current, permission: permission.map(String) }));
-              }}
-            />{" "}
-            <label className="sr-only" htmlFor={`${id}-operator`}>
-              {title("permission_operator")}
+        {afform.type !== "block" && (
+          <div className="form-group">
+            <label htmlFor={`${id}-permission`}>
+              {title("permission")} <HelpLink id="permission" title={title("permission")} />
             </label>
-            <select
-              id={`${id}-operator`}
-              className="form-control"
-              value={text(afform.permission_operator)}
-              onChange={(event) => {
-                const operator = event.target.value;
-                editor.change((current) => ({ ...current, permission_operator: operator }));
-              }}
-            >
-              {operators.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <div className="form-inline afreact-permission-row">
+              <Picker
+                id={`${id}-permission`}
+                label={title("permission")}
+                externalLabel
+                placeholder=""
+                options={editor.meta.gui.permissions.flatMap((group) =>
+                  group.children.map((permission) => ({
+                    id: permission.id,
+                    label: permission.text,
+                    description: permission.description ?? undefined,
+                    group: group.text,
+                  })),
+                )}
+                value={list(afform.permission)}
+                onChange={(permission) => {
+                  editor.change((current) => ({ ...current, permission: permission.map(String) }));
+                }}
+              />{" "}
+              <label className="sr-only" htmlFor={`${id}-operator`}>
+                {title("permission_operator")}
+              </label>
+              <select
+                id={`${id}-operator`}
+                className="form-control"
+                value={text(afform.permission_operator)}
+                onChange={(event) => {
+                  const operator = event.target.value;
+                  editor.change((current) => ({ ...current, permission_operator: operator }));
+                }}
+              >
+                {operators.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
-      )}
-      <Tags />
+        )}
+        <Tags />
+      </PaletteSection>
       {afform.type !== "block" && <Placement />}
       {afform.type === "form" && <Submissions />}
     </form>

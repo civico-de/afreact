@@ -65,6 +65,7 @@ test("plugin elements edit an element, an input type, a behavior and an entity's
 
   const palette = page.locator("#afGuiEditor-palette-config");
   await palette.getByRole("tab", { name: /Household/ }).click();
+  await palette.getByRole("button", { name: "Options", exact: true }).click();
   await palette.getByRole("checkbox", { name: "Island household" }).check();
   await palette.getByRole("combobox", { name: "Greeting" }).selectOption("warm");
   await expect(page.getByText("cannot be edited in the React builder")).toHaveCount(0);

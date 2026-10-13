@@ -1062,8 +1062,8 @@ the tab and puts the active entity's label editor (`crm-ui-editable`) inside
 its link; the tab set puts each tab's gear button inside the tab's link (axe
 `aria-tab-name` on 6.19; a tab's content is presentational, so the nested
 control is lost to assistive technology). React renders each tab as a link
-with `role="tab"`, keeps the label editor beside the tab list and the tab
-set's gear menu, for the active tab, at the end of the tab bar. `deviation:editor-tab-controls-outside`
+with `role="tab"`, edits the entity's label in the head of its panel and keeps
+the tab set's gear menu, for the active tab, at the end of the tab bar. `deviation:editor-tab-controls-outside`
 
 **Ctrl-Shift-Z does not redo.** The editor's `onKeyup()` compares `e.key`
 with `'z'`, but with Shift held the key is `Z`, so the shortcut does nothing

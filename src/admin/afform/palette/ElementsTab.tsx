@@ -1,15 +1,15 @@
-import { useState } from "react";
 import { useEditor } from "../context";
-import { PaletteFieldset, PaletteList } from "./common";
+import { PaletteAdd, PaletteList, usePaletteSearch } from "./common";
 import { elementItems, extraFieldItems, globalBlockItems } from "./lists";
 
 /** afGuiElements: the form's elements, blocks for any entity, and extra fields. */
 export function ElementsTab() {
   const editor = useEditor();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = usePaletteSearch("extra");
   const term = search.toLowerCase();
   return (
     <form
+      className="afreact-palette-sections"
       onSubmit={(event) => {
         event.preventDefault();
       }}
@@ -21,7 +21,7 @@ export function ElementsTab() {
           )}
         </div>
       )}
-      <PaletteFieldset legend={ts("Add:")} search={search} onSearch={setSearch}>
+      <PaletteAdd name="elements-add" title={ts("Add")} search={search} onSearch={setSearch}>
         <PaletteList
           label={ts("Elements")}
           items={elementItems(editor.meta, editor.afform, term)}
@@ -37,7 +37,7 @@ export function ElementsTab() {
           items={extraFieldItems(editor.meta, editor.afform, term)}
           entity={null}
         />
-      </PaletteFieldset>
+      </PaletteAdd>
     </form>
   );
 }
