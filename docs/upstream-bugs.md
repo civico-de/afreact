@@ -1186,6 +1186,19 @@ throws in `JSON.parse`, and the search display's filter settings stop opening
 brackets and reads back everything it writes; `nodes.test.ts` covers the three
 values. `deviation:display-filters-read-back`
 
+**A hidden filter on a field behind a foreign key shows no field.** The
+filter's field picker offers the fields of the search's entities and joins,
+and `afGui.getField()` looks the name up there, so a filter such as core's
+`afsearchTabMember` `{'status_id.is_current_member': true}` shows an empty
+picker and its value as bare text without the field's input (6.19, seen in
+core's builder). Where the last part of such a name is also a field of the
+entity, `getField()` takes that one instead: `campaign_id.status_id` on an
+activity search offers activity statuses. React looks the name up whole, asks
+the entity's `getFields` for one behind a foreign key, which resolves it,
+names the field ("Membership Status: Current Membership?") and offers its
+input, labelled; a name the API does not know shows an error.
+`SearchTab.test.tsx` covers these. `deviation:filter-field-through-join`
+
 **A display filter's backslashes double on every edit.** `afGui`'s
 `encode()` writes a string as JSON text in single quotes, and `decode()`
 strips the quotes without reading the escapes, so `a\b` with a line break is

@@ -1,9 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import { useId } from "react";
+import { api4, errorMessage } from "../../../api/civi";
 import { Dropdown } from "../../widgets/Dropdown";
 import { Picker } from "../../widgets/Picker";
 import { editNode, useEditor } from "../context";
 import { FieldValue } from "../FieldValue";
-import { getField, type SearchDisplayMeta } from "../meta";
+import { type GuiField, type SearchDisplayMeta } from "../meta";
 import { textAttribute } from "../model";
 import {
   readDisplayFilters,
@@ -12,23 +14,63 @@ import {
   type DisplayFilter,
   type FormSearchDisplay,
 } from "../nodes";
-import { searchDisplayFields } from "../searchDisplay";
+import { searchDisplayEntities, searchDisplayFields } from "../searchDisplay";
 import { nodeAt, type ShallowElement } from "../tree";
 import { PaletteAdd, PaletteList, PaletteSection, PanelHead, usePaletteSearch } from "./common";
 import { placementEntities, searchBlockInUse, searchFieldInUse, searchPalette } from "./lists";
 import { MenuLink } from "../../widgets/MenuLink";
 
-/** getFieldEntity(): the entity a filter's field belongs to, by its join prefix. */
-function filterEntity(display: SearchDisplayMeta, name: string): string {
-  const main = display["saved_search_id.api_entity"];
-  const dot = name.indexOf(".");
-  if (dot < 0) return main;
-  const alias = name.slice(0, dot);
-  for (const join of display["saved_search_id.api_params"].join ?? []) {
-    const [entity = "", joinAlias] = String(join[0]).split(" AS ");
-    if (joinAlias === alias) return entity;
-  }
-  return main;
+/**
+ * A filter's field, looked up by its full name in its join's entity and bridge, or in the search's
+ * entity. One behind a foreign key (`status_id.is_current_member`) comes from the API.
+ * deviation:filter-field-through-join
+ */
+function useFilterField(display: SearchDisplayMeta, name: string) {
+  const editor = useEditor();
+  const entities = searchDisplayEntities(editor.meta, display);
+  const alias = name.slice(0, name.indexOf(".") + 1);
+  const joined = entities.filter((entity) => alias && entity.prefix === alias);
+  const owners = joined.length ? joined : entities.filter((entity) => entity.prefix === "");
+  const [owner] = owners;
+  if (!owner) throw new Error(`No entity for the filter ${name}.`);
+  const local = name.slice(owner.prefix.length).split(":")[0] ?? "";
+  const known = owners.map((entity) => entity.fields[local]).find(Boolean);
+  const calculated = (display.calc_fields ?? []).some((field) => field.name === name);
+  const asked = useQuery({
+    queryKey: ["afreact-admin", "filterField", owner.name, local],
+    enabled: !known && !calculated,
+    queryFn: async () => {
+      const [field] = await api4<GuiField>(owner.name, "getFields", {
+        action: "get",
+        loadOptions: ["id", "name", "label"],
+        where: [["name", "=", local]],
+        select: [
+          "name",
+          "label",
+          "input_type",
+          "input_attrs",
+          "options",
+          "serialize",
+          "data_type",
+          "fk_entity",
+        ],
+      });
+      if (!field) throw new Error(ts("%1 has no field %2.", { 1: owner.name, 2: local }));
+      return field;
+    },
+  });
+  if (known || calculated) return { field: known, calculated, label: null };
+  // A custom foreign key is named by its group and field.
+  const [first = "", second = ""] = local.split(".");
+  const via = owner.fields[first] ?? owner.fields[`${first}.${second}`];
+  return {
+    field: asked.data,
+    calculated,
+    error: asked.error,
+    label: asked.data
+      ? `${owner.label} ${via?.label ?? first}: ${asked.data.label ?? asked.data.name}`
+      : name,
+  };
 }
 
 const elementAt = (layout: Parameters<typeof nodeAt>[0], path: Parameters<typeof nodeAt>[1]) => {
@@ -51,6 +93,16 @@ function FilterRow({
 }) {
   const editor = useEditor();
   const id = useId();
+  const { field, calculated, error, label } = useFilterField(display, filter.name);
+  const valueLabel = (
+    <label htmlFor={`${id}-value`} className="sr-only">
+      {ts("Filter value")}
+    </label>
+  );
+  const options =
+    label === null || fieldOptions.some((option) => option.id === filter.name)
+      ? fieldOptions
+      : [{ id: filter.name, label }, ...fieldOptions];
   const placements = placementEntities(editor.meta, editor.afform);
   const modeLabel =
     filter.mode === "routeParams"
@@ -58,7 +110,6 @@ function FilterRow({
       : filter.mode === "val"
         ? ts("Value")
         : (placements.find((each) => each.key === filter.value)?.label ?? filter.value);
-  const field = getField(editor.meta, filterEntity(display, filter.name), filter.name);
   // deviation:palette-value-cards
   return (
     <div className="form-inline afreact-value-card">
@@ -67,7 +118,7 @@ function FilterRow({
         label={ts("Filter field")}
         hiddenLabel
         placeholder=" "
-        options={fieldOptions}
+        options={options}
         value={[filter.name]}
         single
         clearable
@@ -139,8 +190,31 @@ function FilterRow({
             }}
           />
         )}
+        {!!error && (
+          <span className="crm-error" role="alert">
+            {errorMessage(error)}
+          </span>
+        )}
+        {filter.mode === "val" && calculated && (
+          <span>
+            {valueLabel}
+            <input
+              id={`${id}-value`}
+              className="form-control"
+              value={
+                typeof filter.value === "string" || typeof filter.value === "number"
+                  ? filter.value
+                  : JSON.stringify(filter.value)
+              }
+              onChange={(event) => {
+                onChange({ ...filter, value: event.target.value });
+              }}
+            />
+          </span>
+        )}
         {filter.mode === "val" && field && (
           <span>
+            {valueLabel}
             <FieldValue
               id={`${id}-value`}
               field={field}
