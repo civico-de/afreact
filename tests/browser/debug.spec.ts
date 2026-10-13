@@ -4,7 +4,9 @@
  * away, and what the page runs: Angular islands, other extensions' modules and elements, SQL.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { axeFindings, debugOn, debugPanel, ownFindings } from "./harness";
+import { axeFindings, coreBuilders, debugOn, debugPanel, ownFindings } from "./harness";
+
+coreBuilders();
 
 const debugButton = (page: Page) => page.getByRole("button", { name: "Debug", exact: true });
 

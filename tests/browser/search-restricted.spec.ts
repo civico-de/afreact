@@ -3,7 +3,9 @@
  * only their own searches, and one who may only view. React offers and refuses what core does.
  */
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { api } from "./harness";
+import { api, coreBuilders } from "./harness";
+
+coreBuilders();
 
 const LABEL = "Afreact restricted probe";
 const NAME = "afreact_restricted_probe";

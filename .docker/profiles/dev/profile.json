@@ -7,7 +7,8 @@
   ],
   "config": {
     "settings": {
-      "contribute_enable_afform_contributions": true
+      "contribute_enable_afform_contributions": true,
+      "afreact_builders": ["search_kit", "afform"]
     }
   },
   "scripts": ["demo-contacts.php", "demo-contact-types.php", "demo-memberships.php", "demo-events.php"]

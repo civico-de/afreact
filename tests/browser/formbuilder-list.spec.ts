@@ -3,7 +3,9 @@
  * and the choices of the "New" menus.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, axeFindings } from "./harness";
+import { api, axeFindings, coreBuilders } from "./harness";
+
+coreBuilders();
 
 const NAME = "afformAfreactListProbe";
 const TITLE = "Afreact list probe";

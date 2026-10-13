@@ -6,7 +6,9 @@
  */
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { isReady } from "../../src/compare/metrics";
-import { axeFindings, ownFindings, setReactForms } from "./harness";
+import { axeFindings, coreBuilders, ownFindings, setReactForms } from "./harness";
+
+coreBuilders();
 
 const render = (name: string) => (renderer: string) =>
   `/civicrm/afreact/render?name=${name}&renderer=${renderer}`;

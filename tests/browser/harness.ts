@@ -11,17 +11,34 @@ export const isRecord = (value: unknown): value is Record<string, unknown> =>
 /** A light CiviCRM page with CRM.api4, for test setup and cleanup. */
 export const API_PAGE = "/civicrm/admin/setting/afreact";
 
-/** Sets debug_enabled and returns the previous value. */
-export async function setDebug(browser: Browser, value: unknown): Promise<unknown> {
+/** Sets the setting `name` and returns its previous value. */
+export async function setSetting(browser: Browser, name: string, value: unknown): Promise<unknown> {
   const context = await browser.newContext({ storageState: AUTH });
   const page = await context.newPage();
   await page.goto(API_PAGE);
-  const [previous] = await api<{ value: unknown }>(page, "Setting", "get", {
-    select: ["debug_enabled"],
-  });
-  await api(page, "Setting", "set", { values: { debug_enabled: value } });
+  const [previous] = await api<{ value: unknown }>(page, "Setting", "get", { select: [name] });
+  if (!previous) throw new Error(`Setting ${name} has no value to restore.`);
+  await api(page, "Setting", "set", { values: { [name]: value } });
   await context.close();
-  return previous?.value;
+  return previous.value;
+}
+
+/** Sets debug_enabled and returns the previous value. */
+export const setDebug = (browser: Browser, value: unknown) =>
+  setSetting(browser, "debug_enabled", value);
+
+/**
+ * Core's builder routes open core's builders for the tests of this file, which compare React with
+ * them; the site's afreact_builders come back after the file.
+ */
+export function coreBuilders() {
+  let kept: unknown;
+  test.beforeAll(async ({ browser }) => {
+    kept = await setSetting(browser, "afreact_builders", []);
+  });
+  test.afterAll(async ({ browser }) => {
+    await setSetting(browser, "afreact_builders", kept);
+  });
 }
 
 /** Waits for isReady(), evaluated in the page so the time is on the page's own clock. */

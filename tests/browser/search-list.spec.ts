@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
-import { api, axeFindings, ownFindings } from "./harness";
+import { api, axeFindings, coreBuilders, ownFindings } from "./harness";
+
+coreBuilders();
 
 const NAME = "afreact_list_probe";
 

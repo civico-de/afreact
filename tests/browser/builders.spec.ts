@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { axeFindings, debugOn, debugPanel, quietApi } from "./harness";
+import { axeFindings, coreBuilders, debugOn, debugPanel, quietApi } from "./harness";
+
+coreBuilders();
 
 const setBuilders = (page: import("@playwright/test").Page, builders: string[]) =>
   quietApi(page, "Setting", "set", { values: { afreact_builders: builders } });

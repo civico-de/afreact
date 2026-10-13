@@ -1,6 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { unknownSettings } from "../../src/admin/search/display/knownSettings";
-import { api, axeFindings, ownFindings } from "./harness";
+import { api, axeFindings, coreBuilders, ownFindings } from "./harness";
+
+coreBuilders();
 
 const LABEL = "Afreact display probe";
 const TAGS = ["Afreact display probe A", "Afreact display probe B"] as const;

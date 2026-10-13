@@ -2,7 +2,9 @@ import { expect, test, type Page } from "@playwright/test";
 import { loadParams, SAVED_SEARCH_FIELDS } from "../../src/admin/search/editor";
 import { coreHas } from "../../src/admin/version";
 import { searchRoundTrip } from "../../src/admin/search/roundTrip";
-import { api, axeFindings, ownFindings } from "./harness";
+import { api, axeFindings, coreBuilders, ownFindings } from "./harness";
+
+coreBuilders();
 
 // The editor's models name problems with core's ts(); outside the page it only fills placeholders.
 globalThis.ts = (text, params = {}) =>

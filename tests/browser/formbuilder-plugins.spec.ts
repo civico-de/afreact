@@ -3,7 +3,9 @@
  * element's settings, an input type on the canvas, a behavior and an entity's options.
  */
 import { expect, test } from "@playwright/test";
-import { api, quietApi } from "./harness";
+import { api, coreBuilders, quietApi } from "./harness";
+
+coreBuilders();
 
 const PROBE = "afformAfreactPluginProbe";
 const LAYOUT =

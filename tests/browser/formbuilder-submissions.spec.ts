@@ -3,7 +3,9 @@
  * default display core builds for the form.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { api, debugOn, debugPanel } from "./harness";
+import { api, coreBuilders, debugOn, debugPanel } from "./harness";
+
+coreBuilders();
 
 const NAME = "afformAfreactSubmissionsProbe";
 const TITLE = "Afreact submissions probe";

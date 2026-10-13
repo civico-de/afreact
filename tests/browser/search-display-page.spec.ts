@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
-import { api, axeFindings } from "./harness";
+import { api, axeFindings, coreBuilders } from "./harness";
+
+coreBuilders();
 
 const NAME = "afreact_page_probe";
 const TAGS = ["Afreact page probe A", "Afreact page probe B"];
