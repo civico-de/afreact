@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { FieldDefn } from "../types";
+import { useInvalid } from "./env";
 
 interface RangeProps {
   id: string;
@@ -32,6 +33,7 @@ export function rangeValue(defn: FieldDefn, value: unknown): number {
  * deviation:range-slider-disabled
  */
 export function Range({ id, defn, value, onChange, disabled, describedBy }: RangeProps) {
+  const invalid = useInvalid(id);
   const input = useRef<HTMLInputElement>(null);
   const options = Array.isArray(defn.options) ? defn.options : [];
   const attrs = defn.input_attrs ?? {};
@@ -57,6 +59,7 @@ export function Range({ id, defn, value, onChange, disabled, describedBy }: Rang
           list={`${id}-list`}
           disabled={disabled}
           aria-describedby={describedBy}
+          aria-invalid={invalid}
           aria-valuetext={label}
           value={shown}
           onChange={(event) => {

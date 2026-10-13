@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { api4, errorMessage } from "../../api/civi";
 import type { FieldDefn, FieldOption } from "../types";
 import { controlFieldName, valueIds } from "./autocomplete";
-import { useFieldEnv, type FieldEnv } from "./env";
+import { useFieldEnv, type FieldEnv, useInvalid } from "./env";
 
 interface ChainSelectProps {
   id: string;
@@ -61,6 +61,7 @@ export function ChainSelect({
   disabled,
   describedBy,
 }: ChainSelectProps) {
+  const invalid = useInvalid(id);
   const env = useFieldEnv();
   const element = useRef<HTMLSelectElement>(null);
   const attrs = defn.input_attrs ?? {};
@@ -115,6 +116,7 @@ export function ChainSelect({
     disabled: disabled || (chained && (loaded.isFetching || (settled && !options.length))),
     required: defn.required === true,
     "aria-describedby": describedBy,
+    "aria-invalid": invalid,
     "aria-busy": chained && loaded.isFetching,
   };
   const choices = options.map((option) => (

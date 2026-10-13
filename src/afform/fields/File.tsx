@@ -2,7 +2,7 @@ import { useContext, useEffect, useId, useRef, useState } from "react";
 import { onButtonKey } from "../../keys";
 import type { FieldDefn } from "../types";
 import { Unsupported } from "../Unsupported";
-import { ItemPathContext, useFieldEnv } from "./env";
+import { ItemPathContext, useFieldEnv, useInvalid } from "./env";
 import { isFileInfo, UploadsContext, type PendingUpload } from "./upload";
 
 interface FileFieldProps {
@@ -24,6 +24,7 @@ export function fileOutsideFormNote(defn: FieldDefn): string {
  * the form uploads through Afform.submitFile once the record is saved.
  */
 export function FileField({ id, defn, value, onChange, disabled, describedBy }: FileFieldProps) {
+  const invalid = useInvalid(id);
   const env = useFieldEnv();
   const uploads = useContext(UploadsContext);
   const key = useId();
@@ -164,6 +165,7 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
       required={defn.required === true && !retrying}
       disabled={disabled && !retrying}
       aria-describedby={describedBy}
+      aria-invalid={invalid}
       onChange={(event) => {
         const file = event.target.files?.[0];
         uploads.changed();

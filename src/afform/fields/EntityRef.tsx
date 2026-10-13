@@ -19,7 +19,7 @@ import {
   type AutocompleteItem,
   type SearchContext,
 } from "./autocomplete";
-import { useFieldEnv } from "./env";
+import { useFieldEnv, useInvalid } from "./env";
 
 /** Downshift loads with the first EntityRef on a page. */
 const Combobox = lazy(async () => ({ default: (await import("./Combobox")).Combobox }));
@@ -101,6 +101,7 @@ export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: 
     className: defn.input_style ?? undefined,
     disabled: off,
     required: defn.required === true,
+    invalid: useInvalid(id),
     multiple,
     // crmAutocomplete: autoOpen lists results before typing, unless quick-add links take the space.
     minLength: attrs.autoOpen && !hasQuickAdd(defn) ? 0 : 1,

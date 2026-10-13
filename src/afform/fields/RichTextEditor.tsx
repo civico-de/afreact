@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useRef } from "react";
 import type { FieldDefn } from "../types";
+import { useInvalid } from "./env";
 
 interface RichTextEditorProps {
   id: string;
@@ -22,6 +23,7 @@ export function RichTextEditor({
   disabled,
   describedBy,
 }: RichTextEditorProps) {
+  const invalid = useInvalid(id);
   const element = useRef<HTMLTextAreaElement>(null);
   const ready = useRef(false);
   const text = typeof value === "string" ? value : "";
@@ -74,6 +76,7 @@ export function RichTextEditor({
         className={defn.input_style ?? undefined}
         disabled={disabled}
         aria-describedby={describedBy}
+        aria-invalid={invalid}
         value={text}
         onChange={(event) => {
           onChange(event.target.value);

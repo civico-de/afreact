@@ -1,11 +1,5 @@
-import {
-  createContext,
-  useContext,
-  useId,
-  useState,
-  type InputHTMLAttributes,
-  type ReactNode,
-} from "react";
+import { FieldErrorsContext, useInvalid } from "./fields/env";
+import { useContext, useId, useState, type InputHTMLAttributes, type ReactNode } from "react";
 import { onButtonKey } from "../keys";
 import { ChainSelect } from "./fields/ChainSelect";
 import { CheckoutBlock } from "./fields/CheckoutBlock";
@@ -220,9 +214,6 @@ function CharacterCount({ id, length, max }: { id: string; length: number; max: 
   );
 }
 
-/** The error text of each field a blocked submit listed, by the field's `data-afreact-field`. */
-export const FieldErrorsContext = createContext<ReadonlyMap<string, string>>(new Map());
-
 export function Field({ defn, value, onChange, disabled, operator }: FieldProps) {
   const id = useId();
   const helpId = `${id}-help`;
@@ -231,7 +222,9 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
   const label = defn.label === false ? undefined : (defn.label ?? defn.name);
   const required = defn.required === true;
   // deviation:field-error-text
+  // A field with error text is also marked aria-invalid.
   const error = useContext(FieldErrorsContext).get(id);
+  const invalid = useInvalid(id);
   const describedBy =
     [error !== undefined && errorId, defn.help_post && helpId].filter(Boolean).join(" ") ||
     undefined;
@@ -241,6 +234,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
     name: defn.name,
     disabled,
     required,
+    "aria-invalid": invalid,
     "aria-describedby": describedBy,
   };
   const attrs = defn.input_attrs ?? {};
@@ -450,6 +444,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
             disabled={disabled}
             labelId={label ? labelId : undefined}
             helpId={describedBy}
+            invalid={invalid}
           />
         );
       case "CheckBox":
@@ -461,6 +456,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
             disabled={disabled}
             labelId={label ? labelId : undefined}
             helpId={describedBy}
+            invalid={invalid}
           />
         ) : (
           <label className={`crm-af-field-label ${style ?? ""}`.trim()}>
@@ -597,17 +593,23 @@ function YearInput({
 interface GroupProps extends FieldProps {
   labelId: string | undefined;
   helpId: string | undefined;
+  invalid?: true;
 }
 
 /**
  * fields/Radio.html: one label per option, and a clear button while a value is set. The radios
  * form a group named by the field's label. deviation:radio-group-named
  */
-function RadioGroup({ defn, value, onChange, disabled, labelId, helpId }: GroupProps) {
+function RadioGroup({ defn, value, onChange, disabled, labelId, helpId, invalid }: GroupProps) {
   const name = useId();
   return (
     <>
-      <span role="radiogroup" aria-labelledby={labelId} aria-describedby={helpId}>
+      <span
+        role="radiogroup"
+        aria-labelledby={labelId}
+        aria-describedby={helpId}
+        aria-invalid={invalid}
+      >
         {fieldOptions(defn).map((option) => {
           const id = `${name}-${String(option.id)}`;
           const checked = String(value) === String(option.id) && hasValue(value);
@@ -648,7 +650,7 @@ function RadioGroup({ defn, value, onChange, disabled, labelId, helpId }: GroupP
 }
 
 /** fields/CheckBox.html for multi-value fields: a list of checkboxes. */
-function CheckboxList({ defn, value, onChange, disabled, labelId, helpId }: GroupProps) {
+function CheckboxList({ defn, value, onChange, disabled, labelId, helpId, invalid }: GroupProps) {
   const name = useId();
   const selected: unknown[] = Array.isArray(value) ? value : [];
   // As CheckBox.html, each box is required while none is checked.
@@ -668,6 +670,7 @@ function CheckboxList({ defn, value, onChange, disabled, labelId, helpId }: Grou
               type="checkbox"
               disabled={disabled}
               required={required}
+              aria-invalid={invalid}
               checked={selected.some((item) => String(item) === String(option.id))}
               onChange={(event) => {
                 onChange(

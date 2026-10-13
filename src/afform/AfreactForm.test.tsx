@@ -296,6 +296,68 @@ describe("AfreactForm", () => {
     });
   });
 
+  // deviation:field-error-text
+  it("marks each listed field and radio group invalid for assistive technology", async () => {
+    renderFields(
+      [
+        field("first_name", { label: "First Name", required: true }),
+        field("last_name", { label: "Last Name" }),
+        field("gender_id", {
+          label: "Gender",
+          input_type: "Radio",
+          required: true,
+          options: [
+            { id: 1, label: "F" },
+            { id: 2, label: "M" },
+          ],
+        }),
+      ],
+      {},
+    );
+    const first = await screen.findByRole("textbox", { name: "First Name" });
+    await waitFor(() => {
+      expect(first).toBeEnabled();
+    });
+    await save();
+    expect(first).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("radiogroup", { name: "Gender" })).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(screen.getByRole("textbox", { name: "Last Name" })).not.toHaveAttribute("aria-invalid");
+    await userEvent.type(first, "Ada");
+    await waitFor(() => {
+      expect(first).not.toHaveAttribute("aria-invalid");
+    });
+  });
+
+  it("marks every box of a listed checkbox group and a listed switch invalid", async () => {
+    renderFields(
+      [
+        field("tags", {
+          label: "Tags",
+          input_type: "CheckBox",
+          required: true,
+          options: [
+            { id: "a", label: "A" },
+            { id: "b", label: "B" },
+          ],
+        }),
+        field("do_not_email", {
+          label: "No Email",
+          input_type: "Toggle",
+          data_type: "Boolean",
+          required: true,
+        }),
+      ],
+      {},
+    );
+    const boxes = await screen.findAllByRole("checkbox");
+    await save();
+    for (const box of boxes) expect(box).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-invalid", "true");
+  });
+
   // deviation:invalid-fields-listed
   it("marks only the listed fields, numbers repeated names and lists afresh for a field gone", async () => {
     const calls = renderFields(

@@ -33,3 +33,10 @@ export function useFieldEnv(): FieldEnv {
   if (!env) throw new Error("Field rendered outside a FieldEnvContext");
   return env;
 }
+
+/** The error text of each field a blocked submit listed, by the field's control id. */
+export const FieldErrorsContext = createContext<ReadonlyMap<string, string>>(new Map());
+
+/** aria-invalid for a field's control while a blocked submit lists the field. deviation:field-error-text */
+export const useInvalid = (id: string): true | undefined =>
+  useContext(FieldErrorsContext).has(id) ? true : undefined;

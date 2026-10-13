@@ -1,4 +1,5 @@
 import type { FieldDefn, FieldOption } from "../types";
+import { useInvalid } from "./env";
 
 interface ToggleProps {
   id: string;
@@ -16,6 +17,7 @@ interface ToggleProps {
  * after it. FormBuilder makes every Toggle Boolean (Utils::getInputTypes), so it sets true or false.
  */
 export function Toggle({ id, defn, options, value, onChange, disabled, describedBy }: ToggleProps) {
+  const invalid = useInvalid(id);
   return (
     <div className={`crm-form-toggle-container ${defn.input_style ?? ""}`.trim()}>
       <input
@@ -28,6 +30,7 @@ export function Toggle({ id, defn, options, value, onChange, disabled, described
         required={defn.required === true}
         disabled={disabled}
         aria-describedby={describedBy}
+        aria-invalid={invalid}
         checked={value === true || value === 1 || value === "1"}
         onChange={(event) => {
           onChange(event.target.checked);
