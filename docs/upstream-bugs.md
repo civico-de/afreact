@@ -978,6 +978,11 @@ numeric text only and keeps an empty or non-numeric default as it is. `deviation
 
 ## FormBuilder
 
+**The condition badges fail contrast.** `afGuiEditor.css` dims the "If",
+"And" and "Or" badges of the conditional rules dialog with `opacity: .5`, so
+their white text on the theme's grey badge falls to about 2:1, below the 4.5:1
+that WCAG asks (6.19, axe-core in the dialog). React shows them at full
+opacity. `deviation:condition-badge-contrast`
 
 **The "New Submission Form" choices are not sorted.** `afAdminListMenu`
 sorts the primary entities with `_.sortBy(links, 'Label')`, a key the links

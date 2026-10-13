@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { useState, type ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { EditorContext, formEntities, type EditorApi } from "../context";
@@ -238,6 +238,35 @@ describe("ConditionalMenuItem", () => {
     );
     // Only af-required and af-disabled replace a static setting.
     expect(screen.getByTestId("defn").textContent).toBe(FIELD.defn);
+  });
+
+  it("keeps a field picked when another change follows before the pick is reported", async () => {
+    render(<Item />);
+    fireEvent.click(screen.getByRole("button", { name: /Edit Conditional Rules/ }));
+    const panel = screen.getAllByRole("tabpanel")[0]!;
+    const picker = await within(panel).findByRole("combobox", { name: "Select field" });
+    fireEvent.click(picker);
+    fireEvent.change(picker, { target: { value: "Gender" } });
+    const option = await screen.findByRole("option", { name: /Gender/ });
+    // The picker reports a pick from an effect; the group is added before that runs.
+    act(() => {
+      fireEvent.click(option);
+      fireEvent.change(
+        within(panel).getAllByRole("combobox", { name: "Add a group of clauses" })[0]!,
+        {
+          target: { value: "OR" },
+        },
+      );
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Apply Changes/ }));
+    const rule: unknown = JSON.parse(
+      (screen.getByTestId("af-if").textContent ?? "").replace(/^\(|\)$/g, ""),
+    );
+    expect(rule).toEqual([
+      ["Individual1[0][fields][first_name]", "=", '"Ada"'],
+      ["OR", []],
+      ["Individual1[0][fields][gender_id:name]", "=", '""'],
+    ]);
   });
 
   // deviation:condition-clause-move-buttons

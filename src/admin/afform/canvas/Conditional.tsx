@@ -294,8 +294,11 @@ function ConditionalDialog({
                     op="AND"
                     label={ts("If")}
                     choices={choices}
-                    onChange={(next) => {
-                      setConditions({ ...conditions, [rule]: next });
+                    onChange={(update) => {
+                      setConditions((current) => ({
+                        ...current,
+                        [rule]: update(current[rule] ?? list),
+                      }));
                     }}
                   />
                 </div>
@@ -316,14 +319,15 @@ function ConditionalDialog({
 }
 
 interface GroupProps {
-  /** The whole rule, which moves change. */
+  /** The whole rule as drawn, which moves read. */
   root: unknown[];
   list: unknown[];
   path: ClausePath;
   op: string;
   label?: string;
   choices: FieldChoices;
-  onChange: (root: unknown[]) => void;
+  /** Applied to the latest rule, so a change reported a render late keeps earlier ones. */
+  onChange: (update: (root: unknown[]) => unknown[]) => void;
   onDeleteGroup?: () => void;
 }
 
@@ -356,7 +360,7 @@ function ClauseGroup({
   const names = conjunctions();
   const groupLabel = label ?? ts("%1 group", { 1: names[op] ?? op });
   const setList = (update: (current: unknown[]) => unknown[]) => {
-    onChange(updateAt(root, path, update));
+    onChange((latest) => updateAt(latest, path, update));
   };
   const remove = (index: number) => {
     setList((current) => current.filter((_, i) => i !== index));
@@ -393,7 +397,14 @@ function ClauseGroup({
               </span>
               {/* deviation:condition-clause-move-buttons */}
               <ClauseMoveButtons
-                tree={{ root, path, skip: 0, onChange }}
+                tree={{
+                  root,
+                  path,
+                  skip: 0,
+                  onChange: (next) => {
+                    onChange(() => next);
+                  },
+                }}
                 index={index}
                 name={name}
               />

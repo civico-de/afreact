@@ -33,7 +33,7 @@
 .afreact-dialog::backdrop { background: rgb(0 0 0 / 50%); }
 .afreact-dialog .afreact-dialog-title { margin: 0; padding: var(--crm-dialog-header-padding, 0.75rem 1rem); font-size: var(--crm-dialog-header-size, 1.25rem); background: var(--crm-dialog-header-bg-color, Canvas); color: var(--crm-dialog-header-color, CanvasText); }
 .afreact-dialog .afreact-dialog-body { padding: var(--crm-dialog-body-padding, 1rem); }
-.afreact-dialog .afreact-dialog-buttons { display: flex; justify-content: flex-end; gap: 0.5rem; padding: var(--crm-dialog-padding, 0.75rem 1rem); }
+.afreact-dialog .afreact-dialog-buttons { display: flex; clear: both; justify-content: flex-end; gap: 0.5rem; padding: var(--crm-dialog-padding, 0.75rem 1rem); }
 /* React's editable cells (role=button): a visible keyboard focus, and icons without core's dimming. */
 .crm-container .crm-editable-enabled[role="button"]:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
 .crm-container .crm-editable-enabled[role="button"] .crm-i { opacity: 1; }
@@ -189,3 +189,5 @@ body.af-gui-dragging { cursor: grabbing; }
 #afGuiEditor .afreact-permission-row { display: flex; gap: 0.25rem; align-items: flex-start; }
 #afGuiEditor .afreact-permission-row > :first-child { flex: 1 1 auto; min-width: 0; }
 #afGuiEditor .afreact-permission-row > select { width: auto; }
+/* Core dims the badges to 2:1 contrast. deviation:condition-badge-contrast */
+.afreact-dialog.af-gui-conditional-dialog .api4-clause-badge .badge { opacity: 1; }
