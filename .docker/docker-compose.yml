@@ -89,6 +89,11 @@ services:
     ports:
       - "${CK_MAILDEV_PORT:-1080}:1080"
       - "${CK_SMTP_PORT:-1025}:1025"
+    # The image's own check asks localhost, which resolves to ::1; maildev listens on IPv4 only.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:1080/healthz"]
+      interval: 10s
+      timeout: 1s
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:5.2.2
