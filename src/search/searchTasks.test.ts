@@ -3,6 +3,7 @@ import {
   allows,
   BATCH_SIZE,
   batchCall,
+  createsOne,
   batches,
   caseBatch,
   caseRoleBatch,
@@ -305,6 +306,17 @@ describe("batchCall", () => {
       "delete",
       { where: [["id", "IN", [3]]] },
     ]);
+  });
+
+  it("creates one record for a create without id field, once whatever is selected", () => {
+    const create = { action: "create", params: { values: { subject: "x" } } };
+    expect(batchCall(create, contact, [5, 6])).toEqual([
+      "Contact",
+      "create",
+      { values: { subject: "x" } },
+    ]);
+    expect(createsOne(create)).toBe(true);
+    expect(createsOne({ ...create, idField: "contact_id" })).toBe(false);
   });
 
   it("saves one record per id for save and create, on the task's entity and id field", () => {

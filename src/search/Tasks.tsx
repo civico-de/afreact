@@ -31,6 +31,7 @@ import {
   allows,
   batchCall,
   batches,
+  createsOne,
   DOWNLOAD_FORMATS,
   downloadParams,
   evaluateTaskExpression,
@@ -614,7 +615,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
     if (started.current) return;
     started.current = true;
     const inline = isLink && apiBatch.action === "update" && ids.length === 1;
-    const ranges = batches(ids);
+    const ranges = batches(createsOne(apiBatch) ? [] : ids);
     let fetched = 0;
     let matched = 0;
     const rows: Record<string, unknown>[] = [];

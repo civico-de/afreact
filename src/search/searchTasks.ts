@@ -867,14 +867,15 @@ export const BATCH_SIZE = 500;
 export type ApiCall = [entity: string, action: string, params: Record<string, unknown>];
 
 /**
- * crmSearchBatchRunner's runBatch(): save copies the values onto a record per id; every other
+ * crmSearchBatchRunner's runBatch(): a create without idField makes one record; save copies the values onto a record per id; every other
  * action gets the ids in its where clause.
  */
 export function batchCall(batch: ApiBatch, entity: EntityInfo, ids: Key[]): ApiCall {
+  const target = batch.entity ?? entity.name;
+  if (createsOne(batch)) return [target, "create", structuredClone(batch.params ?? {})];
   const idField = batch.idField ?? entity.primary_key[0];
   if (!idField) throw new Error(`Entity ${entity.name} has no primary key.`);
   const params: Record<string, unknown> = structuredClone(batch.params ?? {});
-  const target = batch.entity ?? entity.name;
   if (batch.action === "save" || batch.action === "create") {
     const records = "values" in params ? [params.values] : (params.records ?? [{}]);
     delete params.values;
@@ -903,6 +904,9 @@ export function inlineEditCall(
   delete params.where;
   return ["SearchDisplay", "inlineEdit", { ...params, return: null, rowKey }];
 }
+
+/** A create without idField runs once, ignoring the selection, as core's batch runner does. */
+export const createsOne = (batch: ApiBatch) => batch.action === "create" && !batch.idField;
 
 /** The batches of `ids`; one call even without ids, as core runs one. */
 export function batches(ids: Key[]): { first: number; last: number }[] {
