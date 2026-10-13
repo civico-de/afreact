@@ -12,7 +12,18 @@ export interface SmartGroup {
   [key: string]: unknown;
 }
 
+/** An unsaved display's identity in the editor; JSON and structuredClone leave it out. */
+export const DISPLAY_KEY = Symbol("display");
+let displayCount = 0;
+
+/** The display marked as a new one of its own, so edits made while a save runs find it again. */
+export const newDisplay = (display: EditorDisplay): EditorDisplay => ({
+  ...display,
+  [DISPLAY_KEY]: ++displayCount,
+});
+
 export interface EditorDisplay {
+  [DISPLAY_KEY]?: number;
   id?: number;
   name?: string;
   label: string;
@@ -172,11 +183,13 @@ export function cloneSearch(source: EditorSearch, makeTemplate: boolean): Editor
     label: sameKind ? `${source.label} ${copy}` : makeTemplate ? source.label : "",
     is_template: makeTemplate,
     groups: [],
-    displays: rest.displays.map(({ id: _did, ...display }) => ({
-      ...display,
-      acl_bypass: false,
-      label: sameKind ? `${display.label} ${copy}` : display.label,
-    })),
+    displays: rest.displays.map(({ id: _did, ...display }) =>
+      newDisplay({
+        ...display,
+        acl_bypass: false,
+        label: sameKind ? `${display.label} ${copy}` : display.label,
+      }),
+    ),
   };
 }
 
@@ -288,7 +301,10 @@ export function addDisplay(
   const count = search.displays.filter((d) => d.type === type).length;
   const searchLabel =
     search.label || (getEntity(meta, search.api_entity)?.title_plural ?? search.api_entity);
-  return [...search.displays, { type, label: `${searchLabel} ${typeLabel} ${String(count + 1)}` }];
+  return [
+    ...search.displays,
+    newDisplay({ type, label: `${searchLabel} ${typeLabel} ${String(count + 1)}` }),
+  ];
 }
 
 /** removeDisplay: a saved display is marked and can come back; an unsaved one goes at once. */
@@ -304,7 +320,7 @@ export function cloneDisplay(displays: EditorDisplay[], index: number): EditorDi
   const source = displays[index];
   if (!source) return displays;
   const { id: _id, name: _name, trashed: _trashed, ...copy } = structuredClone(source);
-  return [...displays, { ...copy, label: `${source.label} ${ts("(copy)")}` }];
+  return [...displays, newDisplay({ ...copy, label: `${source.label} ${ts("(copy)")}` })];
 }
 
 export const newGroup = (): SmartGroup => ({

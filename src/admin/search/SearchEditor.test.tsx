@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { listParam, mockApi, recordParam, renderWithQuery } from "../../test/render";
 import { metadata } from "../../test/searchMetadata";
 import { splitHash } from "../../url/hash";
-import type { EditorSearch } from "./editor";
+import { newDisplay, removeDisplay, type EditorSearch } from "./editor";
 import { mergeSaved, SearchEditor, structuralRisk } from "./SearchEditor";
 
 const stored = {
@@ -178,7 +178,7 @@ describe("mergeSaved", () => {
     groups: [],
     displays: [
       { id: 1, name: "old", label: "Old", type: "table", trashed: true },
-      { label: "New", type: "list" },
+      newDisplay({ label: "New", type: "list" }),
     ],
   };
   const result = {
@@ -203,10 +203,32 @@ describe("mergeSaved", () => {
       groups: [{ title: "G", description: "", visibility: "", group_type: [] }],
     };
     const merged = mergeSaved(later, base, false, result);
-    expect(merged.displays).toEqual([
+    expect(structuredClone(merged.displays)).toEqual([
       { label: "Renamed", type: "list", id: 2, name: "new" },
       { label: "Added", type: "grid" },
     ]);
     expect(merged.groups).toHaveLength(1);
+  });
+
+  it("gives an edited new display its own id when an earlier unsaved one went meanwhile", () => {
+    const sent = {
+      ...base,
+      displays: [
+        newDisplay({ label: "T1", type: "table" }),
+        newDisplay({ label: "T2", type: "table" }),
+      ],
+    };
+    const removed = removeDisplay(sent.displays, 0);
+    const later = { ...sent, displays: removed.map((d) => ({ ...d, label: "T2 edited" })) };
+    const merged = mergeSaved(later, sent, false, {
+      id: 5,
+      displays: [
+        { id: 11, name: "T1_n", label: "T1", type: "table" },
+        { id: 12, name: "T2_n", label: "T2", type: "table" },
+      ],
+    });
+    expect(structuredClone(merged.displays)).toEqual([
+      { label: "T2 edited", type: "table", id: 12, name: "T2_n" },
+    ]);
   });
 });

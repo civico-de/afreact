@@ -12,6 +12,7 @@ import {
   addDisplay,
   cloneDisplay,
   cloneSearch,
+  DISPLAY_KEY,
   loadParams,
   newGroup,
   newSearch,
@@ -255,14 +256,16 @@ export function mergeSaved(
           ),
     // A display edited since keeps its edits and takes the id and name its sent version got.
     displays: state.displays
-      .map((d, i) => {
+      .map((d) => {
         const exact = savedAs.get(d);
         if (exact) return exact;
-        const before = sent.displays[i];
+        const before = sent.displays.find((s) =>
+          d.id === undefined
+            ? s[DISPLAY_KEY] !== undefined && s[DISPLAY_KEY] === d[DISPLAY_KEY]
+            : s.id === d.id,
+        );
         const saved = before && savedAs.get(before);
-        return saved && before.id === d.id && before.type === d.type
-          ? { ...d, id: saved.id, name: saved.name }
-          : d;
+        return saved && before.type === d.type ? { ...d, id: saved.id, name: saved.name } : d;
       })
       .filter((d) => !deleted.has(d)),
   };

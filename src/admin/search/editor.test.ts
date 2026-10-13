@@ -75,7 +75,7 @@ describe("creating and cloning", () => {
     const copy = cloneSearch(saved(), false);
     expect(copy.id).toBeUndefined();
     expect(copy.label).toBe("Members (copy)");
-    expect(copy.displays[0]).toEqual({
+    expect(structuredClone(copy.displays[0])).toEqual({
       name: "t",
       label: "Table (copy)",
       type: "table",
@@ -164,7 +164,7 @@ describe("editing", () => {
   });
 
   it("numbers new displays, toggles saved ones and copies without identity", () => {
-    expect(addDisplay(meta, saved(), "table").at(-1)).toEqual({
+    expect(structuredClone(addDisplay(meta, saved(), "table").at(-1))).toEqual({
       type: "table",
       label: "Members Table 2",
     });
@@ -173,7 +173,7 @@ describe("editing", () => {
     expect(trashed[0]?.trashed).toBe(true);
     expect(removeDisplay(trashed, 0)[0]?.trashed).toBe(false);
     expect(removeDisplay([{ label: "x", type: "table" }], 0)).toEqual([]);
-    expect(cloneDisplay(saved().displays, 0).at(-1)).toEqual({
+    expect(structuredClone(cloneDisplay(saved().displays, 0).at(-1))).toEqual({
       label: "Table (copy)",
       type: "table",
       settings: {},
