@@ -160,11 +160,27 @@ export function applyPrefill(
       const current = items[Number(index)];
       items[Number(index)] = {
         fields: { ...current?.fields, ...item.fields, ...entities[name]?.data },
-        joins: { ...current?.joins, ...item.joins },
+        joins: mergeJoins(current?.joins, item.joins),
       };
     }
   }
   return next;
+}
+
+type Joins = NonNullable<EntityItem["joins"]>;
+
+/** angular.merge over join records: by index, loaded fields over current ones, null replacing. */
+function mergeJoins(current: Joins | undefined, loaded: Joins | undefined): Joins {
+  const joins = { ...current };
+  for (const [name, records] of Object.entries(loaded ?? {})) {
+    const merged = [...(current?.[name] ?? [])];
+    for (const [index, record] of Object.entries(records)) {
+      const before = merged[Number(index)];
+      merged[Number(index)] = record === null ? null : { ...before, ...record };
+    }
+    joins[name] = merged;
+  }
+  return joins;
 }
 
 function entityItemAt(data: FormData, scope: Scope): EntityItem | undefined {

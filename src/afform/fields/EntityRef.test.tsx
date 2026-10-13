@@ -288,6 +288,51 @@ describe("EntityRef", () => {
     });
   });
 
+  it("fills a related entity the prefill of the selected record returns too", async () => {
+    const firstName = (label: string): LayoutNode => ({
+      "#tag": "af-field",
+      name: "first_name",
+      defn: { name: "first_name", label, input_type: "Text", data_type: "String" },
+    });
+    const layout: LayoutNode[] = [
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1", actions: "{update: true}" },
+          { "#tag": "af-entity", type: "Contact", name: "Individual2", actions: "{update: true}" },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "#children": [
+              entityRef("id", { label: "Existing", input_attrs: { autofill: "update" } }),
+              firstName("First"),
+            ],
+          },
+          { "#tag": "div", "af-fieldset": "Individual2", "#children": [firstName("Child")] },
+          submit,
+        ],
+      },
+    ];
+    renderForm(layout, {
+      "Contact.autocomplete": () => rows([ADA]),
+      "Afform.prefill": ({ fillMode }) =>
+        fillMode === "entity"
+          ? [
+              { name: "Individual1", values: [{ fields: { id: 1, first_name: "Ada" } }] },
+              { name: "Individual2", values: [{ fields: { id: 7, first_name: "Kim" } }] },
+            ]
+          : [],
+    });
+    const input = await screen.findByRole("combobox", { name: "Existing" });
+    await userEvent.type(input, "a");
+    await userEvent.click(await screen.findByRole("option", { name: "Ada" }));
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Child" })).toHaveValue("Kim");
+    });
+    expect(screen.getByRole("textbox", { name: "First" })).toHaveValue("Ada");
+  });
+
   it("shows the server's message when a search fails", async () => {
     renderForm(form([entityRef("employer_id")]), {
       "Contact.autocomplete": () => {
@@ -370,7 +415,8 @@ describe("EntityRef", () => {
             ? [
                 {
                   name: "Individual1",
-                  values: [{ fields: {}, joins: { Email: [{ id: 5, email: "a@example.org" }] } }],
+                  // Afform.prefill's join mode returns the join record without `fields`.
+                  values: [{ joins: { Email: [{ id: 5, email: "a@example.org" }] } }],
                 },
               ]
             : [],

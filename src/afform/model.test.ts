@@ -115,6 +115,33 @@ describe("applyPrefill", () => {
     expect(data.Individual1?.[0]?.fields).toEqual({ source: "x", id: 1 });
     expect(emails(data)).toEqual([{ email: "a@example.org" }]);
   });
+  it("merges join records by index, keeping records the prefill does not return", () => {
+    const start: FormData = {
+      Individual1: [
+        {
+          fields: {},
+          joins: {
+            Email: [{ email: "typed@example.org", is_primary: true }, { email: "b@x.org" }],
+          },
+        },
+      ],
+    };
+    const data = applyPrefill(
+      start,
+      [
+        {
+          name: "Individual1",
+          values: [{ fields: { id: 1 }, joins: { Email: [{ id: 4, email: "a@x.org" }] } }],
+        },
+      ],
+      {},
+    );
+    expect(emails(data)).toEqual([
+      { email: "a@x.org", is_primary: true, id: 4 },
+      { email: "b@x.org" },
+    ]);
+  });
+
   it("lets the entity's preset data win over prefilled fields", () => {
     const data = applyPrefill(
       emptyData(["Individual1"]),

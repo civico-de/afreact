@@ -1,13 +1,22 @@
 import { api4 } from "../../api/civi";
-import { firstPrefilled, type EntityDeclaration, type PrefillItem } from "../model";
+import { applyPrefill, firstPrefilled, type EntityDeclaration, type PrefillItem } from "../model";
 import type { FormData, Scope, Values } from "../types";
 
 type Join = Record<string, Values>;
 
-/** A join record of a prefill result; `joins` lists may arrive as objects keyed by index. */
+/** A key of a JSON object or list, read without trusting its shape. */
+const at = (value: unknown, key: string | number): unknown =>
+  value !== null && typeof value === "object"
+    ? Object.entries(value).find(([name]) => name === String(key))?.[1]
+    : undefined;
+
+/**
+ * The join record of a join-mode prefill: `{joins}` at the entity's index, without `fields`;
+ * lists may arrive as objects keyed by index.
+ */
 function joinRecord(item: PrefillItem, scope: Scope): Values | undefined {
-  const entityItem = firstPrefilled(item);
-  const join: unknown = scope.join === undefined ? undefined : entityItem?.joins?.[scope.join];
+  if (scope.join === undefined) return undefined;
+  const join = at(at(at(item.values, scope.index), "joins"), scope.join);
   if (join === null || typeof join !== "object") return undefined;
   const records: Join = { ...join };
   return records[String(scope.joinIndex ?? 0)];
@@ -48,14 +57,18 @@ export async function loadSelected(
       replaceRecord(data, scope, { ...currentRecord(data, scope), ...record }, false);
   }
   const loaded = firstPrefilled(item);
-  return (data) =>
-    replaceRecord(
+  // Other entities the server filled from this record, e.g. by a relationship autofill.
+  const others = result.filter((candidate) => candidate.name !== entity);
+  return (current) => {
+    const data = applyPrefill(current, others, entities);
+    return replaceRecord(
       data,
       scope,
       { ...currentRecord(data, scope), ...loaded?.fields, ...entities[entity]?.data },
       false,
       loaded?.joins,
     );
+  };
 }
 
 function currentRecord(data: FormData, { entity, index, join, joinIndex }: Scope): Values {
