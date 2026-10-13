@@ -365,6 +365,36 @@ describe("batch rows", () => {
     await screen.findByRole("link", { name: "2" });
     expect(screen.getByRole("textbox", { name: "Source, Row 1" })).toBeInTheDocument();
   });
+
+  it("pages and focuses by the rows there are once a removal returns", async () => {
+    let finish = () => {};
+    show(
+      [row(1), row(2), row(3)],
+      {
+        "Import_7.save": (params) => listParam(params.records).map(() => row(4).data),
+        "Import_7.delete": () =>
+          new Promise<never[]>((resolve) => {
+            finish = () => {
+              resolve([]);
+            };
+          }),
+      },
+      { ...settings, limit: 2, pager: {} },
+    );
+    await screen.findByRole("textbox", { name: "Source, Row 2" });
+    await userEvent.click(screen.getByRole("link", { name: "2" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Remove Row 3" }));
+    await userEvent.click(screen.getByRole("button", { name: /Add Rows/ }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Add 1 Row", hidden: true }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Remove Row 4" })).toBeInTheDocument();
+    });
+    finish();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Remove Row 3" })).toHaveFocus();
+    });
+    expect(screen.queryByRole("textbox", { name: "Source, Row 1" })).toBeNull();
+  });
 });
 
 describe("import", () => {

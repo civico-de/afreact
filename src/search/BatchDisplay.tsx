@@ -252,6 +252,11 @@ function BatchEditor({
   }, [focus]);
 
   const all = rows ?? [];
+  // The rows as last rendered, for work that resumes after a request.
+  const latest = useRef(all);
+  useEffect(() => {
+    latest.current = all;
+  });
   const current = page;
   const first = limit ? (current - 1) * limit : 0;
   const shown = limit ? all.slice(first, first + limit) : all;
@@ -345,23 +350,26 @@ function BatchEditor({
       });
   };
 
-  const deleteRow = async (rowId: number, index: number) => {
+  const deleteRow = async (rowId: number) => {
     // deviation:batch-delete-then-remove
     await api4(apiName, "delete", { where: [["_id", "=", rowId]] });
+    // Rows may have been added while the delete ran.
+    const list = latest.current;
+    const index = list.findIndex((row) => row._id === rowId);
     setRows((before) => (before ?? []).filter((row) => row._id !== rowId));
     setUnsaved((before) => new Set([...before].filter((other) => other !== rowId)));
     // A removed row may empty the last page: core goes back a page.
     if (limit)
-      setPage((before) => Math.min(before, Math.max(1, Math.ceil((all.length - 1) / limit))));
+      setPage((before) => Math.min(before, Math.max(1, Math.ceil((list.length - 1) / limit))));
     // The focus moves to the row taking the removed one's place, or the one before.
-    const next = all[index + 1] ?? all[index - 1];
+    const next = list[index + 1] ?? list[index - 1];
     setFocus(next ? `${id}-remove-${next._id}` : ADD_BUTTON);
   };
 
-  const removeRow = (rowId: number, index: number) => {
+  const removeRow = (rowId: number) => {
     setRemoving(rowId);
     setFailure(null);
-    return deleteRow(rowId, index)
+    return deleteRow(rowId)
       .catch(setFailure)
       .finally(() => {
         setRemoving(null);
@@ -547,7 +555,7 @@ function BatchEditor({
                       id={`${id}-remove-${row._id}`}
                       className="btn btn-primary btn-xs"
                       disabled={removing !== null}
-                      onClick={() => void removeRow(row._id, first + rowIndex)}
+                      onClick={() => void removeRow(row._id)}
                     >
                       <Icon name={removing === row._id ? "fa-spin fa-spinner" : "fa-trash"} />
                       <span className="sr-only">
