@@ -38,10 +38,12 @@ naming it. A setting the React editors cannot edit is saved back unchanged.
 | [docs/comparison.md](docs/comparison.md) | the renderer's parity gaps, improvements, differences by design, what is not implemented and why |
 | [docs/comparison-builders.md](docs/comparison-builders.md) | the builders' differences from core's SearchKit admin and FormBuilder editor |
 | [docs/upstream-bugs.md](docs/upstream-bugs.md) | bugs in core found on the way, by area, and what React does instead |
+| [docs/searchkit-format.md](docs/searchkit-format.md) | the SearchKit records as a format: the query, field names and joins, display settings, columns, links, text templates, what a run returns |
 | [docs/afform-markup.md](docs/afform-markup.md) | the Afform markup as a language: vocabulary, attribute types, the three layout formats, what core could change for a second renderer |
 | [docs/load-metrics.md](docs/load-metrics.md) | measured load times of both renderers and the layout sources |
 | [docs/testing.md](docs/testing.md) | every browser spec, the sweeps, the demo videos |
-| [docs/plan-builders.md](docs/plan-builders.md) | the builders in React: decisions, server and plugin contracts, round trip, core versions |
+| [docs/builders.md](docs/builders.md) | the React builders: server contracts, takeover and fallback, Angular islands, plugin contract, round trip, testing, core versions |
+| [docs/adr/](docs/adr/) | decision records: why afreact is built the way it is |
 
 ## Development
 

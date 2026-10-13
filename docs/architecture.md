@@ -13,7 +13,7 @@ layout as the Angular runtime sees it, the APIv4 actions `Afform.prefill`,
 `Afform.submit` and `SearchDisplay.run`, and the form's own permission.
 The takeover leaves core's Angular builders and their previews alone; the
 React builders are a separate switch (`afreact_builders`, see
-[plan-builders.md](plan-builders.md)). The dashboard screen around the
+[builders.md](builders.md)). The dashboard screen around the
 dashlets stays Angular (see below).
 
 ## State
@@ -179,7 +179,7 @@ settings form meanwhile.
 The builder sections below the forms list what the React builders would
 hand to the classic ones and what other extensions' panels replace; how
 modules and changed partials are found is in
-[plan-builders.md](plan-builders.md), "Switching and fallback". With only
+[builders.md](builders.md), "Switching and fallback". With only
 core's extensions the sections list nothing. Without FormBuilder's admin
 (afform_admin) the FormBuilder section says so, and the `afreact_builders`
 setting neither offers nor applies the FormBuilder builder.

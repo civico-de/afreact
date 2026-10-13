@@ -149,7 +149,7 @@ adds a working panel):
 
 A panel blocks saving through `validationMessage`, adds `saveNotes` to the
 confirmation and can delay the save with a `ready` promise. Full contract:
-[plan-builders.md](plan-builders.md#plugin-contract); differences from
+[builders.md](builders.md#plugin-contract); differences from
 core's builders: [comparison-builders.md](comparison-builders.md).
 
 ## Pages

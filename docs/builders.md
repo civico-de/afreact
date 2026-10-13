@@ -1,95 +1,11 @@
-# Plan: the builders in React
+# The React builders
 
-Status: phases 1 to 4 and 6 built, 5 open. Phase 6 covers the saved search picker, the add grant dialog, `crm-recaptcha2`, and the tag merge and add translation dialogs, which core has on master only (2026-10-11). Numbers are
-measured against civicrm-core master (6.21 alpha), its release tags and this
-repository on 2026-10-10.
-
-afreact renders Afforms and SearchKit displays. The SearchKit admin and
-FormBuilder, where admins make them, stay Angular. This plan brings those
-builders to React, so that with every switch on, no afform or search_kit
-screen needs Angular. The server does not change: the React builders save
-through the same APIv4 calls as core's Angular builders, and core's builders
-stay installed and reachable.
-
-## Decisions
-
-| Question | Decision | Alternative |
-|---|---|---|
-| Scope | everything afform and search_kit ship in Angular, plus the core extensions that plug into their builders (chart_kit, civi_case, civi_contribute, recaptcha) | also core's other Angular apps (table below), about 11,500 lines more, each better served by a plan of its own |
-| Order | SearchKit admin first, then FormBuilder | FormBuilder first; but its search forms place SearchKit displays, which admins make and edit in the SearchKit admin, so a React FormBuilder would keep sending them to the Angular one |
-| Core versions | 6.19.0 and every release after it, minor and patch, for the builders as for the runtime (`info.xml`), since sites run several side by side once the builders are released (see "Core versions") | the runtime on an older floor and the builders on 6.19: two support ranges and a floor check in the builder pages, while the runtime's tests already need 6.19 (`\Civi::router()`) |
-| Fallback | per page: the Angular builder stays at a route of its own, and React links a record there when it holds something React cannot edit; an extension's display type editor runs as an Angular island inside the React display page (see "Angular islands for display type editors") | islands for every builder part, which would run the Angular builder anyway (same section) |
-| Packages | no new runtime package | `@tanstack/react-virtual`, only if a measurement shows a slow list |
-| UI | free: the React builders save what core's save, but their screens need not copy core's layout or flow, and improve on it where core is awkward; accessibility, core's permissions and the warnings that prevent data loss stay | a copy of core's screens, which would carry its jQuery UI interactions and inaccessible parts into React |
-| Home | in afreact, as a second entry `afreact-admin.js` | a separate extension, which would copy or re-export the runtime's displays, widgets and API types |
-
-## Scope
-
-### In scope
-
-| Area | Core | Angular lines (JS + HTML) |
-|---|---|---|
-| SearchKit admin at `civicrm/admin/search`: search and segment listings; segment editor; search editor (entity, joins, conditions, group by, functions, subsearches, entity sets, settings, query info, templates); results preview; display editors (table, list, grid, tree, autocomplete, DB entity, data entry); import and export; tags and smart groups | `crmSearchAdmin` | 8,300 |
-| SearchKit display page `civicrm/search#/display/<search>/<display>` | `crmSearchPage` | 70 |
-| FormBuilder at `civicrm/admin/afform`: form listing (`afAdminFormList`, itself an Afform; revert and delete are SearchKit tasks of its display), editor (canvas, palette, entities and behaviors, fields, containers, tab sets, conditions, search forms, markup), form settings, undo and redo | `afAdmin`, `afGuiEditor` | 6,624 |
-| FormBuilder submissions at `civicrm/admin/afform/submissions`: a table display with inline settings | `CRM_AfformAdmin_Page_Submissions` | (page markup) |
-| chart_kit's display editor | `crmChartKitAdmin` | 920 |
-| civi_case's case-role autofill settings, appended to a core builder template | `afCaseGuiEditor` | 48 |
-| recaptcha's element settings | `afGuiRecaptcha2` | 27 |
-| civi_contribute's checkout block input type on the canvas (a fixed text) | `afCheckout`, only `inputType/CheckoutBlockAdmin.html`; the runtime renders the block | 5 |
-| gear menus with edit links on placed forms (`Civi\AfformAdmin\AfformAdminInjector`) | ChangeSet on every `*.aff.html` | small |
-| runtime pieces that are still Angular: the filter-set picker `af-search-param-sets` (afform; the runtime applies a set from `#?_s=`, but has no picker); the bulk-action dialogs for tag merge (search_kit), add grant (civigrant) and add translation (message_admin); the `crm-recaptcha2` element | `af`, only `afSearchParamSets`; `crmSearchTasks`, only `crmSearchTaskTagMerge`; `civiGrantTasks`, `crmMsgadmTasks`, `crmRecaptcha2` | 774 |
-
-### Outside this plan
-
-Core's other Angular apps are neither afform nor search_kit; they stay Angular
-after this plan, and so do the shared modules `crmUi` (1,413 lines) and
-`crmUtil` (393) they need.
-
-| App | Module | Angular lines |
-|---|---|---|
-| CiviMail composer and A/B tests | `crmMailing`, `crmMailingAB`, `crmAttachment` | 4,604 |
-| API v4 explorer | `api4Explorer` | 2,215 |
-| case types | `crmCaseType` | 1,255 |
-| message templates, including the Afform `crmMsgadmMonaco` it embeds | `crmMsgadm` | 1,146 |
-| import | `crmCiviimport` | 644 |
-| contact dashboard (sketched in [architecture.md](architecture.md), "Dashlets") | `crmDashboard` | 472 |
-| export field mapping | `exportui` | 314 |
-| standalone login, password change and reset | `crmLogin`, `crmChangePassword`, `crmResetPassword` | 506 |
-| status page, oEmbed sharing, OAuth, queue monitor | `crmStatusPage`, `crmOembedSharing`, `oauthUtil`, `crmQueueMonitor` | 351 |
-
-afform's test extension `ext/afform/mock` is no screen of a site and stays
-out as well.
-
-## Cost
-
-| | Angular (core) | React (afreact) |
-|---|---|---|
-| runtime, built | 7,000 lines: `af` without the filter-set picker, `afCore`, `afformStandalone`, the `crmSearchDisplay` modules, `crmSearchTasks` without tag merge, `crmChartKit`, `civiCaseTasks`, `afCheckout` | 18,300 lines of TypeScript without generated API types; 17,100 lines of unit tests, 6,750 of browser tests |
-| builders, this plan | 16,000 lines | about 30,000 to 40,000 lines of TypeScript, tests in the runtime's ratio |
-| runtime pieces, this plan | 800 lines | about 2,000 lines of TypeScript |
-
-The runtime needed 2.6 lines of TypeScript per Angular line, partly because
-it also does what core's shared modules (`crmUi`, select2, jQuery UI) do for
-the Angular code. The builders reuse the runtime's displays for their
-previews, its comboboxes, field inputs and API types, and their Angular code
-is a larger share of templates (30% against 17% in the runtime), so the
-estimate takes 2 to 2.5. With tests, the repository grows to about three
-times its size.
-
-Upstream moves fast in these files. Non-merge commits on civicrm-core master
-in the twelve months to 2026-10-10:
-
-| Paths | Commits |
-|---|---|
-| the paths this plan adds to `scripts/core-watch.txt` (below) | 294 |
-| of these, SearchKit admin (`crmSearchAdmin*`, `Civi/Search`, `CRM/Search/Page`) | 153 |
-| of these, FormBuilder admin (`ext/afform/admin`) | 121 |
-| of these, not already touching a path followed today | 191 |
-| the paths `scripts/core-watch.txt` follows today | 394 |
-
-The plan adds 191 commits a year to the 394 the weekly core-watch review
-reads today, about half as many again.
+How the React versions of the SearchKit admin and of FormBuilder work: what
+they read and write, how they take over core's routes and fall back to the
+classic builders, how other extensions plug in, how a record survives a
+round trip, and which core releases they support. Why they are built this
+way is in the [decision records](adr/). Their differences from core's
+builders are in [comparison-builders.md](comparison-builders.md).
 
 ## Server contracts
 
@@ -124,13 +40,12 @@ regardless.
 
 ## Switching and fallback
 
-- **Own routes.** From the first phase on, the React builders run at
+- **Own routes.** The React builders run at
   `civicrm/admin/afreact/search` and `civicrm/admin/afreact/afform`, with
   core's permissions, next to core's builders. The parity tests drive both
   builders on one site without changing a setting.
 - **Takeover.** A setting `afreact_builders` lists the builders React takes
-  over (`search_kit`, `afform`); a builder becomes selectable once its last
-  phase is done. For a listed builder, `hook_civicrm_alterMenu` points core's
+  over (`search_kit`, `afform`). For a listed builder, `hook_civicrm_alterMenu` points core's
   route at the React page, as `FormPage` does for forms, so every link to
   `civicrm/admin/search#/edit/5` (navigation menu, gear menus, listings)
   lands in React; `search_kit` takes the display page `civicrm/search`
@@ -203,7 +118,19 @@ notice or the save stops with a message. On a supported core release (see
 "Core versions"), with only core's extensions, a notice in the builder or an
 entry in the report is a bug (see "Testing").
 
-### Angular islands for display type editors
+## Angular islands
+
+Some extensions bring their own editor for a display type they add, written
+in Angular; chart_kit's chart editor is one. Rather than send the admin back
+to the classic builder for these, the React display page starts a small
+Angular application in the place where that editor belongs and leaves the
+rest of the page React. Both sides edit the same display object, so a change
+on either side, and undo, shows on the other at once. Such an island costs
+the page about 1.9 MB of extra scripts, measured below, and works only for
+display type editors: other builder plugins expect the whole Angular builder
+around them, so React detects them, names them and does not save.
+
+### How an island runs
 
 A display type editor from another extension, such as chart_kit's
 `search-admin-display-chart-kit`, runs as an island: React loads its module
@@ -224,7 +151,7 @@ restored object, which the editor shows at once. The editor derives its
 column list from the search's `select` in `$onInit` only, so React rebuilds
 the island when the search's columns change.
 
-Measured on 6.19.0 with a throwaway page (dev stack, assets not
+Measured on 6.19.0 with a test page (dev stack, assets not
 aggregated): the editor compiled with the stand-ins above and nothing else,
 both directions and undo showed on the other side without a second copy,
 and the browser reported no errors. Against the same page without the
@@ -304,62 +231,8 @@ core's input types itself; another extension's input type without an element
 shows a notice in place of its canvas controls, and the field's settings
 menu stays editable.
 
-afreact's own builder plugins move to the contract in their repositories:
-
-- **smartchart**: the `crmSearchAdminDirective` decorator sits in a module
-  of its own, which the `smartchart-save-gate` panel replaces; the display
-  editor runs as an island and the display in Angular at runtime. Elements
-  `civi-search-display-smart-chart` and
-  `afreact-search-admin-display-smart-chart` can follow from its
-  framework-free TypeScript.
-- **preflight**: its two ChangeSet panels become builder panels; in both
-  builders the findings go into the save confirmation as `saveNotes`, which
-  core's FormBuilder has no place for.
-
 Other extensions' builder plugins keep working in the classic builder until
 they adopt the contract; the support report lists them.
-
-## Libraries
-
-| Need | How | New package |
-|---|---|---|
-| field, entity, function and option pickers with search and groups | Downshift, already in the bundle | no |
-| drag and drop: palette to canvas, nested containers, reordering columns, joins, conditions and links | dnd-kit core and sortable, already in the bundle; nested containers need a collision strategy and keyboard coordinates of their own | no |
-| code editor for the markup tab | core's Monaco (`bower_components/monaco-editor`, AMD loader as `crmMonaco` loads it) behind a small component | no |
-| rich text | `CRM.wysiwyg` | no |
-| icon picker | core's icon list, read from `bower_components/font-awesome/css/all.css` as `crmIconPicker` does, in a Downshift combobox | no |
-| colours | `<input type="color">` | no |
-| dialogs, menus | `<dialog>`, `popover` | no |
-| undo and redo | snapshots of the immutable editor state | no |
-| layout edits (insert, move, update a node) | pure functions on the layout tree, without immer | no |
-| hash routes (`#/list`, `#/edit/5`, `#/create/Contact`) | a small matcher on `location.hash`, beside the existing adapter for `#?key=value` | no |
-| attribute values written as Angular literals (`defn="{label: 'Name'}"`), which core's builder evaluates with `$parse`; entity defaults, which it evaluates against the editor (`source: afform.title`) | a parser for the literal subset (objects, arrays, strings, numbers, booleans, `null`, `ts()`) and `afform.*` paths, beside the runtime's `src/afform/expressions.ts`, tested against `$parse` on every attribute of core's packaged forms and every entity's `defaults`; for edited values an encoder writing `CRM_Utils_JS::encode`'s notation, tested against it | no |
-| the DB entity column-name preview, which core computes with MD5 (`searchMeta.createSqlName`, mirroring `Civi\Search\Meta::createSqlName`) | MD5 in about 60 lines, tested against RFC 1321's vectors | no |
-| long lists (fields of an entity with many custom fields) | Downshift renders the filtered matches | `@tanstack/react-virtual` only if measured slow |
-
-Builder code loads only on builder pages: `afreact-admin.js` is a second
-entry, shared code sits in the `vendor` chunk, and the build check that no
-chunk imports an entry, which names `afreact.js` today, covers both entries.
-The runtime entry does not grow.
-
-### Canvas drag and drop
-
-The canvas extends the search tree's `TreeDnd` (`src/search/Sortable.tsx`):
-a drop lands after a field, or at a slot, and the arrow keys step through
-the targets in document order. A phase 0 prototype in a browser, with
-containers in containers, a row of fields side by side and an empty
-container, moved every item to every place by keyboard and by pointer once
-the canvas follows these rules:
-
-- Each container has two slots, first in it and after it, the second behind
-  its last child. A container's own box is no target, otherwise "after the
-  container" would come before its children in the key order.
-- The dragged item's subtree is no target, except its own place, where a
-  drop changes nothing; the arrow keys jump past the rest of it.
-- The arrow keys skip a target that would leave the layout as the previous
-  stop left it, so each press changes the result.
-- In a row, the pointer's half of an item decides: the left half is before
-  it, the right half after it. A slot in a row takes no width.
 
 ## Round trip
 
@@ -416,6 +289,48 @@ with only the edited keys changed.
   `Afform.save` keeps only an Afform's registered fields, and
   `formatWhitespace` rewrites the file's indentation.
 
+## Libraries for the builders
+
+| Need | How | New package |
+|---|---|---|
+| field, entity, function and option pickers with search and groups | Downshift, already in the bundle | no |
+| drag and drop: palette to canvas, nested containers, reordering columns, joins, conditions and links | dnd-kit core and sortable, already in the bundle; nested containers need a collision strategy and keyboard coordinates of their own | no |
+| code editor for the markup tab | core's Monaco (`bower_components/monaco-editor`, AMD loader as `crmMonaco` loads it) behind a small component | no |
+| rich text | `CRM.wysiwyg` | no |
+| icon picker | core's icon list, read from `bower_components/font-awesome/css/all.css` as `crmIconPicker` does, in a Downshift combobox | no |
+| colours | `<input type="color">` | no |
+| dialogs, menus | `<dialog>`, `popover` | no |
+| undo and redo | snapshots of the immutable editor state | no |
+| layout edits (insert, move, update a node) | pure functions on the layout tree, without immer | no |
+| hash routes (`#/list`, `#/edit/5`, `#/create/Contact`) | a small matcher on `location.hash`, beside the existing adapter for `#?key=value` | no |
+| attribute values written as Angular literals (`defn="{label: 'Name'}"`), which core's builder evaluates with `$parse`; entity defaults, which it evaluates against the editor (`source: afform.title`) | a parser for the literal subset (objects, arrays, strings, numbers, booleans, `null`, `ts()`) and `afform.*` paths, beside the runtime's `src/afform/expressions.ts`, tested against `$parse` on every attribute of core's packaged forms and every entity's `defaults`; for edited values an encoder writing `CRM_Utils_JS::encode`'s notation, tested against it | no |
+| the DB entity column-name preview, which core computes with MD5 (`searchMeta.createSqlName`, mirroring `Civi\Search\Meta::createSqlName`) | MD5 in about 60 lines, tested against RFC 1321's vectors | no |
+| long lists (fields of an entity with many custom fields) | Downshift renders the filtered matches | `@tanstack/react-virtual` only if measured slow |
+
+Builder code loads only on builder pages: `afreact-admin.js` is a second
+entry, shared code sits in the `vendor` chunk, and the build check that no
+chunk imports an entry, which names `afreact.js` today, covers both entries.
+The runtime entry does not grow.
+
+### Canvas drag and drop
+
+The canvas extends the search tree's `TreeDnd` (`src/search/Sortable.tsx`):
+a drop lands after a field, or at a slot, and the arrow keys step through
+the targets in document order. A prototype in a browser, with
+containers in containers, a row of fields side by side and an empty
+container, moved every item to every place by keyboard and by pointer once
+the canvas follows these rules:
+
+- Each container has two slots, first in it and after it, the second behind
+  its last child. A container's own box is no target, otherwise "after the
+  container" would come before its children in the key order.
+- The dragged item's subtree is no target, except its own place, where a
+  drop changes nothing; the arrow keys jump past the rest of it.
+- The arrow keys skip a target that would leave the layout as the previous
+  stop left it, so each press changes the result.
+- In a row, the pointer's half of an item decides: the left half is before
+  it, the right half after it. A slot in a row takes no width.
+
 ## Testing
 
 - **Round-trip sweep.** For every saved search, display and form a site has,
@@ -458,8 +373,7 @@ with only the edited keys changed.
   canvas uses jQuery UI sortable, which has no keyboard support; React gives
   every drag a keyboard path and an equivalent menu action, and the gap goes
   into [upstream-bugs.md](upstream-bugs.md) as the repository's rule wants.
-- **Strings.** The builders use core's English strings verbatim. The first
-  phase pins how the bundle's `ts()` strings reach core's translations of
+- **Strings.** The builders use core's English strings verbatim. The builders pin how the bundle's `ts()` strings reach core's translations of
   `org.civicrm.search_kit` and `org.civicrm.afform_admin`; a de_DE browser
   test checks one screen of each builder.
 - **Coverage.** As for the runtime: unit tests for models and reducers,
@@ -533,115 +447,11 @@ The floor rises only by decision, announced with an afreact release, and
 the checks below it go then. Until then the weekly run grows by one minor a
 month.
 
-## Phases
-
-Each phase ends with its tests green on every core release the weekly run
-covers. A builder's takeover option arrives with its last phase.
-
-**0. Groundwork.**
-The React builder routes and pages; the `afreact_builders` setting with the
-classic routes and the `basePages` listener (verified on 6.19.0, see
-"Switching and fallback"); the
-`civi.afreact.assets` event; the version check per branch; the test runs
-per core release (see "Core versions"); metadata loading for both builders;
-shared widgets (pickers, icon picker, Monaco, tags, MD5); undo and redo;
-layout tree functions; the round-trip sweep and the parity harness; the
-support report's builders section with its registry of core's template
-changes and modules; the core-watch paths and release branches; the `ts()`
-question above.
-
-Phase 0 has run two throwaway prototypes, an island with chart_kit's
-display editor and a canvas with nested drag and drop; their results are
-in "Angular islands for display type editors" and "Canvas drag and drop",
-and their code is gone.
-
-**1. SearchKit listings and the display page.**
-`#/list` with its tabs, filters, sorting, in-place editing, links and the
-per-row delete and revert, with core's confirmation naming the displays,
-smart group, scheduled communications and forms that go with the search;
-the cells core draws with include templates (forms using a search,
-displays, tags, scheduled communications) as React cells; import and
-export; the segments listing with its edit dialog and delete; the display
-page through `<afreact-search>`, with the search's default display when the
-URL names none, the display's label as page title and the edit link for
-users who may edit the search. Exit: the listing offers core's rows, links and
-actions.
-
-**2. SearchKit search editor.**
-Entity, with its own API parameters (`ui_params`, such as the form whose
-submissions `AfformSubmissionData` searches) and the fields reloaded when
-one that controls them changes; joins, including bridge joins; conditions
-with nested groups and functions; group by; columns with functions and
-flags; entity sets; the results preview with its column
-actions; smart group and tags; the settings tab (description, expiry date,
-timeout); Query Info (API parameters, request time, and the SQL for
-`view debug output`); the Forms menu with the forms that use the search
-and links to create one in FormBuilder for the search or a display; saving
-as one `SavedSearch.save`; cloning (`#/clone/<id>`); templates: create from
-a template, save as or clone a template (`?is_template=1`), with the create
-route's `label` and `params` in the URL; a warning before leaving unsaved
-changes. Exit: parity on saved records; the sweep finds no difference in
-any search on the dev stack.
-
-**3. SearchKit display editors.**
-Table, list, grid, tree, autocomplete, DB entity and data entry: columns and
-their types (subsearch columns among them), links and link groups, styles and conditional styles, sorting,
-pager, toolbar, tasks, in-place editing, tally, placeholders; live preview
-through the runtime displays, and core's own previews for autocomplete and
-DB entity; the DB entity display's refresh job, refresh date and its
-confirmation for removed or renamed columns; chart_kit's editor with its
-chart as the preview; the confirmation before structural changes; the
-warning naming the forms that embed a display when it is removed, pinned by
-a browser test, since the parity tests compare records, not dialogs; the
-display and save-hook contracts and smartchart's move to them. Exit: parity
-per display type; no false notices; the sweep finds no difference in any
-display.
-`search_kit` becomes selectable in `afreact_builders`.
-
-**4. FormBuilder listing, submissions and gear menus.**
-`afAdminFormList` with `af-admin-list-menu` and its placement column (a
-registry maps core's own include templates to React cells; any other include
-template stays unsupported); the submissions page, which runs the default
-display core builds for the form (`SearchDisplay.getDefault` with the form in
-its context filters, as core's page compiles it; core's `api-entity` is the
-search's own and unused by the table); the gear menus with edit links on
-placed forms and displays, for users with the permission. Exit: the support report notes nothing in
-`afAdminFormList` but its menu, which only React's FormBuilder listing can render; parity on the listing.
-
-**5. FormBuilder editor.**
-Core's routes (`#/create/<type>/<entity>`, `#/edit/<name>`,
-`#/clone/<name>`); canvas and palette; containers, text, markup, buttons,
-tab sets, blocks, joins and repeats; search forms with their displays and
-parameter sets; generic elements; field settings (label, help, required,
-defaults, options, input type, search ranges and operators); conditions;
-entity panels with their defaults (`data.source` follows the form title, as
-in core) and behaviors (contact autofill with civi_case's case roles,
-dedupe, group subscription options); saving a container as a block; form
-settings (title, description, icon, tags stored by name with new tags made
-in place, route, public access, permissions, placements with filters and
-weight, navigation, language, confirmation, redirect, submissions and their
-limits, email verification, drafts, authx redirect); the markup tab with
-Monaco and `Afform.convert`, editable with `edit afform html`; undo and
-redo; element style menus; tokens; core's input types on the canvas, the
-checkout block among them; the literal parser and encoder for attribute
-values, with the round trip's core bugs listed in upstream-bugs.md;
-recaptcha's element; the element, input type, behavior and entity-option
-contracts and preflight's move to the panel contract. Exit: parity on saved
-layouts; no false notices; the sweep finds no difference in any form, core's
-packaged forms included. `afform` becomes selectable in `afreact_builders`.
-
-**6. Remaining runtime pieces.**
-The filter-set picker `af-search-param-sets` (list a form's sets with
-`SearchParamSet.get`, apply one through `#?_s=`, save, update and delete
-them); the tag merge, add grant and add translation dialogs; the
-`crm-recaptcha2` element. Each gets a parity test. This phase depends on no
-other and can run at any time.
-
 ## Upstream tracking
 
-`scripts/core-watch.txt` gets the paths this plan depends on: the builders,
+`scripts/core-watch.txt` follows the paths the builders depend on: the builders,
 their plugins, the display base class the renderer contract builds on, the
-runtime pieces of phase 6, the shared widgets React rebuilds, and the
+runtime pieces that replaced Angular dialogs, the shared widgets React rebuilds, and the
 encoding the round trip and the support report follow.
 
 ```
@@ -682,28 +492,3 @@ A new display setting, element or behavior in core shows up as a notice in
 the React builder until React supports it, never as lost data (see "Round
 trip"). Bugs found in core's builders go into upstream-bugs.md with what
 React does instead.
-
-## Risks
-
-- **Size.** 30,000 to 40,000 lines of TypeScript for the builders plus tests
-  is the largest part of the repository. Every phase delivers on its own;
-  stopping after phase 3 leaves a complete React SearchKit admin next to
-  core's FormBuilder.
-- **Churn.** About 190 more upstream commits a year to read, on top of the
-  runtime's 394. Where React lags behind core, the builder shows notices,
-  and falling behind costs a trip to the classic builder; a change in what
-  a known key means, or in how core processes it, shows no notice (see
-  "Core versions").
-- **Version spread.** Until the floor rises, each new minor adds a weekly
-  test run and a civikitchen image, and each behaviour that differs between
-  supported releases adds a version check.
-- **Nested drag and drop.** dnd-kit's sortable preset covers lists; the
-  canvas's nested containers need a collision strategy and keyboard
-  coordinates of their own. A phase 0 prototype settled both (see "Canvas
-  drag and drop").
-- **Plugins.** Sites that depend on third-party builder plugins keep the
-  classic builder for the affected records until those plugins adopt the
-  contract.
-- **Core replacing its builders.** The server contracts stay core's, so
-  turning the takeover off brings back core's builders with every record
-  intact.

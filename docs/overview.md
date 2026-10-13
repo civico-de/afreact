@@ -77,7 +77,9 @@ such forms before anyone switches them over. The main gaps:
 - a few rarely used settings in the batch entry and chart displays.
 
 In the editors, a setting afreact cannot edit is kept and saved back
-unchanged, with a link to the original editor. The complete list is under
+unchanged, with a link to the original editor. When another extension brings its
+own Angular editor for a display type, such as the chart editor, afreact runs
+just that editor in Angular inside the React page, so it stays usable. The complete list is under
 "Not implemented" in [comparison.md](comparison.md).
 
 ## Switching it on and off
