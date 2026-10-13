@@ -25,6 +25,8 @@ import { replacePageTitle, titleWithLabels } from "./pageTitle";
 import { announceSaved } from "./popup";
 import { countDisplays } from "./SearchFieldset";
 import { loadDefinition, type LayoutSource } from "./source";
+import { useConditionalChanges } from "./conditionalChanges";
+import type { Filled } from "./fields/autofill";
 import { initialiseData, joinOffsets } from "./structure";
 import type { FormData, FormDefinition } from "./types";
 
@@ -559,6 +561,8 @@ function LoadedForm(props: LoadedFormProps) {
   const expressions = useMemo(() => formExpressions(form.strings), [form]);
   const displays = useMemo(() => countDisplays(form.layout), [form]);
   const [itemKeys] = useState(() => new Map<string, number[]>());
+  const [autofilled] = useState(() => new Map<string, Filled>());
+  const conditional = useConditionalChanges(host, data, ts);
   const [labels, setLabels] = useState<string[]>([]);
   // deviation:draft-pristine-label
   const changed = snapshot !== draftSaved;
@@ -591,6 +595,8 @@ function LoadedForm(props: LoadedFormProps) {
     prefilled,
     expressions,
     itemKeys,
+    autofilled,
+    toggled: conditional.toggled,
     ...(isForm(form) && {
       reset: () => {
         reset.mutate();
@@ -797,6 +803,9 @@ function LoadedForm(props: LoadedFormProps) {
           )}
         </DisplayCountContext.Provider>
       </FormContext.Provider>
+      <p aria-live="polite" className="sr-only">
+        {conditional.announcement}
+      </p>
       {/* Below the form, the status comes and goes without moving it. */}
       {/* deviation:form-status-below */}
       <p role="status" className="afreact-status">

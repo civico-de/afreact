@@ -333,6 +333,271 @@ describe("EntityRef", () => {
     expect(screen.getByRole("textbox", { name: "First" })).toHaveValue("Ada");
   });
 
+  // deviation:autofill-clear-resets-related
+  it("fills related entities with a selection and resets the untouched ones when it is cleared", async () => {
+    const text = (name: string, label: string): LayoutNode => ({
+      "#tag": "af-field",
+      name,
+      defn: { name, label, input_type: "Text", data_type: "String" },
+    });
+    const layout: LayoutNode[] = [
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1", actions: "{update: true}" },
+          { "#tag": "af-entity", type: "Contact", name: "Individual2", actions: "{update: true}" },
+          { "#tag": "af-entity", type: "Contact", name: "Individual3", actions: "{update: true}" },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "#children": [
+              entityRef("id", { label: "Existing", input_attrs: { autofill: "update" } }),
+            ],
+          },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual2",
+            "#children": [text("first_name", "Spouse")],
+          },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual3",
+            "#children": [text("first_name", "Child")],
+          },
+        ],
+      },
+    ];
+    renderForm(layout, {
+      "Contact.autocomplete": () => rows([ADA]),
+      "Afform.prefill": ({ fillMode }) =>
+        fillMode === "entity"
+          ? [
+              { name: "Individual1", values: [{ fields: { id: 1 } }] },
+              { name: "Individual2", values: [{ fields: { id: 5, first_name: "Sam" } }] },
+              { name: "Individual3", values: [{ fields: { id: 6 } }] },
+            ]
+          : [],
+    });
+    const input = await screen.findByRole("combobox", { name: "Existing" });
+    const spouse = screen.getByRole("textbox", { name: "Spouse" });
+    const child = screen.getByRole("textbox", { name: "Child" });
+    await userEvent.type(spouse, "Jo");
+    await userEvent.type(input, "a");
+    await userEvent.click(await screen.findByRole("option", { name: "Ada" }));
+    await waitFor(() => {
+      expect(spouse).toHaveValue("Sam");
+    });
+    expect(child).toHaveValue("");
+    // A field the selection left empty counts as an edit once typed into.
+    await userEvent.type(child, "a");
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    // What was typed before the selection comes back with the clear.
+    await waitFor(() => {
+      expect(spouse).toHaveValue("Jo");
+    });
+    expect(child).toHaveValue("a");
+  });
+
+  // deviation:autofill-clear-resets-related
+  it("resets what a repeated selection filled after an earlier item was removed, or it was undone", async () => {
+    const layout: LayoutNode[] = [
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1", actions: "{update: true}" },
+          { "#tag": "af-entity", type: "Contact", name: "Individual2", actions: "{update: true}" },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "af-repeat": "Add person",
+            "#children": [
+              entityRef("id", { label: "Existing", input_attrs: { autofill: "update" } }),
+            ],
+          },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual2",
+            "#children": [
+              {
+                "#tag": "af-field",
+                name: "first_name",
+                defn: {
+                  name: "first_name",
+                  label: "Spouse",
+                  input_type: "Text",
+                  data_type: "String",
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ];
+    renderForm(layout, {
+      "Contact.autocomplete": () => rows([ADA]),
+      "Afform.prefill": ({ fillMode }) =>
+        fillMode === "entity"
+          ? [
+              { name: "Individual1", values: [{ fields: { id: 1 } }, { fields: { id: 1 } }] },
+              { name: "Individual2", values: [{ fields: { id: 5, first_name: "Sam" } }] },
+            ]
+          : [],
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Add person" }));
+    const second = screen.getAllByRole("combobox", { name: "Existing" })[1];
+    if (!second) throw new Error("no second item");
+    await userEvent.type(second, "a");
+    await userEvent.click(await screen.findByRole("option", { name: "Ada" }));
+    const spouse = screen.getByRole("textbox", { name: "Spouse" });
+    await waitFor(() => {
+      expect(spouse).toHaveValue("Sam");
+    });
+    await userEvent.click(screen.getByRole("button", { name: /^Remove item 1/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Remove item 1/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    await waitFor(() => {
+      expect(spouse).toHaveValue("");
+    });
+  });
+
+  // deviation:autofill-clear-resets-related
+  it("gives a repeat item added in a removed one's place none of its autofill history", async () => {
+    const layout: LayoutNode[] = [
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1", actions: "{update: true}" },
+          { "#tag": "af-entity", type: "Contact", name: "Individual2", actions: "{update: true}" },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "af-repeat": "Add person",
+            "#children": [
+              entityRef("id", { label: "Existing", input_attrs: { autofill: "update" } }),
+            ],
+          },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual2",
+            "#children": [
+              {
+                "#tag": "af-field",
+                name: "first_name",
+                defn: {
+                  name: "first_name",
+                  label: "Spouse",
+                  input_type: "Text",
+                  data_type: "String",
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ];
+    renderForm(layout, {
+      "Contact.autocomplete": () => rows([ADA, BOB]),
+      "Afform.prefill": ({ fillMode, args }) => {
+        if (fillMode !== "entity") return [];
+        if (JSON.stringify(args).includes('"id":2'))
+          return [{ name: "Individual1", values: [{ fields: { id: 2 } }] }];
+        return [
+          { name: "Individual1", values: [{ fields: { id: 1 } }] },
+          { name: "Individual2", values: [{ fields: { id: 5, first_name: "Sam" } }] },
+        ];
+      },
+    });
+    const select = async (position: number, name: string) => {
+      const input = screen.getAllByRole("combobox", { name: "Existing" })[position];
+      if (!input) throw new Error(`no item ${String(position)}`);
+      await userEvent.type(input, name.charAt(0));
+      await userEvent.click(await screen.findByRole("option", { name }));
+    };
+    const spouse = await screen.findByRole("textbox", { name: "Spouse" });
+    await userEvent.click(screen.getByRole("button", { name: "Add person" }));
+    await select(1, "Ada");
+    await waitFor(() => {
+      expect(spouse).toHaveValue("Sam");
+    });
+    await select(0, "Ada");
+    await userEvent.click(screen.getByRole("button", { name: /^Remove item 2/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Add person" }));
+    await select(1, "Bob");
+    await waitFor(() => {
+      expect(screen.getAllByRole("combobox", { name: "Existing" })[1]).toHaveValue("Bob");
+    });
+    expect(spouse).toHaveValue("Sam");
+  });
+
+  // deviation:autofill-clear-resets-related
+  it("drops the related repeat items a cleared selection added", async () => {
+    const layout: LayoutNode[] = [
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1", actions: "{update: true}" },
+          { "#tag": "af-entity", type: "Contact", name: "Individual2", actions: "{update: true}" },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "#children": [
+              entityRef("id", { label: "Existing", input_attrs: { autofill: "update" } }),
+            ],
+          },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual2",
+            "af-repeat": "Add child",
+            "#children": [
+              {
+                "#tag": "af-field",
+                name: "first_name",
+                defn: {
+                  name: "first_name",
+                  label: "Child",
+                  input_type: "Text",
+                  data_type: "String",
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ];
+    renderForm(layout, {
+      "Contact.autocomplete": () => rows([ADA]),
+      "Afform.prefill": ({ fillMode }) =>
+        fillMode === "entity"
+          ? [
+              { name: "Individual1", values: [{ fields: { id: 1 } }] },
+              {
+                name: "Individual2",
+                values: [
+                  { fields: { id: 5, first_name: "Sam" } },
+                  { fields: { id: 6, first_name: "Kim" } },
+                ],
+              },
+            ]
+          : [],
+    });
+    const input = await screen.findByRole("combobox", { name: "Existing" });
+    await userEvent.type(input, "a");
+    await userEvent.click(await screen.findByRole("option", { name: "Ada" }));
+    await waitFor(() => {
+      expect(screen.getAllByRole("textbox", { name: "Child" })).toHaveLength(2);
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    await waitFor(() => {
+      expect(screen.getAllByRole("textbox", { name: "Child" })).toHaveLength(1);
+    });
+    expect(screen.getByRole("textbox", { name: "Child" })).toHaveValue("");
+  });
+
   it("shows the server's message when a search fails", async () => {
     renderForm(form([entityRef("employer_id")]), {
       "Contact.autocomplete": () => {

@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { mockApi, renderWithQuery } from "../test/render";
@@ -80,6 +80,47 @@ describe("live rules", () => {
         Individual1: [{ fields: { first_name: "Ada", job_title: "Engineer" }, joins: {} }],
       });
     });
+  });
+
+  // deviation:af-if-focus-kept
+  it("keeps the focus in the form when an af-if hides the focused field, and says what changed", async () => {
+    renderForm(
+      form([
+        field("first_name"),
+        {
+          "#tag": "div",
+          "af-if": when("first_name", "=", '"ada"'),
+          "#children": [field("first_name", { label: "Again" }), field("nick_name")],
+        },
+      ]),
+    );
+    const first = await screen.findByRole("textbox", { name: "first_name" });
+    await userEvent.type(first, "ada");
+    const live = () => document.querySelector(".afreact-form > p[aria-live]");
+    await waitFor(
+      () => {
+        expect(live()).toHaveTextContent("More fields are shown.");
+      },
+      { timeout: 2000 },
+    );
+    // A change from a control that took no focus (a click in Safari) returns the focus to it.
+    await userEvent.click(box("nick_name"));
+    fireEvent.change(first, { target: { value: "bob" } });
+    expect(screen.queryByRole("textbox", { name: "nick_name" })).not.toBeInTheDocument();
+    expect(first).toHaveFocus();
+    await waitFor(
+      () => {
+        expect(live()).toHaveTextContent("Some fields are hidden.");
+      },
+      { timeout: 2000 },
+    );
+    // A field that hides itself leaves the focus on its nearest remaining ancestor.
+    fireEvent.change(first, { target: { value: "ada" } });
+    const again = box("Again");
+    await userEvent.type(again, "x");
+    expect(screen.queryByRole("textbox", { name: "Again" })).not.toBeInTheDocument();
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toContainElement(first);
   });
 
   it("initialises what an af-if shows only once shown, and again on every re-show", async () => {

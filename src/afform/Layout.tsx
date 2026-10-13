@@ -13,7 +13,7 @@ import { createPortal } from "react-dom";
 import { checkConditions, parseConditions } from "./conditions";
 import { interpolate, type ExpressionContext } from "./expressions";
 import { ClearButton, Field, fieldClasses } from "./Field";
-import { loadSelected } from "./fields/autofill";
+import { loadSelected, type Filled } from "./fields/autofill";
 import { TokenContext, withTokens } from "./Markup";
 import { FieldEnvContext, ItemPathContext, type FieldEnv } from "./fields/env";
 import { UploadsContext } from "./fields/upload";
@@ -94,6 +94,10 @@ export interface FormState {
   expressions: ExpressionContext;
   /** Item keys per repeated array, shared by every af-repeat over that array. */
   itemKeys: Map<string, number[]>;
+  /** Per autofill field, what its selection filled into other entities. */
+  autofilled: Map<string, Filled>;
+  /** An af-if showed or hid its content after the form loaded. */
+  toggled: (shown: boolean) => void;
   /** afForm.resetForm(); undefined outside af-form. */
   reset?: () => void;
   /** afForm.submitDraft() and the state its buttons show; undefined outside af-form. */
@@ -335,6 +339,13 @@ function Conditional({ node }: { node: ElementNode }) {
     initialised.current = true;
     update((current) => initialiseNodes([node], current, scope, joinOffsets, routeParams));
   }, [active, update, node, scope, joinOffsets, routeParams]);
+  const { toggled, prefilled } = form;
+  const wasShown = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (hiddenWith !== null || !prefilled) return;
+    if (wasShown.current !== null && wasShown.current !== shown) toggled(shown);
+    wasShown.current = shown;
+  }, [shown, hiddenWith, prefilled, toggled]);
   if (active && shownWith !== form.data) setShownWith(form.data);
   if ("error" in result) return <Unsupported what={result.error} />;
   if (shown) return <Rendered node={node} />;
@@ -453,6 +464,8 @@ interface Removal {
   edits: number;
   /** The files chosen in the item's File fields, by owner. */
   files: [string, File][];
+  /** What the item's autofill selections filled into other entities, by owner. */
+  autofilled: [string, Filled][];
 }
 
 /** af-repeat in afRepeat.html's markup: one copy of the children per item, with add/copy/remove inside the min/max bounds. */
@@ -511,7 +524,13 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
             const files = [...(uploads?.pending.values() ?? [])]
               .filter((upload) => upload.owner.startsWith(inItem))
               .map((upload): [string, File] => [upload.owner, upload.file]);
-            setRemoval({ position, key, keys, before: form.data, edits: form.edits + 1, files });
+            // A later item may take this key, so it must not inherit the item's autofill history.
+            const autofilled = [...form.autofilled].filter(
+              ([owner]) => owner.startsWith(inItem) || owner.startsWith(`${id}#${key}:`),
+            );
+            for (const [owner] of autofilled) form.autofilled.delete(owner);
+            const before = form.data;
+            setRemoval({ position, key, keys, before, edits: form.edits + 1, files, autofilled });
             removeKey(position);
             form.edit((data) => primaryKept(removeRepeatItem(data, scope, position)));
           }}
@@ -537,6 +556,7 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
           disabled={form.disabled}
           onClick={() => {
             for (const [owner, file] of removal.files) uploads?.restored.set(owner, file);
+            for (const [owner, filled] of removal.autofilled) form.autofilled.set(owner, filled);
             restoreKeys(removal.keys);
             setRestored({ key: removal.key });
             setRemoval(null);
@@ -725,6 +745,7 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
     options: visible.options,
     required: required && "value" in required ? required.value : given.required,
   };
+  const itemPath = useContext(ItemPathContext);
   const loop = useTokenDefault(given, scope, name, element);
   useOfferedValue(offeredIds(given, visible.options), scope, name);
   const value = getValue(form.data, scope, name);
@@ -768,7 +789,7 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
         }}
       />
     ) : (
-      <FieldEnvContext.Provider value={fieldEnv(form, scope, name, autofill)}>
+      <FieldEnvContext.Provider value={fieldEnv(form, scope, name, autofill, itemPath)}>
         <Field
           defn={defn}
           value={value}
@@ -788,6 +809,7 @@ function fieldEnv(
   scope: Scope,
   name: string,
   autofill: string | undefined,
+  itemPath: string,
 ): FieldEnv {
   const entityItem = form.data[scope.entity]?.[scope.index];
   const values =
@@ -805,7 +827,19 @@ function fieldEnv(
     joinIndex: scope.join === undefined ? undefined : (scope.joinIndex ?? 0),
     onSelect: autofill
       ? async (id) => {
-          form.edit(await loadSelected(form.formName, scope, name, id, form.entities));
+          // Keyed by the item's place in the layout, which survives removing an earlier repeat item.
+          const key = `${itemPath}:${name}`;
+          const previous = form.autofilled.get(key);
+          const selection = await loadSelected(
+            form.formName,
+            scope,
+            name,
+            id,
+            form.entities,
+            previous,
+          );
+          form.autofilled.set(key, selection.filled);
+          form.edit(selection.apply);
         }
       : undefined,
   };
