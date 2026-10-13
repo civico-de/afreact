@@ -420,8 +420,8 @@ async function renderedTables(page: Page, route: string) {
   await expect(tables).toHaveCount(2);
   await expect(tables.first().locator("tbody tr").first()).toBeVisible();
   await expect(tables.last().locator("tbody tr").first()).toBeVisible();
-  // Both displays' queries settle before their rows are counted.
-  await page.waitForLoadState("networkidle");
+  // Rows count once both displays replaced their loading placeholders.
+  await expect(page.locator("#crm-container .crm-search-loading-placeholder")).toHaveCount(0);
   return tables.evaluateAll((all) =>
     all.map((table) => ({
       // What shows: names for screen readers (deviation:table-header-names) and shut menus left out.
@@ -626,6 +626,164 @@ test("shows a field only once another is filled, alike in both renderers", async
   await expect(page.locator(".afreact-form")).toBeVisible();
   await setReactForms(page, []);
   expect(await behaviour()).toBe(false);
+  expect(raised).toEqual([]);
+});
+
+// deviation:repeat-bounds-on-blur
+test("repeats an email block up to its maximum, alike in both renderers", async ({ page }) => {
+  page.setDefaultTimeout(30_000);
+  const raised: string[] = [];
+  page.on("pageerror", (error) => raised.push(`page error ${error.message.split("\n")[0] ?? ""}`));
+  await keepReactForms(page);
+  const route = routeOf("repeat");
+  await page.goto("/civicrm/admin/afreact/afform#/create/form/Individual");
+  await expect(canvas(page)).toBeVisible();
+  await page.getByRole("textbox", { name: /^Title/ }).fill(`${TITLE}repeat`);
+  await typeRoute(page, route);
+  await page.getByRole("tablist", { name: "Form parts" }).getByRole("tab").nth(2).click();
+  await page.waitForLoadState("networkidle");
+  const blocks = page.locator("#afGuiEditor-palette").getByRole("group", { name: "Blocks" });
+  await dropTile(page, blocks.locator("[role=button]").filter({ hasText: /^Contact Email/ }));
+  const join = canvas(page)
+    .locator("af-gui-container")
+    .filter({ has: page.getByRole("combobox", { name: "Select block" }) })
+    .last();
+  await join.getByRole("button", { name: "Configure" }).first().click();
+  const min = page.getByRole("spinbutton", { name: "Minimum" });
+  const max = page.getByRole("spinbutton", { name: "Maximum" });
+  await expect(min).toHaveValue("1");
+  // Typed digit by digit, "12" passes through 1, which once pulled the minimum down.
+  await min.fill("2");
+  await max.pressSequentially("12");
+  await max.blur();
+  await expect(min).toHaveValue("2");
+  await max.fill("3");
+  await max.blur();
+  await expect(min).toHaveValue("2");
+  await page.keyboard.press("Escape");
+  const name = await saveNew(page);
+
+  const behaviour = async () => {
+    await page.goto(`/${route}`);
+    const emails = page.locator("af-form af-field[name=email] input:visible");
+    await expect(emails.first()).toBeVisible();
+    const before = await emails.count();
+    const add = page.getByRole("button", { name: "Add" });
+    await add.click();
+    await expect(emails).toHaveCount(before + 1);
+    const addAtMax = (await add.isVisible()) && (await add.isEnabled());
+    return { counts: [before, await emails.count()], addAtMax };
+  };
+  await setReactForms(page, [name]);
+  const react = await behaviour();
+  await expect(page.locator(".afreact-form")).toBeVisible();
+  await setReactForms(page, []);
+  const angular = await behaviour();
+  expect(react).toEqual({ counts: [2, 3], addAtMax: false });
+  expect(react).toEqual(angular);
+  expect(raised).toEqual([]);
+});
+
+test("renders a select field as radio buttons with customised options, alike in both renderers", async ({
+  page,
+}) => {
+  page.setDefaultTimeout(30_000);
+  const raised: string[] = [];
+  page.on("pageerror", (error) => raised.push(`page error ${error.message.split("\n")[0] ?? ""}`));
+  await keepReactForms(page);
+  const route = routeOf("options");
+  await page.goto("/civicrm/admin/afreact/afform#/create/form/Individual");
+  await expect(canvas(page)).toBeVisible();
+  await page.getByRole("textbox", { name: /^Title/ }).fill(`${TITLE}options`);
+  await typeRoute(page, route);
+  await page.getByRole("tablist", { name: "Form parts" }).getByRole("tab").nth(2).click();
+  await dropTile(page, freeTiles(page, /Fields$/).filter({ hasText: /^Gender/ }));
+  const gender = canvas(page).locator(".af-gui-field").filter({ hasText: "Gender" }).first();
+  await gender.getByRole("button", { name: "Configure" }).first().click();
+  await page.getByRole("combobox", { name: "Type:" }).selectOption({ label: "Radio Buttons" });
+  await page.getByRole("button", { name: "Customize options" }).click();
+  const editor = canvas(page).locator(".af-gui-edit-options-enabled");
+  const labels = editor.getByRole("textbox", { name: "Option label" });
+  await expect(labels).toHaveText(["Female", "Male", "Other"]);
+  await page.getByRole("button", { name: "Move Other up" }).click();
+  await page.getByRole("button", { name: "Remove option Male" }).click();
+  await labels.first().click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("Woman");
+  await page.keyboard.press("Enter");
+  await expect(labels).toHaveText(["Woman", "Other"]);
+  await canvas(page).getByRole("button", { name: "Done" }).click();
+  await expect(gender.getByRole("radio")).toHaveCount(2);
+  const name = await saveNew(page);
+
+  const optionLabels = async () => {
+    await page.goto(`/${route}`);
+    // Only React groups the radios under the field's name.
+    const radios = page.locator("#crm-container").getByRole("radio");
+    await expect(radios.first()).toBeVisible();
+    await page.getByRole("radio", { name: "Other" }).check();
+    await expect(page.getByRole("radio", { name: "Other" })).toBeChecked();
+    return radios.evaluateAll((all) =>
+      all.map((radio) =>
+        radio instanceof HTMLInputElement ? (radio.labels?.[0]?.textContent?.trim() ?? "") : "",
+      ),
+    );
+  };
+  await setReactForms(page, [name]);
+  const react = await optionLabels();
+  await expect(page.locator(".afreact-form")).toBeVisible();
+  await setReactForms(page, []);
+  const angular = await optionLabels();
+  expect(react).toEqual(["Woman", "Other"]);
+  expect(react).toEqual(angular);
+  expect(raised).toEqual([]);
+});
+
+test("repeats a contact's fieldset and removes an added contact, alike in both renderers", async ({
+  page,
+}) => {
+  page.setDefaultTimeout(30_000);
+  const raised: string[] = [];
+  page.on("pageerror", (error) => raised.push(`page error ${error.message.split("\n")[0] ?? ""}`));
+  await keepReactForms(page);
+  const route = routeOf("fieldset-repeat");
+  await page.goto("/civicrm/admin/afreact/afform#/create/form/Individual");
+  await expect(canvas(page)).toBeVisible();
+  await page.getByRole("textbox", { name: /^Title/ }).fill(`${TITLE}fieldset repeat`);
+  await typeRoute(page, route);
+  // Selecting the fieldset opens its entity's tab while the route is still being typed.
+  const fieldset = canvas(page).locator("af-gui-container.af-gui-fieldset").first();
+  await fieldset.getByRole("button", { name: "Configure" }).first().click();
+  await page.getByRole("checkbox", { name: "Repeat" }).check();
+  await page.getByRole("spinbutton", { name: "Maximum" }).fill("2");
+  await page.keyboard.press("Escape");
+  const name = await saveNew(page);
+
+  const behaviour = async () => {
+    await page.goto(`/${route}`);
+    const firstNames = page.locator("#crm-container").getByRole("textbox", { name: "First Name" });
+    await expect(firstNames.first()).toBeVisible();
+    const counts = [await firstNames.count()];
+    const add = page.getByRole("button", { name: "Add" });
+    await add.click();
+    await expect(firstNames).toHaveCount(counts.length + 1);
+    counts.push(await firstNames.count());
+    const addAtMax = (await add.isVisible()) && (await add.isEnabled());
+    await firstNames.last().fill("Second");
+    // Core's remove button shows only an icon.
+    const remove = page.locator("#crm-container .af-repeat-remove-btn");
+    const removable = await remove.count();
+    await remove.last().click();
+    await expect(firstNames).toHaveCount(1);
+    return { counts, addAtMax, removable, value: await firstNames.first().inputValue() };
+  };
+  await setReactForms(page, [name]);
+  const react = await behaviour();
+  await expect(page.locator(".afreact-form")).toBeVisible();
+  await setReactForms(page, []);
+  const angular = await behaviour();
+  expect(react).toEqual({ counts: [1, 2], addAtMax: false, removable: 2, value: "" });
+  expect(react).toEqual(angular);
   expect(raised).toEqual([]);
 });
 
