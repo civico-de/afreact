@@ -33,7 +33,6 @@ import {
   backfillEntities,
   canvasPath,
   initialForm,
-  newEntityName,
   removeEntity,
   savePayload,
   updateCanvas,
@@ -291,7 +290,10 @@ function Editor({
   /** editor.addEntity(): the entity's fields loaded first, then the entity added and shown. */
   const onAddEntity = (type: string) => {
     const add = (withMeta: EditorMeta) => {
-      const name = newEntityName(latestAfform.current, type);
+      const added = addEntity(latestAfform.current, withMeta, type);
+      // Taken at once, so an add before the next render names and selects the next entity.
+      latestAfform.current = added.afform;
+      const { name } = added;
       change((state) => addEntity(state, withMeta, type).afform);
       select(name);
       requestAnimationFrame(() => {

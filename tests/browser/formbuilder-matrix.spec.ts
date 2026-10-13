@@ -849,3 +849,29 @@ test("lays out each builder dialog within its frame and without an axe finding",
 
   expect(found).toEqual([]);
 });
+
+test("names and shows each of two entities added before either loaded", async ({ page }) => {
+  page.setDefaultTimeout(30_000);
+  await page.goto("/civicrm/admin/afreact/afform#/create/form/Individual");
+  await expect(canvas(page)).toBeVisible();
+  const held: (() => Promise<void>)[] = [];
+  await page.route("**/civicrm/ajax/api4/Afform/loadAdminData", (route) => {
+    held.push(() => route.continue());
+  });
+  for (let add = 0; add < 2; add++) {
+    await page.getByRole("button", { name: "Add Entity" }).click();
+    await page.locator(".dropdown-menu").getByText("Household", { exact: true }).click();
+  }
+  await expect.poll(() => held.length).toBe(2);
+  await Promise.all(held.map((release) => release()));
+  const tabs = page.getByRole("tablist", { name: "Form parts" }).getByRole("tab");
+  await expect(tabs).toHaveCount(5);
+  await expect(tabs).toHaveText([
+    "Settings",
+    "Elements",
+    "Individual 1",
+    "Household 1",
+    "Household 2",
+  ]);
+  await expect(tabs.last()).toHaveAttribute("aria-selected", "true");
+});
