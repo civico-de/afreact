@@ -34,8 +34,9 @@ export function modifyClasses(
       ...list(add),
     ]),
   ];
-  const rest = withoutAttributes(node, ["class"]);
-  return classes.length ? { ...rest, class: classes.join(" ") } : rest;
+  return classes.length
+    ? { ...node, class: classes.join(" ") }
+    : withoutAttributes(node, ["class"]);
 }
 
 /** afGui.getStyles(): the style attribute as name and value pairs. */
@@ -43,8 +44,10 @@ export function getStyles(node: ShallowElement): Record<string, string> {
   const styles: Record<string, string> = {};
   for (const style of (textAttribute(node, "style") ?? "").split(";")) {
     if (!style.trim()) continue;
-    const [key = "", value = ""] = style.split(":").map((part) => part.trim());
-    if (value) styles[key] = value;
+    // deviation:style-value-colon-kept
+    const colon = style.indexOf(":");
+    const value = colon < 0 ? "" : style.slice(colon + 1).trim();
+    if (value) styles[style.slice(0, colon).trim()] = value;
   }
   return styles;
 }
@@ -54,11 +57,10 @@ export function setStyle(node: ShallowElement, name: string, value: string): Sha
   const styles = getStyles(node);
   if (value) styles[name] = value;
   else delete styles[name];
-  const rest = withoutAttributes(node, ["style"]);
   const entries = Object.entries(styles);
   return entries.length
-    ? { ...rest, style: entries.map(([key, val]) => `${key}: ${val}`).join("; ") }
-    : rest;
+    ? { ...node, style: entries.map(([key, val]) => `${key}: ${val}`).join("; ") }
+    : withoutAttributes(node, ["style"]);
 }
 
 /** Without the attributes named, as core's `delete node[name]`. */

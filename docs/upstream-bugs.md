@@ -1035,6 +1035,11 @@ numeric text only and keeps an empty or non-numeric default as it is. `deviation
 
 ## FormBuilder
 
+**A style value with a colon is cut at it.** `afGui.getStyles()` splits each
+style at every `:`, so `background-image: url(https://example.org/a.png)`
+reads as `url(https`, and the next edit in the style menu writes that back.
+React splits at the first colon only. `deviation:style-value-colon-kept`
+
 **The condition badges fail contrast.** `afGuiEditor.css` dims the "If",
 "And" and "Or" badges of the conditional rules dialog with `opacity: .5`, so
 their white text on the theme's grey badge falls to about 2:1, below the 4.5:1

@@ -2,8 +2,10 @@ import { textAttribute } from "./model";
 import {
   layoutOf,
   LAYOUTS,
+  modifyClasses,
   parseDisplayFilters,
   readDisplayFilters,
+  setStyle,
   stringifyDisplayFilters,
   withLayout,
   type DisplayFilter,
@@ -118,5 +120,26 @@ describe("withLayout", () => {
     expect(textAttribute(withLayout({ "#tag": "div" }, "af-layout-rows"), "class")).toBe(
       "af-container",
     );
+  });
+});
+
+describe("styles and classes", () => {
+  // deviation:style-value-colon-kept
+  it("keeps a style value with a colon whole when another style changes", () => {
+    const node = {
+      "#tag": "div",
+      style: "background-image: url(https://example.org/a.png); color: red",
+    };
+    expect(setStyle(node, "color", "blue").style).toBe(
+      "background-image: url(https://example.org/a.png); color: blue",
+    );
+  });
+
+  it("keeps the class and style attributes in their place", () => {
+    const node = { "#tag": "div", class: "af-container", style: "color: red", "af-title": "X" };
+    expect(Object.keys(modifyClasses(node, "af-container", "af-layout-inline"))).toEqual(
+      Object.keys(node),
+    );
+    expect(Object.keys(setStyle(node, "color", "blue"))).toEqual(Object.keys(node));
   });
 });
