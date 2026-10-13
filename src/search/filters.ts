@@ -161,9 +161,8 @@ export function assignValue(
       operator = Object.keys(value)[0] ?? operator;
       operators = { ...operators, [name]: operator };
     }
-    // Core keeps a truthy value only.
-    if (!value[operator]) value = null;
-    else value = value[operator];
+    // deviation:operator-falsy-value-kept
+    value = value[operator] === undefined ? null : value[operator];
   }
   value = convertValue(defn, value, context);
   const values = { ...state.values };

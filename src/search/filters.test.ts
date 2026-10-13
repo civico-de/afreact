@@ -238,6 +238,17 @@ describe("fieldsetReducer", () => {
     expect(state.values.label).toEqual({ "=": "y" });
   });
 
+  // deviation:operator-falsy-value-kept
+  it("keeps a false or 0 stored under an operator, which core drops", () => {
+    const deceased = field("is_deceased", {
+      input_type: "Radio",
+      data_type: "Boolean",
+      search_operator: "=",
+    });
+    const state = assignValue(empty, deceased, { "=": false });
+    expect(state.values.is_deceased).toEqual({ "=": false });
+  });
+
   it("applies a new hash at once without counting it as the user's change", () => {
     const state = fieldsetReducer(start(), {
       type: "route",

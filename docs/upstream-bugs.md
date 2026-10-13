@@ -293,6 +293,12 @@ an entity fieldset has no selected search set, so `#?_s=3` sets each of its
 fields that the route does not name to null. The React renderer reads `_s` in
 search fieldsets only. `deviation:route-search-set-skips-entities`
 
+**A false or 0 under an operator is dropped.** afField's `setValue()` keeps
+`value[search_operator]` only when it is truthy, so a saved filter set or stored
+values holding `{"=": false}` or `{"=": 0}` load as no filter, although
+`getFilterValues()` saved them. The React renderer keeps every value that is
+present. `deviation:operator-falsy-value-kept`
+
 ## Conditions
 
 **`IS EMPTY` reads an emptied list as filled and "No" as empty.** A

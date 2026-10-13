@@ -402,7 +402,8 @@ describe("SearchFieldset", () => {
         ],
       },
     ];
-    const { runs } = renderSearch("", layout);
+    const store = memoryStore("");
+    const { runs } = renderSearch("", layout, {}, store);
     await screen.findByRole("cell", { name: "Row" });
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Operator" }), "=");
     await userEvent.type(screen.getByRole("textbox", { name: "Title" }), "A");
@@ -412,6 +413,10 @@ describe("SearchFieldset", () => {
       },
       { timeout: 2000 },
     );
+    // The URL keeps the chosen operator, so a reload or a shared link searches the same.
+    await waitFor(() => {
+      expect(store.params().get("title")).toBe('{"=":"A"}');
+    });
   });
 
   it("follows a hash changed by a link, with the new values at once", async () => {

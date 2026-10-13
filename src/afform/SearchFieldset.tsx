@@ -274,6 +274,8 @@ function useUrlWriter(
   const [, setUrl] = useQueryStates(keyMap);
   const defaults = useMemo(() => filterValues(defaultValues(fields, context)), [fields, context]);
   const write = useEffectEvent(() => {
+    // A set still loading decides the values once it lands, as afFormReset does.
+    if (setId && paramSet === undefined) return;
     const update: Record<string, string | null> = {};
     const filters = filterValues(state.applied);
     const base = setId && !paramSet?.missing ? filterValues(paramSet?.filters ?? {}) : defaults;
@@ -283,7 +285,8 @@ function useUrlWriter(
       const isDefault = JSON.stringify(filters[plain]) === JSON.stringify(base[plain]);
       update[prefix ? full : plain] = isDefault
         ? null
-        : urlText(state.applied[plain], operatorOf(field, state.operators));
+        : // A chosen operator travels with the value: a reload assumes the field's own.
+          urlText(state.applied[plain], operatorOf(field, {}));
       update[prefix ? plain : full] = null;
     }
     void setUrl(update);
