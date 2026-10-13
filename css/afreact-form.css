@@ -34,20 +34,23 @@
 .afreact-checked af-field:has([data-afreact-listed]:invalid) .crm-af-field-label::before { content: "\f071" / ""; font-family: "FontAwesome"; font-weight: normal; margin-inline-end: 0.25em; }
 /* A listed field's own error text, in the theme's error ink. deviation:field-error-text */
 .afreact-field-error, #bootstrap-theme .afreact-field-error { margin: 0.25em 0 0; color: var(--crm-danger-ink-color, #a94442); }
+/* Fields side by side keep a gap wide enough for a range's dash, so a range's bounds stand on two fields' slots. */
+.afreact-form:not(.crm-public *) { --afreact-slot-gap: calc(2 * var(--crm-flex-gap, 0.5rem)); }
 /* One width for single-line inputs and selects, so stacked fields line up, and two plus the gap for a range;
    it resolves at the field, and the second selectors outrank #bootstrap-theme. deviation:form-inputs-one-width */
 @property --afreact-input-width { syntax: "<length>"; inherits: true; initial-value: 240px; }
-.afreact-form:not(.crm-public *) af-field { --afreact-input-width: var(--crm-input-width, 15em); --afreact-range-width: calc(2 * var(--afreact-input-width) + var(--crm-flex-gap, 0.5rem)); }
+.afreact-form:not(.crm-public *) af-field { --afreact-input-width: var(--crm-input-width, 15em); --afreact-range-width: calc(2 * var(--afreact-input-width) + var(--afreact-slot-gap)); }
 .afreact-form:not(.crm-public *) af-field :is(input.form-control:not([type=checkbox], [type=radio], [type=file], [type=range], [type=color]), .afreact-select):not(.afreact-range *),
 #bootstrap-theme .afreact-form:not(.crm-public *) af-field :is(input.form-control:not([type=checkbox], [type=radio], [type=file], [type=range], [type=color]), .afreact-select):not(.afreact-range *) { width: var(--afreact-input-width); max-width: 100%; }
-/* As a flex row the range drops the spaces around its dash; the gap stands in for them. */
-#bootstrap-theme .afreact-form:not(.crm-public *) af-field .afreact-range { display: flex; align-items: center; column-gap: 0.25em; width: var(--afreact-range-width); max-width: 100%; }
-#bootstrap-theme .afreact-form:not(.crm-public *) af-field .afreact-range > :not(.af-field-range-sep) { flex: 1; width: auto; min-width: 0; }
+/* Each bound takes one slot and the dash sits centred in the gap between them. deviation:range-dash-centred */
+#bootstrap-theme .afreact-form:not(.crm-public *) af-field .afreact-range { display: flex; align-items: center; column-gap: 0; width: var(--afreact-range-width); max-width: 100%; }
+#bootstrap-theme .afreact-form:not(.crm-public *) af-field .afreact-range > :not(.af-field-range-sep) { flex: 1 1 0; width: auto; min-width: 0; }
+#bootstrap-theme .afreact-form:not(.crm-public *) af-field .afreact-range > .af-field-range-sep { flex: 0 0 var(--afreact-slot-gap); margin: 0; text-align: center; }
 #bootstrap-theme .afreact-form:not(.crm-public *) af-field .afreact-range > .crm-form-date-wrapper { display: flex; align-items: center; }
 #bootstrap-theme .afreact-form:not(.crm-public *) af-field .afreact-range > .crm-form-date-wrapper > input.form-control { flex: 1; width: auto; min-width: 0; }
 /* Filter fields beside a search display stand side by side at the standard width and wrap with the
    page; the display and any other block take a row of their own. deviation:filter-fields-row */
-.afreact-form:not(.crm-public *) :is(div, fieldset, details):has(> af-field + af-field):has(> .crm-search-display) { display: flex; flex-wrap: wrap; align-items: flex-end; column-gap: var(--crm-flex-gap, 0.5rem); }
+.afreact-form:not(.crm-public *) :is(div, fieldset, details):has(> af-field + af-field):has(> .crm-search-display) { display: flex; flex-wrap: wrap; align-items: flex-end; column-gap: var(--afreact-slot-gap); }
 .afreact-form:not(.crm-public *) :is(div, fieldset, details):has(> af-field + af-field):has(> .crm-search-display) > :not(af-field) { flex: 0 0 100%; }
 .afreact-form:not(.crm-public *) :is(div, fieldset, details):has(> af-field + af-field):has(> .crm-search-display) > .af-field-type-hidden { display: none; }
 .afreact-form:not(.crm-public *) :is(div, fieldset, details):has(> af-field + af-field):has(> .crm-search-display) > af-field { width: var(--afreact-input-width); max-width: 100%; }

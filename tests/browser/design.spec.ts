@@ -20,6 +20,17 @@ const box = async (locator: Locator) => {
   };
 };
 
+/** The dash of a range, not its separator's box, which spans the gap between the bounds. */
+const dashBox = (range: Locator) =>
+  range.locator(".af-field-range-sep").evaluate((separator) => {
+    const dash = separator.firstChild;
+    if (!dash) throw new Error("The range separator has no dash.");
+    const text = document.createRange();
+    text.selectNodeContents(dash);
+    const { x, width } = text.getBoundingClientRect();
+    return { x, right: x + width };
+  });
+
 for (const stream of STREAMS)
   test.describe(stream, () => {
     test.use({ stream });
@@ -327,36 +338,39 @@ for (const stream of STREAMS)
       });
 
     // deviation:range-dash-centred
-    test("a date range's dash sits midway between its dates, with or without a clear link", async ({
+    test("a date range's bounds stand on two filter slots, its dash centred between them", async ({
       page,
     }) => {
       await page.goto("/civicrm/afreact/demo");
-      const range = page.getByRole("group", { name: "Born" });
+      const search = page.locator("afreact-form[name=afsearchAfreactDemoContacts]");
+      const range = search.getByRole("group", { name: "Born" });
       const from = range.getByLabel("Born from");
-      // The dash itself, not the separator's box, which holds the unseen twin of a clear link.
-      const dashBox = () =>
-        range.locator(".af-field-range-sep").evaluate((separator) => {
-          const dash = separator.firstChild;
-          if (!dash) throw new Error("The range separator has no dash.");
-          const text = document.createRange();
-          text.selectNodeContents(dash);
-          const { x, width } = text.getBoundingClientRect();
-          return { x, right: x + width };
-        });
-      const gaps = async () => {
-        const [start, dash, end] = await Promise.all([
-          box(range.getByLabel("Born from")),
-          dashBox(),
-          box(range.getByLabel("Born to")),
+      const bounds = range.locator(".crm-form-date-wrapper");
+      const fits = async () => {
+        const [start, dash, end, first, second] = await Promise.all([
+          box(bounds.first()),
+          dashBox(range),
+          box(bounds.last()),
+          box(search.locator('af-field[name="last_name"] input')),
+          box(search.locator('af-field[name="first_name"] input')),
         ]);
-        return Math.abs(dash.x - start.right - (end.x - dash.right));
+        const before = dash.x - start.right;
+        expect(before).toBeGreaterThanOrEqual(3);
+        expect(Math.abs(before - (end.x - dash.right))).toBeLessThanOrEqual(1);
+        for (const [bound, slot] of [
+          [start, first],
+          [end, second],
+        ] as const) {
+          expect(Math.abs(bound.x - slot.x)).toBeLessThanOrEqual(1);
+          expect(Math.abs(bound.right - slot.right)).toBeLessThanOrEqual(1);
+        }
       };
       await expect(from).toBeVisible(LOAD);
-      expect(await gaps()).toBeLessThanOrEqual(2);
-      await range.getByLabel("Born from").fill("2000-01-01");
+      await fits();
+      await from.fill("2000-01-01");
       const clear = range.getByRole("button", { name: "Clear" }).first();
       await expect(clear).toBeVisible();
-      expect(await gaps()).toBeLessThanOrEqual(2);
+      await fits();
       // The clear link keeps the theme's size, a target of at least 24 pixels.
       expect((await box(clear)).width).toBeGreaterThanOrEqual(24);
     });
@@ -369,7 +383,7 @@ for (const stream of STREAMS)
       await expect(range).toBeVisible(LOAD);
       const [start, dash, end] = await Promise.all([
         box(range.getByLabel("Contact ID from")),
-        box(range.locator(".af-field-range-sep")),
+        dashBox(range),
         box(range.getByLabel("Contact ID to")),
       ]);
       expect(dash.x - start.right).toBeGreaterThanOrEqual(3);

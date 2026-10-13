@@ -32,7 +32,7 @@ const PARTS: { name: string; selector: string; text?: boolean }[] = [
       ".crm-af-field :is(input.form-control:not(.crm-form-date), select, .select2-choice, textarea, input[type=radio], input[type=checkbox])",
   },
   { name: "date", selector: "input.crm-form-date" },
-  { name: "clear", selector: ".crm-hover-button:not(.afreact-range-room *)" },
+  { name: "clear", selector: ".crm-hover-button" },
   { name: "add button", selector: ".af-repeat-add-btn", text: true },
   { name: "submit", selector: ".af-button", text: true },
   { name: "table", selector: ".crm-search-display-table table" },
@@ -58,13 +58,13 @@ const BY_DESIGN: Record<string, { skip: string[]; reason: string }> = {
   "date 3": {
     skip: ["x", "width"],
     reason:
-      "the range's upper bound follows Angular's time input or React's room after the dash, and is the wider native date field",
+      "the range's upper bound follows Angular's time input or stands on React's second slot, and is the wider native date field",
   },
   "clear 3": { skip: ["x"], reason: "the lower bound's clear link follows Angular's time input" },
   "clear 4": {
     skip: ["x"],
     reason:
-      "the upper bound's clear link follows Angular's time input or React's room after the dash",
+      "the upper bound's clear link follows Angular's time input or stands on React's second slot",
   },
 };
 
