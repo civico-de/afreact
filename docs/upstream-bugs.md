@@ -978,6 +978,7 @@ numeric text only and keeps an empty or non-numeric default as it is. `deviation
 
 ## FormBuilder
 
+
 **The "New Submission Form" choices are not sorted.** `afAdminListMenu`
 sorts the primary entities with `_.sortBy(links, 'Label')`, a key the links
 lack (they carry `label`), so the choices keep the order of afform_admin's
@@ -1170,6 +1171,7 @@ string, and the `deep` save of that string fails with a server error, so the
 form cannot be saved at all (6.19, run). React keeps both texts; the same
 test covers them. `deviation:save-keeps-unread-attributes`
 
+
 **The markup tab turns `ts()` into `null`.** Applying edited markup converts
 it `deep`, where `CRM_Utils_JS::decode()` reads `{label: ts('Given name')}`
 as `{label: null}`, and the next save stores the null (6.19, `Afform.convert`
@@ -1185,6 +1187,15 @@ throws in `JSON.parse`, and the search display's filter settings stop opening
 (6.19, core's two functions run). React splits only outside quotes and
 brackets and reads back everything it writes; `nodes.test.ts` covers the three
 values. `deviation:display-filters-read-back`
+
+**A form with a negative menu order cannot be saved.** The menu item's Order
+input allows no number below 0, and the editor's Save button submits the
+form, so the browser refuses it with a message at the Order input, which sits
+in a section the admin may not have open. Core's own Campaign Dashboard
+(`afsearchCampaignDashboard`) stores the order -1: after any change its Save
+sends nothing (6.19, seen in core's builder). React takes any whole number
+and keeps what is typed, such as "-", until it is one.
+`deviation:navigation-weight-negative`
 
 **A hidden filter on a field behind a foreign key shows no field.** The
 filter's field picker offers the fields of the search's entities and joins,

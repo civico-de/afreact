@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { mockApi, renderWithQuery } from "../../../test/render";
@@ -8,10 +8,12 @@ import { META } from "../testMeta";
 import { SettingsTab } from "./SettingsTab";
 
 let latest: AfformDefinition | undefined;
+let replace: (afform: AfformDefinition) => void = () => undefined;
 
 function Harness({ initial, meta = META }: { initial: AfformDefinition; meta?: EditorMeta }) {
   const [afform, setAfform] = useState(initial);
   latest = afform;
+  replace = setAfform;
   const api: EditorApi = {
     meta,
     afform,
@@ -76,7 +78,84 @@ describe("SettingsTab", () => {
     expect(screen.getAllByRole("textbox", { name: /^title/i })).toHaveLength(1);
   });
 
-  // deviation:placement-filters-list
+  // deviation:route-paste-replaces-offer
+  it("takes a whole path pasted into the offered start of a page route", async () => {
+    renderWithQuery(<Harness initial={{ type: "form", title: "Probe", layout: [] }} />);
+    const route = screen.getByTitle('Path must begin with "civicrm/"');
+    await userEvent.click(route);
+    expect(route).toHaveValue("civicrm/");
+    await userEvent.paste("civicrm/probe-page");
+    expect(route).toHaveValue("civicrm/probe-page");
+    await userEvent.clear(route);
+    await userEvent.tab();
+    await userEvent.click(route);
+    await userEvent.keyboard("probe");
+    expect(route).toHaveValue("civicrm/probe");
+  });
+
+  // deviation:navigation-weight-negative
+  it("takes a negative menu order, as core's own forms store one, and lets it be typed", async () => {
+    renderWithQuery(
+      <Harness
+        initial={{
+          type: "form",
+          title: "Probe",
+          layout: [],
+          server_route: "civicrm/probe",
+          navigation: { label: "Probe menu", parent: null, weight: -1 },
+        }}
+      />,
+    );
+    const order = screen.getByRole("spinbutton", { name: "Order" });
+    expect(order).toHaveValue(-1);
+    expect(order).toBeValid();
+    await userEvent.clear(order);
+    expect(order).toHaveValue(null);
+    expect(latest?.navigation?.weight).toBe(-1);
+    await userEvent.type(order, "-3");
+    expect(order).toHaveValue(-3);
+    expect(latest?.navigation?.weight).toBe(-3);
+  });
+
+  it("shows the order an undo brings back while the order input keeps focus", async () => {
+    const initial: AfformDefinition = {
+      type: "form",
+      title: "Probe",
+      layout: [],
+      server_route: "civicrm/probe",
+      navigation: { label: "Probe menu", parent: null, weight: 2 },
+    };
+    renderWithQuery(<Harness initial={initial} />);
+    const order = screen.getByRole("spinbutton", { name: "Order" });
+    await userEvent.type(order, "5");
+    expect(order).toHaveValue(25);
+    act(() => {
+      replace(initial);
+    });
+    expect(order).toHaveFocus();
+    expect(order).toHaveValue(2);
+  });
+
+  it("keeps a fraction typed as the order on show and does not store it", async () => {
+    renderWithQuery(
+      <Harness
+        initial={{
+          type: "form",
+          title: "Probe",
+          layout: [],
+          server_route: "civicrm/probe",
+          navigation: { label: "Probe menu", parent: null, weight: 2 },
+        }}
+      />,
+    );
+    const order = screen.getByRole("spinbutton", { name: "Order" });
+    await userEvent.clear(order);
+    await userEvent.type(order, "1.5");
+    expect(order).toHaveValue(1.5);
+    // The "1" typed on the way is stored; the fraction is not.
+    expect(latest?.navigation?.weight).toBe(1);
+  });
+
   it("warns of placement filters stored as a list and replaces them once a filter is chosen", async () => {
     renderWithQuery(
       <Harness

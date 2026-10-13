@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useId, useRef } from "react";
+import { useId, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { api4 } from "../../../api/civi";
 import { EntityTags, useTags } from "../../widgets/EntityTags";
 import { IconPicker } from "../../widgets/IconPicker";
@@ -90,6 +91,8 @@ function Navigation() {
   const afform = editor.afform;
   const navigation = afform.navigation;
   const menu = useNavigationOptions(!!navigation, afform.name);
+  // What is typed until it is a number, such as "-" on the way to "-1".
+  const [weightDraft, setWeightDraft] = useState<{ text: string; at: number } | null>(null);
   const set = (update: (afform: AfformDefinition) => AfformDefinition) => {
     editor.change(update);
   };
@@ -171,17 +174,26 @@ function Navigation() {
               id={`${id}-weight`}
               type="number"
               placeholder={ts("Order")}
-              min={0}
+              // Core's own forms sort first by a negative order. deviation:navigation-weight-negative
               step={1}
               required
-              value={navigation.weight}
+              // The typing shows while the order is the one it made; an undo shows the order.
+              value={weightDraft?.at === navigation.weight ? weightDraft.text : navigation.weight}
               onChange={(event) => {
-                const weight = Number(event.target.value);
+                const typed = event.target.value;
+                const typedWeight = typed === "" ? NaN : Number(typed);
+                // An order is a whole number; the input marks any other as invalid.
+                const weight = Number.isInteger(typedWeight) ? typedWeight : navigation.weight;
+                setWeightDraft({ text: typed, at: weight });
+                if (weight === navigation.weight) return;
                 set((current) =>
                   current.navigation
                     ? { ...current, navigation: { ...current.navigation, weight } }
                     : current,
                 );
+              }}
+              onBlur={() => {
+                setWeightDraft(null);
               }}
             />
           </div>
@@ -216,7 +228,19 @@ function ServerRoute({ required }: { required: boolean }) {
         aria-invalid={invalid || undefined}
         value={route.value}
         onFocus={() => {
-          if (!route.value) route.show("civicrm/");
+          // At once, as core's onfocus, so text put in right after replaces it.
+          if (!route.value)
+            flushSync(() => {
+              route.show("civicrm/");
+            });
+        }}
+        onPaste={(event) => {
+          const pasted = event.clipboardData.getData("text").trim();
+          // A whole path pasted takes the offered start's place. deviation:route-paste-replaces-offer
+          if (route.value === "civicrm/" && pasted.startsWith("civicrm/")) {
+            event.preventDefault();
+            route.onChange(pasted);
+          }
         }}
         onChange={(event) => {
           route.onChange(event.target.value);
