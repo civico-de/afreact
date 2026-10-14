@@ -135,6 +135,20 @@ code, not run). The React renderer restores the field values only. It sends
 `extra` only once a form holds an extra field's value; afForm always sends
 `extra: {fields: {}}`, which the server treats as no values. `deviation:draft-extra-fields-restored`
 
+**A validate listener cannot see which record it validates.**
+`preprocessSubmittedValues()` keeps only the fields placed on the form, so the
+main entity's `id` is missing from `getSubmittedValues()`. The processor has
+it: `loadEntities()` runs before `validate()` and stores each record it may
+update in `_entityIds`. `AfformPrefillEvent` and `AfformSubmitEvent` expose
+those ids, `AfformValidateEvent` does not (`master` as of 2026-10-14; read
+from the code, not run). A listener that compares against the stored row can
+only read the client's `getApiRequest()->getArgs()`, which may name a record
+the submit will not update, so it has to check that id again itself. The submit
+runs on the server, so the React renderer shares this. A fix would be small:
+`Submit::validate()` passes `$this->_entityIds` to the event, which gets
+`getEntityIds(string $entityName)` with the trait's logic. Not reported
+upstream.
+
 ## Fields and filters
 
 **A required rich text or proximity field can be submitted empty.**
