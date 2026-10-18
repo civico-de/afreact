@@ -4,7 +4,7 @@
  * groups the test creates.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { text } from "node:stream/consumers";
 import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
@@ -91,7 +91,8 @@ for (const renderer of ["react", "angular"] as const) {
     await runTask(page, [a, b], "Download Spreadsheet", "Download");
     const file = await download;
     expect(file.suggestedFilename()).toMatch(/\.csv$/);
-    const lines = (await readFile(await file.path(), "utf8")).trim().split("\n");
+    // A stream, not path(): the browser may run on a remote server.
+    const lines = (await text(await file.createReadStream())).trim().split("\n");
     expect(lines).toHaveLength(3);
     expect(lines.slice(1).join("\n")).toContain(a);
     expect(lines.slice(1).join("\n")).toContain(b);
