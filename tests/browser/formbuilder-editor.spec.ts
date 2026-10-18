@@ -438,8 +438,12 @@ test.describe("FormBuilder editor", () => {
     expect(add.top).toBeGreaterThanOrEqual(values.bottom);
     expect(add.width).toBeCloseTo(values.width, 0);
     expect(list.inner).toBe(0);
-    const [first, second] = await Promise.all([own.nth(0).boundingBox(), own.nth(1).boundingBox()]);
-    expect(second?.y).toBe(first?.y);
+    // The tab click scrolls the page smoothly, so both tiles are read in one frame.
+    const tops = await own.evaluateAll((tiles) =>
+      tiles.slice(0, 2).map((tile) => tile.getBoundingClientRect().top),
+    );
+    expect(tops).toHaveLength(2);
+    expect(tops[1]).toBe(tops[0]);
     // Core's grip and shade for plain entries stay off the tiles.
     const date = palette.getByRole("button", { name: "Activity Date", exact: true });
     await date.hover();
@@ -456,13 +460,19 @@ test.describe("FormBuilder editor", () => {
     expect(await palette.locator(".panel-body").evaluate((body) => body.scrollTop)).toBeGreaterThan(
       0,
     );
-    const [box, panel] = await Promise.all([
-      search.boundingBox(),
-      palette.locator(".panel-body").boundingBox(),
-    ]);
+    const [box, panel] = await search.evaluate((input) => {
+      const body = input.closest(".panel-body");
+      if (!body) throw new Error("No panel around the search box");
+      return [input.getBoundingClientRect(), body.getBoundingClientRect()].map(
+        ({ top, bottom }) => ({
+          top,
+          bottom,
+        }),
+      );
+    });
     if (!box || !panel) throw new Error("No search box or panel");
-    expect(box.y).toBeGreaterThanOrEqual(panel.y);
-    expect(box.y + box.height).toBeLessThanOrEqual(panel.y + panel.height);
+    expect(box.top).toBeGreaterThanOrEqual(panel.top);
+    expect(box.bottom).toBeLessThanOrEqual(panel.bottom);
   });
 
   // deviation:palette-sections
