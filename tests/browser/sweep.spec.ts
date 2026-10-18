@@ -136,14 +136,13 @@ function observe(scope: string): Observed {
   const root = document.querySelector(scope);
   if (!root) throw new Error(`No ${scope} on the page`);
   const visible = (el: Element) => el.getClientRects().length > 0;
+  const hiddenSelector =
+    ".sr-only, .dropdown-menu, .ng-hide, [hidden], [style*='visibility: hidden'], .select2-drop";
   const text = (el: Element | null | undefined): string => {
     if (!el) return "";
     const copy = el.cloneNode(true);
     if (!(copy instanceof Element)) return "";
-    for (const hidden of copy.querySelectorAll(
-      ".sr-only, .dropdown-menu, .ng-hide, [hidden], [style*='visibility: hidden'], .select2-drop",
-    ))
-      hidden.remove();
+    for (const hidden of copy.querySelectorAll(hiddenSelector)) hidden.remove();
     return (copy.textContent ?? "").replace(/\s+/g, " ").trim();
   };
   const isControl = (
@@ -240,8 +239,9 @@ function observe(scope: string): Observed {
   // Fields, tables and notes are read on their own; admin gear menus are Angular-only.
   const elsewhere =
     "af-field, table, .afreact-unsupported, .crm-admin-block-context-dropdown, .select2-container";
+  // A hidden paragraph itself, e.g. a screen-reader status, is no text a user sees.
   const texts = [...root.querySelectorAll("h1, h2, h3, h4, h5, h6, legend, summary, p")]
-    .filter((el) => visible(el) && !el.closest(elsewhere))
+    .filter((el) => visible(el) && !el.closest(elsewhere) && !el.matches(hiddenSelector))
     .map(text)
     .filter(Boolean);
   const alerts = [...root.querySelectorAll("[role=alert], .alert")]
