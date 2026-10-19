@@ -9,6 +9,9 @@ export type ApiResult<R> = R[] & {
   countMatched?: number;
   countFetched?: number;
   action?: string;
+  /** A batch action records each failed item here instead of failing the call. */
+  is_blocking_error?: boolean;
+  errors?: { message: string }[];
 };
 
 /** The part of a jQuery object the renderer uses to cooperate with CiviCRM's popups (js/crm.ajax.js). */

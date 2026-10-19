@@ -629,6 +629,9 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
           : batchCall(apiBatch, entity, ids.slice(range.first, range.last));
         ran = true;
         const result = await api4(callEntity, action, params);
+        // deviation:bulk-item-errors-fail
+        if (result.is_blocking_error)
+          throw new Error([...new Set(result.errors?.map((error) => error.message))].join(" "));
         if (result.countFetched === undefined)
           throw new Error(`${callEntity}.${action} answered without countFetched.`);
         fetched += result.countFetched;

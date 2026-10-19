@@ -690,6 +690,36 @@ describe("AfreactSearch bulk actions", () => {
     });
   });
 
+  // deviation:bulk-item-errors-fail
+  it("fails a batch whose answer records failed items, naming each message once", async () => {
+    const failed = (message: string) => ({ level: "error", message, title: "", code: 0 });
+    serve({
+      handlers: {
+        "Contact.update": () =>
+          Object.assign([], {
+            countFetched: 1,
+            is_blocking_error: true,
+            errors: [failed("Not permitted"), failed("Locked"), failed("Not permitted")],
+          }),
+      },
+    });
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+    await screen.findByText("Name 1");
+    await selectRows("Name 1", "Name 2", "Name 3");
+    await openActions();
+    await userEvent.click(screen.getByRole("menuitem", { name: /Enable Contacts/, hidden: true }));
+    await waitFor(() => {
+      expect(window.CRM.alert).toHaveBeenCalled();
+    });
+    expect(vi.mocked(window.CRM.alert).mock.calls).toEqual([
+      [
+        "An error occurred while attempting to enable 3 Contacts. Not permitted Locked",
+        "Error",
+        "error",
+      ],
+    ]);
+  });
+
   it("opens a popup task with the selected ids and reloads when its form succeeds", async () => {
     const calls = serve({});
     const popup = new EventTarget();

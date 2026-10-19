@@ -745,6 +745,11 @@ so:
   and clears the selection whenever a batch was sent. `deviation:bulk-failed-batch-reloads`
 - The error alert shows the task's `errorMsg` in place of the server's
   message whenever the task has one. React shows both. `deviation:bulk-error-both-messages`
+- A batch whose items failed reports success up to 6.19.1: a batch action
+  records each failed item in the answer's `errors` instead of failing the
+  call, and `crmSearchBatchRunner` counts the batch as done. Fixed in 6.20
+  and 6.19.2 in [civicrm-core#37450](https://github.com/civicrm/civicrm-core/pull/37450).
+  React fails the run with the items' messages on every version. `deviation:bulk-item-errors-fail`
 - Selecting all pages has no error handler
   (`searchDisplayTasksTrait.service.js` `selectAllPages`): the checkboxes stay
   disabled with no message. React shows the error and enables them again. `deviation:bulk-select-all-error`
