@@ -209,8 +209,8 @@ test.describe("search filters", () => {
     expect(react.runs).toEqual([{ title: { CONTAINS: `${PREFIX} Al` }, is_active: true }]);
     expect(react.rows).toEqual([`${PREFIX} Alpha`]);
     expect(react.seen).toHaveLength(1);
-    // Core's afFieldset resets to the defaults after loading the set, so Angular gets the
-    // same filters through the URL for comparison.
+    // Up to 6.19.1 core's afFieldset resets to the defaults after loading the set, so Angular
+    // gets the same filters through the URL for comparison.
     const angular = await load(page, GROUPS, "angular", titleHash(`${PREFIX} Al`), "Title");
     expect(angular.runs).toEqual(react.runs);
     expect(angular.rows).toEqual(react.rows);

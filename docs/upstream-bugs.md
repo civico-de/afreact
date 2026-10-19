@@ -206,9 +206,13 @@ The React renderer leaves the marker out. `deviation:minlength-message-without-m
 
 **A saved filter set is dropped after loading.** With `#?_s=<id>` afFieldset
 loads the `SearchParamSet`, then resets the fields to their defaults, so the
-set's values never reach the search; fix proposed in
-[civicrm-core#37200](https://github.com/civicrm/civicrm-core/pull/37200). The
-React renderer keeps them (fields the URL leaves out take the set's values). `deviation:saved-filter-set-kept`
+set's values never reach the search (6.19.1). Fixed for 6.19.2 and in 6.20
+after 6.20.beta1 by
+[`a800e1c1f4`](https://github.com/civicrm/civicrm-core/commit/a800e1c1f4)
+([civicrm-core#37200](https://github.com/civicrm/civicrm-core/pull/37200),
+backported in [civicrm-core#37436](https://github.com/civicrm/civicrm-core/pull/37436)):
+the reset fills each field from the URL, else from the set. The React renderer
+does so on every version. `deviation:saved-filter-set-kept`
 
 **A saved filter set that fails to load is passed over without a word.**
 afFieldset loads the set the URL names (`#?_s=<id>`) with no rejection
