@@ -1,5 +1,6 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { SEARCH_DELAY_MS } from "../search/filters";
 import { mockApi, renderWithQuery } from "../test/render";
 import { memoryStore } from "../url/hash";
 import { AfreactForm } from "./AfreactForm";
@@ -78,6 +79,10 @@ const written = (calls: { call: string; params: Record<string, unknown> }[], cal
   calls.filter((each) => each.call === call).map((each) => each.params);
 
 describe("ParamSets", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   // deviation:param-sets-select-label
   it("picks a set into the URL and clears it again", async () => {
     const { store } = renderPicker("");
@@ -91,6 +96,28 @@ describe("ParamSets", () => {
     await userEvent.click(screen.getByRole("button", { name: "Clear saved search" }));
     expect(store.params().toString()).toBe("_s=0");
     expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("");
+  });
+
+  it("keeps a filter that commits just before a pick out of the picked set's URL", async () => {
+    const { store } = renderPicker("");
+    const select = await screen.findByRole("combobox", { name: "Saved searches" });
+    const title = screen.getByRole("textbox", { name: "Title" });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldClearNativeTimers: true });
+    fireEvent.change(title, { target: { value: "Ne" } });
+    // Typing pauses and the filter commits; the pick follows before the next tick.
+    act(() => {
+      vi.advanceTimersByTime(SEARCH_DELAY_MS);
+    });
+    fireEvent.change(select, { target: { value: "4" } });
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    vi.useRealTimers();
+    expect(store.params().toString()).toBe("_s=4");
+    await waitFor(() => {
+      expect(title).toHaveValue("News");
+    });
+    expect(store.params().toString()).toBe("_s=4");
   });
 
   it("gives the fields their defaults again once the set is cleared, as afFormReset does", async () => {

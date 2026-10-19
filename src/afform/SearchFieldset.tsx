@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { parseAsString, useQueryStates } from "nuqs";
 import {
   createContext,
   createElement,
@@ -9,9 +8,11 @@ import {
   useEffectEvent,
   useMemo,
   useReducer,
+  useRef,
   useState,
   type ActionDispatch,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { api4, errorMessage } from "../api/civi";
 import { AfreactSearch } from "../search/AfreactSearch";
@@ -141,12 +142,18 @@ export function SearchFieldset({ node, formName, children }: SearchFieldsetProps
   const stores = storesValues(node["store-values"]);
   const [context] = useState<ValueContext>(() => ({ userContactId: window.CRM.config?.cid }));
   const [route, setRoute] = useState(() => store.params());
+  // The route last set, ahead of `route` until the render that shows it.
+  const latestRoute = useRef(route);
+  const reroute = useCallback((next: URLSearchParams) => {
+    latestRoute.current = next;
+    setRoute(next);
+  }, []);
   useEffect(
     () =>
       store.external(() => {
-        setRoute(store.params());
+        reroute(store.params());
       }),
-    [store],
+    [store, reroute],
   );
   const setId = route.get("_s");
   const paramSet = useQuery({
@@ -199,7 +206,7 @@ export function SearchFieldset({ node, formName, children }: SearchFieldsetProps
     if (stores && Object.keys(state.values).length) window.CRM.cache?.set(cacheKey, state.values);
   }, [stores, cacheKey, state.values]);
 
-  useUrlWriter(fields, name, state, context, setId, paramSet.data);
+  useUrlWriter(fields, name, state, context, route, latestRoute, paramSet.data);
 
   const [toggled, setToggled] = useState<Record<string, Record<string, string>>>({});
   const reportColumns = useCallback((key: string, picked: Record<string, string>) => {
@@ -212,9 +219,9 @@ export function SearchFieldset({ node, formName, children }: SearchFieldsetProps
   const select = useCallback(
     (id: number) => {
       store.write(new URLSearchParams({ _s: String(id) }), { push: true });
-      setRoute(store.params());
+      reroute(store.params());
     },
-    [store],
+    [store, reroute],
   );
   const columns = paramSet.data?.columns;
   const value = useMemo(
@@ -255,41 +262,36 @@ function useUrlWriter(
   name: string,
   state: FieldsetReducerState,
   context: ValueContext,
-  setId: string | null,
+  route: URLSearchParams,
+  latestRoute: RefObject<URLSearchParams>,
   paramSet: ParamSet | undefined,
 ) {
+  const store = useParamStore();
   const prefix = useUrlPrefix(name);
   const unique = useMemo(
     () => fields.filter((field, index) => fields.findIndex((o) => o.name === field.name) === index),
     [fields],
   );
-  const keyMap = useMemo(() => {
-    const keys: Record<string, typeof parseAsString> = {};
-    for (const field of unique) {
-      keys[field.name] = parseAsString;
-      keys[`${name}.${field.name}`] = parseAsString;
-    }
-    return keys;
-  }, [unique, name]);
-  const [, setUrl] = useQueryStates(keyMap);
   const defaults = useMemo(() => filterValues(defaultValues(fields, context)), [fields, context]);
   const write = useEffectEvent(() => {
-    // A set still loading decides the values once it lands, as afFormReset does.
-    if (setId && paramSet === undefined) return;
-    const update: Record<string, string | null> = {};
+    const setId = route.get("_s");
+    // A set still loading decides the values once it lands, as afFormReset does; a route set
+    // since this render (a picked set, a link) decides them in the render that shows it.
+    if ((setId && paramSet === undefined) || latestRoute.current !== route) return;
+    const params = store.params();
     const filters = filterValues(state.applied);
     const base = setId && !paramSet?.missing ? filterValues(paramSet?.filters ?? {}) : defaults;
     for (const field of unique) {
       const plain = field.name;
       const full = `${name}.${field.name}`;
-      const isDefault = JSON.stringify(filters[plain]) === JSON.stringify(base[plain]);
-      update[prefix ? full : plain] = isDefault
-        ? null
-        : // A chosen operator travels with the value: a reload assumes the field's own.
-          urlText(state.applied[plain], operatorOf(field, {}));
-      update[prefix ? plain : full] = null;
+      params.delete(prefix ? plain : full);
+      if (JSON.stringify(filters[plain]) === JSON.stringify(base[plain]))
+        params.delete(prefix ? full : plain);
+      // A chosen operator travels with the value: a reload assumes the field's own.
+      else params.set(prefix ? full : plain, urlText(state.applied[plain], operatorOf(field, {})));
     }
-    void setUrl(update);
+    // Written at once, not queued, so a pick that replaces the hash after it cannot be overtaken.
+    store.write(params);
   });
   useEffect(() => {
     if (state.commits > 0) write();

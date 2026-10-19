@@ -1,9 +1,11 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useEffect, useRef } from "react";
 import { SEARCH_DELAY_MS } from "../search/filters";
 import { mockApi, renderWithQuery } from "../test/render";
 import { memoryStore, pageStore, type ParamStore } from "../url/hash";
 import { AfreactForm } from "./AfreactForm";
+import { filterFields, SearchFieldset, useSearchFieldset } from "./SearchFieldset";
 import type { FieldDefn, LayoutNode } from "./types";
 
 const field = (name: string, defn: Partial<FieldDefn>): LayoutNode => ({
@@ -84,6 +86,7 @@ function renderSearch(
 describe("SearchFieldset", () => {
   afterEach(() => {
     delete window.CRM.cache;
+    vi.useRealTimers();
   });
 
   it("applies af-required and af-disabled on a filter", async () => {
@@ -336,6 +339,47 @@ describe("SearchFieldset", () => {
         timeout: 2000,
       },
     );
+  });
+
+  it("leaves typed filters out of a hash that a pick replaced right after they committed", () => {
+    mockApi({ "SearchParamSet.get": () => [] });
+    const nodes = [field("title", { label: "Title", search_operator: "CONTAINS" })];
+    const [title] = filterFields(nodes);
+    if (!title) throw new Error("fixture");
+    // A child's effects run before the fieldset's: the pick lands after the commit renders.
+    const PickOnCommit = () => {
+      const fieldset = useSearchFieldset();
+      const picked = useRef(false);
+      useEffect(() => {
+        if (fieldset?.state.commits !== 1 || picked.current) return;
+        picked.current = true;
+        fieldset.select(4);
+      });
+      return (
+        <button
+          type="button"
+          onClick={() => fieldset?.dispatch({ type: "input", field: title, value: "Ne" })}
+        >
+          Type
+        </button>
+      );
+    };
+    const store = memoryStore("");
+    renderWithQuery(
+      <SearchFieldset node={{ "#tag": "div", "#children": nodes }} formName="afsearchGroups">
+        <PickOnCommit />
+      </SearchFieldset>,
+      store,
+    );
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldClearNativeTimers: true });
+    fireEvent.click(screen.getByRole("button", { name: "Type" }));
+    act(() => {
+      vi.advanceTimersByTime(SEARCH_DELAY_MS);
+    });
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    expect(store.params().toString()).toBe("_s=4");
   });
 
   it("adds the display's own filters from the route, which win on the same key", async () => {
