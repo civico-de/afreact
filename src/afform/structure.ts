@@ -61,11 +61,20 @@ export function hasTokens(value: unknown): value is string {
   return typeof value === "string" && new RegExp(TOKEN.source).test(value);
 }
 
-/** afForm's replaceTokens(): each token becomes the referenced field's value, "" while unset. */
+/** afForm's getTokenValue(): the item's field, else a `Join.index.field` of its join records. */
+export function tokenValue(token: string, data: FormData): unknown {
+  const [entity = "", index = "", ...path] = token.slice(1, -1).split(".");
+  const item = data[entity]?.[Number(index)];
+  const own = item?.fields[path.join(".")];
+  if (own !== undefined) return own;
+  const [join = "", joinIndex = "", ...field] = path;
+  return item?.joins?.[join]?.[Number(joinIndex)]?.[field.join(".")];
+}
+
+/** afForm's replaceTokens(): each token becomes the referenced value, "" while unset. */
 export function replaceTokens(value: string, data: FormData): string {
   return value.replace(TOKEN, (token) => {
-    const [entity = "", index = "", ...field] = token.slice(1, -1).split(".");
-    const current = data[entity]?.[Number(index)]?.fields[field.join(".")];
+    const current = tokenValue(token, data);
     // deviation:token-null-empty
     return current === undefined || current === null ? "" : asText(current);
   });
@@ -79,8 +88,9 @@ export function tokenValues(value: string, data: FormData): string[] {
 /** Whether a token default refers to the field it fills, which would recalculate without end. */
 export function refersToItself(value: string, scope: Scope, field: string): boolean {
   // A token reads an item's fields, never the extra fields it keeps in `extras`.
-  if (scope.join !== undefined || scope.extras) return false;
-  return value.includes(`[${scope.entity}.${scope.index}.${field}]`);
+  if (scope.extras) return false;
+  const join = scope.join === undefined ? "" : `${scope.join}.${scope.joinIndex ?? 0}.`;
+  return value.includes(`[${scope.entity}.${scope.index}.${join}${field}]`);
 }
 
 /** A default without tokens; afField calculates token defaults live, see FieldNode. */

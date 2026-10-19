@@ -32,10 +32,50 @@ describe("formTokens", () => {
       ],
     };
     const editor = { afform, meta: META, entities: formEntities(afform, META) };
-    expect(formTokens(editor, false).map((group) => group.text)).toEqual([
+    expect(formTokens(editor, false, true).map((group) => group.text)).toEqual([
       "Individual1",
       "Individual2",
       "Partner",
     ]);
+  });
+
+  it("offers each join block's fields, and its id with the submission, where core has them", () => {
+    const email = {
+      "#tag": "div",
+      "af-join": "Email",
+      "#children": [{ "#tag": "af-field", name: "email" }],
+    };
+    const afform: AfformDefinition = {
+      type: "form",
+      title: "Two emails",
+      layout: [
+        {
+          "#tag": "af-form",
+          ctrl: "afform",
+          "#children": [
+            { "#tag": "af-entity", type: "Individual", name: "Individual1", label: "Person" },
+            {
+              "#tag": "fieldset",
+              "af-fieldset": "Individual1",
+              "#children": [{ "#tag": "af-field", name: "first_name" }, email, email],
+            },
+          ],
+        },
+      ],
+    };
+    const editor = { afform, meta: META, entities: formEntities(afform, META) };
+    const work = {
+      text: "Person: Email 2",
+      children: [{ id: "Individual1.0.Email.1.email", text: "Email" }],
+    };
+    expect(formTokens(editor, false, true).slice(1)).toEqual([
+      { text: "Person: Email 1", children: [{ id: "Individual1.0.Email.0.email", text: "Email" }] },
+      work,
+    ]);
+    expect(formTokens(editor, true, true)[2]).toEqual({
+      ...work,
+      children: [{ id: "Individual1.0.Email.1.id", text: "Email ID" }, ...work.children],
+    });
+    expect(formTokens(editor, false, false).map((group) => group.text)).toEqual(["Person"]);
   });
 });

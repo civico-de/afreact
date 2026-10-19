@@ -106,6 +106,24 @@ describe("replaceTokens", () => {
   });
 });
 
+describe("replaceTokens on joins", () => {
+  it("fills [Entity.index.Join.index.field] from the item's join records after its own fields", () => {
+    const data = {
+      Individual1: [
+        {
+          fields: { "Extra.Email.0.x": "own" },
+          joins: { Email: [null, { email: "work@example.org" }] },
+        },
+      ],
+    };
+    expect(replaceTokens("[Individual1.0.Email.1.email]", data)).toBe("work@example.org");
+    expect(replaceTokens("[Individual1.0.Extra.Email.0.x]", data)).toBe("own");
+    expect(replaceTokens("[Individual1.0.Email.0.email] [Individual1.0.Phone.0.phone]", data)).toBe(
+      " ",
+    );
+  });
+});
+
 describe("tokenValues and refersToItself", () => {
   it("reads each distinct token once and spots a default that refers to its own field", () => {
     const data = { Individual1: [{ fields: { first_name: "Ada" } }] };
@@ -122,6 +140,9 @@ describe("tokenValues and refersToItself", () => {
     expect(
       refersToItself("[Individual1.0.first_name]", { ...scope, extras: true }, "first_name"),
     ).toBe(false);
+    const work = { ...scope, join: "Email", joinIndex: 1 };
+    expect(refersToItself("[Individual1.0.Email.1.email]", work, "email")).toBe(true);
+    expect(refersToItself("[Individual1.0.Email.0.email]", work, "email")).toBe(false);
   });
 });
 

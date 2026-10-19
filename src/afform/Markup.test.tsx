@@ -87,6 +87,10 @@ describe("Markup", () => {
     expect(tokenText("[Individual1.0.nick_name]", data)).toBe("");
     expect(tokenText("[Individual1.0.last_name]", data)).toBe("");
     expect(tokenText("[Organization1.0.name]", data)).toBe("");
+    const joined = {
+      Individual1: [{ fields: {}, joins: { Email: [{ email: "a@example.org" }] } }],
+    };
+    expect(tokenText("[Individual1.0.Email.0.email]", joined)).toBe("a@example.org");
   });
 });
 

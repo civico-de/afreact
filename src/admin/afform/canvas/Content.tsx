@@ -1,11 +1,12 @@
 import { useEffect, useId, useLayoutEffect, useRef } from "react";
+import { useCoreHas } from "../../version";
 import { IconPicker } from "../../widgets/IconPicker";
 import { InlineEdit } from "../../widgets/InlineEdit";
 import { ModelText } from "../../widgets/ModelText";
 import { useEditor, type EditorApi } from "../context";
 import { filled, textAttribute } from "../model";
 import { modifyClasses, splitClass } from "../nodes";
-import { formTokens, type TokenGroup } from "../tokens";
+import { formTokens, JOIN_TOKENS, type TokenGroup } from "../tokens";
 import { isElement, type ShallowElement } from "../tree";
 import {
   BackgroundMenuItem,
@@ -367,6 +368,7 @@ export function RichTextInput({
 /** afGuiMarkup: rich content, edited with the site's editor. */
 export function MarkupElement({ path, node, handle, label }: ElementProps) {
   const editor = useEditor();
+  const joins = useCoreHas(JOIN_TOKENS);
   const ops = useNodeOps(path, node);
   const element = useRef<RichTextElement | null>(null);
   return (
@@ -403,7 +405,7 @@ export function MarkupElement({ path, node, handle, label }: ElementProps) {
         <RichTextInput
           value={node["#markup"] ?? ""}
           elementRef={element}
-          tokens={() => formTokens(editor, false)}
+          tokens={() => formTokens(editor, false, joins)}
           onChange={(markup) => {
             ops.edit((current) => ({ ...current, "#markup": markup }));
           }}

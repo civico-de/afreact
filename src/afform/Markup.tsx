@@ -1,15 +1,14 @@
 import { createContext, createElement, Fragment, useContext, useMemo, type ReactNode } from "react";
 import { asText } from "./conditions";
-import { TOKEN } from "./structure";
+import { TOKEN, tokenValue } from "./structure";
 import type { FormData } from "./types";
 
 /** The data tokens show; set inside af-form only, where afMarkup replaces tokens. */
 export const TokenContext = createContext<FormData | null>(null);
 
-/** afForm's getTokenValues(): the field's stored value as text, "" while unset or emptied. */
+/** afForm's getTokenValues(): the token's value as text, "" while unset or emptied. */
 export function tokenText(token: string, data: FormData): string {
-  const [entity = "", index = "", ...field] = token.slice(1, -1).split(".");
-  const value = data[entity]?.[Number(index)]?.fields[field.join(".")];
+  const value = tokenValue(token, data);
   return value === undefined || value === null ? "" : asText(value);
 }
 

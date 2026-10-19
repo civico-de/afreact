@@ -1,11 +1,12 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { useCoreHas } from "../../version";
 import { NgElement } from "../../widgets/NgElement";
 import { InlineEdit } from "../../widgets/InlineEdit";
 import { useEditor, type EditorApi } from "../context";
 import type { Literal } from "../literal";
 import type { GuiEntity, GuiField, SearchDisplayMeta } from "../meta";
 import { textAttribute } from "../model";
-import { formTokens } from "../tokens";
+import { formTokens, JOIN_TOKENS } from "../tokens";
 import { RichTextInput, type RichTextElement } from "./Content";
 import {
   DeleteAction,
@@ -193,13 +194,14 @@ function originalLabel(editor: EditorApi, scope: ContainerScope, state: FieldSta
 /** A help text above or below the field, edited with the site's editor. */
 function HelpText({ api, position }: { api: FieldApi; position: "pre" | "post" }) {
   const element = useRef<RichTextElement | null>(null);
+  const joins = useCoreHas(JOIN_TOKENS);
   const prop = `help_${position}`;
   return (
     <div className="af-gui-field-help">
       <RichTextInput
         value={text(getProp(api.state, prop))}
         elementRef={element}
-        tokens={() => formTokens(api.editor, false)}
+        tokens={() => formTokens(api.editor, false, joins)}
         onChange={(value) => {
           api.set(prop, value);
         }}

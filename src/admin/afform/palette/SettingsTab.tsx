@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { api4 } from "../../../api/civi";
+import { useCoreHas } from "../../version";
 import { EntityTags, useTags } from "../../widgets/EntityTags";
 import { IconPicker } from "../../widgets/IconPicker";
 import { Picker, type PickerOption } from "../../widgets/Picker";
@@ -11,7 +12,7 @@ import { useEditor } from "../context";
 import { FieldValue } from "../FieldValue";
 import type { AfformDefinition } from "../meta";
 import { retitle } from "../model";
-import { formTokens } from "../tokens";
+import { formTokens, JOIN_TOKENS } from "../tokens";
 import {
   DebouncedInput,
   DebouncedTextarea,
@@ -446,6 +447,7 @@ function Checkbox({
 
 function Submissions() {
   const editor = useEditor();
+  const joins = useCoreHas(JOIN_TOKENS);
   const id = useId();
   const afform = editor.afform;
   const title = useFieldTitle();
@@ -617,7 +619,7 @@ function Submissions() {
           <span className="afreact-palette-label">{title("confirmation_message")}</span>
           <RichTextInput
             value={text(afform.confirmation_message)}
-            tokens={() => formTokens(editor, true)}
+            tokens={() => formTokens(editor, true, joins)}
             elementRef={message}
             onChange={(value) => {
               set({ confirmation_message: value });

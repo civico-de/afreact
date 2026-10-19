@@ -1,8 +1,9 @@
 import { useId } from "react";
+import { useCoreHas } from "../../version";
 import { Dropdown } from "../../widgets/Dropdown";
 import { Picker } from "../../widgets/Picker";
 import { useEditor } from "../context";
-import { formTokens } from "../tokens";
+import { formTokens, JOIN_TOKENS } from "../tokens";
 
 /**
  * afGuiTokenSelect: appends a `[token]` of the form's entities to a text. Core's action menu
@@ -22,7 +23,8 @@ export function FormTokenSelect({
 }) {
   const editor = useEditor();
   const id = useId();
-  const options = formTokens(editor, submission).flatMap((group) =>
+  const joins = useCoreHas(JOIN_TOKENS);
+  const options = formTokens(editor, submission, joins).flatMap((group) =>
     group.children.map((token) => ({
       id: token.id,
       label: token.text,
