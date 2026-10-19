@@ -194,9 +194,12 @@ the field. `deviation:rich-text-disabled`
 `setValue()` splits a multiple field's default into a list before it compares
 the value with `user_contact_id`, so the list never matches and is then typed
 as numbers: the field starts as `[NaN]`, which the request sends as `[null]`
-(`afField.component.js`, `master` as of 2026-10-05; read from the code, not
-run). The React renderer replaces `user_contact_id` in each list item, for
-form fields and search filters alike. `deviation:current-user-multiple-default`
+(`afField.component.js` on 6.19 and 6.20; read from the code, not run). Fixed
+on `master` (6.21) in
+[`830c9990b9`](https://github.com/civicrm/civicrm-core/commit/830c9990b9)
+([civicrm-core#37457](https://github.com/civicrm/civicrm-core/pull/37457)),
+which replaces it in each list item. The React renderer does so on every
+version, for form fields and search filters alike. `deviation:current-user-multiple-default`
 
 **The minlength message names the required marker.** afForm words the
 message for a too short text from the label's `textContent`, so a required
