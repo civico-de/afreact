@@ -149,6 +149,21 @@ runs on the server, so the React renderer shares this. A fix would be small:
 `getEntityIds(string $entityName)` with the trait's logic. Not reported
 upstream.
 
+**A required extra field never passes.** `preprocessSubmittedValues()` walks
+the submitted `extra` like an entity's list of records, so the required check
+finds no value for any extra field, and a form with a required one fails every
+submission with "… is a required field." (reproduced through `Afform.submit`
+on 6.19.1; 6.20 reads the same). Fixed on `master` (6.21) in
+[`a527b40fec`](https://github.com/civicrm/civicrm-core/commit/a527b40fec)
+([civicrm-core#37447](https://github.com/civicrm/civicrm-core/pull/37447)).
+The check still reads the form-level `extra` alone, so on `master` a required
+extra field in a repeated fieldset, whose values sit in each item's `extras`,
+never passes (read from the code, not run). The React renderer shares both,
+except that it leaves `extra` out while no form-level extra field holds a
+value: 6.19 and 6.20 then skip the check, so a required extra field that sits
+only in repeated fieldsets passes there, required in the browser alone
+(reproduced through `Afform.submit` on 6.19.1).
+
 ## Fields and filters
 
 **A required rich text or proximity field can be submitted empty.**
