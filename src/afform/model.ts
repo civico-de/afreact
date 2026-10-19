@@ -35,14 +35,26 @@ export function entityDeclarations(layout: LayoutNode[]): Record<string, EntityD
 /** afForm keeps an af-field without a name (an "extra" field) in data.extra, outside any entity. */
 export const EXTRA_SCOPE: Scope = { entity: "extra", index: 0 };
 
-/** Where an af-field's value lives and its key there: an extra field's is its definition's name. */
+/**
+ * Where an af-field's value lives and its key there: an extra field's is its definition's name,
+ * in the item's `extras` when its nearest repeat item is one of a fieldset (afRepeatItem).
+ */
 export function fieldPlace(
   node: ElementNode,
   scope: Scope | null,
 ): { scope: Scope; name: string } | null {
   if (typeof node.name === "string" && node.name) return scope && { scope, name: node.name };
-  return isFieldDefn(node.defn) ? { scope: EXTRA_SCOPE, name: node.defn.name } : null;
+  if (!isFieldDefn(node.defn)) return null;
+  // deviation:repeat-extra-fields-per-item
+  const place =
+    scope?.slot && !scope.repeated
+      ? { entity: scope.entity, index: scope.index, extras: true }
+      : EXTRA_SCOPE;
+  return { scope: place, name: node.defn.name };
 }
+
+/** An extra field's place, which the route fills by the plain field name only. */
+export const isExtraScope = (scope: Scope): boolean => scope === EXTRA_SCOPE || !!scope.extras;
 
 /**
  * The values afForm submits and announces: extra fields as one record, `extra: {fields}`, beside
@@ -160,9 +172,12 @@ export function applyPrefill(
     for (const [index, item] of Object.entries(values)) {
       if (!isEntityItem(item)) throw new Error(`Prefill of ${name} holds no record at ${index}.`);
       const current = items[Number(index)];
+      // A stored draft also holds the extra fields of a repeated fieldset's items.
+      const extras = { ...current?.extras, ...item.extras };
       items[Number(index)] = {
         fields: { ...current?.fields, ...item.fields, ...entities[name]?.data },
         joins: mergeJoins(current?.joins, item.joins),
+        ...(Object.keys(extras).length > 0 && { extras }),
       };
     }
   }
@@ -191,6 +206,7 @@ function entityItemAt(data: FormData, scope: Scope): EntityItem | undefined {
 
 function recordAt(data: FormData, scope: Scope): Values | null | undefined {
   const entityItem = entityItemAt(data, scope);
+  if (scope.extras) return entityItem?.extras;
   return scope.join === undefined
     ? entityItem?.fields
     : entityItem?.joins?.[scope.join]?.[scope.joinIndex ?? 0];
@@ -200,11 +216,18 @@ export function getValue(data: FormData, scope: Scope, field: string): unknown {
   return recordAt(data, scope)?.[field];
 }
 
-/** Immutable write; creates the entity item and join record on first use, as afFieldset/afJoin do. */
+/**
+ * Immutable write; creates the entity item, join record or item's extras on first use, as
+ * afFieldset, afJoin and afRepeatItem.getExtrasData() do.
+ */
 export function setValue(data: FormData, scope: Scope, field: string, value: unknown): FormData {
   const next = structuredClone(data);
   const items = (next[scope.entity] ??= []);
   const entityItem = (items[scope.index] ??= { fields: {}, joins: {} });
+  if (scope.extras) {
+    (entityItem.extras ??= {})[field] = value;
+    return next;
+  }
   if (scope.join === undefined) {
     entityItem.fields[field] = value;
     return next;
@@ -218,11 +241,7 @@ export function setValue(data: FormData, scope: Scope, field: string, value: unk
 /** afField on afIfDestroy: the field's key leaves the record. */
 export function deleteValue(data: FormData, scope: Scope, field: string): FormData {
   const next = structuredClone(data);
-  const entityItem = next[scope.entity]?.[scope.index];
-  const record =
-    scope.join === undefined
-      ? entityItem?.fields
-      : entityItem?.joins?.[scope.join]?.[scope.joinIndex ?? 0];
+  const record = recordAt(next, scope);
   if (record) delete record[field];
   return next;
 }
@@ -276,7 +295,10 @@ function copied(record: Values): Values {
   return rest;
 }
 
-/** afRepeat's copyItem(): appends a copy of the last item; an entity's copy leaves its joins out. */
+/**
+ * afRepeat's copyItem(): appends a copy of the last item; an entity's copy leaves its joins and
+ * extra fields out.
+ */
 export function copyRepeatItem(data: FormData, scope: Scope): FormData {
   const next = structuredClone(data);
   if (scope.join === undefined) {

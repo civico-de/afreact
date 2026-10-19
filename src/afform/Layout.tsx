@@ -404,7 +404,7 @@ function FieldsetNode({ node }: { node: ElementNode }) {
     <Repeat
       node={node}
       scope={{ entity, index: 0 }}
-      itemScope={(index) => ({ entity, index })}
+      itemScope={(index) => ({ entity, index, slot: true })}
       count={repeatCount(form.data, { entity, index: 0 })}
     />
   );
@@ -423,7 +423,13 @@ function JoinNode({ node }: { node: ElementNode }) {
   const parent = useContext(ScopeContext);
   const path = useContext(ItemPathContext);
   if (!parent) return <Unsupported what={joinOutsideFieldsetNote(String(node["af-join"]))} />;
-  const scope = { entity: parent.entity, index: parent.index, join: String(node["af-join"]) };
+  const slot = parent.slot && { slot: true };
+  const scope = {
+    entity: parent.entity,
+    index: parent.index,
+    join: String(node["af-join"]),
+    ...slot,
+  };
   const offset = form.joinOffsets.get(node) ?? 0;
   // Each join block by its place in the layout, which removing items does not shift.
   return (

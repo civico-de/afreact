@@ -98,11 +98,13 @@ export interface EntityItem {
   fields: Values;
   /** Prefill sends null for a location block whose location type the contact lacks. */
   joins?: Record<string, (Values | null)[]>;
+  /** The extra fields of an item of a repeated fieldset, by their definition's name. */
+  extras?: Values;
 }
 /** Afform submission values: entity name => items. */
 export type FormData = Record<string, EntityItem[]>;
 
-/** Where a field's value lives: an entity item, or one of its join records. */
+/** Where a field's value lives: an entity item, one of its join records, or its extra fields. */
 export interface Scope {
   entity: string;
   index: number;
@@ -110,6 +112,10 @@ export interface Scope {
   joinIndex?: number;
   /** Set inside an af-repeat of join records, where is_primary is exclusive. */
   repeated?: boolean;
+  /** Set inside an item of a repeated fieldset, whose extra fields keep values of their own. */
+  slot?: boolean;
+  /** The item's extra fields (`extras`) rather than its entity fields. */
+  extras?: boolean;
 }
 
 /** Metadata the server merges into an af-field; a field without it renders as unsupported. */

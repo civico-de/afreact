@@ -4,10 +4,10 @@ import { rangeValue } from "./fields/Range";
 import {
   ensurePrimary,
   ensureRepeatItems,
-  EXTRA_SCOPE,
   fieldPlace,
   findElements,
   getValue,
+  isExtraScope,
   repeatCount,
   setValue,
 } from "./model";
@@ -104,7 +104,7 @@ export function routeValue(
 ): string | undefined {
   const join = scope.join === undefined ? "" : `.${scope.join}`;
   const unique = `${scope.entity}${scope.index ? scope.index + 1 : ""}${join}.${name}`;
-  if (scope !== EXTRA_SCOPE && Object.hasOwn(params, unique)) return params[unique];
+  if (!isExtraScope(scope) && Object.hasOwn(params, unique)) return params[unique];
   return Object.hasOwn(params, name) ? params[name] : undefined;
 }
 
@@ -147,10 +147,12 @@ export function initialiseNodes(
         // afFieldset creates its entity's item on init, so an untouched entity still submits.
         else if (!previous && fieldset) next = ensureRepeatItems(next, base, 1);
         const count = repeats ? repeatCount(next, base) : 1;
+        const slot = repeats && { slot: true };
         for (let index = 0; index < count; index++)
-          walk(node["#children"] ?? [], { entity: fieldset, index });
+          walk(node["#children"] ?? [], { entity: fieldset, index, ...slot });
       } else if (typeof join === "string" && scope) {
-        const joinScope = { entity: scope.entity, index: scope.index, join };
+        const slot = scope.slot && { slot: true };
+        const joinScope = { entity: scope.entity, index: scope.index, join, ...slot };
         if (repeats) {
           const hasPrimary = findElements(node["#children"] ?? [], "af-field").some(
             (field) => field.name === "is_primary",

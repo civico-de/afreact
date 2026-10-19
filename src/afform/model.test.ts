@@ -341,4 +341,41 @@ describe("extra fields", () => {
     ]);
     expect(applyPrefill(emptyData([]), [{ name: "extra", values: [] }], {})).toEqual({});
   });
+
+  // deviation:repeat-extra-fields-per-item
+  it("keep values per item of a repeated fieldset, which a copy starts afresh", () => {
+    const node = { "#tag": "af-field", defn };
+    const item = { entity: "Individual1", index: 1, slot: true };
+    const extras = { entity: "Individual1", index: 1, extras: true };
+    expect(fieldPlace(node, item)).toEqual({ scope: extras, name: "text1" });
+    expect(fieldPlace({ "#tag": "af-field" }, item)).toBeNull();
+    expect(fieldPlace(node, { ...item, join: "Email", joinIndex: 0 })?.scope).toEqual(extras);
+    // The items of a repeated join have none of their own, as afRepeatItem.getExtrasData() says.
+    const email = { ...item, join: "Email", joinIndex: 0, repeated: true };
+    expect(fieldPlace(node, email)?.scope).toBe(EXTRA_SCOPE);
+
+    const people = { entity: "Individual1", index: 0 };
+    const data = setValue(ensureRepeatItems(emptyData([]), people, 2), extras, "text1", "b");
+    expect(getValue(data, extras, "text1")).toBe("b");
+    expect(getValue(data, { ...extras, index: 0 }, "text1")).toBeUndefined();
+    expect(submission(data)).toEqual({
+      Individual1: [
+        { fields: {}, joins: {} },
+        { fields: {}, joins: {}, extras: { text1: "b" } },
+      ],
+    });
+    expect(copyRepeatItem(data, people).Individual1?.[2]).toEqual({ fields: {}, joins: {} });
+    expect(getValue(deleteValue(data, extras, "text1"), extras, "text1")).toBeUndefined();
+
+    const draft: PrefillItem[] = [
+      {
+        name: "Individual1",
+        values: [{ fields: { first_name: "A" } }, { fields: {}, extras: { text1: "y" } }],
+      },
+    ];
+    expect(applyPrefill(emptyData([]), draft, {}).Individual1).toEqual([
+      { fields: { first_name: "A" }, joins: {} },
+      { fields: {}, joins: {}, extras: { text1: "y" } },
+    ]);
+  });
 });

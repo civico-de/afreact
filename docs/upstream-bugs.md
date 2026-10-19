@@ -395,6 +395,22 @@ React renderer leaves stored files out of a copy, whose field offers an empty
 chooser. A chosen but not yet uploaded file is never copied, in core or React.
 `deviation:repeat-copy-stored-file`
 
+**An extra field in a repeated fieldset has one value for all items.** afField
+binds an extra field (an `af-field` without a name) to the form-level `extra`
+data wherever it sits, so each item of a repeated fieldset shows the value
+typed last in any of them, and no item submits a value of its own.
+`repeat-extras.spec.ts` pins it in the browser on 6.19.1. Fixed on `master`
+(6.21) in [`ec294d3293`](https://github.com/civicrm/civicrm-core/commit/ec294d3293)
+([civicrm-core#36186](https://github.com/civicrm/civicrm-core/pull/36186)),
+which gives each item `extras` beside its `fields`; a copied item starts
+without them. An extra field in a repeated join block keeps one value for all
+its records, also on `master`: a join record holds only the join entity's
+fields, so the submission has no place for a value per record, and the React
+renderer shares this. For a fieldset's items it keeps `extras` on every
+version; the stored submission keeps them per item on 6.19.1, and 6.19 and
+6.20 hand them to submit subscribers (read from the code, not run).
+`deviation:repeat-extra-fields-per-item`
+
 **A repeat shows more items at first than its maximum.** `afRepeat` adds items
 up to `af-repeat-default` (or `min`) without looking at `max`, so a block set to
 show 4 with a maximum of 3 opens with 4, one past what the form allows, and the
