@@ -13,7 +13,13 @@ const search = {
   api_entity: "Contact",
   api_params: { version: 4, select: ["id", "display_name", "birth_date"] },
 };
-const ctx = { meta: metadata, search, defaultPagerSize: 50, entityIndex: true };
+const ctx = {
+  meta: metadata,
+  search,
+  defaultPagerSize: 50,
+  entityIndex: true,
+  customDateFormat: true,
+};
 const typeInfo = { label: "Chart", description: "A chart", icon: "fa-pie-chart" };
 
 function renderEditor(display: EditorDisplay) {

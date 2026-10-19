@@ -158,6 +158,8 @@ export interface DisplayContext {
   defaultPagerSize: number;
   /** DB entity columns carry a search index (core 3ede57c349). */
   entityIndex: boolean;
+  /** Date columns take a strftime format of their own (core a6f8934057). */
+  customDateFormat: boolean;
 }
 
 export const colTypes = (): Record<

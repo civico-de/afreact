@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -12,6 +12,7 @@ const ctx: DisplayContext = {
   search: { api_entity: "Contact", api_params: { version: 4, select: ["id", "display_name"] } },
   defaultPagerSize: 50,
   entityIndex: true,
+  customDateFormat: true,
 };
 
 function Harness() {
@@ -53,6 +54,59 @@ describe("columns", () => {
     expect(screen.getByRole("button", { name: "Move Contact ID down" })).toHaveFocus();
     await user.keyboard("{Enter}");
     expect(screen.getByRole("button", { name: "Move Contact ID up" })).toHaveFocus();
+  });
+});
+
+const dated: DisplayContext = {
+  ...ctx,
+  search: { api_entity: "Contact", api_params: { version: 4, select: ["birth_date"] } },
+};
+
+function DateColumn({ context, format }: { context: DisplayContext; format?: string }) {
+  const [draft, setDraft] = useState<Draft>({
+    label: "T",
+    type: "table",
+    settings: { columns: [{ type: "field", key: "birth_date", format }] },
+  });
+  return (
+    <Columns
+      ctx={context}
+      draft={draft}
+      edit={(change) => {
+        setDraft((d) => {
+          const next = structuredClone(d);
+          change(next);
+          return next;
+        });
+      }}
+      links={[]}
+      defaults={{}}
+      head={() => null}
+    />
+  );
+}
+
+describe("date format", () => {
+  const formats = async () => {
+    await userEvent.click(screen.getByText("Birth Date", { selector: "summary" }));
+    return within(screen.getByRole("combobox", { name: "Format" }))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+  };
+
+  it("offers a format of its own only where core formats with it", async () => {
+    render(<DateColumn context={{ ...dated, customDateFormat: false }} />);
+    expect(await formats()).not.toContain("Other...");
+    cleanup();
+    render(<DateColumn context={dated} />);
+    expect(await formats()).toContain("Other...");
+  });
+
+  it("keeps a stored format of its own in view where core ignores it", async () => {
+    render(<DateColumn context={{ ...dated, customDateFormat: false }} format="%Y-%m" />);
+    expect(await formats()).toContain("Other...");
+    expect(screen.getByRole("combobox", { name: "Format" })).toHaveValue("other");
+    expect(screen.getByRole("textbox", { name: "Custom date format" })).toHaveValue("%Y-%m");
   });
 });
 
