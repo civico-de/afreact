@@ -9,6 +9,8 @@ coreBuilders();
 
 const NAME = "afformAfreactListProbe";
 const TITLE = "Afreact list probe";
+// A form the filter leaves out, so the filtered rows differ from the first, unfiltered ones.
+const DECOY = "afformAfreactListDecoy";
 const REACT = "/civicrm/admin/afreact/afform";
 const ANGULAR = "/civicrm/admin/afform";
 
@@ -17,7 +19,8 @@ const squash = (texts: string[]) => texts.map((text) => text.replaceAll(/\s+/g, 
 async function rows(page: Page, filter: string) {
   await page.getByPlaceholder("Search by name...").locator("visible=true").fill(filter);
   const body = page.locator("table:visible tbody");
-  await expect(body.getByText(TITLE)).toBeVisible();
+  // The filtered run has shown its rows: no loading placeholder, no decoy, the probe alone.
+  await expect(body.locator("tr")).toHaveText([new RegExp(TITLE)]);
   return squash(await body.locator("tr").allInnerTexts());
 }
 
@@ -40,7 +43,10 @@ async function choices(page: Page, type: string) {
 test.describe("FormBuilder listing", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(REACT);
-    await api(page, "Afform", "revert", { where: [["name", "=", NAME]] });
+    await api(page, "Afform", "revert", { where: [["name", "IN", [NAME, DECOY]]] });
+    await api(page, "Afform", "create", {
+      values: { name: DECOY, type: "form", title: "Afreact list decoy", is_public: false },
+    });
     await api(page, "Afform", "create", {
       values: {
         name: NAME,
@@ -54,7 +60,7 @@ test.describe("FormBuilder listing", () => {
     });
   });
   test.afterEach(async ({ page }) => {
-    await api(page, "Afform", "revert", { where: [["name", "=", NAME]] });
+    await api(page, "Afform", "revert", { where: [["name", "IN", [NAME, DECOY]]] });
   });
 
   test("shows the rows and placements core's listing shows", async ({ page }) => {
