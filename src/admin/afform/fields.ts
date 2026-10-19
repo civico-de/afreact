@@ -125,7 +125,8 @@ const isNamedField = (node: ShallowElement) =>
 
 export interface EntityFields {
   fields: GuiField[];
-  joins: { entity: string; fields: GuiField[] }[];
+  /** Every join block, numbered per joined entity over all the entity's fieldsets. */
+  joins: { entity: string; joinIndex: number; fields: GuiField[] }[];
 }
 
 /** editor.getEntityFields(): the fields placed on the form for an entity, and for its joins. */
@@ -139,16 +140,19 @@ export function entityFields(
     (node) => textAttribute(node, "af-fieldset") === entity.name,
   ).map(({ node }) => node);
   const result: EntityFields = { fields: [], joins: [] };
+  const joinCounts = new Map<string, number>();
   for (const fieldset of fieldsets) {
     const children = fieldset["#children"] ?? [];
     for (const field of formElements(children, meta, isNamedField, isJoin))
       result.fields.push(fieldDefn(meta, entity.type, field));
     for (const join of formElements(children, meta, isJoin)) {
       const joinEntity = textAttribute(join, "af-join") ?? "";
+      const joinIndex = joinCounts.get(joinEntity) ?? 0;
+      joinCounts.set(joinEntity, joinIndex + 1);
       const fields = formElements(join["#children"] ?? [], meta, isNamedField).map((field) =>
         fieldDefn(meta, joinEntity, field),
       );
-      if (fields.length) result.joins.push({ entity: joinEntity, fields });
+      result.joins.push({ entity: joinEntity, joinIndex, fields });
     }
   }
   return result;

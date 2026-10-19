@@ -361,6 +361,19 @@ present. `deviation:operator-falsy-value-kept`
 
 ## Conditions
 
+**A rule on a second join block tests the first.** Up to 6.20 the conditional
+rules dialog keys each join's fields as `Individual1[0][joins][Email][0][email]`
+(`afGuiConditionalDialog.ctrl.js`), so with a Home and a Work email block it
+offers "Email" twice under one name, and both rules test the first block (read
+from the code, not run). Fixed on `master` (6.21) in
+[civicrm-core#37004](https://github.com/civicrm/civicrm-core/pull/37004) and
+[civicrm-core#37577](https://github.com/civicrm/civicrm-core/pull/37577), which
+number the blocks over all of the entity's fieldsets and label them "Email 1",
+"Email 2". React numbers and labels them so on every version. Both renderers
+number a block within its own fieldset, so a rule on a block in a second
+fieldset of the entity points past it (read from the code, not run).
+`deviation:condition-join-block-index`
+
 **`IS EMPTY` reads an emptied list as filled and "No" as empty.** A
 condition's `IS EMPTY` and `IS NOT EMPTY` test the value with `!val1`
 (`afForm.component.js` `compareConditions()`; read from the code, not run):

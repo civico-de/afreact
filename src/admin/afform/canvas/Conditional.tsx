@@ -155,10 +155,12 @@ export function fieldChoices(
       result.defns[key] = field;
       result.options.push({ id: key, label: fieldLabel(field), group: entity.label });
     }
+    // deviation:condition-join-block-index
     for (const join of fields.joins) {
-      const group = `${entity.label}: ${editor.meta.gui.entities[join.entity]?.label ?? join.entity}`;
+      const joinLabel = editor.meta.gui.entities[join.entity]?.label ?? join.entity;
+      const group = `${entity.label}: ${joinLabel} ${join.joinIndex + 1}`;
       for (const field of join.fields) {
-        const key = `${entity.name}[0][joins][${join.entity}][0][${field.name}]`;
+        const key = `${entity.name}[0][joins][${join.entity}][${join.joinIndex}][${field.name}]`;
         result.defns[key] = field;
         result.options.push({ id: key, label: fieldLabel(field), group });
       }

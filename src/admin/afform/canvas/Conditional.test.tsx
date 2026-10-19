@@ -139,7 +139,7 @@ describe("fieldChoices", () => {
       {
         id: "Individual1[0][joins][Email][0][email]",
         label: "Email",
-        group: "Individual 1: Email",
+        group: "Individual 1: Email 1",
       },
     ]);
     // A suffixed field compares by the suffix's option key.
@@ -147,6 +147,53 @@ describe("fieldChoices", () => {
     expect(Array.isArray(gender?.options) && gender.options.map((o) => o.id)).toEqual([
       "Female",
       "Male",
+    ]);
+  });
+  // deviation:condition-join-block-index
+  it("keys each join block by its place among the entity's blocks of that join", () => {
+    const email = (children: ShallowElement["#children"]) => ({
+      "#tag": "div",
+      "af-join": "Email",
+      "#children": children,
+    });
+    const afform: AfformDefinition = {
+      type: "form",
+      title: "Test",
+      layout: [
+        {
+          "#tag": "af-form",
+          ctrl: "afform",
+          "#children": [
+            { "#tag": "af-entity", type: "Individual", name: "Individual1", label: "Individual 1" },
+            {
+              "#tag": "fieldset",
+              "af-fieldset": "Individual1",
+              "#children": [
+                email([{ "#tag": "af-field", name: "email" }]),
+                email([{ "#tag": "p", "#children": [{ "#text": "No email field" }] }]),
+              ],
+            },
+            {
+              "#tag": "fieldset",
+              "af-fieldset": "Individual1",
+              "#children": [email([{ "#tag": "af-field", name: "email" }])],
+            },
+          ],
+        },
+      ],
+    };
+    const choices = fieldChoices({ afform, meta: META, entities: formEntities(afform, META) });
+    expect(choices.options).toEqual([
+      {
+        id: "Individual1[0][joins][Email][0][email]",
+        label: "Email",
+        group: "Individual 1: Email 1",
+      },
+      {
+        id: "Individual1[0][joins][Email][2][email]",
+        label: "Email",
+        group: "Individual 1: Email 3",
+      },
     ]);
   });
 });
