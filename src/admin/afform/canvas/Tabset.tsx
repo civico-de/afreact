@@ -23,11 +23,15 @@ import { childScope } from "./scope";
 
 const TOTAL_COUNT = "$parent.count";
 
-/** The search displays in a tab, which may show their count on it. */
+/** The search displays in a tab, which may show their count on it; a chart reports none. */
 function tabDisplays(tab: ShallowElement, searchDisplayTags: string[]) {
   return findElements(
     tab["#children"] ?? [],
-    (node) => searchDisplayTags.includes(node["#tag"]) && !!textAttribute(node, "search-name"),
+    (node) =>
+      searchDisplayTags.includes(node["#tag"]) &&
+      // deviation:chart-tab-count-not-offered
+      node["#tag"] !== "crm-search-display-chart-kit" &&
+      !!textAttribute(node, "search-name"),
   );
 }
 

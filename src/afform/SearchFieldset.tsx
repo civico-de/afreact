@@ -394,6 +394,7 @@ export function FieldsetDisplay({ node, formName, onLabels }: FieldsetDisplayPro
   const options = useContext(RouteOptionsContext);
   const tab = useTab();
   const inTab = tab !== null;
+  const type = displayTypeOf(node["#tag"]) ?? "table";
   const check = useMemo(() => searchDisplayCheck(node, options, inTab), [node, options, inTab]);
   const params = useHashParams(check.filters ? routeKeys(check.filters) : []);
   const notes = check.notes.map((note) => <Unsupported key={note} what={note} />);
@@ -406,7 +407,8 @@ export function FieldsetDisplay({ node, formName, onLabels }: FieldsetDisplayPro
   return (
     <>
       {notes}
-      {inTab && node["total-count"] === TAB_COUNT && (
+      {/* A chart aggregates its rows, so their count is not what it shows. */}
+      {inTab && node["total-count"] === TAB_COUNT && type !== "chart-kit" && (
         <TabCount
           search={String(node["search-name"])}
           display={String(node["display-name"])}
@@ -417,7 +419,7 @@ export function FieldsetDisplay({ node, formName, onLabels }: FieldsetDisplayPro
       <AfreactSearch
         search={search}
         display={display}
-        type={displayTypeOf(node["#tag"]) ?? "table"}
+        type={type}
         settings={check.settings}
         savedColumns={savedColumnsOf(fieldset?.columns, `${search}.${display}`)}
         savedSet={fieldset?.setId ?? null}

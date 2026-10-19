@@ -169,6 +169,29 @@ describe("af-tabset", () => {
     expect(runs()).toEqual(["form_table", "search_table"]);
   });
 
+  it("counts no rows for a chart, which shows aggregates", async () => {
+    const chart = display("chart", {
+      "#tag": "crm-search-display-chart-kit",
+      "total-count": "$parent.count",
+    });
+    const layout: LayoutNode[] = [
+      {
+        "#tag": "af-tabset",
+        "#children": [
+          searchTab("form", "Submission Forms", "form"),
+          { "#tag": "af-tab", name: "chart", title: "Chart", "#children": [chart] },
+        ],
+      },
+    ];
+    const { calls } = renderTabs({ layout });
+    await waitFor(() => {
+      expect(tab(/Submission Forms/)).toHaveTextContent("Submission Forms 10");
+    });
+    const counts = calls.filter(({ params }) => params.return === "row_count");
+    expect(counts.map(({ params }) => params.display)).toEqual(["form_table"]);
+    expect(tab(/Chart/)).toHaveAccessibleName("Chart");
+  });
+
   it("selects the tab named in url-arg and writes the user's choice there", async () => {
     const store = memoryStore("#?tab=block&other=1");
     renderTabs({ layout: searchTabs({ "url-arg": "tab" }), store });

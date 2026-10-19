@@ -946,7 +946,9 @@ from the code, not run). The React renderer hands an empty list over as `{}`. `d
 tab up with `querySelector(id + ' [search][display]')`, missing the `#`, so the
 check never matches, and the count request then calls `.replace()` on the tab
 element, a TypeError (read from the code, not run). Both renderers use the
-same element and share it.
+same element and share it. Fixed on `master` (6.21) in
+[civicrm-core#37204](https://github.com/civicrm/civicrm-core/pull/37204), where
+a chart reports no count at all.
 
 **A chart's download links and drawing are out of reach for assistive
 technology.** The download links are `<a>` elements with an `onclick` and no
@@ -1142,6 +1144,14 @@ without one, losing what was typed. afreact keeps the typed path and marks the
 input invalid. `deviation:include-path-kept`
 
 ## FormBuilder
+
+**A tab's count offers its charts.** The tab menu's "Count" select lists every
+search display in the tab (`getSearchDisplays()` in `afGuiTabset.component.js`),
+charts included, but a chart never sets the count: chart_kit's element writes
+`totalCount` only as an own property, which it never has (6.19 and 6.20, read
+from the code, not run). Fixed on `master` (6.21) in
+[civicrm-core#37204](https://github.com/civicrm/civicrm-core/pull/37204). React
+offers the tab's other displays only. `deviation:chart-tab-count-not-offered`
 
 **A style value with a colon is cut at it.** `afGui.getStyles()` splits each
 style at every `:`, so `background-image: url(https://example.org/a.png)`
