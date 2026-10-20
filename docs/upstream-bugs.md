@@ -1125,6 +1125,17 @@ offered, such as one of a disabled extension, counts too, so ticking or
 unticking another task can switch to all enabled. afreact enables all once each
 offered task is on. `deviation:tasks-all-enabled-by-name`
 
+**Opening a display turns its old add button into a different one.** A
+display saved with the legacy `addButton` shows it, via the server, as a
+toolbar button that keeps its own style and opens in a popup unless it names a
+target (`Run::formatToolbar`, `Display::getSettings`). The toolbar config moves
+it into `toolbar` on open with the style forced to `primary` and no target,
+which the link group then sets to the same page
+(`searchAdminToolbarConfig.component.js`), and it moves nothing when the
+toolbar is an empty list, which the server treats as none. A save without
+edits thus changes how the button looks and where it opens. afreact moves the
+button as the server shows it. `deviation:legacy-add-button-as-shown`
+
 **A style condition on an aliased column loses its field.** The conditions of
 a display's styles, a column's icons and a link look up the chosen column as a
 field name (`searchAdminCssRules`, `searchAdminIcons`, `crmSearchConditions`

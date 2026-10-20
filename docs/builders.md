@@ -284,7 +284,7 @@ with only the edited keys changed.
   `form_values.join` and turns each display's empty `pager` from `[]` back
   into `{}`. A display's editor, once the display is opened and not before,
   fills in its type's defaults, removes columns the search no longer
-  selects and moves the old `addButton` into `toolbar`. A save without
+  selects and moves the old `addButton` into `toolbar` as the server shows it. A save without
   edits thus sends what core's builder would send, apart from the losses
   above.
 - **What the server keeps** is core's, the same for both builders:

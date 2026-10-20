@@ -109,8 +109,22 @@ describe("table init", () => {
     initPager(ctx, settings);
     initToolbar(settings);
     expect(settings.pager).toEqual({ show_count: false, expose_limit: false });
-    expect(settings.toolbar).toEqual([{ path: "civicrm/new", text: "New", style: "primary" }]);
+    expect(settings.toolbar).toEqual([
+      { path: "civicrm/new", text: "New", style: "primary", target: "crm-popup" },
+    ]);
     expect(settings.addButton).toBeUndefined();
+  });
+
+  // deviation:legacy-add-button-as-shown
+  it("keeps a legacy add button's own style and target, and fills an empty toolbar", () => {
+    const settings: Draft["settings"] = {
+      toolbar: [],
+      addButton: { path: "civicrm/new", text: "New", style: "danger", target: "_blank" },
+    };
+    initToolbar(settings);
+    expect(settings.toolbar).toEqual([
+      { path: "civicrm/new", text: "New", style: "danger", target: "_blank" },
+    ]);
   });
 });
 

@@ -712,7 +712,10 @@ export const taskEnabled = (settings: AdminSettings, name: string) =>
 export function initToolbar(settings: AdminSettings): void {
   const legacy = settings.addButton;
   if (!legacy) return;
-  if (!settings.toolbar && legacy.path) settings.toolbar = [{ ...legacy, style: "primary" }];
+  // As the server shows it: a popup unless the button names a target, and its own style kept.
+  // deviation:legacy-add-button-as-shown
+  if (!settings.toolbar?.length && legacy.path)
+    settings.toolbar = [{ style: "primary", target: "crm-popup", ...legacy }];
   delete settings.addButton;
 }
 
