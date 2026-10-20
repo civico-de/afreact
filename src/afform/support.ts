@@ -362,12 +362,14 @@ export function fieldAttributesNote(problems: string[], name: string): string {
   return `${problems.join(", ")} on ${name}`;
 }
 
-/** A block renders its layout alone; core's quick edit forms repeat the join's actions on it, inert. */
-const BLOCK_ATTRIBUTES = new Set(["#tag", "#children", "af-if", "actions"]);
+/** A block element's own attributes; core's quick edit forms repeat the join's actions on it, inert. */
+const BLOCK_ATTRIBUTES = new Set(["#tag", "#children", "af-if", "af-title", "class", "actions"]);
 
-/** Attributes on a block element, which the renderer does not render. */
+/** Attributes on a block element the renderer neither handles nor carries over. */
 export function unknownBlockAttributes(node: ElementNode): string | null {
-  const unknown = Object.keys(node).filter((attr) => !BLOCK_ATTRIBUTES.has(attr));
+  const unknown = Object.keys(node).filter(
+    (attr) => !BLOCK_ATTRIBUTES.has(attr) && !PASSTHROUGH.has(attr) && !/^(aria|data)-/.test(attr),
+  );
   return unknown.length ? `${unknown.join(", ")} on <${node["#tag"]}>` : null;
 }
 

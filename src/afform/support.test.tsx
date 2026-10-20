@@ -38,8 +38,7 @@ const layout: LayoutNode[] = [
           field("first_name", {}, { "ng-model": "x", "af-required": "(broken" }),
           field("state", { label: "State", input_type: "Signature" }),
           field("middle_name", { label: "Middle", template: "~/myExt/fields/Text.html" }),
-          // FormBuilder's style menu styles a block; a container keeps its title on becoming one.
-          { "#tag": "afblock-name-individual", "af-title": "Name", style: "margin: 0" },
+          { "#tag": "afblock-name-individual", options: "{a: 1}" },
           { "#tag": "div", "af-if": always, "#children": [field("last_name")] },
           {
             "#tag": "afblock-contact-email",
@@ -131,7 +130,7 @@ describe("layoutProblems", () => {
       'ng-model, af-required="(broken" on first_name',
       "field type Signature (State)",
       "field template ~/myExt/fields/Text.html (Middle)",
-      "af-title, style on <afblock-name-individual>",
+      "options on <afblock-name-individual>",
     ]);
   });
 
@@ -347,6 +346,44 @@ describe("layoutProblems", () => {
     const report = ["field template ~/myExt/Primary.html (Primary)"];
     expect(layoutProblems(primary)).toEqual(report);
     expect(await shownFormNotes(primary)).toEqual(report);
+  });
+});
+
+describe("blocks", () => {
+  it("renders a block element with the title and style a FormBuilder container left on it", async () => {
+    // setBlockDirective() turns a container into the block and drops only its class and children.
+    const titled = form([
+      {
+        "#tag": "div",
+        "af-fieldset": "Individual1",
+        "#children": [
+          {
+            "#tag": "afblock-name-individual",
+            "af-title": "T",
+            style: "margin: 3px",
+            "#children": [field("first_name")],
+          },
+          {
+            "#tag": "div",
+            "af-join": "Email",
+            "#children": [{ "#tag": "afblock-contact-email", "#children": [field("email")] }],
+          },
+        ],
+      },
+    ]);
+    expect(layoutProblems(titled)).toEqual([]);
+    expect(await shownFormNotes(titled)).toEqual([]);
+    const block = screen
+      .getByRole("textbox", { name: "first_name" })
+      .closest("afblock-name-individual");
+    expect(block).toHaveClass("afform-directive");
+    expect(block).toHaveStyle({ margin: "3px" });
+    expect(block?.firstElementChild).toHaveClass("af-title");
+    expect(block?.firstElementChild?.tagName).toBe("H4");
+    expect(block?.firstElementChild).toHaveTextContent("T");
+    const email = screen.getByRole("textbox", { name: "email" }).closest("afblock-contact-email");
+    expect(email).toHaveClass("afform-directive");
+    expect(email?.parentElement?.tagName).toBe("DIV");
   });
 });
 

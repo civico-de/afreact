@@ -223,7 +223,11 @@ for (const stream of STREAMS)
       // They end with the item's last row of fields and are as tall as its inputs, in streams
       // whose buttons are taller or spaced apart; a taller field (Walbrook's radios) sets the end.
       const input = await box(item.getByLabel("Email Location Type"));
-      const fields = await item.locator("> .af-layout-inline").last().locator("af-field").all();
+      const fields = await item
+        .locator("> .afform-directive > .af-layout-inline")
+        .last()
+        .locator("af-field")
+        .all();
       const rowEnd = Math.max(...(await Promise.all(fields.map(box))).map((field) => field.bottom));
       for (const control of [remove, menu]) {
         expect(control.height).toBeCloseTo(input.height, 0);
@@ -250,16 +254,22 @@ for (const stream of STREAMS)
       const items = about.locator("[af-repeat-item]");
       const email = items.filter({ has: page.getByLabel("Email Location Type") }).first();
       const address = items.filter({ has: page.getByLabel("City") }).first();
-      await expect(address.locator("> .af-layout-inline")).toHaveCount(2);
+      await expect(address.locator("> .afform-directive > .af-layout-inline")).toHaveCount(2);
       // As wide as on a one-row item, not stretched by the rows above the last.
-      for (const control of [".af-repeat-remove-btn", ".crm-admin-block-context-dropdown"]) {
+      for (const control of [
+        ".af-repeat-remove-btn",
+        ".afform-directive > .crm-admin-block-context-dropdown",
+      ]) {
         const [own, oneRow] = await Promise.all([
           box(address.locator(`> ${control}`)),
           box(email.locator(`> ${control}`)),
         ]);
         expect(own.width).toBeCloseTo(oneRow.width, 0);
       }
-      const last = address.locator("> .af-layout-inline").last().locator("af-field");
+      const last = address
+        .locator("> .afform-directive > .af-layout-inline")
+        .last()
+        .locator("af-field");
       const tops = (await Promise.all((await last.all()).map(box))).map((field) => field.y);
       expect(tops.length).toBeGreaterThan(1);
       expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(1);

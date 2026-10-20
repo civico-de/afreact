@@ -139,13 +139,14 @@ export function Nodes({ nodes }: { nodes: LayoutNode[] }): ReactNode {
 
 const Children = ({ node }: { node: ElementNode }) => <Nodes nodes={node["#children"] ?? []} />;
 
-/** A block's compiled layout, without an element of its own. */
+/** afCore's block element around the block's compiled layout, with its title and attributes. */
 function BlockNode({ node }: { node: ElementNode }) {
   const note = unknownBlockAttributes(node);
+  const own = typeof node.class === "string" ? `${node.class} ` : "";
   return (
     <>
       {note !== null && <Unsupported what={note} />}
-      <Children node={node} />
+      <Element node={{ ...node, class: `${own}afform-directive` }} />
     </>
   );
 }
