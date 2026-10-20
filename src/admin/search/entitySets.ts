@@ -142,7 +142,21 @@ export function removeEntitySet(params: ApiParams, index: number): ApiParams {
   return { ...params, select, sets: trimmed };
 }
 
-/** A set's params changed; a renamed column of the first set renames the outer column too. */
+const LOGIC = ["AND", "OR", "NOT"];
+
+/** Clauses with each field key passed through `rename`, inside AND, OR and NOT groups too. */
+function renameInClauses(clauses: unknown[][], rename: (key: string) => string): unknown[][] {
+  return clauses.map(([head, ...rest]) =>
+    typeof head === "string" && LOGIC.includes(head) && Array.isArray(rest[0])
+      ? [head, renameInClauses(rest[0].filter(Array.isArray), rename)]
+      : [typeof head === "string" ? rename(head) : head, ...rest],
+  );
+}
+
+/**
+ * A set's params changed; a renamed column of the first set is renamed in the outer select,
+ * conditions, grouping and sorting. deviation:union-rename-outer-references
+ */
 export function setEntitySet(
   meta: SearchAdminMetadata,
   params: ApiParams,
@@ -152,18 +166,31 @@ export function setEntitySet(
   const sets = setsOf(params);
   const old = sets[index];
   if (!old) return params;
-  let select = params.select;
+  let outer = params;
   if (index === 0)
     inner.select.forEach((expr, row) => {
       const before = old[3].select[row];
       if (!before || !expr || before === expr) return;
       const was = parseExpr(meta, before, infoOf(old)).alias;
       const now = parseExpr(meta, expr, infoOf([old[0], old[1], old[2], inner])).alias;
-      if (was && now && was !== now) select = select.map((col) => (col === was ? now : col));
+      if (!was || !now || was === now) return;
+      const rename = (key: string) =>
+        key === was || key.startsWith(`${was}:`) ? now + key.slice(was.length) : key;
+      outer = {
+        ...outer,
+        select: outer.select.map(rename),
+        ...(outer.where && { where: renameInClauses(outer.where, rename) }),
+        ...(outer.having && { having: renameInClauses(outer.having, rename) }),
+        ...(outer.groupBy && { groupBy: outer.groupBy.map(rename) }),
+        ...(outer.orderBy && {
+          orderBy: Object.fromEntries(
+            Object.entries(outer.orderBy).map(([key, dir]) => [rename(key), dir]),
+          ),
+        }),
+      };
     });
   return {
-    ...params,
-    select,
+    ...outer,
     sets: sets.map((set, i): EntitySet => (i === index ? [set[0], set[1], set[2], inner] : set)),
   };
 }

@@ -76,6 +76,47 @@ describe("entity sets", () => {
     ]);
   });
 
+  // deviation:union-rename-outer-references
+  it("renames the outer conditions, grouping and sorting with the first set's column", () => {
+    const params = setEntitySet(
+      meta,
+      {
+        ...union(),
+        where: [
+          ["name", "=", "Ada"],
+          [
+            "OR",
+            [
+              ["name:label", "IS NULL"],
+              ["id", ">", 1],
+            ],
+          ],
+        ],
+        having: [["name", "IS NOT NULL"]],
+        groupBy: ["name"],
+        orderBy: { name: "ASC", id: "DESC" },
+      },
+      0,
+      { select: ["id", "display_name AS title"] },
+    );
+    expect(params).toMatchObject({
+      select: ["id", "title"],
+      where: [
+        ["title", "=", "Ada"],
+        [
+          "OR",
+          [
+            ["title:label", "IS NULL"],
+            ["id", ">", 1],
+          ],
+        ],
+      ],
+      having: [["title", "IS NOT NULL"]],
+      groupBy: ["title"],
+      orderBy: { title: "ASC", id: "DESC" },
+    });
+  });
+
   it("gives the outer search the first set's columns, labelled across sets", () => {
     const fields = withEntitySetFields(meta, union()).schema.find(
       (e) => e.name === "EntitySet",

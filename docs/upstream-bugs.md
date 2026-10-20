@@ -1198,6 +1198,13 @@ shifts that set's remaining columns into the wrong rows. afreact keeps each
 set's columns in their rows: a join adds no columns there, and a removed
 column leaves an empty cell. `deviation:union-join-keeps-rows`
 
+
+**Renaming a combined search's column leaves stale references.** When the first
+set's column gets another name, core renames only an outer select item equal to
+the old name (`crmSearchAdminEntitySetSelect`), so outer conditions, grouping
+and sorting keep the old name and the search fails on its next run. afreact
+renames them too, with suffixes such as `:label`. A function expression such as
+`COUNT(name)` keeps the old name in both. `deviation:union-rename-outer-references`
 **A combined search's function column takes its field's type.** The fields of
 an entity set search copy the first set's field behind each column
 (`crmSearchAdmin.component.js` `updateEntitySetFields`), also for a function
