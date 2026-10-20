@@ -364,6 +364,22 @@ describe("data entry display", () => {
     expect(draft.settings.columns?.map((col) => col.default)).toEqual([1, "abc", "1", null]);
   });
 
+  it("finds an aliased column's field for its total and default", () => {
+    // deviation:batch-column-alias-field
+    const select = ["id AS entry_id", "display_name"];
+    const aliased = { ...ctx, search: { ...ctx.search, api_params: { version: 4, select } } };
+    const draft: Draft = { label: "D", type: "batch", settings: {} };
+    initBatch(aliased, draft);
+    expect(draft.settings.columns?.map((col) => col.tally)).toEqual([{ fn: "SUM" }, undefined]);
+    const typed: Draft = {
+      label: "D",
+      type: "batch",
+      settings: { columns: [{ type: "field", key: "entry_id", default: "3" }] },
+    };
+    initBatch(aliased, typed);
+    expect(typed.settings.columns?.[0]?.default).toBe(3);
+  });
+
   it("keeps a target only for sums and toggles a default value", () => {
     const col: AdminColumn = { type: "field", key: "id", tally: { fn: "SUM", target: true } };
     setBatchTallyFn(col, "AVG");

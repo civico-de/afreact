@@ -1,11 +1,11 @@
 import { useId } from "react";
-import { getField } from "../expr";
 import { useFieldOptions } from "../meta";
 import { SearchInput } from "../SearchInput";
 import { ModelText } from "../../widgets/ModelText";
 import { Check, PagerConfig, Section, type Editing } from "./common";
 import { Columns } from "./Columns";
 import {
+  columnField,
   setBatchTallyFn,
   tableClasses,
   toggleBatchTally,
@@ -30,7 +30,7 @@ function BatchColumn({
   editCol: EditCol;
 }) {
   const id = useId();
-  const field = col.key ? getField(ctx.meta, col.key, ctx.search) : undefined;
+  const field = col.key ? columnField(ctx, col.key) : undefined;
   const options = useFieldOptions(
     field?.options ? (field.entity ?? ctx.search.api_entity) : undefined,
   );

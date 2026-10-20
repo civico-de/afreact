@@ -14,7 +14,7 @@ import {
   type SearchInfo,
 } from "../expr";
 import { formatValue } from "../condition";
-import type { EntityLink, SearchAdminMetadata } from "../meta";
+import type { EntityLink, SchemaField, SearchAdminMetadata } from "../meta";
 import { md5 } from "./md5";
 
 /**
@@ -225,6 +225,12 @@ const exprInfo = (ctx: DisplayContext, key: string | undefined): ExprInfo | null
   const expr = key ? getExprFromSelect(ctx.search, key) : null;
   return expr ? parseExpr(ctx.meta, expr, ctx.search) : null;
 };
+
+/** The field a column shows as is, found through its select alias. deviation:batch-column-alias-field */
+export function columnField(ctx: DisplayContext, key: string): SchemaField | undefined {
+  const info = exprInfo(ctx, key);
+  return info && !info.fn ? info.args[0]?.field : undefined;
+}
 
 /** The columns core starts a display with, and the defaults it fills in on opening. */
 export function initColumns(ctx: DisplayContext, draft: Draft, defaults: ColumnDefaults): void {
@@ -1000,12 +1006,7 @@ export function initBatch(ctx: DisplayContext, draft: Draft): void {
   // Each default's crm-search-input stores it as its field's data type once it renders.
   for (const col of columnsOf(draft.settings))
     if ("default" in col && col.key)
-      col.default = formatValue(
-        getField(ctx.meta, col.key, ctx.search),
-        undefined,
-        undefined,
-        col.default,
-      );
+      col.default = formatValue(columnField(ctx, col.key), undefined, undefined, col.default);
 }
 
 /** Totals in the footer: sums for numbers, counts for booleans, nothing for options or links. */
@@ -1017,7 +1018,7 @@ export function toggleBatchTally(ctx: DisplayContext, settings: AdminSettings): 
   }
   settings.tally = {};
   for (const col of columnsOf(settings)) {
-    const field = col.key ? parseExpr(ctx.meta, col.key, ctx.search).args[0]?.field : undefined;
+    const field = col.key ? columnField(ctx, col.key) : undefined;
     if (!field || field.fk_entity || field.options) continue;
     if (["Integer", "Float", "Money"].includes(field.data_type)) col.tally = { fn: "SUM" };
     if (field.data_type === "Boolean") col.tally = { fn: "COUNT" };

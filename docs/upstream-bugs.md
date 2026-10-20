@@ -1098,6 +1098,12 @@ code, not run). The column is `int unsigned`. React marks a timeout that is
 negative or not whole invalid and refuses to save until it is fixed.
 `deviation:search-timeout-invalid-blocks-save`
 
+**A data entry column with an alias loses its field.** The batch display editor
+looks up a column's key as a field name (`searchAdminDisplayBatch.component.js`
+`toggleTally`, `getField`), so for `id AS entry_id` it finds no field: the new
+display adds no total for the column, and its default value input is untyped.
+afreact resolves the alias through the search's select first. `deviation:batch-column-alias-field`
+
 **A new autocomplete display searches by description.** When it sets up a
 new autocomplete display, core adds `description` to the entity's
 `search_fields` array in the admin metadata instead of to a copy, so the

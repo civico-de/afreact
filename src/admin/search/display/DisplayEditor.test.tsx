@@ -25,13 +25,13 @@ let latest: EditorDisplay | undefined;
 const firstColumn = () => listParam(latest?.settings?.columns)[0];
 
 /** The editor with every edit and adoption kept, as the search editor keeps them. */
-function Harness({ initial }: { initial: EditorDisplay }) {
+function Harness({ initial, info = search }: { initial: EditorDisplay; info?: typeof search }) {
   const [display, setDisplay] = useState(initial);
   latest = display;
   return (
     <DisplayEditor
-      ctx={ctx}
-      search={search}
+      ctx={{ ...ctx, search: info }}
+      search={info}
       display={display}
       typeInfo={typeInfo}
       searchDisplayPath="/civicrm/search"
@@ -213,4 +213,23 @@ describe("display settings trimmed as ngModel trims them", () => {
     await retype(/^Label/, " Pick ");
     expect(latest?.label).toBe("Pick");
   });
+});
+
+it("offers a default value input for an aliased column", async () => {
+  const info = { ...search, api_params: { version: 4, select: ["display_name AS who"] } };
+  renderWithQuery(
+    <Harness
+      info={info}
+      initial={{
+        id: 1,
+        name: "B",
+        label: "B",
+        type: "batch",
+        settings: { columns: [{ type: "field", key: "who", label: "Who" }] },
+      }}
+    />,
+  );
+  await userEvent.click(screen.getByRole("checkbox", { name: "Default Value" }));
+  await userEvent.type(screen.getByLabelText("Default value of Who"), "Bo");
+  expect(firstColumn()).toMatchObject({ default: "Bo" });
 });
