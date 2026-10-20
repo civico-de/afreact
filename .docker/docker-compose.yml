@@ -61,6 +61,8 @@ services:
       - ./fixtures/afreactisland:/var/www/html/ext/afreactisland:ro
       # Demo forms, searches and pages for development and the browser tests; not released.
       - ./fixtures/afreactdemo:/var/www/html/ext/afreactdemo:ro
+      # Checkout options whose Angular templates run as islands in the React checkout block; not released.
+      - ./fixtures/afreactcheckout:/var/www/html/ext/afreactcheckout:ro
       # - ../../othersibling:/var/www/html/ext/othersibling
       - ./profiles:/civikitchen-profiles:ro
       # Hooks for the stack's environment, run after the profile. See init.d/README.md.

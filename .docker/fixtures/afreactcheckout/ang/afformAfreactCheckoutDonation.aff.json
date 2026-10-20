@@ -1,0 +1,10 @@
+{
+  "type": "form",
+  "title": "Demo donation",
+  "description": "A donation form whose payment methods run their own Angular templates: card fields, a wallet button that takes over the submit, a widget mounted after the submit.",
+  "server_route": "civicrm/afreact/demo/donate",
+  "permission": ["make online contributions"],
+  "create_submission": true,
+  "confirmation_type": "show_confirmation_message",
+  "confirmation_message": "Thank you for your donation."
+}

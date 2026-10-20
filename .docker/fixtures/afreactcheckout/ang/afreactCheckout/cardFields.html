@@ -1,0 +1,30 @@
+<div class="afreact-checkout-card">
+  <div class="form-group">
+    <label for="afreact-checkout-card-type">{{:: ts('Card Type') }}</label>
+    <select id="afreact-checkout-card-type" name="credit_card_type" class="crm-form-select"
+            ng-model="$ctrl.checkout_params.credit_card_type"
+            ng-options="option.id as option.label for option in $ctrl.cardTypeOptions" required>
+      <option value="">{{:: ts('- select -') }}</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="afreact-checkout-card-number">{{:: ts('Card Number') }}</label>
+    <input type="text" id="afreact-checkout-card-number" name="credit_card_number" class="crm-form-text"
+           ng-model="$ctrl.checkout_params.credit_card_number" autocomplete="cc-number" required>
+  </div>
+  <div class="form-group">
+    <label id="afreact-checkout-card-expiry">{{:: ts('Expiration Date') }}</label>
+    <div class="crm-flex-box" role="group" aria-labelledby="afreact-checkout-card-expiry">
+      <select name="credit_card_exp_month" class="crm-form-select" aria-label="{{:: ts('Expiration month') }}"
+              ng-model="$ctrl.checkout_params.credit_card_exp_date.M"
+              ng-options="month for month in $ctrl.months" required>
+        <option value="">{{:: ts('Month') }}</option>
+      </select>
+      <select name="credit_card_exp_year" class="crm-form-select" aria-label="{{:: ts('Expiration year') }}"
+              ng-model="$ctrl.checkout_params.credit_card_exp_date.Y"
+              ng-options="year for year in $ctrl.years" required>
+        <option value="">{{:: ts('Year') }}</option>
+      </select>
+    </div>
+  </div>
+</div>

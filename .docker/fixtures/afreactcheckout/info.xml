@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<extension key="afreactcheckout" type="module">
+  <file>afreactcheckout</file>
+  <name>afreact checkout fixture</name>
+  <description>Checkout options whose Angular templates take card details, take over the submit button and mount a widget after submit, with a donation form using them, for afreact's browser tests; no network, no money.</description>
+  <license>Proprietary</license>
+  <maintainer>
+    <author>civico GmbH</author>
+    <email>hi@jfilter.de</email>
+  </maintainer>
+  <releaseDate>2026-10-19</releaseDate>
+  <version>1.0</version>
+  <develStage>stable</develStage>
+  <compatibility>
+    <ver>6.19</ver>
+  </compatibility>
+  <requires>
+    <ext>civi_contribute</ext>
+    <ext>org.civicrm.afform</ext>
+  </requires>
+  <classloader>
+    <psr4 prefix="Civi\" path="Civi"/>
+  </classloader>
+  <mixins>
+    <mixin>ang-php@1.0.0</mixin>
+  </mixins>
+</extension>

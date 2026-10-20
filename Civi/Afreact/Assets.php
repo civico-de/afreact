@@ -73,21 +73,8 @@ final class Assets {
       ]));
       BuilderPanels::add($builder, $panels, $replaces);
     }
-    // What afCheckout's settingsFactory gives CRM.afCheckout, for CheckoutBlock fields.
-    $checkout = \Civi::container()->has('civi.checkout.afform') ? \Civi::service('civi.checkout.afform') : NULL;
-    if ($checkout instanceof \Civi\Checkout\Afform && $checkout->isActive()) {
-      \Civi::resources()
-        ->addStyleFile('civi_contribute', 'ang/afCheckout.css')
-        ->addVars('afreact', ['afCheckout' => self::$checkout ??= \Civi\Checkout\Afform::getSettings()]);
-    }
+    Checkout::addVars();
   }
-
-  /**
-   * The checkout settings, asked once per request: load() runs once per element on a page.
-   *
-   * @var array<mixed>|null
-   */
-  private static ?array $checkout = NULL;
 
   /**
    * Preload links for the chunks the bundle imports statically, so the browser fetches them with

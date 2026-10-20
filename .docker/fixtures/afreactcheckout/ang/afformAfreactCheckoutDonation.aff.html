@@ -1,0 +1,14 @@
+<af-form ctrl="afform">
+  <af-entity data="{source: 'Afreact checkout demo'}" type="Individual" name="Individual1" label="Donor" actions="{create: true, update: false}" security="FBAC" />
+  <af-entity data="{contact_id: 'Individual1', financial_type_id: 1, currency: 'EUR'}" type="Contribution" name="Contribution1" label="Donation" actions="{create: true, update: false}" security="FBAC" />
+  <fieldset af-fieldset="Individual1" class="af-container" af-title="Your details">
+    <af-field name="first_name" defn="{required: true}" />
+    <af-field name="last_name" defn="{required: true}" />
+  </fieldset>
+  <fieldset af-fieldset="Contribution1" class="af-container" af-title="Your donation">
+    <af-field name="default_contribution_amount.contribution_amount" defn="{label: 'Amount', input_attrs: {}, required: true}" />
+    <af-field name="checkout_option" defn="{label: 'Payment method', input_type: 'Radio', required: true}" />
+    <af-field name="checkout_params" defn="{label: false}" />
+  </fieldset>
+  <button class="af-button btn btn-primary" crm-icon="fa-check" ng-click="afform.submit()">Donate</button>
+</af-form>
