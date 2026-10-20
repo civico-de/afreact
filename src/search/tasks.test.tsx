@@ -322,6 +322,56 @@ describe("AfreactSearch bulk actions", () => {
     });
   });
 
+  it("keeps the selection new filters cleared when the old filters come back", async () => {
+    serve({});
+    const view = (filters: Record<string, unknown>) => (
+      <AfreactSearch search="S" display="D" settings={settings} filters={filters} />
+    );
+    const { rerender } = renderWithQuery(view({}));
+    await screen.findByText("Name 1");
+    await selectRows("Name 1");
+    rerender(view({ display_name: "Name" }));
+    await screen.findByText("Name 1");
+    rerender(view({}));
+    await screen.findByText("Name 1");
+    expect(checkbox("Name 1")).not.toBeChecked();
+    expect(selectAll()).toHaveAttribute("aria-checked", "false");
+  });
+
+  // deviation:select-all-latest-choice
+  it("drops the ids of a select-all that a later None overtook", async () => {
+    let answer: (ids: number[]) => void = () => undefined;
+    serve({
+      rows: [row(1), row(2), row(3)],
+      count: 3,
+      handlers: {
+        "SearchDisplay.run": (params) => {
+          if (params.return === "row_count") return Object.assign([], { count: 3 });
+          if (params.return === "id")
+            return new Promise<number[]>((resolve) => {
+              answer = resolve;
+            });
+          return [row(1), row(2)];
+        },
+      },
+    });
+    renderWithQuery(
+      <AfreactSearch search="S" display="D" settings={{ ...settings, limit: 2, pager: {} }} />,
+    );
+    await screen.findByText("Name 1");
+    await userEvent.click(selectAll());
+    await userEvent.click(
+      screen.getByRole("button", { name: "Select All rows or this pages rows" }),
+    );
+    await userEvent.click(screen.getByRole("menuitem", { name: "None", hidden: true }));
+    answer([1, 2, 3]);
+    await waitFor(() => {
+      expect(selectAll()).toBeEnabled();
+    });
+    expect(selectAll()).toHaveAttribute("aria-checked", "false");
+    expect(checkbox("Name 1")).not.toBeChecked();
+  });
+
   it("selects the rows between two with Shift", async () => {
     serve({ rows: [row(1), row(2), row(3), row(4)] });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);

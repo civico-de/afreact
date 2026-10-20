@@ -140,14 +140,22 @@ export function useTasks(options: TasksOptions) {
     enabled: (actions && (buttons || requested)) || hasTaskLinks,
   });
 
+  // New filters clear the selection, as onChangeFilters(); going back to the old ones keeps it clear.
   const [chosen, setChosen] = useState({ key: filtersKey, selection: NO_SELECTION });
+  if (chosen.key !== filtersKey) setChosen({ key: filtersKey, selection: NO_SELECTION });
   const selection = chosen.key === filtersKey ? chosen.selection : NO_SELECTION;
+  // The select-all run whose ids may still be taken; any later choice or new filters void it.
+  const pendingAll = useRef<object | null>(null);
+  useEffect(() => {
+    pendingAll.current = null;
+  }, [filtersKey]);
   const [loadingAll, setLoadingAll] = useState(false);
   const [message, setMessage] = useState("");
   const [running, setRunning] = useState<RunningTask | null>(null);
   const [failure, setFailure] = useState<unknown>(null);
 
   const select = (next: Selection) => {
+    pendingAll.current = null;
     setChosen({ key: filtersKey, selection: next });
     setMessage(
       rowCount === null
@@ -162,9 +170,12 @@ export function useTasks(options: TasksOptions) {
 
   const selectAllPages = async () => {
     setLoadingAll(true);
+    const run = {};
+    pendingAll.current = run;
     try {
       const ids = await api4<Key>("SearchDisplay", "run", { ...runParams, return: "id" });
-      select({ keys: [...new Set(ids)], all: true });
+      // deviation:select-all-latest-choice
+      if (pendingAll.current === run) select({ keys: [...new Set(ids)], all: true });
     } catch (error) {
       // deviation:bulk-select-all-error
       setFailure(error);
@@ -181,6 +192,7 @@ export function useTasks(options: TasksOptions) {
 
   /** refreshAfterTask(): selection cleared, this and every display of the form reloaded. */
   const refreshAfterTask = () => {
+    pendingAll.current = null;
     setChosen({ key: filtersKey, selection: NO_SELECTION });
     if (root) window.CRM.$(root).trigger("crmPopupFormSuccess");
   };

@@ -820,6 +820,11 @@ so:
 - Selecting all pages has no error handler
   (`searchDisplayTasksTrait.service.js` `selectAllPages`): the checkboxes stay
   disabled with no message. React shows the error and enables them again. `deviation:bulk-select-all-error`
+- A select-all still loading is not cancelled by a later choice:
+  `selectAllPages()` sets `selectedRows` whenever the ids arrive, so choosing
+  "None" meanwhile ends with every row selected (read from the code, not run).
+  React drops the ids once the selection changed, a task ran or the filters
+  changed. `deviation:select-all-latest-choice`
 - A failed `getSearchTasks` leaves an empty actions menu with no message
   (`getMetadata`). React shows the error. `deviation:bulk-task-list-error`
 - A redirect task's query is replaced by its data expression (`doTask`:
