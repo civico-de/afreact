@@ -46,7 +46,7 @@ export function fieldPlace(
 
 /**
  * The values afForm submits and announces: extra fields as one record, `extra: {fields}`, beside
- * the values elements add to data.extra, such as crm-recaptcha2's response.
+ * the values elements add to data.extra, such as a captcha's response.
  */
 export type Submission = Record<string, EntityItem[] | ({ fields: Values } & Values)>;
 

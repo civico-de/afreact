@@ -472,11 +472,11 @@ function LoadedForm(props: LoadedFormProps) {
   const [uploading, setUploading] = useState<string | null>(null);
   /** Counts the files chosen or removed, which change the form without changing its data. */
   const [fileChanges, setFileChanges] = useState(0);
-  /** crm-recaptcha2's response, and the failed submissions after which it is void. */
-  const recaptchaResponse = useRef<string | null>(null);
+  /** The captcha's response, and the failed submissions after which it is void. */
+  const captchaResponse = useRef<string | null>(null);
   const [submitFailures, setSubmitFailures] = useState(0);
-  const respondRecaptcha = useCallback((response: string | null) => {
-    recaptchaResponse.current = response;
+  const respondCaptcha = useCallback((response: string | null) => {
+    captchaResponse.current = response;
   }, []);
   /** afForm's submissionResponse: the last response Afform.submit returned. */
   const submissionResponse = useRef<SubmitResponse[] | undefined>(undefined);
@@ -664,7 +664,7 @@ function LoadedForm(props: LoadedFormProps) {
           draft.mutate({ values: draftValues(data), snapshot, background: false });
         },
       },
-      recaptcha: { respond: respondRecaptcha, failures: submitFailures },
+      captcha: { respond: respondCaptcha, failures: submitFailures },
     }),
     addTitle: setLabels,
   };
@@ -750,7 +750,7 @@ function LoadedForm(props: LoadedFormProps) {
       return;
     }
     setEdits((count) => count + 1);
-    const response = recaptchaResponse.current;
+    const response = captchaResponse.current;
     // deviation:captcha-response-both-keys
     // core's recaptcha extension validates extra.recaptcha2, formprotection extra.recaptcha.
     const captcha = response === null ? {} : { recaptcha2: response, recaptcha: response };

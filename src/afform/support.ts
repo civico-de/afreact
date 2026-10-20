@@ -144,12 +144,27 @@ export type NodeKind =
   | "adminListMenu"
   | "paramSets"
   | "recaptcha"
+  | "turnstile"
   | "element";
 
 export const PARAM_SETS_OUTSIDE_NOTE = "af-search-param-sets outside a search fieldset";
-export const RECAPTCHA_OUTSIDE_FORM_NOTE = "crm-recaptcha2 outside af-form";
-export const RECAPTCHA_WITHOUT_KEY_NOTE =
-  "ReCaptcha without a site key, which the recaptcha or formprotection extension adds";
+
+export interface CaptchaNotes {
+  outside: string;
+  keyless: string;
+}
+
+/** A captcha's notes; each extension that provides one writes its site key into the markup. */
+export const CAPTCHA_NOTES: Record<"recaptcha" | "turnstile", CaptchaNotes> = {
+  recaptcha: {
+    outside: "crm-recaptcha2 outside af-form",
+    keyless: "ReCaptcha without a site key, which the recaptcha or formprotection extension adds",
+  },
+  turnstile: {
+    outside: "crm-turnstile outside af-form",
+    keyless: "Turnstile without a site key, which the formprotection extension adds",
+  },
+};
 
 /** The site key the providing extension writes into the markup, even where none is set. */
 export function captchaSiteKey(node: ElementNode): string {
@@ -174,6 +189,7 @@ export function renderedKind(
   if (tag === "af-admin-list-menu") return "adminListMenu";
   if (tag === "af-search-param-sets") return "paramSets";
   if (tag === "crm-recaptcha2") return "recaptcha";
+  if (tag === "crm-turnstile") return "turnstile";
   if (tag === "af-entity") return "entity";
   if (tag === "af-field") return "field";
   // Blocks arrive with their compiled layout as children.
@@ -441,10 +457,12 @@ function elementProblems(node: ElementNode): string[] {
 }
 
 // deviation:captcha-without-key-noted
-function recaptchaProblems(node: ElementNode, scope: Scope): string[] {
-  if (!scope.form) return [RECAPTCHA_OUTSIDE_FORM_NOTE];
-  return captchaSiteKey(node) ? [] : [RECAPTCHA_WITHOUT_KEY_NOTE];
-}
+const captchaProblems =
+  (notes: CaptchaNotes) =>
+  (node: ElementNode, scope: Scope): string[] => {
+    if (!scope.form) return [notes.outside];
+    return captchaSiteKey(node) ? [] : [notes.keyless];
+  };
 
 const childProblems = (node: ElementNode, scope: Scope) =>
   layoutProblemsIn(node["#children"] ?? [], scope);
@@ -513,7 +531,8 @@ const KIND_PROBLEMS: Record<NodeKind, (node: ElementNode, scope: Scope) => strin
     isListMenuTab(node.tab) ? LIST_MENU_SETTINGS_NOTE : listMenuTabNote(node.tab),
   ],
   paramSets: (_node, scope) => (scope.filters ? [] : [PARAM_SETS_OUTSIDE_NOTE]),
-  recaptcha: recaptchaProblems,
+  recaptcha: captchaProblems(CAPTCHA_NOTES.recaptcha),
+  turnstile: captchaProblems(CAPTCHA_NOTES.turnstile),
   element: (node, scope) => [...elementProblems(node), ...childProblems(node, scope)],
 };
 

@@ -49,7 +49,7 @@ import {
 import { adminMenuLinks, checkLinkPerm } from "./adminMenu";
 import { AdminListMenu } from "./AdminListMenu";
 import { ParamSets } from "./ParamSets";
-import { Recaptcha2 } from "./Recaptcha2";
+import { Recaptcha2, Turnstile } from "./Captcha";
 import { Menu } from "../search/Menu";
 import type { ElementNode, FieldDefn, FormData, LayoutNode, Scope } from "./types";
 import { isElement, isFieldDefn } from "./types";
@@ -102,8 +102,8 @@ export interface FormState {
   reset?: () => void;
   /** afForm.submitDraft() and the state its buttons show; undefined outside af-form. */
   draft?: { status: DraftStatus; save: () => void };
-  /** crm-recaptcha2's response, sent as extra.recaptcha2 and extra.recaptcha, and the failed submissions that void it. */
-  recaptcha?: { respond: (response: string | null) => void; failures: number };
+  /** The captcha's response, sent as extra.recaptcha2 and extra.recaptcha, and the failed submissions that void it. */
+  captcha?: { respond: (response: string | null) => void; failures: number };
   /** afCore's addTitle(): a search display reports the labels of its filters. */
   addTitle: (labels: string[]) => void;
 }
@@ -168,6 +168,7 @@ const KIND_VIEWS: Record<NodeKind, (props: { node: ElementNode }) => ReactNode> 
   adminListMenu: AdminListMenu,
   paramSets: ParamSets,
   recaptcha: Recaptcha2,
+  turnstile: Turnstile,
   element: Element,
 };
 

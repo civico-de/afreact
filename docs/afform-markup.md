@@ -31,6 +31,7 @@ Elements:
 | `crm-search-display-*` | a SearchKit display: `search-name`, `display-name`, `filters` |
 | a block's directive name (`afblock-contact-email`, …) | another layout embedded |
 | `af-search-param-sets` | saved sets of a search form's filters and columns; inside a search `af-fieldset` |
+| `crm-recaptcha2`, `crm-turnstile` | a captcha inside `af-form`: `recaptchatheme`, and `recaptchakey`, which the providing extension's change set writes (core's recaptcha or formprotection) |
 
 Attributes on any element:
 

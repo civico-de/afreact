@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
 import { AfreactForm } from "./AfreactForm";
-import { layoutProblems, RECAPTCHA_WITHOUT_KEY_NOTE } from "./support";
+import { CAPTCHA_NOTES, layoutProblems } from "./support";
 import type { LayoutNode } from "./types";
 
 const captcha: LayoutNode = {
@@ -120,9 +120,9 @@ describe("crm-recaptcha2", () => {
       { "#tag": "af-form", ctrl: "afform", "#children": [{ "#tag": "crm-recaptcha2" }] },
     ];
     renderCaptcha(() => [{}], keyless);
-    expect(await screen.findByRole("note")).toHaveTextContent(RECAPTCHA_WITHOUT_KEY_NOTE);
+    expect(await screen.findByRole("note")).toHaveTextContent(CAPTCHA_NOTES.recaptcha.keyless);
     expect(widgets).toEqual([]);
-    expect(layoutProblems(keyless)).toEqual([RECAPTCHA_WITHOUT_KEY_NOTE]);
+    expect(layoutProblems(keyless)).toEqual([CAPTCHA_NOTES.recaptcha.keyless]);
   });
 
   it("is noted outside af-form", () => {
