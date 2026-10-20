@@ -670,6 +670,7 @@ const sizes = () => [
 
 function LinksColumn({ ctx, col, links, editCol }: ColumnEditing) {
   const id = useId();
+  const styleKeys = ctx.meta.styles.flatMap((opt) => [opt.key, `${opt.key}-outline`]);
   const sizeSelect = (label: string) => (
     <>
       <label htmlFor={`${id}-size`}>{label}</label>{" "}
@@ -684,6 +685,8 @@ function LinksColumn({ ctx, col, links, editCol }: ColumnEditing) {
           });
         }}
       >
+        {/* Angular's unknown option, so a size it does not offer shows blank and can be changed. */}
+        {!sizes().some((size) => size.key === (col.size ?? "")) && <option value={col.size} />}
         {sizes().map((size) => (
           <option key={size.key} value={size.key}>
             {size.label}
@@ -703,7 +706,7 @@ function LinksColumn({ ctx, col, links, editCol }: ColumnEditing) {
             <select
               id={`${id}-style`}
               className="form-control"
-              value={col.style ?? "default"}
+              value={col.style ?? ""}
               onChange={(event) => {
                 const value = event.target.value;
                 editCol((c) => {
@@ -711,6 +714,7 @@ function LinksColumn({ ctx, col, links, editCol }: ColumnEditing) {
                 });
               }}
             >
+              {!styleKeys.includes(col.style ?? "") && <option value={col.style ?? ""} />}
               {ctx.meta.styles.map((opt) => (
                 <option key={opt.key} value={opt.key}>
                   {opt.value}

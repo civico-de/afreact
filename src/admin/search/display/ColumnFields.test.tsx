@@ -222,6 +222,35 @@ describe("ColumnTypeFields", () => {
     });
   });
 
+  describe("a menu column", () => {
+    const styled: DisplayContext = {
+      ...ctx,
+      meta: {
+        ...meta,
+        styles: [
+          { key: "default", value: "Default" },
+          { key: "primary", value: "Primary" },
+        ],
+      },
+    };
+
+    it("gives a menu without a style the default one once it is chosen", async () => {
+      renderColumn({ type: "menu", text: "Actions", size: "btn-sm", links: [] }, styled);
+      const style = screen.getByRole("combobox", { name: "Style" });
+      expect(style).toHaveValue("");
+      await userEvent.selectOptions(style, "Default");
+      expect(saved?.style).toBe("default");
+    });
+
+    it("gives buttons of a size it does not offer one it does once chosen", async () => {
+      renderColumn({ type: "buttons", size: "btn-md", links: [] }, styled);
+      const size = screen.getByRole("combobox", { name: "Button Size" });
+      expect(size).toHaveValue("btn-md");
+      await userEvent.selectOptions(size, "Large");
+      expect(saved?.size).toBe("btn-lg");
+    });
+  });
+
   describe("a subsearch column", () => {
     const members = {
       label: "Members",
