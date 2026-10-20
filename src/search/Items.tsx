@@ -1,6 +1,7 @@
 import { createElement, Suspense, use, useState, type MouseEvent, type ReactNode } from "react";
 import { errorMessage } from "../api/civi";
-import { Cell, cellText } from "./Cell";
+import { Cell } from "./Cell";
+import { cellText } from "./cellText";
 import { EditableCell } from "./EditableCell";
 import { InlineEditContext, useInlineEditContext, type InlineEdit } from "./inlineEdit";
 import { loadSortable, type Reorder } from "./Reorder";

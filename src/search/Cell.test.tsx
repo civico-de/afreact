@@ -133,6 +133,50 @@ describe("other column types", () => {
     expect(screen.getByRole("link", { name: "View" })).toHaveClass("btn btn-xs btn-info");
   });
 
+  // deviation:link-title-names-link
+  it("names each row's link by its title where the title says more than the text", () => {
+    const rowLinks: Link[] = [
+      { url: "/1", text: "Edit", icon: "fa-pencil", title: "Edit Berlin donors" },
+      { url: "/2", text: "Edit", title: "Change segment 2" },
+      { url: "/3", text: "View", title: "View" },
+      { url: "/4", text: "Explain" },
+      { url: "/5", icon: "fa-trash", title: "Delete Berlin donors" },
+    ];
+    const names = [
+      "Edit Berlin donors",
+      "Edit: Change segment 2",
+      "View",
+      "Explain",
+      "Delete Berlin donors",
+    ];
+    for (const type of ["links", "buttons"]) {
+      const { container } = cell({ type }, { links: rowLinks });
+      const anchors = names.map((name) => screen.getByRole("link", { name }));
+      // The visible text, the tooltip and the hidden icons stay as core writes them.
+      expect(anchors.map((link) => link.textContent.trim())).toEqual([
+        "Edit",
+        "Edit",
+        "View",
+        "Explain",
+        "",
+      ]);
+      expect(anchors[0]).toHaveAttribute("title", "Edit Berlin donors");
+      expect(anchors[2]).not.toHaveAttribute("aria-label");
+      expect(anchors[3]).not.toHaveAttribute("aria-label");
+      expect(container.querySelector(".crm-i")).toHaveAttribute("aria-hidden", "true");
+      container.remove();
+    }
+    const field = cell(
+      { type: "field" },
+      { val: ["Ada"], links: [{ url: "/a", text: "Ada", title: "View Contact" }] },
+    );
+    expect(screen.getByRole("link", { name: "Ada: View Contact" })).toHaveTextContent("Ada");
+    field.container.remove();
+    cell({ type: "menu" }, { text: "Actions", links: rowLinks });
+    for (const name of names)
+      expect(screen.getByRole("menuitem", { name, hidden: true })).toBeInTheDocument();
+  });
+
   it("makes a task link a focusable button that runs on click, Enter and Space", async () => {
     const { clicked } = cell({ type: "links" }, { links: [{ task: "delete", text: "Delete" }] });
     const link = screen.getByRole("button", { name: "Delete" });

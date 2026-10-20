@@ -1,5 +1,6 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
-import { Cell, cellText } from "./Cell";
+import { Cell } from "./Cell";
+import { cellText } from "./cellText";
 import { dragField } from "./dragOrder";
 import { EditableCell, editingClass, RowEditButtons } from "./EditableCell";
 import { useInlineEditContext } from "./inlineEdit";

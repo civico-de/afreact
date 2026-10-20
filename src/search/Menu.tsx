@@ -27,6 +27,8 @@ export interface MenuProps {
   links: Link[];
   alignRight: boolean;
   itemClass?: (link: Link) => string | undefined;
+  /** The accessible name of an item, where its text alone is not enough. */
+  itemLabel?: (link: Link) => string | undefined;
   /** Items that stay in the menu, focusable, but do nothing. */
   isDisabled?: (link: Link) => boolean;
   onLinkClick?: (link: Link, event: MouseEvent<HTMLAnchorElement>) => void;
@@ -58,6 +60,7 @@ export function Menu({
   links,
   alignRight,
   itemClass,
+  itemLabel,
   isDisabled,
   onLinkClick,
   onOpen,
@@ -208,6 +211,7 @@ export function Menu({
                 href={link.url}
                 target={link.target}
                 title={link.title}
+                aria-label={itemLabel?.(link)}
                 aria-disabled={isDisabled?.(link) ? true : undefined}
                 onClick={(event) => {
                   onLinkClick?.(link, event);

@@ -3,7 +3,8 @@ import { Unsupported } from "../afform/Unsupported";
 import { memoryStore } from "../url/hash";
 import { UrlState } from "../url/UrlState";
 import { AfreactSearch } from "./AfreactSearch";
-import { Icon, LinkContent } from "./LinkContent";
+import { cellText } from "./cellText";
+import { Icon, LinkContent, linkLabel } from "./LinkContent";
 import { taskLinkProps } from "./links";
 import { Menu } from "./Menu";
 import { INCLUDES } from "./includes";
@@ -26,14 +27,6 @@ export interface CellProps {
   subsearch: Record<string, SubsearchDisplay>;
   afform?: string;
   onLinkClick: (link: Link, event: MouseEvent<HTMLAnchorElement>) => void;
-}
-
-/** Angular's interpolation: scalars as text, other objects as JSON. */
-export function cellText(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  if (value === null || value === undefined) return "";
-  return JSON.stringify(value);
 }
 
 /** The colType templates of crmSearchDisplay, picked as getFieldTemplate() picks them. */
@@ -125,6 +118,7 @@ function FieldLinks({ cell, links, onLinkClick }: CellProps & { links: Link[] })
         target={link.target}
         href={link.url}
         title={link.title}
+        aria-label={linkLabel(link)}
         className={link.style}
         {...taskLinkProps(link)}
         onClick={(event) => {
@@ -182,6 +176,7 @@ function LinksColumn({ cell, onLinkClick }: CellProps) {
         target={link.target}
         href={link.url}
         title={link.title}
+        aria-label={linkLabel(link)}
         {...taskLinkProps(link)}
         onClick={(event) => {
           onLinkClick(link, event);
@@ -201,6 +196,7 @@ function ButtonsColumn({ column, cell, onLinkClick }: CellProps) {
         target={link.target}
         href={link.url}
         title={link.title}
+        aria-label={linkLabel(link)}
         {...taskLinkProps(link)}
         onClick={(event) => {
           onLinkClick(link, event);
@@ -228,6 +224,7 @@ function MenuColumn({ column, cell, onLinkClick }: CellProps) {
       links={links}
       alignRight={column?.alignment === "text-right"}
       itemClass={(link) => `bg-${link.style ?? ""}`}
+      itemLabel={linkLabel}
       onLinkClick={onLinkClick}
     />
   );

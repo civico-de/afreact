@@ -17,7 +17,7 @@ import {
   withFormulas,
   type BatchRow,
 } from "./batchRows";
-import { cellText } from "./Cell";
+import { cellText } from "./cellText";
 import { Input } from "./EditableCell";
 import { editorFor, unsupportedEditors } from "./inlineEdit";
 import { Icon } from "./LinkContent";

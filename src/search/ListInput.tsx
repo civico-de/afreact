@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
-import { cellText } from "./Cell";
+import { cellText } from "./cellText";
 import type { InputProps } from "./EditableCell";
 
 export type ListKind = "text" | "integer" | "float" | "date";

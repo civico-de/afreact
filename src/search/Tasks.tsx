@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { api4, errorMessage } from "../api/civi";
-import { cellText } from "./Cell";
+import { cellText } from "./cellText";
 import { crmAlert } from "../html";
 import { fetchDownload, saveBlob } from "./download";
 import { Input } from "./EditableCell";

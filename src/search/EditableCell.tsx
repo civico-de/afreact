@@ -11,7 +11,7 @@ import {
 } from "react";
 import { api4, errorMessage } from "../api/civi";
 import { fromLocalDateTime, toLocalDateTime } from "../afform/fields/dateTime";
-import { cellText } from "./Cell";
+import { cellText } from "./cellText";
 import { EntityRefInput } from "./EntityRefInput";
 import { ListInput } from "./ListInput";
 import {

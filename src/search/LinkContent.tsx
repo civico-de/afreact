@@ -13,3 +13,12 @@ export function LinkContent({ link }: { link: Link }) {
     </>
   );
 }
+
+// deviation:link-title-names-link
+/** A title other than the text names the link; one lacking the visible text follows that text. */
+export function linkLabel(link: Link): string | undefined {
+  const title = link.title?.trim() ?? "";
+  const text = link.text?.trim() ?? "";
+  if (!title || title === text) return undefined;
+  return title.toLocaleLowerCase().includes(text.toLocaleLowerCase()) ? title : `${text}: ${title}`;
+}
