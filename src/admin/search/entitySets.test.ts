@@ -165,6 +165,58 @@ describe("entity sets", () => {
     });
   });
 
+  it("leaves the references of a field that another column keeps", () => {
+    const params = setEntitySet(
+      meta,
+      {
+        select: ["gender_id", "gender_id:label"],
+        where: [["gender_id", "=", 1]],
+        orderBy: { gender_id: "ASC" },
+        sets: [["UNION ALL", "Contact", "get", { select: ["gender_id", "gender_id:label"] }]],
+      },
+      0,
+      { select: ["gender_id", "display_name"] },
+    );
+    expect(params).toMatchObject({
+      select: ["gender_id", "display_name"],
+      where: [["gender_id", "=", 1]],
+      orderBy: { gender_id: "ASC" },
+    });
+  });
+
+  it("renames an outer column with a suffix or alias of its own, and a function's without adding an alias", () => {
+    const params = setEntitySet(
+      meta,
+      {
+        select: ["gender_id:label", "gender_id AS g", "COUNT(gender_id)"],
+        sets: [["UNION ALL", "Contact", "get", { select: ["gender_id"] }]],
+      },
+      0,
+      { select: ["employer_id"] },
+    );
+    expect(params.select).toEqual(["employer_id:label", "employer_id AS g", "COUNT(employer_id)"]);
+  });
+
+  it("keeps a renamed function's own suffix, and a sort on an outer alias of the field's name", () => {
+    const month = meta.functions.flatMap((fn) =>
+      fn.name === "COUNT" ? [{ ...fn, name: "MONTH", options: [{ id: 1, label: "January" }] }] : [],
+    );
+    const params = setEntitySet(
+      { ...meta, functions: [...meta.functions, ...month] },
+      {
+        select: ["MONTH(birth_date) AS m", "COUNT(id) AS birth_date"],
+        orderBy: { birth_date: "ASC" },
+        sets: [["UNION ALL", "Contact", "get", { select: ["birth_date", "id"] }]],
+      },
+      0,
+      { select: ["employer_id", "id"] },
+    );
+    expect(params).toMatchObject({
+      select: ["MONTH(employer_id) AS m", "COUNT(id) AS birth_date"],
+      orderBy: { birth_date: "ASC" },
+    });
+  });
+
   it("renames swapped columns from their old names at once", () => {
     const params = setEntitySet(
       meta,

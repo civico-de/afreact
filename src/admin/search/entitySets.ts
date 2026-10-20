@@ -169,6 +169,14 @@ function renameColumns(
   // Every rename is taken from the old names at once, so names that swap do not merge.
   const renamed = new Map<string, string>();
   const fields = new Map<string, string>();
+  const base = (set: EntitySet, row: number) => {
+    const expr = set[3].select[row];
+    return expr ? parseExpr(meta, expr, infoOf(set)).alias.split(":")[0] : undefined;
+  };
+  // A field that a row keeps still names that row's references.
+  const kept = new Set(
+    to[3].select.flatMap((_, row) => (base(from, row) === base(to, row) ? [base(to, row)] : [])),
+  );
   to[3].select.forEach((expr, row) => {
     const before = from[3].select[row];
     if (!before || !expr || before === expr) return;
@@ -178,13 +186,16 @@ function renameColumns(
     renamed.set(was, now);
     // Conditions, grouping and sorting name the field without its suffix, or with one of theirs.
     const [wasField = was, nowField = now] = [was.split(":")[0], now.split(":")[0]];
-    if (wasField !== nowField) fields.set(wasField, nowField);
+    if (wasField !== nowField && !kept.has(wasField)) fields.set(wasField, nowField);
   });
   const rename = (key: string) => {
     const field = key.split(":")[0] ?? key;
     const now = fields.get(field);
     return now === undefined ? key : now + key.slice(field.length);
   };
+  // Having, grouping and sorting may name an outer column by its alias, which stays.
+  const aliases = new Set(params.select.flatMap((col) => col.split(" AS ")[1] ?? []));
+  const renameRef = (key: string) => (aliases.has(key.split(":")[0] ?? key) ? key : rename(key));
   const outerMeta = withEntitySetFields(meta, params);
   const renameInFunction = (col: string) => {
     const state = fnState(outerMeta, col, { api_entity: "EntitySet", api_params: params });
@@ -192,20 +203,28 @@ function renameColumns(
       arg.type === "field" ? { ...arg, value: rename(String(arg.value)) } : arg,
     );
     if (!state.fn || args.every((arg, i) => arg.value === state.args[i]?.value)) return col;
-    const [expr = "", alias] = writeExpr({ ...state, args }, "select").split(" AS ");
-    return alias === undefined ? expr : `${expr} AS ${col.split(" AS ")[1] ?? alias}`;
+    const [written = ""] = writeExpr({ ...state, args }, "select").split(" AS ");
+    const [stored = col, alias] = col.split(" AS ");
+    // writeExpr adds ":label" to a function with options; a stored expression may go without.
+    const expr = stored.endsWith(":label") ? written : written.replace(/:label$/, "");
+    return alias === undefined ? expr : `${expr} AS ${alias}`;
+  };
+  const renameColumn = (col: string) => {
+    if (col.includes("(")) return renameInFunction(col);
+    const [expr = col, alias] = col.split(" AS ");
+    return alias === undefined ? rename(expr) : `${rename(expr)} AS ${alias}`;
   };
   return !renamed.size
     ? params
     : {
         ...params,
-        select: params.select.map((col) => renamed.get(col) ?? renameInFunction(col)),
+        select: params.select.map((col) => renamed.get(col) ?? renameColumn(col)),
         ...(params.where && { where: renameInClauses(params.where, rename) }),
-        ...(params.having && { having: renameInClauses(params.having, rename) }),
-        ...(params.groupBy && { groupBy: params.groupBy.map(rename) }),
+        ...(params.having && { having: renameInClauses(params.having, renameRef) }),
+        ...(params.groupBy && { groupBy: params.groupBy.map(renameRef) }),
         ...(params.orderBy && {
           orderBy: Object.fromEntries(
-            Object.entries(params.orderBy).map(([key, dir]) => [rename(key), dir]),
+            Object.entries(params.orderBy).map(([key, dir]) => [renameRef(key), dir]),
           ),
         }),
       };
