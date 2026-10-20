@@ -59,3 +59,6 @@
 .afreact-form:not(.crm-public *) :is(div, fieldset, details):has(> af-field + af-field):has(> .crm-search-display) > .af-field-type-hidden { display: none; }
 .afreact-form:not(.crm-public *) :is(div, fieldset, details):has(> af-field + af-field):has(> .crm-search-display) > af-field { width: var(--afreact-input-width); max-width: 100%; }
 .afreact-form:not(.crm-public *) :is(div, fieldset, details):has(> af-field + af-field):has(> .crm-search-display) > af-field:has(.afreact-range) { width: auto; }
+
+/* The fieldset around a checkout template only disables its controls, without a frame of its own. */
+.afreact-checkout-island { border: 0; margin: 0; padding: 0; min-width: 0; }

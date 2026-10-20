@@ -164,6 +164,14 @@ value: 6.19 and 6.20 then skip the check, so a required extra field that sits
 only in repeated fieldsets passes there, required in the browser alone
 (reproduced through `Afform.submit` on 6.19.1).
 
+**`crmFormError` carries an earlier submit's response.** afForm keeps
+`submissionResponse` from the last successful `Afform.submit` and sends it
+with `crmFormError` when a later submit fails, so a listener reads the
+response of a submit that did not fail. A form that stays after saving
+(neither redirect nor message) can be submitted again (`afForm.component.js`,
+6.19.1; read from the code, not run). The React renderer sends the response
+of the failing submit only, none when `Afform.submit` itself failed. `deviation:form-error-own-response`
+
 ## Fields and filters
 
 **A required rich text or proximity field can be submitted empty.**
@@ -542,6 +550,29 @@ the state chosen for the previous country, and a country without states shows
 (`afCheckoutBlock.component.js`, read from 6.18.1). The React renderer empties
 the state with the country, and a country without states frees the required
 select. `deviation:billing-state-follows-country`
+
+**The block reads a contribution value other than the one the submit
+saves.** `getContributionValue()` in `afCheckoutBlock.component.js` returns
+the field on the form before the af-entity's fixed `data`, and takes `0`,
+`false` and `""` for unset. The submit does it the other way round: fixed
+values override submitted ones (`AbstractProcessor::preprocessSubmittedValues`),
+and `Civi\Checkout\Afform::startCheckout()` reads the merged record. On a form
+with a fixed `checkout_option` and an option field, Angular shows the option
+chosen in the field and a processor's template takes its details, while the
+submit checks out with the fixed option; an amount of 0 reads as `null`
+(6.19.1; read from the code, not run). The React renderer reads every
+contribution value as the submit saves it, for the block itself and for a
+template's `getContributionValue()`: the fixed value where the entity's data
+has the key, else the field, and `null` only while empty. `deviation:checkout-value-as-saved`
+
+**A template's `afForm.submit()` is not held.** `submit()` in
+`afForm.component.js` keeps no state of its own: `$element.block()` covers the
+form against clicks, but a processor's callback that calls `afForm.submit()`
+again while the first submit runs sends a second `Afform.submit`, and one that
+calls it while `Afform.prefill` is under way submits without the loaded
+records (6.19.1; read from the code, not run). The React renderer's stand-in
+for a checkout template submits only while the form's submit button is
+enabled. `deviation:checkout-submit-once`
 
 ## Search displays
 

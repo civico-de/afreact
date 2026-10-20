@@ -106,12 +106,23 @@ export interface FormState {
   toggled: (shown: boolean) => void;
   /** afForm.resetForm(); undefined outside af-form. */
   reset?: () => void;
+  /** What afForm's controller gives an Angular island; undefined outside af-form. */
+  island?: RefObject<IslandForm | null>;
+  /** Holds the submit under `key` with a reason, or releases it with null; undefined outside af-form. */
+  hold?: (key: string, reason: string | null) => void;
   /** afForm.submitDraft() and the state its buttons show; undefined outside af-form. */
   draft?: { status: DraftStatus; save: () => void };
   /** The captcha's response, sent as extra.recaptcha2 and extra.recaptcha, and the failed submissions that void it. */
   captcha?: { respond: (response: string | null) => void; failures: number };
   /** afCore's addTitle(): a search display reports the labels of its filters. */
   addTitle: (labels: string[]) => void;
+}
+
+export interface IslandForm {
+  /** afForm.submit(): the submit button's path, held while the button is. */
+  submit: () => void;
+  /** Whether a submit would go through now: the button enabled and its check passing, silently. */
+  valid: () => boolean;
 }
 
 /** A saved draft matches the form ("saved"), or nothing was changed since loading ("pristine"). */
@@ -953,6 +964,8 @@ function FormButton({ node, disabled, onClick, shown, reset }: FormButtonProps) 
       className={typeof node.class === "string" ? node.class : "btn btn-primary"}
       disabled={disabled}
       onClick={onClick}
+      // Inert: Angular never compiles it. Checkout templates find the submit button by it.
+      ng-click={onClick ? undefined : "afform.submit()"}
       data-afreact-reset={reset ? "" : undefined}
     >
       {icon && <i className={`crm-i ${icon}`} aria-hidden="true" />}{" "}

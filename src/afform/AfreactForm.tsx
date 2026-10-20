@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -17,7 +18,7 @@ import { isRecord } from "../search/searchTasks";
 import type { ExpressionContext } from "./expressions";
 import { DisplayCountContext, useHashParams } from "../url/UrlState";
 import { uploadAll, UploadsContext, type Uploads, type UploadsState } from "./fields/upload";
-import { FormContext, Nodes, type DraftStatus, type FormState } from "./Layout";
+import { FormContext, Nodes, type DraftStatus, type FormState, type IslandForm } from "./Layout";
 import {
   applyPrefill,
   draftValues,
@@ -245,16 +246,23 @@ function fieldMessage(control: Control): string {
   return ts("Please enter a valid value.");
 }
 
+/** What a submit refuses: validity alone counts disabled controls, which the browser leaves out. */
+const isInvalid = (control: Control) =>
+  control.willValidate && (!control.validity.valid || shortOf(control) > 0);
+
 /** The error text of each field with a listed control still invalid, by its `data-afreact-field`. */
 function fieldErrors(root: Element | null): ReadonlyMap<string, string> {
   const errors = new Map<string, string>();
   for (const control of root?.querySelectorAll<Control>(`[${LISTED}]`) ?? []) {
     const field = control.closest("[data-afreact-field]")?.getAttribute("data-afreact-field");
-    const invalid = control.willValidate && (!control.validity.valid || shortOf(control) > 0);
-    if (field && invalid && !errors.has(field)) errors.set(field, fieldMessage(control));
+    if (field && isInvalid(control) && !errors.has(field)) errors.set(field, fieldMessage(control));
   }
   return errors;
 }
+
+const controlsOf = (root: Element | null) => [
+  ...(root?.querySelectorAll<Control>("input, select, textarea") ?? []),
+];
 
 const NO_ERRORS: ReadonlyMap<string, string> = new Map();
 
@@ -467,8 +475,10 @@ function LoadedForm(props: LoadedFormProps) {
     /** From a draft save, whose next success takes it away. */
     draft?: boolean;
   } | null>(null);
-  // deviation:form-events-on-wrapper
   const host = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLFormElement>(null);
+  /** afForm's element, where its crmFormSuccess and crmFormError start. */
+  const afFormElement = () => root.current?.querySelector(":scope > af-form");
   const summary = useRef<HTMLDivElement>(null);
   const announceFailure = (error: unknown) => {
     alertFailure(error);
@@ -485,10 +495,13 @@ function LoadedForm(props: LoadedFormProps) {
   const respondCaptcha = useCallback((response: string | null) => {
     captchaResponse.current = response;
   }, []);
-  /** afForm's submissionResponse: the last response Afform.submit returned. */
+  /** afForm's submissionResponse: what Afform.submit returned for the submit under way. */
   const submissionResponse = useRef<SubmitResponse[] | undefined>(undefined);
   const save = useMutation({
     mutationFn: async ({ values, saved }: SubmitRequest) => {
+      // deviation:form-error-own-response
+      // A failed Afform.submit has no response (upstream bug: afForm's crmFormError sends the last).
+      submissionResponse.current = saved;
       const response =
         saved ??
         (await withStatus(
@@ -515,13 +528,14 @@ function LoadedForm(props: LoadedFormProps) {
       }
       setFailure(null);
       const { redirect, message } = response[0] ?? {};
-      if (host.current) {
+      const element = afFormElement();
+      if (element) {
         const detail = {
           afform: form.meta,
           data: values,
           submissionResponse: [...response],
         };
-        announceSaved(host.current, detail, !redirect && !message);
+        announceSaved(element, detail, !redirect && !message);
       }
       if (redirect) window.location.href = redirectUrl(redirect);
     },
@@ -529,8 +543,9 @@ function LoadedForm(props: LoadedFormProps) {
       // Only a response Afform.submit received is used up; an upload retry sends none.
       if (!saved) setSubmitFailures((count) => count + 1);
       announceFailure(error);
-      if (host.current)
-        window.CRM.$(host.current).trigger("crmFormError", {
+      const element = afFormElement();
+      if (element)
+        window.CRM.$(element).trigger("crmFormError", {
           afform: form.meta,
           data: values,
           submissionResponse: submissionResponse.current,
@@ -619,7 +634,6 @@ function LoadedForm(props: LoadedFormProps) {
   const entities = useMemo(() => entityDeclarations(form.layout), [form]);
   // A redirect keeps the form busy until the browser leaves the page.
   const busy = save.isPending || !!saved?.redirect;
-  const root = useRef<HTMLFormElement>(null);
   // afCore's watch on $location.search() binds routeParams anew whenever the route changes.
   const expressions = useMemo(() => formExpressions(form.strings, route), [form, route]);
   const displays = useMemo(() => countDisplays(form.layout), [form]);
@@ -637,6 +651,24 @@ function LoadedForm(props: LoadedFormProps) {
         ? "saved"
         : "pristine";
   const showSubmitButton = !args.sid;
+  const island = useRef<IslandForm>(null);
+  // What holds the submit beyond the form itself, such as a checkout template still loading.
+  const [holds, setHolds] = useState<ReadonlyMap<string, string>>(new Map());
+  const hold = useCallback((key: string, reason: string | null) => {
+    setHolds((current) => {
+      if ((current.get(key) ?? null) === reason) return current;
+      const next = new Map(current);
+      if (reason === null) next.delete(key);
+      else next.set(key, reason);
+      return next;
+    });
+  }, []);
+  // An array, as the compiler memoises a Map iterator that the first read already consumed.
+  const held = Array.from(holds.values())[0];
+  // deviation:draft-save-holds-submit
+  // A submit waits for a running draft save, whose files and late answer would cross it.
+  const submitDisabled =
+    busy || closed !== null || reset.isPending || !prefilled || draft.isPending || !!held;
   const state: FormState = {
     data,
     update: setData,
@@ -647,9 +679,7 @@ function LoadedForm(props: LoadedFormProps) {
     edits,
     // deviation:closed-form-locked
     disabled: busy || closed !== null || reset.isPending || !!retry,
-    // deviation:draft-save-holds-submit
-    // A submit waits for a running draft save, whose files and late answer would cross it.
-    submitDisabled: busy || closed !== null || reset.isPending || !prefilled || draft.isPending,
+    submitDisabled,
     joinOffsets: offsets,
     routeParams: route,
     entities,
@@ -673,6 +703,8 @@ function LoadedForm(props: LoadedFormProps) {
         },
       },
       captcha: { respond: respondCaptcha, failures: submitFailures },
+      island,
+      hold,
     }),
     addTitle: setLabels,
   };
@@ -728,13 +760,8 @@ function LoadedForm(props: LoadedFormProps) {
 
   /** Lists and marks the invalid fields and points at the first; their message, or null. */
   function check(): string | null {
-    const controls = [
-      ...(root.current?.querySelectorAll<Control>("input, select, textarea") ?? []),
-    ];
-    // validity alone counts disabled controls, which the browser leaves out of its checks.
-    const invalid = controls.filter(
-      (control) => control.willValidate && (!control.validity.valid || shortOf(control) > 0),
-    );
+    const controls = controlsOf(root.current);
+    const invalid = controls.filter(isInvalid);
     // Only the listed fields take the error colours, not those added or shown later.
     for (const control of controls) control.toggleAttribute(LISTED, invalid.includes(control));
     const [first] = invalid;
@@ -765,6 +792,18 @@ function LoadedForm(props: LoadedFormProps) {
     save.mutate({ values: submission(data, captcha), saved: retry?.response });
   }
 
+  // Read after every render, also a flushSync(); both hold where the submit button is disabled.
+  useLayoutEffect(() => {
+    island.current = {
+      // deviation:checkout-submit-once
+      submit: () => {
+        if (!submitDisabled) submit();
+      },
+      // deviation:prefill-without-overlay
+      valid: () => !submitDisabled && !controlsOf(root.current).some(isInvalid),
+    };
+  });
+
   // postProcess() leaves for a redirect before it would show a message.
   if (saved?.message && !saved.redirect) {
     // The admin's HTML, with submitted values escaped by the server (Civi/Afreact/ConfirmationMessage.php).
@@ -781,19 +820,21 @@ function LoadedForm(props: LoadedFormProps) {
     );
   }
   const lines = failure?.message.split("\n") ?? [];
+  const saveLine =
+    draftStatus === "saving"
+      ? ts("Saving Draft")
+      : save.isSuccess
+        ? ts("Saved")
+        : draftStatus === "saved"
+          ? ts("Draft Saved")
+          : "";
   const status = uploading
     ? ts("Uploading %1", { 1: uploading })
     : !prefilled
       ? ts("Loading…")
       : busy
         ? ts("Saving…")
-        : draftStatus === "saving"
-          ? ts("Saving Draft")
-          : save.isSuccess
-            ? ts("Saved")
-            : draftStatus === "saved"
-              ? ts("Draft Saved")
-              : "";
+        : (held ?? saveLine);
   // afCore marks every form element afform-directive; theme rules anchor dropdowns and toolbars on it.
   return (
     <div className="afreact-form afform-directive" aria-busy={busy || !prefilled} ref={host}>

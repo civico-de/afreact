@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useId, useRef, useState } from "react";
+import { lazy, Suspense, useContext, useEffect, useId, useRef, useState } from "react";
+import type { AngularAssets } from "../../angular/island";
 import { api4, errorMessage } from "../../api/civi";
+import { FormContext } from "../Layout";
 import type { FieldOption } from "../types";
 import { Unsupported } from "../Unsupported";
 import { useFieldEnv } from "./env";
@@ -25,10 +27,24 @@ export interface CheckoutOption {
   fields?: CheckoutField[] | Record<string, CheckoutField>;
 }
 
+/** What the options' Angular templates need, loaded once one of them is chosen. */
+export interface CheckoutIslands {
+  /** The modules an island boots: afCore, afCheckout and the options' own. */
+  modules: string[];
+  /** Each templated option's label and own module (getAfformModule()). */
+  options: Record<string, { label: string; module: string | null }>;
+  assets: AngularAssets;
+}
+
 export interface CheckoutSettings {
   checkoutOptions: Record<string, CheckoutOption>;
   testMode: boolean;
+  /** Set by Civi\Afreact\Checkout while an option has a template. */
+  islands?: CheckoutIslands;
 }
+
+// The island's chunk and the options' Angular modules load once a templated option is chosen.
+const CheckoutIsland = lazy(() => import("./CheckoutIsland"));
 
 interface CheckoutBlockProps {
   /** The field's label, naming the group; undefined for a field without one. */
@@ -47,11 +63,24 @@ const isParams = (value: unknown): value is Params =>
 const COUNTRY = "billing_country_id-";
 const STATE = "billing_state_province_id-";
 
-/** afCheckoutBlock reads the option from the field on the form, then from the entity's fixed data. */
+/**
+ * A contribution value as the submit saves it, null while unset: the af-entity's fixed data
+ * overrides the field on the form (AbstractProcessor::preprocessSubmittedValues).
+ */
+export function contributionValue(
+  key: string,
+  values: Params,
+  entityData: Params | undefined,
+): unknown {
+  // deviation:checkout-value-as-saved
+  // afCheckoutBlock reads the field first and takes a 0 or false for unset (upstream bug).
+  const value = entityData && Object.hasOwn(entityData, key) ? entityData[key] : values[key];
+  return value === undefined || value === null || value === "" ? null : value;
+}
+
 function optionKey(values: Params, entityData: Params | undefined): string | null {
-  const own = values.checkout_option;
-  const key = typeof own === "string" && own ? own : entityData?.checkout_option;
-  return typeof key === "string" && key ? key : null;
+  const key = contributionValue("checkout_option", values, entityData);
+  return typeof key === "string" ? key : null;
 }
 
 function StateSelect({
@@ -304,8 +333,8 @@ function CheckoutInput({
 }
 
 /**
- * afCheckoutBlock: the selected checkout option's description and fields, written into
- * checkout_params; a change of option empties them. An option's Angular template is not shown.
+ * afCheckoutBlock: the selected checkout option's description, its Angular template as an
+ * island, and its fields, written into checkout_params; a change of option empties them.
  */
 export function CheckoutBlock({
   labelId,
@@ -351,8 +380,17 @@ export function CheckoutBlock({
         </div>
       )}
       {option?.description && <span>{option.description}</span>}
-      {option?.template && (
-        <Unsupported what={`checkout template ${option.template} (${option.label ?? key})`} />
+      {key !== null && option?.template && (
+        <CheckoutTemplate
+          optionKey={key}
+          template={option.template}
+          settings={settings}
+          params={params}
+          values={env.values}
+          entityData={env.entityData}
+          onChange={onChange}
+          disabled={disabled}
+        />
       )}
       {Object.values(option?.fields ?? {}).map((field) => (
         <div
@@ -369,5 +407,65 @@ export function CheckoutBlock({
         </div>
       ))}
     </div>
+  );
+}
+
+function CheckoutTemplate({
+  settings,
+  ...props
+}: {
+  optionKey: string;
+  template: string;
+  settings: CheckoutSettings;
+  params: Params;
+  values: Params;
+  entityData: Params | undefined;
+  onChange: (value: unknown) => void;
+  disabled: boolean;
+}) {
+  const { islands } = settings;
+  const holdKey = useId();
+  const hold = useContext(FormContext)?.hold;
+  const [phase, setPhase] = useState<"loading" | "ready" | "failed">("loading");
+  const current = islands ? phase : "failed";
+  // As the island names it: the option's label from the server, which the settings may lack.
+  const label =
+    islands?.options[props.optionKey]?.label ??
+    settings.checkoutOptions[props.optionKey]?.label ??
+    props.optionKey;
+  // The submit waits for the template, whose controls and checks are not there before it boots.
+  const reason =
+    current === "ready"
+      ? null
+      : current === "loading"
+        ? ts("Loading %1…", { 1: label })
+        : ts("%1 could not load, so the form cannot be submitted.", { 1: label });
+  useEffect(() => {
+    hold?.(holdKey, reason);
+  }, [hold, holdKey, reason]);
+  useEffect(
+    () => () => {
+      hold?.(holdKey, null);
+    },
+    [hold, holdKey],
+  );
+  if (!islands)
+    return (
+      <p className="crm-error" role="alert">
+        {ts("The page lists no Angular assets for the template of %1.", { 1: props.optionKey })}
+      </p>
+    );
+  return (
+    <Suspense fallback={<p role="status">{ts("Loading…")}</p>}>
+      {/* deviation:checkout-island-per-option */}
+      {/* A change of option or template boots a fresh island with empty details. */}
+      <CheckoutIsland
+        key={`${props.optionKey} ${props.template}`}
+        {...props}
+        settings={settings}
+        islands={islands}
+        onPhase={setPhase}
+      />
+    </Suspense>
   );
 }

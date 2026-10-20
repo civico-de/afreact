@@ -652,21 +652,72 @@ describe("AfreactForm", () => {
     );
   });
 
-  // deviation:form-events-on-wrapper
-  it("triggers crmFormSuccess on the renderer's wrapper, which af-form does not hear", async () => {
+  it("triggers crmFormError and crmFormSuccess on af-form, whose ancestors and page hear them", async () => {
     vi.mocked(window.CRM.$).mockImplementation((target) => events(target));
-    const onDocument = vi.fn<(event: Event) => void>();
-    const onAfForm = vi.fn<(event: Event) => void>();
-    document.addEventListener("crmFormSuccess", onDocument);
-    renderForm(() => [{ saved: true }]);
+    let attempts = 0;
+    renderForm(() => {
+      attempts += 1;
+      if (attempts === 1) throw apiError("Validation failed");
+      return [{ saved: true }];
+    });
     const button = await screen.findByRole("button", { name: "Save" });
-    button.closest("af-form")?.addEventListener("crmFormSuccess", onAfForm);
+    const afForm = button.closest("af-form");
+    const wrapper = afForm?.parentElement;
+    if (!afForm || !wrapper) throw new Error("The form has no af-form element.");
+    const heard: string[] = [];
+    const listening = new AbortController();
+    const listen = (where: string, target: EventTarget) => {
+      for (const name of ["crmFormError", "crmFormSuccess"]) {
+        const hear = (event: Event) => {
+          heard.push(`${where}: ${event.type}${event.target === afForm ? " from af-form" : ""}`);
+        };
+        target.addEventListener(name, hear, { signal: listening.signal });
+      }
+    };
+    listen("af-form", afForm);
+    listen("ancestor", wrapper);
+    listen("document", document);
+    await userEvent.click(button);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Validation failed");
     await userEvent.click(button);
     await waitFor(() => {
-      expect(onDocument).toHaveBeenCalled();
+      expect(heard).toHaveLength(6);
     });
-    expect(onAfForm).not.toHaveBeenCalled();
-    document.removeEventListener("crmFormSuccess", onDocument);
+    expect(heard).toEqual([
+      "af-form: crmFormError from af-form",
+      "ancestor: crmFormError from af-form",
+      "document: crmFormError from af-form",
+      "af-form: crmFormSuccess from af-form",
+      "ancestor: crmFormSuccess from af-form",
+      "document: crmFormSuccess from af-form",
+    ]);
+    listening.abort();
+  });
+
+  // deviation:form-error-own-response
+  it("sends crmFormError without the response of an earlier submit", async () => {
+    const trigger = vi.fn(() => selection);
+    const selection = jquerySelection({ trigger });
+    vi.mocked(window.CRM.$).mockReturnValue(selection);
+    let attempts = 0;
+    renderForm(() => {
+      attempts += 1;
+      if (attempts === 2) throw apiError("Validation failed");
+      return [{ saved: true }];
+    });
+    const button = await screen.findByRole("button", { name: "Save" });
+    await userEvent.click(button);
+    await waitFor(() => expect(screen.getByText("Saved")).toHaveAttribute("role", "status"));
+    await userEvent.click(button);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Validation failed");
+    expect(trigger).toHaveBeenCalledWith(
+      "crmFormSuccess",
+      expect.objectContaining({ submissionResponse: [{ saved: true }] }),
+    );
+    expect(trigger).toHaveBeenLastCalledWith(
+      "crmFormError",
+      expect.objectContaining({ submissionResponse: undefined }),
+    );
   });
 
   it("keeps the popup open for a confirmation message", async () => {
