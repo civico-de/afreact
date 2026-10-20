@@ -7,6 +7,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
+  type Ref,
 } from "react";
 import type { AutocompleteItem, SearchContext, SearchPage } from "./autocomplete";
 
@@ -80,6 +81,12 @@ const classes = (...names: (string | false | undefined)[]) => names.filter(Boole
 
 function failure(error: unknown): string {
   return error instanceof Error ? error.message : JSON.stringify(error);
+}
+
+/** Sets a ref of either kind, as React does on attach and detach. */
+function assignRef<T>(ref: Ref<T> | undefined, node: T | null) {
+  if (typeof ref === "function") ref(node);
+  else if (ref) ref.current = node;
 }
 
 /** Consecutive items of one optgroup, with the list index of the first. */
@@ -268,6 +275,27 @@ export function Combobox(props: ComboboxProps) {
     props.onRemove(item);
     input.current?.focus();
   };
+  // The input's own ref stays out of getInputProps, where the compiler cannot tell that
+  // Downshift only stores it; both are set where React attaches the element.
+  const { ref: downshiftRef, ...inputProps } = combobox.getInputProps({
+    type: "text",
+    className: classes("select2-input", !hasValue && "select2-default"),
+    placeholder: hasValue ? undefined : props.placeholder,
+    disabled,
+    autoFocus: props.autoFocus,
+    "aria-labelledby": undefined,
+    "aria-describedby": props.describedBy,
+    "aria-required": props.required,
+    "aria-invalid": props.invalid,
+    "aria-busy": props.resolving,
+    onKeyDown: removeLast,
+    onChange: (event) => {
+      setQuery(event.currentTarget.value);
+    },
+    onFocus: (event) => {
+      if (single) event.currentTarget.select();
+    },
+  });
 
   return (
     <div
@@ -302,26 +330,11 @@ export function Combobox(props: ComboboxProps) {
           ))}
         <li className="select2-search-field">
           <input
-            {...combobox.getInputProps({
-              ref: input,
-              type: "text",
-              className: classes("select2-input", !hasValue && "select2-default"),
-              placeholder: hasValue ? undefined : props.placeholder,
-              disabled,
-              autoFocus: props.autoFocus,
-              "aria-labelledby": undefined,
-              "aria-describedby": props.describedBy,
-              "aria-required": props.required,
-              "aria-invalid": props.invalid,
-              "aria-busy": props.resolving,
-              onKeyDown: removeLast,
-              onChange: (event) => {
-                setQuery(event.currentTarget.value);
-              },
-              onFocus: (event) => {
-                if (single) event.currentTarget.select();
-              },
-            })}
+            {...inputProps}
+            ref={(node) => {
+              assignRef(downshiftRef, node);
+              input.current = node;
+            }}
           />
         </li>
       </ul>
