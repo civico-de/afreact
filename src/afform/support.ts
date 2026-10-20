@@ -362,6 +362,15 @@ export function fieldAttributesNote(problems: string[], name: string): string {
   return `${problems.join(", ")} on ${name}`;
 }
 
+/** A block renders its layout alone; core's quick edit forms repeat the join's actions on it, inert. */
+const BLOCK_ATTRIBUTES = new Set(["#tag", "#children", "af-if", "actions"]);
+
+/** Attributes on a block element, which the renderer does not render. */
+export function unknownBlockAttributes(node: ElementNode): string | null {
+  const unknown = Object.keys(node).filter((attr) => !BLOCK_ATTRIBUTES.has(attr));
+  return unknown.length ? `${unknown.join(", ")} on <${node["#tag"]}>` : null;
+}
+
 /** af-field attributes a filter field does not apply. */
 export function unknownFilterAttributes(node: ElementNode): string[] {
   return Object.keys(node).filter((attr) => !FILTER_ATTRIBUTES.has(attr));
@@ -544,7 +553,10 @@ const KIND_PROBLEMS: Record<NodeKind, (node: ElementNode, scope: Scope) => strin
   routeCondition: (node, scope) => KIND_PROBLEMS[renderedKind(node)](node, scope),
   entity: () => [],
   field: fieldProblems,
-  block: childProblems,
+  block: (node, scope) => [
+    ...[unknownBlockAttributes(node)].filter((note) => note !== null),
+    ...childProblems(node, scope),
+  ],
   form: (node, scope) => childProblems(node, { ...scope, form: true }),
   submit: childProblems,
   draft: (node, scope) => [

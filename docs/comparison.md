@@ -151,10 +151,8 @@ renderers.
 ### Not implemented in the React renderer
 
 Each of these shows a visible "Not supported by the React renderer" note
-instead of being dropped. Each item names why it is left out: core does not
-support it either, it runs Angular code the renderer cannot run, React does
-not render it yet, or FormBuilder never writes it. The survey behind this
-covered every `*.aff.html` in core and the dev stack's extensions.
+instead of being dropped. Each item names why it is left out. The survey behind
+this covered every `*.aff.html` in core and the dev stack's extensions.
 
 Angular code from elsewhere, which a React renderer cannot run:
 
@@ -232,6 +230,14 @@ What FormBuilder never writes:
 - `store-values` on an entity fieldset: FormBuilder's "Remember Filters" sets
   it on a search fieldset only, which the renderer handles; on an entity
   fieldset afFieldset would keep the typed values in the browser's storage
+
+What core renders on an element the renderer does not draw:
+
+- attributes on a block element (`<afblock-…>`): the renderer shows a block's
+  layout without an element of its own. FormBuilder's style menu sets `style`
+  on a block, and a container that becomes a block keeps its `af-title`.
+  `actions`, which core's quick edit forms repeat there from the join, is read
+  by nothing on the block and causes no note
 
 The support report (`civicrm/admin/afreact`) lists these per form; for bulk
 actions it asks the server for each display's tasks. Its notes on a site's

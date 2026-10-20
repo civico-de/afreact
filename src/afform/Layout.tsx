@@ -67,6 +67,7 @@ import {
   renderedKind,
   routeCondition,
   type NodeKind,
+  unknownBlockAttributes,
   unknownFieldAttributes,
   unsupportedElement,
 } from "./support";
@@ -138,6 +139,17 @@ export function Nodes({ nodes }: { nodes: LayoutNode[] }): ReactNode {
 
 const Children = ({ node }: { node: ElementNode }) => <Nodes nodes={node["#children"] ?? []} />;
 
+/** A block's compiled layout, without an element of its own. */
+function BlockNode({ node }: { node: ElementNode }) {
+  const note = unknownBlockAttributes(node);
+  return (
+    <>
+      {note !== null && <Unsupported what={note} />}
+      <Children node={node} />
+    </>
+  );
+}
+
 /** The component rendering each kind of element. */
 const KIND_VIEWS: Record<NodeKind, (props: { node: ElementNode }) => ReactNode> = {
   conditional: Conditional,
@@ -145,7 +157,7 @@ const KIND_VIEWS: Record<NodeKind, (props: { node: ElementNode }) => ReactNode> 
   routeCondition: RouteCondition,
   entity: () => null,
   field: FieldNode,
-  block: Children,
+  block: BlockNode,
   form: FormNode,
   submit: SubmitButton,
   draft: DraftButton,

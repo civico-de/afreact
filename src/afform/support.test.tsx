@@ -38,9 +38,13 @@ const layout: LayoutNode[] = [
           field("first_name", {}, { "ng-model": "x", "af-required": "(broken" }),
           field("state", { label: "State", input_type: "Signature" }),
           field("middle_name", { label: "Middle", template: "~/myExt/fields/Text.html" }),
+          // FormBuilder's style menu styles a block; a container keeps its title on becoming one.
+          { "#tag": "afblock-name-individual", "af-title": "Name", style: "margin: 0" },
           { "#tag": "div", "af-if": always, "#children": [field("last_name")] },
           {
             "#tag": "afblock-contact-email",
+            // As core's quick edit forms write it: nothing reads it off the block element.
+            actions: "{update: true, delete: true}",
             "#children": [
               {
                 "#tag": "div",
@@ -127,6 +131,7 @@ describe("layoutProblems", () => {
       'ng-model, af-required="(broken" on first_name',
       "field type Signature (State)",
       "field template ~/myExt/fields/Text.html (Middle)",
+      "af-title, style on <afblock-name-individual>",
     ]);
   });
 
