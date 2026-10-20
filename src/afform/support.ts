@@ -279,6 +279,14 @@ export function unsupportedElement(node: ElementNode): string | null {
     return /^(ng|af|crm)-/.test(attr) && !HANDLED.has(attr) ? [attr] : [];
   });
   if (node["ng-click"] !== undefined) unknown.push(`ng-click=${JSON.stringify(node["ng-click"])}`);
+  // afFieldset's bindings: React remembers values in a search fieldset only, and field-data is a
+  // scope expression.
+  if (node["af-fieldset"] !== undefined) {
+    if (node["af-fieldset"] !== "" && node["store-values"] !== undefined)
+      unknown.push("store-values");
+    if (node["field-data"] !== undefined)
+      unknown.push(`field-data=${JSON.stringify(node["field-data"])}`);
+  }
   return unknown.length ? unknown.join(", ") : null;
 }
 

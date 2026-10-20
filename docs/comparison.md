@@ -152,10 +152,9 @@ renderers.
 
 Each of these shows a visible "Not supported by the React renderer" note
 instead of being dropped. Each item names why it is left out: core does not
-support it either, it runs Angular code the renderer cannot run, or React does
-not render it yet. The
-survey behind this covered every `*.aff.html` in core and the dev stack's
-extensions.
+support it either, it runs Angular code the renderer cannot run, React does
+not render it yet, or FormBuilder never writes it. The survey behind this
+covered every `*.aff.html` in core and the dev stack's extensions.
 
 Angular code from elsewhere, which a React renderer cannot run:
 
@@ -199,6 +198,8 @@ Angular code from elsewhere, which a React renderer cannot run:
   `ids.join(',')` and the task's data names. They stay in the actions menu,
   disabled, with the note as their title; a row link to one alerts. A single
   extension's dialog can be rebuilt as the core ones were.
+- `field-data` on an `af-fieldset`, an expression for the fieldset's values;
+  civi_mail's own Angular templates use it, outside any form
 - in a batch display, a formula other than fields, numbers and `+ - * / ( )`:
   core evaluates the formula as an Angular expression. The only formula core
   defines, Contribution's `net_amount` as `[total_amount] - [fee_amount]`, is
@@ -225,6 +226,12 @@ Not in React yet:
 - an `ng-if` on a route parameter around fields, entities, blocks, joins or
   repeats: Angular sets up what it holds only while the condition holds, the
   renderer sets up a form's fields when the form loads, shown or not
+
+What FormBuilder never writes:
+
+- `store-values` on an entity fieldset: FormBuilder's "Remember Filters" sets
+  it on a search fieldset only, which the renderer handles; on an entity
+  fieldset afFieldset would keep the typed values in the browser's storage
 
 The support report (`civicrm/admin/afreact`) lists these per form; for bulk
 actions it asks the server for each display's tasks. Its notes on a site's

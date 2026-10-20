@@ -345,6 +345,20 @@ describe("layoutProblems", () => {
   });
 });
 
+describe("afFieldset bindings", () => {
+  it("reports the bindings the renderer does not apply", async () => {
+    const bound = form([
+      { "#tag": "div", "af-fieldset": "Individual1", "store-values": "1" },
+      { "#tag": "div", "af-fieldset": "", "field-data": "mailing" },
+    ]);
+    // Only a search fieldset remembers its values; field-data is a scope expression.
+    const report = ["store-values", 'field-data="mailing"'];
+    expect(layoutProblems(bound)).toEqual(report);
+    expect(await shownFormNotes(bound)).toEqual(report);
+    expect(layoutProblems([{ "#tag": "div", "af-fieldset": "", "store-values": "1" }])).toEqual([]);
+  });
+});
+
 /** A form of one contact, saved by its button. */
 function form(children: LayoutNode[]): LayoutNode[] {
   return [
