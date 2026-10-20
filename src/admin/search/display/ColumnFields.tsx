@@ -1256,6 +1256,7 @@ function SubsearchColumn(props: ColumnEditing) {
           </>
         )}
       </div>
+      {/* deviation:subsearch-missing-search-kept */}
       {searchName && info.data === null && (
         <p className="crm-error" role="alert">
           {ts("The saved search %1 no longer exists; choose another one.", { 1: searchName })}

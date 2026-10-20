@@ -229,6 +229,17 @@ describe("ColumnTypeFields", () => {
       expect(saved?.subsearch).toEqual({ display: null, filters: [], subsearch_mode: "dropdown" });
       expect(screen.queryByRole("columnheader", { name: "Filter Subsearch Display" })).toBeNull();
     });
+
+    // deviation:subsearch-missing-search-kept
+    it("keeps a saved search that no longer exists, saying so", async () => {
+      mockApi({ "SavedSearch.get": () => [], "SearchDisplay.get": () => [] });
+      const initial = column("Gone");
+      renderColumn(initial);
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "The saved search Gone no longer exists; choose another one.",
+      );
+      expect(saved).toEqual(initial);
+    });
   });
 
   // deviation:include-path-kept
