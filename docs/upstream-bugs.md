@@ -1011,6 +1011,11 @@ munged import column (`<join>_<field>`), so every field reads 0 (read from the
 code, not run). The React renderer reads each field from the column showing
 it. `deviation:batch-formula-joined-columns`
 
+**A batch total does not count a 0.** `getTally()` skips every falsy value
+before it counts (`if (row.data[col.spec.name])`), so a COUNT tally leaves out
+a number field set to 0 while it counts the text "0" (read from the code, not
+run). The React renderer counts every filled value but an unticked box. `deviation:batch-count-zero`
+
 ## Chart display
 
 **A removed chart keeps running.** `disconnectedCallback()` in chart_kit's

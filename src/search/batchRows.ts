@@ -175,8 +175,8 @@ export function tallyOf(rows: BatchRow[], column: Column): number {
   let total = 0;
   for (const row of rows) {
     const value = row[name];
-    // Falsy values count for nothing, as `if (row.data[...])` in core.
-    if (!value) continue;
+    // Empty values and an unticked box count for nothing; a 0 counts. deviation:batch-count-zero
+    if (isEmpty(value) || value === false) continue;
     if (fn === "COUNT") {
       total++;
       continue;

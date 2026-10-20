@@ -124,6 +124,16 @@ describe("tallies", () => {
     { _id: 3, total_amount: "", fee_amount: "0", flag: true },
   ];
 
+  // deviation:batch-count-zero
+  it("counts a typed 0 as filled, an unticked box not", () => {
+    const zero: BatchRow[] = [
+      { _id: 1, total_amount: 0, flag: false },
+      { _id: 2, total_amount: "0", flag: null },
+    ];
+    expect(tallyOf(zero, field("total_amount", { tally: { fn: "COUNT" } }))).toBe(2);
+    expect(tallyOf(zero, field("flag", { tally: { fn: "COUNT" } }))).toBe(0);
+  });
+
   // deviation:batch-tally-exact
   it("sums typed amounts exactly, counts filled values and averages over every row", () => {
     expect(tallyOf(rows, amount)).toBe(30.3);
