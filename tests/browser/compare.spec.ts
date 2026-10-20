@@ -6,6 +6,7 @@
  * as a static file); the previous debug setting is restored afterwards.
  * Numbers go to stdout and the report; the assertions only guard the harness.
  */
+import { writeFileSync } from "node:fs";
 import { expect, test, type BrowserContext } from "@playwright/test";
 import { median, resourceMetrics, type PageMetrics } from "../../src/compare/metrics";
 import { AUTH, readyAt, setDebug } from "./harness";
@@ -154,4 +155,79 @@ test("prints the request waterfall of a cold load", async ({ browser }, testInfo
   console.log(report);
   await testInfo.attach("waterfall.md", { body: report, contentType: "text/markdown" });
   expect(lines.some((line) => line.includes("ajax/api4"))).toBe(true);
+});
+
+test("prints what a checkout template's island adds to a cold page", async ({
+  browser,
+}, testInfo) => {
+  test.setTimeout(ROUNDS * 60_000);
+  const runs: { ms: number; files: { name: string; bytes: number; decoded: number }[] }[] = [];
+  let variableBytes = 0;
+  for (let round = 0; round < ROUNDS; round++) {
+    const context = await browser.newContext({ storageState: AUTH });
+    const page = await context.newPage();
+    // CiviCRM pages fetch more resources than the default buffer of 250 holds.
+    await page.addInitScript(() => {
+      performance.setResourceTimingBufferSize(2000);
+    });
+    await page.goto("/civicrm/afreact/render?name=afformAfreactCheckoutDonation&renderer=react");
+    const card = page.locator(".afreact-render").getByLabel("Demo card");
+    await expect(card).toBeVisible({ timeout: 30_000 });
+    // The page's own requests (prefill, fonts) are done before the choice.
+    await page.waitForLoadState("networkidle");
+    const before = await page.evaluate(() => {
+      const islands: unknown = Reflect.get(Object(window.CRM.vars?.afreact?.afCheckout), "islands");
+      return {
+        entries: performance.getEntriesByType("resource").length,
+        variable: new TextEncoder().encode(JSON.stringify(islands)).length,
+      };
+    });
+    variableBytes = before.variable;
+    const ms = await card.evaluate(
+      (radio) =>
+        new Promise<number>((resolve) => {
+          const start = performance.now();
+          const shown = () => {
+            if (document.querySelector("[ng-include] input")) resolve(performance.now() - start);
+            else requestAnimationFrame(shown);
+          };
+          if (radio instanceof HTMLElement) radio.click();
+          shown();
+        }),
+    );
+    const files = await page.evaluate(
+      (from) =>
+        performance
+          .getEntriesByType("resource")
+          .slice(from)
+          .filter((entry) => entry instanceof PerformanceResourceTiming)
+          .map(({ name, encodedBodySize, decodedBodySize }) => ({
+            name:
+              new URL(name).searchParams.get("an") ??
+              new URL(name).pathname.split("/").at(-1) ??
+              name,
+            bytes: encodedBodySize,
+            decoded: decodedBodySize,
+          })),
+      before.entries,
+    );
+    runs.push({ ms, files });
+    await context.close();
+  }
+  const [first] = runs;
+  if (!first) throw new Error("No round ran.");
+  const kB = (bytes: number) => `${(bytes / 1024).toFixed(1)} kB`;
+  const report = [
+    `Checkout island, cold (median of ${String(ROUNDS)}; the page variable is ${kB(variableBytes)})`,
+    "| file | encoded | decoded |",
+    "|---|---|---|",
+    ...first.files.map((file) => `| ${file.name} | ${kB(file.bytes)} | ${kB(file.decoded)} |`),
+    `| total | ${kB(median(runs.map((run) => run.files.reduce((sum, f) => sum + f.bytes, 0))))} | ${kB(median(runs.map((run) => run.files.reduce((sum, f) => sum + f.decoded, 0))))} |`,
+    `| choice to template | ${String(Math.round(median(runs.map((run) => run.ms))))} ms | |`,
+  ].join("\n");
+  console.log(report);
+  await testInfo.attach("checkout-island.md", { body: report, contentType: "text/markdown" });
+  writeFileSync(testInfo.outputPath("checkout-island.md"), report);
+  // With debug off the asset builder answers with a static file named after the modules' hash.
+  expect(first.files.some((file) => /^angular-modules\b.*\.js$/.test(file.name))).toBe(true);
 });
