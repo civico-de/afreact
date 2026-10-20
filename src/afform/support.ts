@@ -9,7 +9,14 @@ import { parseConditions } from "./conditions";
 import { interpolate, routeTest, type RouteTest } from "./expressions";
 import { INPUT_TYPES, inputTypeNote, templateNote } from "./Field";
 import { entityRefProblem } from "./fields/autocomplete";
-import { isTabOf, TAB_COUNT, tabOutsideNote, tabsetProblems, tabsOf } from "./tabsets";
+import {
+  isTabOf,
+  TAB_COUNT,
+  TABSET_ATTRIBUTES,
+  tabOutsideNote,
+  tabsetProblems,
+  tabsOf,
+} from "./tabsets";
 import { fileOutsideFormNote } from "./fields/File";
 import { RANGE_TYPES } from "./fields/SearchRange";
 import type { ElementNode, FieldDefn, LayoutNode } from "./types";
@@ -300,8 +307,11 @@ function isResetButton(node: ElementNode): boolean {
 export function unsupportedElement(node: ElementNode): string | null {
   const tag = node["#tag"];
   if (!HTML_TAGS.has(tag)) return `<${tag}>`;
+  // crmUiTabSet's settings, which the tab set checks.
+  const tabset = node["crm-ui-tab-set"] !== undefined;
   const unknown = Object.keys(node).flatMap((attr) => {
     if (attr === "ng-if") return ngIfNotes(node);
+    if (tabset && TABSET_ATTRIBUTES.has(attr)) return [];
     return HANDLED.has(attr) || OWN.has(attr) || carried(attr) ? [] : [attr];
   });
   if (node["ng-click"] !== undefined) unknown.push(`ng-click=${JSON.stringify(node["ng-click"])}`);

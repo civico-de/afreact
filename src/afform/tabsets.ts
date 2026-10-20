@@ -10,7 +10,7 @@ import { isElement } from "./types";
 /** A display's `total-count` that puts its row count into the badge of the tab around it. */
 export const TAB_COUNT = "$parent.count";
 
-const TABSET_ATTRIBUTES = new Set([
+export const TABSET_ATTRIBUTES = new Set([
   "#tag",
   "#children",
   "class",

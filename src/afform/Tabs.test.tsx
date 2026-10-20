@@ -661,11 +661,16 @@ describe("support for tab sets", () => {
   it("dispatches both kinds of tab set", () => {
     expect(nodeKind({ "#tag": "af-tabset" })).toBe("tabset");
     expect(nodeKind({ "#tag": "div", "crm-ui-tab-set": "" })).toBe("tabset");
+    const settings = { "url-arg": "tab", "remember-selection": "true", "selected-tab": "a" };
+    expect(nodeKind({ "#tag": "div", "crm-ui-tab-set": "", ...settings })).toBe("tabset");
     expect(nodeKind({ "#tag": "af-tab" })).toBe("tab");
     expect(nodeKind({ "#tag": "div", "crm-ui-tab": "", id: "x" })).toBe("unknown");
   });
 
   it("finds nothing in core's tabbed forms", () => {
+    const settings = { "url-arg": "tab", "remember-selection": "true" };
+    const set = uiTabs.map((node) => (isElement(node) ? { ...node, ...settings } : node));
+    expect(layoutProblems(set)).toEqual([]);
     expect(layoutProblems(searchTabs({ "url-arg": "tab", "remember-selection": "true" }))).toEqual(
       [],
     );
