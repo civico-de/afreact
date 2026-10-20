@@ -198,8 +198,12 @@ export interface EditorError {
   tab?: string;
 }
 
+const INT_UNSIGNED_MAX = 4294967295;
+
 export const validTimeout = (timeout: unknown) =>
-  timeout === null || timeout === undefined || (Number.isInteger(timeout) && Number(timeout) >= 0);
+  timeout === null ||
+  timeout === undefined ||
+  (Number.isInteger(timeout) && Number(timeout) >= 0 && Number(timeout) <= INT_UNSIGNED_MAX);
 
 export function validate(search: EditorSearch, groupExists: boolean): EditorError[] {
   const required = (label: string) => ts("%1 is a required field.", { 1: label });

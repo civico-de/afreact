@@ -105,6 +105,8 @@ describe("saving", () => {
       { message: "Query Timeout must be a whole number of seconds, 0 or more.", tab: "settings" },
     ]);
     expect(validate(saved({ timeout: 1.5 }), false)).toHaveLength(1);
+    expect(validate(saved({ timeout: 4294967296 }), false)).toHaveLength(1);
+    expect(validate(saved({ timeout: 4294967295 }), false)).toEqual([]);
     expect(validate(saved({ timeout: 0 }), false)).toEqual([]);
     expect(validate(saved({ timeout: null }), false)).toEqual([]);
   });
