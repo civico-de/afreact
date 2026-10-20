@@ -1109,7 +1109,8 @@ offered task is on. `deviation:tasks-all-enabled-by-name`
 a display's styles, a column's icons and a link look up the chosen column as a
 field name (`searchAdminCssRules`, `searchAdminIcons`, `crmSearchConditions`
 `getField`), so for `gender_id:label AS g` they find
-no field and offer a plain text input instead of the options. afreact resolves
+no field and offer a plain text input instead of the options; a new style rule
+of such a column starts without a condition on it. afreact resolves
 the alias through the search's select first. `deviation:rule-condition-alias-field`
 
 **An aliased column cannot be coloured.** The colour option looks up the

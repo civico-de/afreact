@@ -825,12 +825,9 @@ export function addCssRule(
   defaultField?: string,
 ): void {
   const clause: unknown[] = [style];
-  if (defaultField && getFieldFor(ctx, defaultField)) clause.push(defaultField, "=");
+  if (defaultField && keyField(ctx, defaultField)) clause.push(defaultField, "=");
   item.cssRules = [...(item.cssRules ?? []), clause];
 }
-
-const getFieldFor = (ctx: DisplayContext, name: string) =>
-  parseExpr(ctx.meta, name, ctx.search).args[0]?.field;
 
 /** onSelectField: a chosen field starts with "=", no field means always. */
 export function withConditionField(clause: unknown[], offset: number, field: string): unknown[] {

@@ -521,3 +521,14 @@ describe("colours of an aliased column", () => {
     ]);
   });
 });
+
+// deviation:rule-condition-alias-field
+it("starts a style rule of an aliased column with a condition on it", () => {
+  const item: { cssRules?: unknown[][] } = {};
+  const aliased = {
+    ...ctx,
+    search: { api_entity: "Contact", api_params: { version: 4, select: ["gender_id:label AS g"] } },
+  };
+  addCssRule(aliased, item, "bg-danger", "g");
+  expect(item.cssRules).toEqual([["bg-danger", "g", "="]]);
+});
