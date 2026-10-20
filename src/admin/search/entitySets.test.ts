@@ -217,6 +217,19 @@ describe("entity sets", () => {
     expect(group("title")).toEqual(["visibility:label", "title AS v", "COUNT(title)"]);
   });
 
+  it("renames a function's fields and leaves its string literals as written", () => {
+    const params = setEntitySet(
+      meta,
+      {
+        select: ['GROUP_CONCAT(visibility SEPARATOR "\\n \\" visibility") AS n'],
+        sets: [["UNION ALL", "Group", "get", { select: ["visibility"] }]],
+      },
+      0,
+      { select: ["title"] },
+    );
+    expect(params.select).toEqual(['GROUP_CONCAT(title SEPARATOR "\\n \\" visibility") AS n']);
+  });
+
   it("renames no field into one that a row keeps, even in a swap", () => {
     const params = setEntitySet(
       meta,
