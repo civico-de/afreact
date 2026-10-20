@@ -74,7 +74,8 @@ function equals(a: unknown, b: unknown): boolean {
 
 function like(text: string, pattern: string): boolean {
   const source = pattern
-    .replace(/([.+?^=!:${}()|[\]/\\])/g, "\\$1")
+    // An asterisk is text too, where core's escaping leaves it. deviation:condition-like-asterisk
+    .replace(/([.*+?^=!:${}()|[\]/\\])/g, "\\$1")
     .replace(/%/g, ".*")
     .replace(/_/g, ".");
   return new RegExp(`^${source}$`, "i").test(text);
@@ -111,7 +112,7 @@ function isEmpty(value: unknown): boolean {
   return typeof value === "object" && !Object.keys(value).length;
 }
 
-/** undefined for an operator afForm does not know (IS NULL): the clause decides nothing. */
+/** undefined for an operator afForm does not know: the clause decides nothing. */
 function compare(left: unknown, op: string, right: unknown): boolean | undefined {
   const yes = op !== "!=" && !op.includes("NOT ");
   switch (op) {
@@ -130,6 +131,10 @@ function compare(left: unknown, op: string, right: unknown): boolean | undefined
     case "IS EMPTY":
     case "IS NOT EMPTY":
       return isEmpty(left) === yes;
+    // Offered by the builder and checked by the server, as is_null(). deviation:condition-is-null
+    case "IS NULL":
+    case "IS NOT NULL":
+      return (left === null || left === undefined) === yes;
     case "CONTAINS":
     case "NOT CONTAINS":
       if (Array.isArray(left)) return left.includes(right) === yes;

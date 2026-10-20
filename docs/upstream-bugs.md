@@ -403,6 +403,20 @@ a checkbox list or multi-select emptied again (`[]`) and an emptied range
 React renderer takes unset, `""`, `[]` and `{}` as empty and `false` and `0`
 as answers. `deviation:condition-is-empty-values`
 
+**"No Value" and "Any Value" conditions decide nothing.** The rules dialog
+offers `IS NULL` and `IS NOT NULL` (`afGuiCondition.component.js`), and the
+server checks them as `is_null()` (`ArrayQueryActionTrait::compareValues()`),
+but `compareConditions()` in `afForm.component.js` has no case for them, so
+the clause counts as true and an element shown on "No Value" stays visible
+after the field is filled (read from the code, not run). The React renderer
+tests for an unset value, as the server does. `deviation:condition-is-null`
+
+**A LIKE pattern with an asterisk breaks the rule.** `compareConditions()`
+escapes the pattern's regex characters but not `*`, so `%*%` ("contains an
+asterisk") throws "Nothing to repeat" and `a*` matches "aaa" but not "a*"
+(read from the code, run in node). The React renderer matches the asterisk as
+text. `deviation:condition-like-asterisk`
+
 ## Joins and repeats
 
 **Selecting another record keeps the last one's join records.** An autofill

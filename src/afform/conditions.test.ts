@@ -76,9 +76,39 @@ describe("checkConditions", () => {
     expect(check([])).toBe(true);
   });
 
+  // deviation:condition-is-null
+  it("tests a value for No Value and Any Value as the server does", () => {
+    const unset = "Individual1[0][fields][missing]";
+    expect(check([[unset, "IS NULL"]])).toBe(true);
+    expect(check([[unset, "IS NOT NULL"]])).toBe(false);
+    expect(check([[name, "IS NULL"]])).toBe(false);
+    expect(
+      check([
+        [
+          "OR",
+          [
+            [unset, "IS NULL"],
+            [name, "=", '"Bob"'],
+          ],
+        ],
+      ]),
+    ).toBe(true);
+  });
+
+  // deviation:condition-like-asterisk
+  it("matches an asterisk in a LIKE pattern as itself", () => {
+    const starred = { Individual1: [{ fields: { first_name: "a*" } }] };
+    expect(checkConditions([[name, "LIKE", '"%*%"']], starred)).toBe(true);
+    expect(
+      checkConditions([[name, "LIKE", '"a*"']], {
+        Individual1: [{ fields: { first_name: "aaa" } }],
+      }),
+    ).toBe(false);
+  });
+
   it("lets a clause with an operator afForm does not know decide nothing", () => {
     const no: Condition = [name, "=", '"Bob"'];
-    for (const op of ["IS NULL", "IS NOT NULL"]) {
+    for (const op of ["REGEXP", "NOT REGEXP"]) {
       const unknown: Condition = [name, op, "[1,2]"];
       expect(check([unknown])).toBe(true);
       expect(check([unknown, no])).toBe(false);
