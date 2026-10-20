@@ -891,22 +891,28 @@ export function LinkConditions({
       {clauses.map((clause, index) => {
         const head = typeof clause[0] === "string" ? clause[0] : "";
         const name = ts("Condition %1 of %2", { 1: index + 1, 2: label });
+        const headPicker = (
+          <Picker
+            id={`${id}-${String(index)}`}
+            label={name}
+            hiddenLabel
+            placeholder=" "
+            single
+            options={fields}
+            value={[head]}
+            onChange={(picked) => {
+              set(index, picked[0] === undefined ? null : [String(picked[0]), "="]);
+            }}
+          />
+        );
         return (
           <div className="form-inline" key={index}>
-            {head === "check user permission" ? (
+            {head === "no results" ? (
+              // The server tests only for an empty result, whatever the operator.
+              headPicker
+            ) : head === "check user permission" ? (
               <>
-                <Picker
-                  id={`${id}-${String(index)}`}
-                  label={name}
-                  hiddenLabel
-                  placeholder=" "
-                  single
-                  options={fields}
-                  value={[head]}
-                  onChange={(picked) => {
-                    set(index, picked[0] === undefined ? null : [String(picked[0]), "="]);
-                  }}
-                />
+                {headPicker}
                 <select
                   className="form-control crm-auto-width"
                   aria-label={ts("Operator for %1", { 1: name })}

@@ -1,7 +1,35 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { NumberInput } from "./common";
+import { renderWithQuery } from "../../../test/render";
+import { metadata as meta } from "../../../test/searchMetadata";
+import { LinkConditions, NumberInput } from "./common";
+import type { DisplayContext } from "./model";
+
+const ctx: DisplayContext = {
+  meta,
+  search: { api_entity: "Contact", api_params: { version: 4, select: ["id", "display_name"] } },
+  defaultPagerSize: 50,
+  entityIndex: true,
+  customDateFormat: true,
+};
+
+describe("LinkConditions", () => {
+  it("offers no operator or value for No Results, which the server ignores", () => {
+    renderWithQuery(
+      <LinkConditions
+        ctx={ctx}
+        conditions={[["no results", "="]]}
+        isToolbar
+        label="Button 1"
+        onChange={() => undefined}
+      />,
+    );
+    expect(screen.getByRole("textbox", { name: "Condition 1 of Button 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.getAllByRole("textbox")).toHaveLength(2);
+  });
+});
 
 describe("NumberInput", () => {
   // deviation:number-input-rejects-invalid
