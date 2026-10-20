@@ -35,7 +35,8 @@ function joinRecord(item: PrefillItem, scope: Scope): Values | undefined {
 export type Filled = Record<string, Record<string, { before?: EntityItem; after: EntityItem }>>;
 
 export interface Selection {
-  apply: (data: FormData) => FormData;
+  /** Writes the selection at `place`, the selecting field's place as it stands by then. */
+  apply: (data: FormData, at: Scope) => FormData;
   /** What the selection filled into other entities, e.g. through relationship autofill. */
   filled: Filled;
 }
@@ -58,10 +59,10 @@ export async function loadSelected(
   const empty = id === null || id === undefined || id === "" || (Array.isArray(id) && !id.length);
   if (empty)
     return {
-      apply: (data) =>
+      apply: (data, place) =>
         replaceRecord(
           unfill(data, previous, entities),
-          scope,
+          place,
           join === undefined ? { ...entities[entity]?.data } : {},
           true,
         ),
@@ -82,8 +83,8 @@ export async function loadSelected(
   if (join !== undefined) {
     const record = joinRecord(item, scope);
     return {
-      apply: (data) =>
-        replaceRecord(data, scope, { ...currentRecord(data, scope), ...record }, false),
+      apply: (data, place) =>
+        replaceRecord(data, place, { ...currentRecord(data, place), ...record }, false),
       filled: previous,
     };
   }
@@ -92,7 +93,7 @@ export async function loadSelected(
   const others = result.filter((candidate) => candidate.name !== entity);
   const filled: Filled = {};
   return {
-    apply: (current) => {
+    apply: (current, place) => {
       const reset = unfill(current, previous, entities);
       const data = applyPrefill(reset, others, entities);
       for (const other of others)
@@ -103,8 +104,8 @@ export async function loadSelected(
         }
       return replaceRecord(
         data,
-        scope,
-        { ...currentRecord(data, scope), ...loaded?.fields, ...entities[entity]?.data },
+        place,
+        { ...currentRecord(data, place), ...loaded?.fields, ...entities[entity]?.data },
         false,
         loaded?.joins,
       );
@@ -134,6 +135,28 @@ function unfill(data: FormData, filled: Filled, entities: Record<string, EntityD
 }
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/** A place after the item at `position` of `repeat` was removed; later items move up one. */
+export function placeAfterRemoval(scope: Scope, repeat: Scope, position: number): Scope {
+  if (scope.entity !== repeat.entity) return scope;
+  if (repeat.join === undefined)
+    return scope.index > position ? { ...scope, index: scope.index - 1 } : scope;
+  const joinIndex = scope.joinIndex ?? 0;
+  return scope.index === repeat.index && scope.join === repeat.join && joinIndex > position
+    ? { ...scope, joinIndex: joinIndex - 1 }
+    : scope;
+}
+
+/** What a selection filled, once the item at `position` of a repeated entity was removed. */
+export function filledAfterRemoval(filled: Filled, repeat: Scope, position: number): Filled {
+  const records = filled[repeat.entity];
+  if (repeat.join !== undefined || !records) return filled;
+  const moved = Object.entries(records).flatMap(([index, record]) => {
+    const was = Number(index);
+    return was === position ? [] : [[String(was > position ? was - 1 : was), record] as const];
+  });
+  return { ...filled, [repeat.entity]: Object.fromEntries(moved) };
+}
 
 function currentRecord(data: FormData, { entity, index, join, joinIndex }: Scope): Values {
   const entityItem = data[entity]?.[index];

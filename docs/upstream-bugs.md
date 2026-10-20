@@ -182,6 +182,14 @@ fills again with the cleared record; picking A and then B ends with A when A's
 answer comes last. afreact applies only the answer to the field's latest
 selection. `deviation:autofill-latest-selection`
 
+**A late prefill fills the wrong repeat item.** `afField` passes the item's
+index when the selection is made (`entityIndex`, `joinIndex`), and `loadData()`
+writes the answer to that index once it arrives. If an earlier item is removed
+meanwhile, the answer lands on the item that moved into that place, or adds an
+item past the end, and the selected record is submitted twice. afreact writes
+the answer to the item the selection was made in, wherever it stands by then.
+`deviation:autofill-follows-moved-item`
+
 **A required rich text or proximity field can be submitted empty.**
 `fields/RichTextEditor.html` and `afLocationInput` set no `ng-required`, so
 the form shows the required marker but sends the empty field; only the server

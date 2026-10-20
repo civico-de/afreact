@@ -18,7 +18,14 @@ import { isRecord } from "../search/searchTasks";
 import type { ExpressionContext } from "./expressions";
 import { DisplayCountContext, useHashParams } from "../url/UrlState";
 import { uploadAll, UploadsContext, type Uploads, type UploadsState } from "./fields/upload";
-import { FormContext, Nodes, type DraftStatus, type FormState, type IslandForm } from "./Layout";
+import {
+  FormContext,
+  Nodes,
+  type AutofillRun,
+  type DraftStatus,
+  type FormState,
+  type IslandForm,
+} from "./Layout";
 import {
   applyPrefill,
   draftValues,
@@ -639,7 +646,7 @@ function LoadedForm(props: LoadedFormProps) {
   const displays = useMemo(() => countDisplays(form.layout), [form]);
   const [itemKeys] = useState(() => new Map<string, number[]>());
   const [autofilled] = useState(() => new Map<string, Filled>());
-  const [autofillRuns] = useState(() => new Map<string, object>());
+  const [autofillRuns] = useState(() => new Map<string, AutofillRun>());
   const conditional = useConditionalChanges(host, data, ts);
   const [labels, setLabels] = useState<string[]>([]);
   // deviation:draft-pristine-label

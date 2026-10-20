@@ -13,7 +13,12 @@ import { createPortal } from "react-dom";
 import { checkConditions, parseConditions } from "./conditions";
 import { interpolate, type ExpressionContext } from "./expressions";
 import { ClearButton, Field, fieldClasses, templateNote } from "./Field";
-import { loadSelected, type Filled } from "./fields/autofill";
+import {
+  filledAfterRemoval,
+  loadSelected,
+  placeAfterRemoval,
+  type Filled,
+} from "./fields/autofill";
 import { TokenContext, withTokens } from "./Markup";
 import { FieldEnvContext, ItemPathContext, type FieldEnv } from "./fields/env";
 import { UploadsContext } from "./fields/upload";
@@ -102,8 +107,8 @@ export interface FormState {
   itemKeys: Map<string, number[]>;
   /** Per autofill field, what its selection filled into other entities. */
   autofilled: Map<string, Filled>;
-  /** Per autofill field, its latest selection; an answer to an earlier one is dropped. */
-  autofillRuns: Map<string, object>;
+  /** Per autofill field, its latest selection and the field's place as it stands now. */
+  autofillRuns: Map<string, AutofillRun>;
   /** An af-if showed or hid its content after the form loaded. */
   toggled: (shown: boolean) => void;
   /** afForm.resetForm(); undefined outside af-form. */
@@ -513,8 +518,15 @@ interface Removal {
   edits: number;
   /** The files chosen in the item's File fields, by owner. */
   files: [string, File][];
-  /** What the item's autofill selections filled into other entities, by owner. */
+  /** What every autofill selection filled into other entities, by owner, before the removal. */
   autofilled: [string, Filled][];
+  /** Where each pending autofill selection stood before the removal. */
+  runs: [AutofillRun, Scope][];
+}
+
+/** An autofill selection whose answer is pending; `scope` follows its field as items go. */
+export interface AutofillRun {
+  scope: Scope;
 }
 
 /** af-repeat in afRepeat.html's markup: one copy of the children per item, with add/copy/remove inside the min/max bounds. */
@@ -573,16 +585,24 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
             const files = [...(uploads?.pending.values() ?? [])]
               .filter((upload) => upload.owner.startsWith(inItem))
               .map((upload): [string, File] => [upload.owner, upload.file]);
-            // A later item may take this key, so it must not inherit the item's autofill history.
-            const autofilled = [...form.autofilled].filter(
-              ([owner]) => owner.startsWith(inItem) || owner.startsWith(`${id}#${key}:`),
-            );
-            for (const [owner] of autofilled) form.autofilled.delete(owner);
-            for (const owner of [...form.autofillRuns.keys()])
-              if (owner.startsWith(inItem) || owner.startsWith(`${id}#${key}:`))
-                form.autofillRuns.delete(owner);
+            // A later item may take this key, so it must not inherit the item's autofill history;
+            // the others' records and pending answers move up with the items after it.
+            const ownedHere = (owner: string) =>
+              owner.startsWith(inItem) || owner.startsWith(`${id}#${key}:`);
+            const autofilled = [...form.autofilled];
+            const runs = [...form.autofillRuns.values()].map((run): [AutofillRun, Scope] => [
+              run,
+              run.scope,
+            ]);
+            for (const [owner, filled] of autofilled)
+              if (ownedHere(owner)) form.autofilled.delete(owner);
+              else form.autofilled.set(owner, filledAfterRemoval(filled, scope, position));
+            for (const [owner, run] of [...form.autofillRuns])
+              if (ownedHere(owner)) form.autofillRuns.delete(owner);
+              else run.scope = placeAfterRemoval(run.scope, scope, position);
             const before = form.data;
-            setRemoval({ position, key, keys, before, edits: form.edits + 1, files, autofilled });
+            const edits = form.edits + 1;
+            setRemoval({ position, key, keys, before, edits, files, autofilled, runs });
             removeKey(position);
             form.edit((data) => primaryKept(removeRepeatItem(data, scope, position)));
           }}
@@ -608,7 +628,9 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
           disabled={form.disabled}
           onClick={() => {
             for (const [owner, file] of removal.files) uploads?.restored.set(owner, file);
+            form.autofilled.clear();
             for (const [owner, filled] of removal.autofilled) form.autofilled.set(owner, filled);
+            for (const [run, place] of removal.runs) run.scope = place;
             restoreKeys(removal.keys);
             setRestored({ key: removal.key });
             setRemoval(null);
@@ -901,7 +923,7 @@ function fieldEnv(
           // Keyed by the item's place in the layout, which survives removing an earlier repeat item.
           const key = `${itemPath}:${name}`;
           const previous = form.autofilled.get(key);
-          const run = {};
+          const run: AutofillRun = { scope };
           form.autofillRuns.set(key, run);
           const selection = await loadSelected(
             form.formName,
@@ -914,7 +936,8 @@ function fieldEnv(
           // deviation:autofill-latest-selection
           if (form.autofillRuns.get(key) !== run) return;
           form.autofilled.set(key, selection.filled);
-          form.edit(selection.apply);
+          // deviation:autofill-follows-moved-item
+          form.edit((data) => selection.apply(data, run.scope));
         }
       : undefined,
   };
