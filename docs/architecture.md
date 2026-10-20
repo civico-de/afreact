@@ -26,7 +26,11 @@ dashlets stays Angular (see below).
   `location.hash`, `replaceState` on write, `hashchange` to read back. nuqs
   brings typed parsers, one URL write for several keys, defaults kept out of
   the URL and `urlKeys` for the per-display prefix; its adapter API is marked
-  `unstable_`, so the version is pinned in `package.json`.
+  `unstable_`, so the version is pinned in `package.json`. Displays and tabs
+  write through nuqs, which queues a write for the next tick. A fieldset
+  writes its filter keys straight to the `ParamStore` under the adapter
+  (`src/url/hash.ts`) when they commit, so a saved-set pick, which replaces
+  the hash, cannot be overtaken by a queued filter write.
 
   Keys get the display name as a prefix (`<display>._page=2`) once a form
   holds several displays or other forms or displays share the page

@@ -83,10 +83,26 @@ function renderSearch(
   return { store, calls, runs, view };
 }
 
+// Only timeouts are fake, the debounce's and those of the next-tick flushes; awaiting
+// anything needs real timers again.
+const fakeTimers = () =>
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldClearNativeTimers: true });
+
+/** Lets `ms` pass on the fake timers, then what that scheduled for the next tick. */
+function pass(ms: number) {
+  act(() => {
+    vi.advanceTimersByTime(ms);
+  });
+  act(() => {
+    vi.advanceTimersByTime(0);
+  });
+}
+
 describe("SearchFieldset", () => {
   afterEach(() => {
     delete window.CRM.cache;
     vi.useRealTimers();
+    window.history.replaceState(null, "", "/");
   });
 
   it("applies af-required and af-disabled on a filter", async () => {
@@ -234,14 +250,11 @@ describe("SearchFieldset", () => {
         }),
     });
     const title = await screen.findByRole("textbox", { name: "Title" });
-    await userEvent.type(title, "Ne");
-    // Lets the search delay pass while the set is still loading.
-    await act(
-      () =>
-        new Promise<void>((resolve) => {
-          setTimeout(resolve, SEARCH_DELAY_MS + 100);
-        }),
-    );
+    fakeTimers();
+    fireEvent.change(title, { target: { value: "Ne" } });
+    // The search delay passes while the set is still loading.
+    pass(SEARCH_DELAY_MS);
+    vi.useRealTimers();
     expect(store.params().toString()).toBe("_s=4");
     act(() => {
       resolveSet([{ filters: { title: { CONTAINS: "Set" } } }]);
@@ -258,20 +271,17 @@ describe("SearchFieldset", () => {
       "SearchParamSet.get": () => [],
     });
     await screen.findByRole("cell", { name: "Row" });
-    await userEvent.type(screen.getByRole("textbox", { name: "Title" }), "Ne");
+    fakeTimers();
+    fireEvent.change(screen.getByRole("textbox", { name: "Title" }), { target: { value: "Ne" } });
+    pass(SEARCH_DELAY_MS - 1);
     expect(runs()).toHaveLength(1);
-    await waitFor(
-      () => {
-        expect(runs()).toHaveLength(2);
-      },
-      { timeout: 2000 },
-    );
+    expect(store.params().toString()).toBe("_s=4&other=x");
+    pass(1);
+    // The id stays in the URL; only what differs from the defaults is written.
+    expect(store.params().toString()).toBe("_s=4&other=x&title=Ne");
+    expect(runs()).toHaveLength(2);
     // The id names no set, so the fields keep their defaults, as after afFormReset.
     expect(runs()[1]).toEqual({ is_active: true, title: { CONTAINS: "Ne" } });
-    await waitFor(() => {
-      // The id stays in the URL; only what differs from the defaults is written.
-      expect(store.params().toString()).toBe("_s=4&other=x&title=Ne");
-    });
   });
 
   // deviation:search-filter-minlength
@@ -279,13 +289,10 @@ describe("SearchFieldset", () => {
     const short = field("name", { label: "Name", input_attrs: { minlength: 4 } });
     const { runs } = renderSearch("", searchForm({}, [display("Groups")], [short]));
     await screen.findByRole("cell", { name: "Row" });
-    await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "ab");
-    await waitFor(
-      () => {
-        expect(runs()).toHaveLength(2);
-      },
-      { timeout: 2000 },
-    );
+    fakeTimers();
+    fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "ab" } });
+    pass(SEARCH_DELAY_MS);
+    expect(runs()).toHaveLength(2);
     expect(runs()[1]).toEqual({ is_active: true, name: "ab" });
   });
 
@@ -308,16 +315,11 @@ describe("SearchFieldset", () => {
   it("leaves defaults out of the URL", async () => {
     const { store, runs } = renderSearch("#?is_active=0");
     await screen.findByRole("cell", { name: "Row" });
-    await userEvent.click(screen.getByRole("radio", { name: "Yes" }));
-    await waitFor(
-      () => {
-        expect(runs()).toHaveLength(2);
-      },
-      { timeout: 2000 },
-    );
-    await waitFor(() => {
-      expect(store.params().toString()).toBe("");
-    });
+    fakeTimers();
+    fireEvent.click(screen.getByRole("radio", { name: "Yes" }));
+    pass(SEARCH_DELAY_MS);
+    expect(runs()).toHaveLength(2);
+    expect(store.params().toString()).toBe("");
   });
 
   it("writes the fieldset's keys when the form has more than one display", async () => {
@@ -328,17 +330,10 @@ describe("SearchFieldset", () => {
     await waitFor(() => {
       expect(screen.getAllByRole("cell", { name: "Row" })).toHaveLength(2);
     });
-    const title = screen.getByRole("textbox", { name: "Title" });
-    await userEvent.clear(title);
-    await userEvent.type(title, "New");
-    await waitFor(
-      () => {
-        expect(store.params().toString()).toBe("Groups.title=New");
-      },
-      {
-        timeout: 2000,
-      },
-    );
+    fakeTimers();
+    fireEvent.change(screen.getByRole("textbox", { name: "Title" }), { target: { value: "New" } });
+    pass(SEARCH_DELAY_MS);
+    expect(store.params().toString()).toBe("Groups.title=New");
   });
 
   it("leaves typed filters out of a hash that a pick replaced right after they committed", () => {
@@ -371,14 +366,9 @@ describe("SearchFieldset", () => {
       </SearchFieldset>,
       store,
     );
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldClearNativeTimers: true });
+    fakeTimers();
     fireEvent.click(screen.getByRole("button", { name: "Type" }));
-    act(() => {
-      vi.advanceTimersByTime(SEARCH_DELAY_MS);
-    });
-    act(() => {
-      vi.advanceTimersByTime(0);
-    });
+    pass(SEARCH_DELAY_MS);
     expect(store.params().toString()).toBe("_s=4");
   });
 
@@ -465,18 +455,15 @@ describe("SearchFieldset", () => {
     const store = memoryStore("");
     const { runs } = renderSearch("", layout, {}, store);
     await screen.findByRole("cell", { name: "Row" });
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Operator" }), "=");
-    await userEvent.type(screen.getByRole("textbox", { name: "Title" }), "A");
-    await waitFor(
-      () => {
-        expect(runs().at(-1)).toEqual({ title: { "=": "A" } });
-      },
-      { timeout: 2000 },
-    );
-    // The URL keeps the chosen operator, so a reload or a shared link searches the same.
-    await waitFor(() => {
-      expect(store.params().get("title")).toBe('{"=":"A"}');
+    fakeTimers();
+    fireEvent.change(screen.getByRole("combobox", { name: "Operator" }), {
+      target: { value: "=" },
     });
+    fireEvent.change(screen.getByRole("textbox", { name: "Title" }), { target: { value: "A" } });
+    pass(SEARCH_DELAY_MS);
+    expect(runs().at(-1)).toEqual({ title: { "=": "A" } });
+    // The URL keeps the chosen operator, so a reload or a shared link searches the same.
+    expect(store.params().get("title")).toBe('{"=":"A"}');
   });
 
   it("follows a hash changed by a link, with the new values at once", async () => {
@@ -492,7 +479,6 @@ describe("SearchFieldset", () => {
       expect(runs()).toHaveLength(2);
     });
     expect(runs()[1]).toEqual({ title: { CONTAINS: "New" }, is_active: true });
-    window.history.replaceState(null, "", "/");
   });
 
   it("follows a link back to the hash it started from after writing its own", async () => {
@@ -512,21 +498,18 @@ describe("SearchFieldset", () => {
     );
     await screen.findByRole("cell", { name: "Row Old" });
     const title = screen.getByRole("textbox", { name: "Title" });
-    await userEvent.clear(title);
-    await userEvent.type(title, "New");
-    await waitFor(
-      () => {
-        expect(window.location.hash).toBe("#?title=New");
-      },
-      { timeout: 2000 },
-    );
+    fakeTimers();
+    fireEvent.change(title, { target: { value: "New" } });
+    pass(SEARCH_DELAY_MS);
+    vi.useRealTimers();
+    expect(window.location.hash).toBe("#?title=New");
+    expect(await screen.findByRole("cell", { name: "Row New" })).toBeInTheDocument();
     act(() => {
       window.history.replaceState(null, "", "/civicrm/group#?title=Old");
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
     expect(title).toHaveValue("Old");
     expect(await screen.findByRole("cell", { name: "Row Old" })).toBeInTheDocument();
-    window.history.replaceState(null, "", "/");
   });
 
   it("shows no display filtered by placement options when there are none", async () => {
