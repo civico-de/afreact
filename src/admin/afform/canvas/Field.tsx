@@ -81,7 +81,7 @@ function originalOptions(editor: EditorApi, state: FieldState): FieldOption[] | 
       .map((entity) => ({ id: entity.name, label: entity.label }));
   }
   if (["Date", "Timestamp"].includes(String(getProp(state, "data_type")))) {
-    const ranges = editor.meta.gui.dateRanges.map((range) => ({ id: range.id, label: range.text }));
+    const ranges = editor.meta.gui.dateRanges;
     return getProp(state, "search_range") ? ranges : ranges.slice(1);
   }
   if (base.options) return base.options;

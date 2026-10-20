@@ -70,7 +70,7 @@ export interface GuiEditorSettings {
   styles: Record<string, string>;
   /** Grouped by extension or component, as select2 takes them. */
   permissions: { text: string; children: PermissionOption[] }[];
-  dateRanges: { id: string; text: string }[];
+  dateRanges: { id: string; label: string }[];
   searchDisplayTags: string[];
   inputTypes: InputTypeMeta[];
 }
