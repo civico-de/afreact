@@ -115,7 +115,7 @@ test("each item of a repeated fieldset keeps and submits its own extra field", a
   const react = await observe(page, "react");
   const byAngular = await observe(page, "angular");
   const own = [{ note: "First" }, { note: "Second" }];
-  expect(react).toEqual({ shown: ["First", "Second"], submitted: own, extra: null, stored: own });
+  expect(react).toEqual({ shown: ["First", "Second"], submitted: own, extra: {}, stored: own });
   // Before 6.21 Angular's items show and submit one form-level value, the one typed last.
   const shared = {
     shown: ["Second", "Second"],
@@ -123,6 +123,5 @@ test("each item of a repeated fieldset keeps and submits its own extra field", a
     extra: { note: "Second" },
     stored: [null, null],
   };
-  // Angular always sends the form-level extra fields, empty here.
-  expect(byAngular).toEqual(perItem ? { ...react, extra: {} } : shared);
+  expect(byAngular).toEqual(perItem ? react : shared);
 });
