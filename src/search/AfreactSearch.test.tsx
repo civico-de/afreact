@@ -628,8 +628,9 @@ describe("AfreactSearch", () => {
 
     it("opens a shared link with one page request", async () => {
       const calls = runs(5);
+      const sized = { ...settings, pager: { show_count: true, expose_limit: true } };
       renderWithQuery(
-        <AfreactSearch search="S" display="D" settings={settings} />,
+        <AfreactSearch search="S" display="D" settings={sized} />,
         memoryStore("#?_sort=-email,sort_name&_page=2&_limit=1"),
       );
       expect(await currentPage()).toHaveTextContent("2");
@@ -643,6 +644,29 @@ describe("AfreactSearch", () => {
           1,
         ],
       ]);
+    });
+
+    // deviation:url-pager-needs-pager
+    it("takes a page size from the link only where the pager offers one", async () => {
+      const calls = runs(5);
+      renderWithQuery(
+        <AfreactSearch search="S" display="D" settings={settings} />,
+        memoryStore("#?_page=2&_limit=1"),
+      );
+      expect(await currentPage()).toHaveTextContent("2");
+      expect(pageRequests(calls)).toEqual([["page:2", [["sort_name", "ASC"]], 2]]);
+    });
+
+    // deviation:url-pager-needs-pager
+    it("shows the first page of a display without a pager whatever page the link names", async () => {
+      const calls = runs(5);
+      renderWithQuery(
+        <AfreactSearch search="S" display="D" settings={{ ...settings, pager: false }} />,
+        memoryStore("#?_page=3"),
+      );
+      await waitFor(() => {
+        expect(pageRequests(calls)).toEqual([["page:1", [["sort_name", "ASC"]], 2]]);
+      });
     });
 
     it("ignores page numbers and sizes below 1", async () => {

@@ -195,8 +195,12 @@ function ResultDisplay({
   const [seed] = useState(() => Math.floor(Math.random() * 10e10));
 
   const activeSort = url.sort ?? settings?.sort ?? [];
-  const limit = url.limit ?? settings?.limit ?? 0;
-  const page = filtersChanged ? 1 : (url.page ?? 1);
+  // A page or page size in the link counts only where the display's pager offers it.
+  // deviation:url-pager-needs-pager
+  const paged = type !== "tree" && !!settings?.pager;
+  const exposedLimit = settings?.pager ? settings.pager.expose_limit : false;
+  const limit = (exposedLimit ? url.limit : undefined) ?? settings?.limit ?? 0;
+  const page = filtersChanged || !paged ? 1 : (url.page ?? 1);
   const runSearch = inline?.search ?? search;
   const runDisplay = inline?.display ?? display;
   const params = {

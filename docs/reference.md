@@ -72,7 +72,7 @@ code writes into the hash (Angular routes, `Individual1=5`) are kept.
 | Key | Meaning |
 |---|---|
 | `_sort=title,-created_date` | sort columns, `-` for descending |
-| `_page=2`, `_limit=50` | page and page size |
+| `_page=2`, `_limit=50` | page and page size; a page counts only on a display with a pager and a size only where the pager offers one (`expose_limit`), the controls core offers for them; the server ignores any other size `deviation:url-pager-needs-pager` |
 | `<field>=value` | a filter, the key afField reads: lists comma-separated, Yes/No as `1`/`0` |
 | `<display>.<field>=value` | the same filter for one fieldset; wins over the plain key |
 | `_s=<id>` | a saved filter set; the first change of a filter removes it |
