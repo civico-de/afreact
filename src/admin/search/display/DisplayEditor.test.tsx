@@ -181,6 +181,31 @@ describe("display settings trimmed as ngModel trims them", () => {
     expect(firstColumn()).toMatchObject({ label: "Full name" });
   });
 
+  it("lets a column name take a space between words, which becomes an underscore", async () => {
+    renderWithQuery(
+      <Harness
+        initial={{
+          id: 1,
+          name: "E",
+          label: "E",
+          type: "entity",
+          settings: { columns: [{ ...columns[1], name: "display_name" }] },
+        }}
+      />,
+    );
+    const name = await retype("Name", "full name");
+    expect(firstColumn()).toMatchObject({ name: "full_name" });
+    expect(name).toHaveValue("full_name");
+    await userEvent.clear(name);
+    await userEvent.type(name, "full ");
+    expect(firstColumn()).toMatchObject({ name: "full" });
+    expect(name).toHaveValue("full ");
+    // Core's ng-change leaves a name of spaces alone, which munge would make a random name.
+    await userEvent.clear(name);
+    await userEvent.type(name, "  ");
+    expect(firstColumn()).toMatchObject({ name: "" });
+  });
+
   it("trims an autocomplete display's label", async () => {
     renderWithQuery(
       <Harness initial={{ id: 1, name: "A", label: "A", type: "autocomplete", settings: {} }} />,

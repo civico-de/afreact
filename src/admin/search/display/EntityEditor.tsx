@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useId } from "react";
+import { useEffect, useId, useState } from "react";
 import { api4 } from "../../../api/civi";
 import { ModelText } from "../../widgets/ModelText";
 import { Picker } from "../../widgets/Picker";
@@ -242,17 +242,13 @@ export function EntityEditor(props: Editing & { adopt: (change: (draft: Draft) =
             <>
               <div className="form-inline crm-search-admin-flex-row">
                 <label htmlFor={`${id}-col-${String(index)}-name`}>{ts("Name")}</label>
-                <input
+                <SqlNameInput
                   id={`${id}-col-${String(index)}-name`}
-                  className="form-control crm-flex-1"
-                  type="text"
                   placeholder={createSqlName(col.key ?? "")}
-                  maxLength={58}
                   value={col.name ?? ""}
-                  onChange={(event) => {
-                    const value = event.target.value;
+                  onChange={(name) => {
                     editCol((c) => {
-                      c.name = value === "" ? value : createSqlName(value);
+                      c.name = name;
                     });
                   }}
                 />
@@ -300,3 +296,38 @@ export const entityPreviewSettings = (settings: unknown) => ({
   pager: { expose_limit: true },
   classes: ["table", "table-striped"],
 });
+
+/**
+ * A column name, made a SQL name as typed; text the conversion only trims stays on show, as
+ * core's ngModel keeps "full " on show for "full".
+ */
+function SqlNameInput({
+  id,
+  placeholder,
+  value,
+  onChange,
+}: {
+  id: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState<{ text: string; at: string } | null>(null);
+  return (
+    <input
+      id={id}
+      className="form-control crm-flex-1"
+      type="text"
+      placeholder={placeholder}
+      maxLength={58}
+      value={draft?.at === value ? draft.text : value}
+      onChange={(event) => {
+        const text = event.target.value;
+        const name = text.trim() === "" ? "" : createSqlName(text);
+        // A name the conversion changed replaces the text, as ng-change rewriting the model does.
+        setDraft(text.trim() === name ? { text, at: name } : null);
+        onChange(name);
+      }}
+    />
+  );
+}
