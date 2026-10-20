@@ -136,60 +136,65 @@ export function SortConfig({ ctx, draft, edit }: Editing) {
   return (
     <fieldset>
       <legend className="sr-only">{ts("Sorting")}</legend>
-      {sort.map(([field, dir], index) => (
-        <div
-          className="form-inline crm-search-admin-display-sorts"
-          key={`${field}-${String(index)}`}
-        >
-          <Picker
-            id={`${id}-${String(index)}`}
-            label={index ? ts("Also by") : ts("Sort by")}
-            placeholder={ts("Select field")}
-            single
-            options={options(field)}
-            value={[field]}
-            onChange={(picked) => {
-              const next = picked[0];
-              edit((d) => {
-                const list = d.settings.sort ?? [];
-                if (next === undefined) list.splice(index, 1);
-                else list[index] = [String(next), list[index]?.[1] ?? "ASC"];
-                d.settings.sort = list;
-              });
-            }}
-          />
-          {field !== "RAND()" && (
-            <select
-              className="form-control crm-auto-width"
-              aria-label={ts("Direction")}
-              value={dir}
-              onChange={(event) => {
-                const value = event.target.value;
+      {sort.map(([field, dir], index) => {
+        // Each row's controls name its field, so a screen reader tells the rows apart.
+        // deviation:sort-controls-named
+        const name = options(field).find((option) => option.id === field)?.label ?? field;
+        return (
+          <div
+            className="form-inline crm-search-admin-display-sorts"
+            key={`${field}-${String(index)}`}
+          >
+            <Picker
+              id={`${id}-${String(index)}`}
+              label={index ? ts("Also by") : ts("Sort by")}
+              placeholder={ts("Select field")}
+              single
+              options={options(field)}
+              value={[field]}
+              onChange={(picked) => {
+                const next = picked[0];
                 edit((d) => {
-                  const clause = d.settings.sort?.[index];
-                  if (clause) clause[1] = value;
+                  const list = d.settings.sort ?? [];
+                  if (next === undefined) list.splice(index, 1);
+                  else list[index] = [String(next), list[index]?.[1] ?? "ASC"];
+                  d.settings.sort = list;
+                });
+              }}
+            />
+            {field !== "RAND()" && (
+              <select
+                className="form-control crm-auto-width"
+                aria-label={ts("Direction of %1", { 1: name })}
+                value={dir}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  edit((d) => {
+                    const clause = d.settings.sort?.[index];
+                    if (clause) clause[1] = value;
+                  });
+                }}
+              >
+                <option value="ASC">{ts("Ascending")}</option>
+                <option value="DESC">{ts("Descending")}</option>
+              </select>
+            )}
+            <button
+              type="button"
+              className="btn btn-xs crm-hover-button"
+              aria-label={ts("Clear sorting by %1", { 1: name })}
+              title={ts("Clear")}
+              onClick={() => {
+                edit((d) => {
+                  d.settings.sort = (d.settings.sort ?? []).filter((_, i) => i !== index);
                 });
               }}
             >
-              <option value="ASC">{ts("Ascending")}</option>
-              <option value="DESC">{ts("Descending")}</option>
-            </select>
-          )}
-          <button
-            type="button"
-            className="btn btn-xs crm-hover-button"
-            aria-label={ts("Clear")}
-            title={ts("Clear")}
-            onClick={() => {
-              edit((d) => {
-                d.settings.sort = (d.settings.sort ?? []).filter((_, i) => i !== index);
-              });
-            }}
-          >
-            <i className="crm-i fa-times" role="img" aria-hidden="true" />
-          </button>
-        </div>
-      ))}
+              <i className="crm-i fa-times" role="img" aria-hidden="true" />
+            </button>
+          </div>
+        );
+      })}
       <div className="form-inline crm-search-admin-display-sort-add">
         <Picker
           id={`${id}-add`}

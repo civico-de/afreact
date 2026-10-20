@@ -72,6 +72,7 @@ and group by as core's editor saves them. `docs/testing.md` lists the rest.
 | Area | Angular | React | Pinned by |
 |---|---|---|---|
 | Relative date offset in a condition ("Before now", "After now") | a number input bound to the offset through an Angular number model | the typed text stays on show; only a whole number of 1 or more is stored, and leaving the input brings back the last stored offset, so a cleared input or a typed "1.5" or "-5" never stores 0, a fraction or a negative offset `deviation:relative-date-offset-draft` | `src/admin/search/SearchInput.test.tsx` |
+| A display's sort rows | every row's direction select has no name and its remove link is titled "Clear" (`crmSearchAdminDisplaySort.html`), so a screen reader cannot tell the rows apart | each row names its field: "Direction of %1", "Clear sorting by %1" `deviation:sort-controls-named` | `src/admin/search/display/DisplayEditor.test.tsx`: "names each sort row's direction and clear button by its field" |
 | Editing a label or description in the search listing | the editable cell focuses its input when it opens; once saved or cancelled the input goes and the focus falls to the page | the focus returns to the cell's edit button after saving, Escape or Cancel `deviation:inline-edit-returns-focus` | `src/admin/search/SearchList.test.tsx`: "returns focus to the label's edit button after saving or cancelling" |
 
 ### Differences by design

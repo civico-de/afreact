@@ -289,3 +289,29 @@ it("trims an autocomplete column's rewrite and placeholder and keeps an inserted
   await userEvent.tab();
   expect(firstColumn()).toMatchObject({ empty_value: "" });
 });
+
+// deviation:sort-controls-named
+it("names each sort row's direction and clear button by its field", async () => {
+  renderWithQuery(
+    <Harness
+      initial={{
+        id: 1,
+        name: "T",
+        label: "T",
+        type: "table",
+        settings: {
+          columns,
+          sort: [
+            ["display_name", "ASC"],
+            ["id", "DESC"],
+          ],
+        },
+      }}
+    />,
+  );
+  const direction = screen.getByRole("combobox", { name: "Direction of Contact ID" });
+  expect(direction).toHaveValue("DESC");
+  await userEvent.selectOptions(direction, "ASC");
+  await userEvent.click(screen.getByRole("button", { name: "Clear sorting by Display Name" }));
+  expect(latest?.settings?.sort).toEqual([["id", "ASC"]]);
+});
