@@ -19,6 +19,7 @@ function setup(
     settings: extra = {},
     cell = {},
     handlers = {},
+    more = [],
   }: {
     shown?: unknown;
     inlineEdit?: (params: Record<string, unknown>) => unknown;
@@ -26,6 +27,7 @@ function setup(
     settings?: Partial<DisplaySettings>;
     cell?: CellData;
     handlers?: Parameters<typeof mockApi>[0];
+    more?: Row[];
   } = {},
 ) {
   const key = info.value_key;
@@ -50,7 +52,7 @@ function setup(
         ? [{}]
         : params.return === "row_count"
           ? Object.assign([], { count: 2 })
-          : Object.assign([row(value, shown)], { editable: { [key]: editInfo(info) } }),
+          : Object.assign([row(value, shown), ...more], { editable: { [key]: editInfo(info) } }),
     // By default the server returns the row with the saved value, shown as "Saved".
     "SearchDisplay.inlineEdit":
       inlineEdit ?? ((params) => [row(Object.values(params.values ?? {})[0], "Saved")]),
@@ -316,6 +318,30 @@ describe("in-place editing", () => {
     await waitFor(() => {
       expect(screen.getByRole("checkbox", { name: "Select Ada" })).not.toBeChecked();
     });
+  });
+
+  it("keeps a selection changed while the save that drops a row runs", async () => {
+    let answer: (rows: Row[]) => void = () => undefined;
+    setup({ value_key: "job_title" }, "Pilot", {
+      inlineEdit: () =>
+        new Promise<Row[]>((resolve) => {
+          answer = resolve;
+        }),
+      settings: { actions: true },
+      handlers: { "SearchDisplay.getSearchTasks": () => [] },
+      more: [{ key: 8, columns: [{ val: "Bob" }, { val: "Cook" }], data: { id: 8 } }],
+    });
+    const bob = () => screen.getByRole("checkbox", { name: "Select Bob" });
+    await userEvent.click(await screen.findByRole("checkbox", { name: "Select Ada" }));
+    await userEvent.click(bob());
+    await open();
+    await userEvent.type(field(), "s{Enter}");
+    await userEvent.click(bob());
+    answer([]);
+    await waitFor(() => {
+      expect(screen.getByRole("checkbox", { name: "Select Ada" })).not.toBeChecked();
+    });
+    expect(bob()).not.toBeChecked();
   });
 
   // deviation:next-page-prefetched

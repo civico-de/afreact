@@ -544,8 +544,18 @@ export function useTasks(options: TasksOptions) {
     selected: count,
     /** A row an edit took out of the result leaves the selection. deviation:edited-row-deselected */
     deselect: (key: Key) => {
-      if (selection.keys.includes(key))
-        select({ keys: selection.keys.filter((other) => other !== key), all: false });
+      // The selection as it is by then, which may have changed while the edit was saved.
+      setChosen((current) =>
+        current.key === filtersKey && current.selection.keys.includes(key)
+          ? {
+              key: current.key,
+              selection: {
+                keys: current.selection.keys.filter((other) => other !== key),
+                all: false,
+              },
+            }
+          : current,
+      );
     },
     header,
     menu,
