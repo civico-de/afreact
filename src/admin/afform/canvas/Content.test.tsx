@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState, type ComponentType } from "react";
+import { CoreVersion } from "../../version";
 import { EditorContext, type EditorApi } from "../context";
 import type { AfformDefinition, EditorMeta } from "../meta";
 import { META } from "../testMeta";
@@ -68,15 +69,17 @@ function Canvas({
   };
   if (!latest) return null;
   return (
-    <EditorContext value={editor}>
-      <Element
-        path={[0]}
-        node={latest}
-        scope={scope}
-        handle={{ ref: () => undefined, "data-path": "0", tabIndex: 0 }}
-        label="Element"
-      />
-    </EditorContext>
+    <CoreVersion value="6.20.0">
+      <EditorContext value={editor}>
+        <Element
+          path={[0]}
+          node={latest}
+          scope={scope}
+          handle={{ ref: () => undefined, "data-path": "0", tabIndex: 0 }}
+          label="Element"
+        />
+      </EditorContext>
+    </CoreVersion>
   );
 }
 
