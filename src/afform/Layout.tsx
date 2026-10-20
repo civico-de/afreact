@@ -62,8 +62,10 @@ import {
   fieldAttributesNote,
   joinOutsideFieldsetNote,
   missingFieldNote,
+  ngIfKind,
   nodeKind,
   renderedKind,
+  routeCondition,
   type NodeKind,
   unknownFieldAttributes,
   unsupportedElement,
@@ -140,6 +142,7 @@ const Children = ({ node }: { node: ElementNode }) => <Nodes nodes={node["#child
 const KIND_VIEWS: Record<NodeKind, (props: { node: ElementNode }) => ReactNode> = {
   conditional: Conditional,
   submitCondition: SubmitButtonCondition,
+  routeCondition: RouteCondition,
   entity: () => null,
   field: FieldNode,
   block: Children,
@@ -232,9 +235,12 @@ function Node({ node }: { node: LayoutNode }): ReactNode {
   return <View node={node} />;
 }
 
-/** An element whose af-if or submit-button condition holds; the node itself goes on, so lookups by node still match. */
-function Rendered({ node }: { node: ElementNode }): ReactNode {
-  const View = KIND_VIEWS[renderedKind(node)];
+/**
+ * An element whose af-if holds, which goes on to its ng-if, or whose ng-if holds; the node itself
+ * goes on, so lookups by node still match.
+ */
+function Rendered({ node, after }: { node: ElementNode; after: "af-if" | "ng-if" }): ReactNode {
+  const View = KIND_VIEWS[after === "af-if" ? ngIfKind(node) : renderedKind(node)];
   return <View node={node} />;
 }
 
@@ -349,18 +355,24 @@ function Conditional({ node }: { node: ElementNode }) {
   }, [shown, hiddenWith, prefilled, toggled]);
   if (active && shownWith !== form.data) setShownWith(form.data);
   if ("error" in result) return <Unsupported what={result.error} />;
-  if (shown) return <Rendered node={node} />;
+  if (shown) return <Rendered node={node} after="af-if" />;
   if (hiddenWith !== null || shownWith === null) return null;
   return createPortal(
     <HiddenContext.Provider value={shownWith}>
-      <Rendered node={node} />
+      <Rendered node={node} after="af-if" />
     </HiddenContext.Provider>,
     detached,
   );
 }
 
 function SubmitButtonCondition({ node }: { node: ElementNode }) {
-  return useForm().showSubmitButton ? <Rendered node={node} /> : null;
+  return useForm().showSubmitButton ? <Rendered node={node} after="ng-if" /> : null;
+}
+
+/** ngIf on a route parameter: the element renders while the test holds on the route as it is now. */
+function RouteCondition({ node }: { node: ElementNode }) {
+  const { routeParams } = useForm();
+  return routeCondition(node)?.(routeParams) ? <Rendered node={node} after="ng-if" /> : null;
 }
 
 function FieldsetNode({ node }: { node: ElementNode }) {

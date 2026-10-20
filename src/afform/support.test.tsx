@@ -64,6 +64,8 @@ describe("nodeKind", () => {
   it("dispatches in the renderer's order", () => {
     expect(nodeKind({ "#tag": "af-field", "af-if": "()" })).toBe("conditional");
     expect(nodeKind({ "#tag": "div", "ng-if": "afform.showSubmitButton" })).toBe("submitCondition");
+    expect(nodeKind({ "#tag": "div", "ng-if": "!routeParams.event" })).toBe("routeCondition");
+    expect(nodeKind({ "#tag": "div", "ng-if": "routeParams.a || b" })).toBe("unknown");
     expect(nodeKind({ "#tag": "afblock-name-individual" })).toBe("block");
     expect(nodeKind({ "#tag": "crm-search-display-table" })).toBe("search");
     for (const type of ["list", "grid", "tree", "batch", "chart-kit"])
@@ -96,6 +98,7 @@ describe("noteKind", () => {
     for (const note of [
       "<crm-search-display-map>",
       "<img>",
+      'route condition (ng-if="!routeParams.event") around fields',
       "field x without metadata",
       "search range (Date)",
       "display type map",
@@ -215,8 +218,10 @@ describe("layoutProblems", () => {
       {
         "#tag": "p",
         title: "{{ routeParams.event }}",
+        "ng-if": "routeParams.event",
         "#children": [{ "#text": "{{ routeParams.event }}" }],
       },
+      { "#tag": "p", "af-if": always, "ng-if": "routeParams.mode != 'short'" },
       {
         "#tag": "div",
         "ng-if": "afform.showSubmitButton",
@@ -224,6 +229,25 @@ describe("layoutProblems", () => {
       },
     ];
     expect(layoutProblems(supported)).toEqual([]);
+  });
+
+  it("reports a route ng-if around fields, entities, blocks, joins or repeats", () => {
+    const around = (inner: LayoutNode): LayoutNode => ({
+      "#tag": "div",
+      "ng-if": "routeParams.event",
+      "#children": [{ "#tag": "p", "#children": [inner] }],
+    });
+    const note = 'route condition (ng-if="routeParams.event") around fields';
+    for (const inner of [
+      field("first_name"),
+      { "#tag": "af-entity", type: "Contact", name: "Individual2" },
+      { "#tag": "afblock-name-individual" },
+      { "#tag": "div", "af-fieldset": "Individual1" },
+      { "#tag": "div", "af-join": "Email" },
+      { "#tag": "div", "af-repeat": "Add" },
+    ] satisfies LayoutNode[])
+      expect(layoutProblems([around(inner)])[0], JSON.stringify(inner)).toBe(note);
+    expect(layoutProblems([around({ "#tag": "crm-search-display-table" })])).not.toContain(note);
   });
 
   it("checks each display with the settings its type reads", () => {

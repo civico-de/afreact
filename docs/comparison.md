@@ -131,7 +131,7 @@ that no longer excuses anything fails the test. It measures React without
 | Field labels and help texts (`label`, `help_pre`, `help_post`) | set as HTML (`af-markup`), tokens such as `[Individual1.0.first_name]` show the field's value inside `af-form` | the same, with the HTML rebuilt from a list of plain elements and attributes: scripts, event handlers and inline styles are dropped, other unknown tags keep their text; a token updates while the user types, where Angular waits for the input's `change` |
 | Display-only fields (`DisplayOnly`) | option labels, dates in the site format, reference labels from `<Entity>.autocomplete`, rich text as HTML, URL and file links; a value matching no option, or not of the option's type (`"2"` for `2`), shows nothing, as does a date it cannot format | the same, with values compared as text and a value without option or a date that cannot be formatted shown as stored; rich text keeps what `ng-bind-html` keeps (no `id`, `role` or `aria-*`, links and images of plain schemes only), and a URL of another scheme stays text; a failed label lookup shows its error `deviation:display-only-as-stored` |
 | Route parameters | the hash (`#?first_name=…`), for the fields and for the server's `args` | the same for the fields; `args` also carry the page's query string, with the hash over it `deviation:route-args-query-string` |
-| Route parameters in the layout (`{{ routeParams.event }}`) | on a page `$location.search()`, where a key without value reads `true` and a repeated key a list; in a popup the dialog URL's parameters as text | as text everywhere, as in a popup: a key without value reads empty, a repeated key its last value `deviation:route-params-as-text` |
+| Route parameters in the layout (`{{ routeParams.event }}`, `ng-if="routeParams.event"`) | on a page `$location.search()`, where a key without value reads `true` and a repeated key a list; in a popup the dialog URL's parameters as text | as text everywhere, as in a popup: a key without value reads empty, so an `ng-if` on it fails, a repeated key its last value `deviation:route-params-as-text` |
 | Checkout block (`CheckoutBlock`, the donation form's `checkout_params`) | `afCheckoutBlock`: test-mode warning, the chosen option's description, template and fields; the details start empty and a change of option empties them; the block reads `CRM.afCheckout` from its own Angular module | the same from the page's `afreact.afCheckout` variable (`Civi\Afreact\Assets`), set while contributions through forms are enabled; the fields' labels are tied to their controls and the expiry pair is a group; an option cleared to none also empties the details (Angular leaves the stale ones in the data, which the server ignores); a new country empties the billing state and a country without states frees a required one; drafts never carry the details (see [upstream bugs](upstream-bugs.md)) |
 | Tree items | `<li>` without `data-entity-id` | `<li data-entity-id>`, as list items have it, so focus can return to the row after a reload `deviation:tree-item-entity-id` |
 
@@ -151,8 +151,9 @@ renderers.
 ### Not implemented in the React renderer
 
 Each of these shows a visible "Not supported by the React renderer" note
-instead of being dropped. Each item names why it is left out: either core does
-not support it either, or it runs Angular code the renderer cannot run. The
+instead of being dropped. Each item names why it is left out: core does not
+support it either, it runs Angular code the renderer cannot run, or React does
+not render it yet. The
 survey behind this covered every `*.aff.html` in core and the dev stack's
 extensions.
 
@@ -161,6 +162,8 @@ Angular code from elsewhere, which a React renderer cannot run:
 - Angular expressions other than `:: ts('…', {…})` and `crmUrl(…)` with
   literal arguments and `routeParams.name`, and a one-time
   `{{:: routeParams.name }}`, which keeps the first value the route gives it.
+  An `ng-if` may test `routeParams.name`, its negation or its comparison with
+  a string literal (`==`, `!=`, `===`, `!==`); other conditions are reported.
   In the surveyed layouts all other expressions sit in oauth-client's forms
   and afform's mock page, and read variables their own Angular controllers set
   (`options.client.id`, `token.scopes`), so a general expression evaluator
@@ -204,6 +207,12 @@ What core does not support either:
 - an in-place editor for a multi-value colour field, should one exist; the
   renderer also turns a Location input away, though core defines that type
   only for the `Address.proximity` search filter, which is never editable
+
+Not in React yet:
+
+- an `ng-if` on a route parameter around fields, entities, blocks, joins or
+  repeats: Angular sets up what it holds only while the condition holds, the
+  renderer sets up a form's fields when the form loads, shown or not
 
 The support report (`civicrm/admin/afreact`) lists these per form; for bulk
 actions it asks the server for each display's tasks. Its notes on a site's

@@ -962,6 +962,56 @@ describe("route parameters in the layout", () => {
     expect(await screen.findByText("[|2]")).toBeInTheDocument();
   });
 
+  it("renders an ng-if element while its route test holds, following the route", async () => {
+    const text = (content: string, extra: Record<string, unknown>): LayoutNode => ({
+      "#tag": "p",
+      ...extra,
+      "#children": [{ "#text": content }],
+    });
+    const go = renderRouted(
+      [
+        text("Feedback for event {{ routeParams.event }}", { "ng-if": "routeParams.event" }),
+        text("Pick an event", { "ng-if": "!routeParams.event" }),
+        text("Short", { "ng-if": "routeParams.mode == 'short'" }),
+        text("Shown by both", { "af-if": "([])", "ng-if": "routeParams.event" }),
+      ],
+      "?event=12",
+    );
+    expect(await screen.findByText("Feedback for event 12")).toBeInTheDocument();
+    expect(screen.getByText("Shown by both")).toBeInTheDocument();
+    expect(screen.queryByText("Pick an event")).not.toBeInTheDocument();
+    expect(screen.queryByText("Short")).not.toBeInTheDocument();
+    go("mode=short");
+    expect(await screen.findByText("Pick an event")).toBeInTheDocument();
+    expect(screen.getByText("Short")).toBeInTheDocument();
+    expect(screen.queryByText(/Feedback for event/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Shown by both")).not.toBeInTheDocument();
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+
+  it("reports a route ng-if around fields, which the form would initialise while hidden", async () => {
+    renderRouted(
+      [{ "#tag": "div", "ng-if": "!routeParams.event", "#children": [field("first_name")] }],
+      "",
+    );
+    expect(await screen.findByRole("note")).toHaveTextContent(
+      'route condition (ng-if="!routeParams.event") around fields',
+    );
+  });
+
+  it("hides a submit button with an af-if for a stored submission, as afForm does", async () => {
+    const button: LayoutNode = {
+      "#tag": "button",
+      "ng-click": "afform.submit()",
+      "ng-if": "afform.showSubmitButton",
+      "af-if": "([])",
+      "#children": [{ "#text": "Save" }],
+    };
+    renderRouted([field("first_name"), button], "?sid=7");
+    await screen.findByRole("textbox", { name: "first_name" });
+    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+  });
+
   it("leaves a one-time route parameter unsupported, as it would freeze at its first value", async () => {
     renderRouted(
       [{ "#tag": "p", "#children": [{ "#text": "{{:: routeParams.event }}" }] }],

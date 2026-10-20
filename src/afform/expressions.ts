@@ -15,8 +15,14 @@ const LITERAL = String.raw`'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"`;
 const CALL = new RegExp(
   String.raw`^(?:::)?\s*(ts|crmUrl)\(\s*(${LITERAL})\s*(?:,\s*(\{[^}]*\})\s*)?\)$`,
 );
+const PARAM = String.raw`routeParams\.(?<name>[A-Za-z_$][\w$]*)`;
+const EQUALS = String.raw`\s*(?<operator>[!=]==?)\s*`;
+const QUOTED = `(?<quoted>${LITERAL})`;
 /** One-time `::` is left out: its value would freeze at the first route that has the key. */
-const ROUTE_PARAM = /^routeParams\.([A-Za-z_$][\w$]*)$/;
+const ROUTE_PARAM = new RegExp(`^${PARAM}$`);
+const ROUTE_TRUTH = new RegExp(String.raw`^(?<not>!?)\s*${PARAM}$`);
+const ROUTE_EQUALS = new RegExp(`^${PARAM}${EQUALS}${QUOTED}$`);
+const EQUALS_ROUTE = new RegExp(`^${QUOTED}${EQUALS}${PARAM}$`);
 const PAIR = new RegExp(
   String.raw`^\s*(?:([A-Za-z_$][\w$]*|\d+)|(${LITERAL}))\s*:\s*(${LITERAL}|-?\d+(?:\.\d+)?)\s*$`,
 );
@@ -57,12 +63,42 @@ function substitute(text: string, params: Record<string, string | number>): stri
 
 /** The parameter a `routeParams.name` expression reads; null for any other expression. */
 export function routeParamName(expression: string): string | null {
-  return ROUTE_PARAM.exec(expression.trim())?.[1] ?? null;
+  return ROUTE_PARAM.exec(expression.trim())?.groups?.name ?? null;
 }
 
 /** A route parameter's value, undefined where the route lacks it. */
 export function routeParam(params: Record<string, string>, name: string): string | undefined {
   return Object.hasOwn(params, name) ? params[name] : undefined;
+}
+
+export type RouteTest = (params: Record<string, string>) => boolean;
+
+/**
+ * An ngIf condition on a route parameter: its truth, its negation, or its (in)equality with a
+ * string literal; null for any other condition. Loose and strict equality agree on these.
+ */
+export function routeTest(expression: string): RouteTest | null {
+  const text = expression.trim();
+  const truth = ROUTE_TRUTH.exec(text)?.groups;
+  if (truth) {
+    const { name = "", not } = truth;
+    return (params) => Boolean(routeParam(params, name)) !== (not === "!");
+  }
+  const {
+    name = "",
+    operator = "",
+    quoted = "",
+  } = (ROUTE_EQUALS.exec(text) ?? EQUALS_ROUTE.exec(text))?.groups ?? {};
+  if (!name) return null;
+  let value: string;
+  try {
+    value = literal(quoted);
+  } catch (error) {
+    if (error instanceof SyntaxError) return null;
+    throw error;
+  }
+  const equal = operator.startsWith("=");
+  return (params) => (routeParam(params, name) === value) === equal;
 }
 
 /** One expression between {{ }}; null when it is not one of the supported calls. */

@@ -1,4 +1,10 @@
-import { evaluateExpression, interpolate, literal, type ExpressionContext } from "./expressions";
+import {
+  evaluateExpression,
+  interpolate,
+  literal,
+  routeTest,
+  type ExpressionContext,
+} from "./expressions";
 
 const context: ExpressionContext = {
   translate: (text) => (text === "Save" ? "Speichern" : text),
@@ -70,5 +76,45 @@ describe("interpolate", () => {
     expect(interpolate("{{ ts('Save') }} {{ total }} {{ count }}", context)).toEqual({
       unsupported: "{{ total }}",
     });
+  });
+});
+
+describe("routeTest", () => {
+  const holds = (expression: string, params: Record<string, string>) =>
+    routeTest(expression)?.(params);
+
+  it("tests a route parameter for truth, as ngIf does, or negated", () => {
+    expect(holds("routeParams.event", { event: "12" })).toBe(true);
+    expect(holds("routeParams.event", { event: "0" })).toBe(true);
+    expect(holds("routeParams.event", { event: "" })).toBe(false);
+    expect(holds(" routeParams.event ", {})).toBe(false);
+    expect(holds("routeParams.toString", {})).toBe(false);
+    expect(holds("!routeParams.event", {})).toBe(true);
+    expect(holds("! routeParams.event", { event: "12" })).toBe(false);
+  });
+
+  it("compares a route parameter with a string literal on either side", () => {
+    expect(holds("routeParams.mode == 'short'", { mode: "short" })).toBe(true);
+    expect(holds('routeParams.mode === "short"', { mode: "long" })).toBe(false);
+    expect(holds("'short' == routeParams.mode", { mode: "short" })).toBe(true);
+    // A missing parameter is undefined, which equals no string.
+    expect(holds("routeParams.mode != ''", {})).toBe(true);
+    expect(holds("routeParams.mode !== 'short'", { mode: "short" })).toBe(false);
+  });
+
+  it("leaves every other condition unsupported", () => {
+    for (const expression of [
+      "::routeParams.event",
+      "routeParams.event && routeParams.mode",
+      "!!routeParams.event",
+      "routeParams.event == 12",
+      "routeParams.event == mode",
+      "routeParams['event']",
+      "routeParams.event = 'x'",
+      // Angular's lexer reads \x as x, JSON rejects it.
+      "routeParams.event == '\\x41'",
+      "afform.showSubmitButton",
+    ])
+      expect(routeTest(expression), expression).toBeNull();
   });
 });

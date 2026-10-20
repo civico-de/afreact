@@ -64,7 +64,8 @@ Text nodes carry Angular expressions in `{{ }}`. Core's layouts use
 `{{:: ts('…', {…}) }}` and `{{ ts('…') }}`; a few extension forms read
 variables their own controllers set (`{{options.client.id}}`). Every form's
 scope also holds afCore's `routeParams`, the route's parameters, so a layout
-can show `{{ routeParams.event }}`.
+can show `{{ routeParams.event }}` or show a part only on some routes
+(`ng-if="routeParams.event"`).
 
 ## Three layout formats
 
@@ -115,8 +116,9 @@ into the `deep` format, translating `ts('…')` in `js` attributes, which
 core's decoding turns into null. Its `bundle` source parses the compiled
 module in the browser instead, with core's attribute types exported by
 `Civi/Afreact/AttributeSchema.php`. The renderer renders the vocabulary above,
-evaluates `ts()` and `crmUrl()` with literal arguments and reads
-`routeParams.name`; any other expression, directive or attribute renders a
+evaluates `ts()` and `crmUrl()` with literal arguments, reads
+`routeParams.name` and an `ng-if` testing it (truth, negation, comparison with
+a string literal); any other expression, directive or attribute renders a
 "Not supported by the React renderer" note.
 The full list and the reasons are in
 [comparison.md](comparison.md#not-implemented-in-the-react-renderer); the

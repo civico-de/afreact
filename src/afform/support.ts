@@ -6,7 +6,7 @@ import { columnNote, settingsOf, unsupportedFeatures } from "../search/rows";
 import { referencedTasks } from "../search/searchTasks";
 import { displayTypeOf, isDisplaySettings, type DisplaySettings } from "../search/types";
 import { parseConditions } from "./conditions";
-import { interpolate } from "./expressions";
+import { interpolate, routeTest, type RouteTest } from "./expressions";
 import { INPUT_TYPES, inputTypeNote } from "./Field";
 import { entityRefProblem } from "./fields/autocomplete";
 import { isTabOf, TAB_COUNT, tabOutsideNote, tabsetProblems, tabsOf } from "./tabsets";
@@ -126,6 +126,7 @@ const PASSTHROUGH = new Set("id href title role target type style lang dir".spli
 export type NodeKind =
   | "conditional"
   | "submitCondition"
+  | "routeCondition"
   | "entity"
   | "field"
   | "block"
@@ -176,14 +177,48 @@ export const SUBMIT_BUTTON_CONDITION = "afform.showSubmitButton";
 /** How the renderer treats an element, in the order Layout's Node() checks. */
 export function nodeKind(node: ElementNode): NodeKind {
   if (typeof node["af-if"] === "string") return "conditional";
+  return ngIfKind(node);
+}
+
+/** Inside a holding af-if, as afIf outranks ngIf: the ng-if the renderer reads, else the element. */
+export function ngIfKind(node: ElementNode): Exclude<NodeKind, "conditional"> {
   if (node["ng-if"] === SUBMIT_BUTTON_CONDITION) return "submitCondition";
+  if (routeCondition(node) !== null) return "routeCondition";
   return renderedKind(node);
 }
 
-/** How an element renders once its af-if or submit-button condition holds. */
+/** Elements that put data into the form as they render, which a false ng-if would keep out. */
+function holdsData(node: ElementNode): boolean {
+  const tag = node["#tag"];
+  if (tag === "af-field" || tag === "af-entity" || tag.startsWith("afblock-")) return true;
+  if (["af-fieldset", "af-join", "af-repeat"].some((attr) => node[attr] !== undefined)) return true;
+  return (node["#children"] ?? []).some((child) => isElement(child) && holdsData(child));
+}
+
+/**
+ * ngIf on afCore's routeParams on a plain HTML element; null for any other ng-if, and around
+ * fields, which the form initialises at load, shown or not.
+ */
+export function routeCondition(node: ElementNode): RouteTest | null {
+  const condition = node["ng-if"];
+  if (typeof condition !== "string" || !HTML_TAGS.has(node["#tag"]) || holdsData(node)) return null;
+  return routeTest(condition);
+}
+
+/** An ng-if the renderer does not read, as its note names it. A route test around fields is a
+ * gap in React, not Angular code. */
+function ngIfNotes(node: ElementNode): string[] {
+  const condition = node["ng-if"];
+  if (condition === SUBMIT_BUTTON_CONDITION || routeCondition(node) !== null) return [];
+  return typeof condition === "string" && routeTest(condition)
+    ? [`route condition (ng-if=${JSON.stringify(condition)}) around fields`]
+    : ["ng-if"];
+}
+
+/** How an element renders once its af-if and ng-if conditions hold. */
 export function renderedKind(
   node: ElementNode,
-): Exclude<NodeKind, "conditional" | "submitCondition"> {
+): Exclude<NodeKind, "conditional" | "submitCondition" | "routeCondition"> {
   const tag = node["#tag"];
   if (isAdminMenu(node)) return "adminMenu";
   if (tag === "af-admin-list-menu") return "adminListMenu";
@@ -220,12 +255,10 @@ function isResetButton(node: ElementNode): boolean {
 export function unsupportedElement(node: ElementNode): string | null {
   const tag = node["#tag"];
   if (!HTML_TAGS.has(tag)) return `<${tag}>`;
-  const unknown = Object.keys(node).filter(
-    (attr) =>
-      /^(ng|af|crm)-/.test(attr) &&
-      !HANDLED.has(attr) &&
-      !(attr === "ng-if" && node[attr] === SUBMIT_BUTTON_CONDITION),
-  );
+  const unknown = Object.keys(node).flatMap((attr) => {
+    if (attr === "ng-if") return ngIfNotes(node);
+    return /^(ng|af|crm)-/.test(attr) && !HANDLED.has(attr) ? [attr] : [];
+  });
   if (node["ng-click"] !== undefined) unknown.push(`ng-click=${JSON.stringify(node["ng-click"])}`);
   return unknown.length ? unknown.join(", ") : null;
 }
@@ -472,9 +505,10 @@ const KIND_PROBLEMS: Record<NodeKind, (node: ElementNode, scope: Scope) => strin
   // An unreadable condition shows its note instead of the element.
   conditional: (node, scope) => {
     const unreadable = conditionProblem(node, "af-if");
-    return unreadable.length ? unreadable : KIND_PROBLEMS[renderedKind(node)](node, scope);
+    return unreadable.length ? unreadable : KIND_PROBLEMS[ngIfKind(node)](node, scope);
   },
   submitCondition: (node, scope) => KIND_PROBLEMS[renderedKind(node)](node, scope),
+  routeCondition: (node, scope) => KIND_PROBLEMS[renderedKind(node)](node, scope),
   entity: () => [],
   field: fieldProblems,
   block: childProblems,
