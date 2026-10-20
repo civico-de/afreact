@@ -28,6 +28,8 @@ export interface FieldDefn {
   input_type: string;
   data_type: string;
   required?: boolean;
+  /** FormBuilder's "Disable this field"; an af-disabled condition replaces it. */
+  disabled?: boolean;
   options?: FieldOption[] | false;
   input_attrs?: {
     /** Entity action this field selects a record for, e.g. "update" on the id field. */

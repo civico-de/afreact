@@ -108,6 +108,26 @@ describe("SearchFieldset", () => {
     expect(screen.queryByRole("note")).toBeNull();
   });
 
+  it("disables a filter FormBuilder disabled, unless an af-disabled condition fails", async () => {
+    const fails = JSON.stringify([["1", "=", "2"]]);
+    renderSearch(
+      "",
+      searchForm(
+        {},
+        [display("Groups")],
+        [
+          field("name", { label: "Name", disabled: true }),
+          {
+            ...field("description", { label: "Description", disabled: true }),
+            "af-disabled": fails,
+          },
+        ],
+      ),
+    );
+    expect(await screen.findByRole("textbox", { name: "Name" })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "Description" })).toBeEnabled();
+  });
+
   it("searches once with the field defaults on first load", async () => {
     const { runs } = renderSearch("");
     expect(await screen.findByRole("cell", { name: "Row" })).toBeInTheDocument();

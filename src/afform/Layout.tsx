@@ -629,7 +629,7 @@ function FieldNode({ node }: { node: ElementNode }) {
     const disabled = conditionResult(node, form, "af-disabled");
     const rules = {
       required: required && "value" in required ? required.value : undefined,
-      disabled: !!disabled && "value" in disabled && disabled.value,
+      disabled: isDisabled(disabled, defn),
       errors: [required, disabled].flatMap((result) =>
         result && "error" in result ? [result.error] : [],
       ),
@@ -661,6 +661,12 @@ function DroppedField({ scope, name, defn }: FieldNodeProps) {
 function conditionResult(node: ElementNode, form: FormState, attr: string): Evaluated | null {
   const attribute = node[attr];
   return typeof attribute === "string" ? evaluateConditions(attribute, form.data, attr) : null;
+}
+
+/** afField's isDisabled(): an af-disabled condition, once read, replaces the defn's own flag. */
+function isDisabled(condition: Evaluated | null, defn: unknown): boolean {
+  if (condition && "value" in condition) return condition.value;
+  return isFieldDefn(defn) && defn.disabled === true;
 }
 
 interface VisibleOptions {
@@ -782,7 +788,7 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
     ...visible.errors,
     ...(loop ? [loop] : []),
   ];
-  const conditionallyDisabled = !!disabled && "value" in disabled && disabled.value;
+  const fieldDisabled = isDisabled(disabled, given);
   // afField: a field that selects a record (autofill) is read-only when the entity forbids that action.
   const autofill = defn.input_attrs?.autofill;
   const readonly =
@@ -808,7 +814,7 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
           label={typeof defn.label === "string" && defn.label !== "" ? defn.label : ts("Primary")}
           group={`${form.formName}-${scope.entity}-${scope.index}-${scope.join ?? ""}`}
           checked={value === true}
-          disabled={form.disabled || conditionallyDisabled}
+          disabled={form.disabled || fieldDisabled}
           onSelect={() => {
             form.edit((data) => setPrimary(data, scope));
           }}
@@ -822,7 +828,7 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
         <Field
           defn={defn}
           value={value}
-          disabled={form.disabled || readonly || conditionallyDisabled}
+          disabled={form.disabled || readonly || fieldDisabled}
           onChange={(next) => {
             form.edit((data) => setValue(data, scope, name, next));
           }}

@@ -352,6 +352,24 @@ describe("live rules", () => {
     expect(box("nick_name")).toBeDisabled();
   });
 
+  it("disables a field FormBuilder disabled, until an af-disabled condition decides", async () => {
+    renderForm(
+      form([
+        field("first_name"),
+        field("nick_name", { disabled: true }),
+        field(
+          "last_name",
+          { disabled: true },
+          { "af-disabled": when("first_name", "=", '"lock"') },
+        ),
+      ]),
+    );
+    expect(await screen.findByRole("textbox", { name: "nick_name" })).toBeDisabled();
+    expect(box("last_name")).toBeEnabled();
+    await userEvent.type(box("first_name"), "lock");
+    expect(box("last_name")).toBeDisabled();
+  });
+
   it("calculates a token default until the user edits the field", async () => {
     renderForm(
       form([
