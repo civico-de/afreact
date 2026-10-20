@@ -469,10 +469,11 @@ export function linksFor(ctx: DisplayContext, all: LinkItem[], columnKey?: strin
 
 const LINK_PROPS = ["path", "entity", "action", "join", "target", "task"] as const;
 
-export function onChangeLink(column: AdminColumn, all: LinkItem[], after: LinkItem): void {
+/** onChangeLink: `links` are the column's own, among which its current link is looked up. */
+export function onChangeLink(column: AdminColumn, links: LinkItem[], after: LinkItem): void {
   const link: LinkItem = column.link ?? {};
   column.link = link;
-  const before = link.action ? all.find((l) => l.action === link.action) : undefined;
+  const before = link.action ? links.find((l) => l.action === link.action) : undefined;
   if (!after.action && !after.path && !after.task) {
     if (before && before.text === column.title) delete column.title;
     delete column.link;
@@ -484,11 +485,11 @@ export function onChangeLink(column: AdminColumn, all: LinkItem[], after: LinkIt
   for (const prop of LINK_PROPS) link[prop] = after[prop] ?? "";
 }
 
-export function toggleLink(column: AdminColumn, links: LinkItem[], all: LinkItem[]): void {
-  if (column.link) onChangeLink(column, all, {});
+export function toggleLink(column: AdminColumn, links: LinkItem[]): void {
+  if (column.link) onChangeLink(column, links, {});
   else {
     delete column.editable;
-    onChangeLink(column, all, links[0] ?? { path: "civicrm/" });
+    onChangeLink(column, links, links[0] ?? { path: "civicrm/" });
   }
 }
 

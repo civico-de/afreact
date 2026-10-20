@@ -229,7 +229,7 @@ function LinkRow({ ctx, col, links, editCol }: ColumnEditing) {
         checked={!!col.link}
         onChange={() => {
           editCol((c) => {
-            toggleLink(c, own, links);
+            toggleLink(c, own);
           });
         }}
       />
@@ -257,7 +257,7 @@ function LinkRow({ ctx, col, links, editCol }: ColumnEditing) {
             label={ts("Link of %1", { 1: colLabel(ctx, col) })}
             onChange={(next) => {
               editCol((c) => {
-                onChangeLink(c, links, next);
+                onChangeLink(c, own, next);
               });
             }}
           />

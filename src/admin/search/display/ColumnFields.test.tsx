@@ -4,7 +4,7 @@ import { useState } from "react";
 import { mockApi, renderWithQuery } from "../../../test/render";
 import { metadata as meta } from "../../../test/searchMetadata";
 import { changeFilterField, ColumnTypeFields, filterMode } from "./ColumnFields";
-import type { AdminColumn, DisplayContext } from "./model";
+import { buildLinks, type AdminColumn, type DisplayContext, type LinkItem } from "./model";
 
 const ctx: DisplayContext = {
   meta,
@@ -19,14 +19,22 @@ const ctx: DisplayContext = {
 let saved: AdminColumn | undefined;
 
 /** One column's settings, every edit kept as the display editor keeps it. */
-function Column({ initial, context = ctx }: { initial: AdminColumn; context?: DisplayContext }) {
+function Column({
+  initial,
+  context = ctx,
+  links = [],
+}: {
+  initial: AdminColumn;
+  context?: DisplayContext;
+  links?: LinkItem[];
+}) {
   const [col, setCol] = useState(initial);
   saved = col;
   return (
     <ColumnTypeFields
       ctx={context}
       col={col}
-      links={[]}
+      links={links}
       dateFormats={meta.dateFormats}
       editCol={(change) => {
         setCol((current) => {
@@ -185,6 +193,32 @@ describe("ColumnTypeFields", () => {
       expect(height).toHaveValue(0);
       await userEvent.type(height, "8");
       expect(saved?.image).toEqual({ alt: "", height: 8 });
+    });
+  });
+
+  describe("a field's link", () => {
+    const joined: DisplayContext = {
+      ...ctx,
+      search: {
+        api_entity: "Contact",
+        api_params: { version: 4, select: ["id", "display_name", "employer_id.display_name"] },
+      },
+    };
+    const allLinks = () => buildLinks(joined, true);
+
+    it("removes the tooltip its own link set, though the main entity has a link of that action", async () => {
+      renderWithQuery(
+        <Column
+          initial={{ type: "field", key: "employer_id.display_name" }}
+          context={joined}
+          links={allLinks()}
+        />,
+      );
+      await userEvent.click(screen.getByRole("checkbox", { name: "Link" }));
+      expect(saved?.link).toMatchObject({ action: "view", join: "employer_id" });
+      expect(saved?.title).toBe("View Current Employer");
+      await userEvent.click(screen.getByRole("checkbox", { name: "Link" }));
+      expect(saved).toEqual({ type: "field", key: "employer_id.display_name" });
     });
   });
 
