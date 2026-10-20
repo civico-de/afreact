@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { FormContext } from "./Layout";
-import { RECAPTCHA_OUTSIDE_FORM_NOTE } from "./support";
+import { captchaSiteKey, RECAPTCHA_OUTSIDE_FORM_NOTE, RECAPTCHA_WITHOUT_KEY_NOTE } from "./support";
 import type { ElementNode } from "./types";
 import { Unsupported } from "./Unsupported";
 
@@ -69,11 +69,14 @@ function loadRecaptcha(): Promise<Grecaptcha> {
 export function Recaptcha2({ node }: { node: ElementNode }) {
   const recaptcha = useContext(FormContext)?.recaptcha;
   if (!recaptcha) return <Unsupported what={RECAPTCHA_OUTSIDE_FORM_NOTE} />;
+  const sitekey = captchaSiteKey(node);
+  // deviation:captcha-without-key-noted
+  if (!sitekey) return <Unsupported what={RECAPTCHA_WITHOUT_KEY_NOTE} />;
   return (
     <Widget
       respond={recaptcha.respond}
       failures={recaptcha.failures}
-      sitekey={typeof node.recaptchakey === "string" ? node.recaptchakey : ""}
+      sitekey={sitekey}
       theme={
         typeof node.recaptchatheme === "string" && node.recaptchatheme
           ? node.recaptchatheme

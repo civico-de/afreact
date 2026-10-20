@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
 import { AfreactForm } from "./AfreactForm";
-import { layoutProblems } from "./support";
+import { layoutProblems, RECAPTCHA_WITHOUT_KEY_NOTE } from "./support";
 import type { LayoutNode } from "./types";
 
 const captcha: LayoutNode = {
@@ -44,10 +44,10 @@ function fakeGrecaptcha() {
   return { widgets, reset };
 }
 
-function renderCaptcha(submit: () => unknown) {
+function renderCaptcha(submit: () => unknown, form = layout) {
   const calls = mockApi({
     "Afreact.getForm": () => [
-      { name: "afformTest", title: "Test", type: "form", layout, strings: [] },
+      { name: "afformTest", title: "Test", type: "form", layout: form, strings: [] },
     ],
     "Afform.prefill": () => [],
     "Afform.submit": submit,
@@ -111,6 +111,18 @@ describe("crm-recaptcha2", () => {
       { extra: { recaptcha2: "token-2", recaptcha: "token-2", fields: {} } },
       {},
     ]);
+  });
+
+  // deviation:captcha-without-key-noted
+  it("shows a note instead of the widget where no extension wrote a site key", async () => {
+    const { widgets } = fakeGrecaptcha();
+    const keyless: LayoutNode[] = [
+      { "#tag": "af-form", ctrl: "afform", "#children": [{ "#tag": "crm-recaptcha2" }] },
+    ];
+    renderCaptcha(() => [{}], keyless);
+    expect(await screen.findByRole("note")).toHaveTextContent(RECAPTCHA_WITHOUT_KEY_NOTE);
+    expect(widgets).toEqual([]);
+    expect(layoutProblems(keyless)).toEqual([RECAPTCHA_WITHOUT_KEY_NOTE]);
   });
 
   it("is noted outside af-form", () => {

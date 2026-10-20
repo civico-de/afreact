@@ -148,6 +148,13 @@ export type NodeKind =
 
 export const PARAM_SETS_OUTSIDE_NOTE = "af-search-param-sets outside a search fieldset";
 export const RECAPTCHA_OUTSIDE_FORM_NOTE = "crm-recaptcha2 outside af-form";
+export const RECAPTCHA_WITHOUT_KEY_NOTE =
+  "ReCaptcha without a site key, which the recaptcha or formprotection extension adds";
+
+/** The site key the providing extension writes into the markup, even where none is set. */
+export function captchaSiteKey(node: ElementNode): string {
+  return typeof node.recaptchakey === "string" ? node.recaptchakey : "";
+}
 
 export const SUBMIT_BUTTON_CONDITION = "afform.showSubmitButton";
 
@@ -433,6 +440,12 @@ function elementProblems(node: ElementNode): string[] {
   return expressions.length ? [expressionNote(expressions)] : [];
 }
 
+// deviation:captcha-without-key-noted
+function recaptchaProblems(node: ElementNode, scope: Scope): string[] {
+  if (!scope.form) return [RECAPTCHA_OUTSIDE_FORM_NOTE];
+  return captchaSiteKey(node) ? [] : [RECAPTCHA_WITHOUT_KEY_NOTE];
+}
+
 const childProblems = (node: ElementNode, scope: Scope) =>
   layoutProblemsIn(node["#children"] ?? [], scope);
 
@@ -500,7 +513,7 @@ const KIND_PROBLEMS: Record<NodeKind, (node: ElementNode, scope: Scope) => strin
     isListMenuTab(node.tab) ? LIST_MENU_SETTINGS_NOTE : listMenuTabNote(node.tab),
   ],
   paramSets: (_node, scope) => (scope.filters ? [] : [PARAM_SETS_OUTSIDE_NOTE]),
-  recaptcha: (_node, scope) => (scope.form ? [] : [RECAPTCHA_OUTSIDE_FORM_NOTE]),
+  recaptcha: recaptchaProblems,
   element: (node, scope) => [...elementProblems(node), ...childProblems(node, scope)],
 };
 
