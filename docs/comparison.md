@@ -188,11 +188,12 @@ Angular code from elsewhere, which a React renderer cannot run:
   so does the support report
 - include columns other than FormBuilder's placement column: a column of type
   `include` is an `ng-include` of any Angular template
-- bulk actions whose task is an extension's own Angular dialog (download,
-  update, tag, relationship, mailing, open case and assign case role have
-  their own dialogs), takes an input field the in-place editors lack
-  (`apiBatch.fields` with a Location or multi-value colour input), or uses an
-  expression other than a literal, an object literal, `ids[n]`,
+- bulk actions whose task opens an Angular dialog the renderer has not
+  rebuilt (the rebuilt core dialogs are those `taskRun()` in
+  `src/search/searchTasks.ts` maps, each described under
+  [Bulk actions](#bulk-actions)), takes an input field the in-place editors
+  lack (`apiBatch.fields` with a Location or multi-value colour input), or
+  uses an expression other than a literal, an object literal, `ids[n]`,
   `ids.join(',')` and the task's data names. They stay in the actions menu,
   disabled, with the note as their title; a row link to one alerts. A single
   extension's dialog can be rebuilt as the core ones were.
@@ -247,9 +248,9 @@ own forms show which gaps matter there.
 
 The React table runs the tasks `SearchDisplay.getSearchTasks` returns:
 API batches (enable, disable, delete, …) in a confirmation dialog with
-progress, the spreadsheet download, the update of chosen fields and the tag
-task in dialogs of their own, `CRM.loadForm` popups, and redirects to a new
-window. Selection
+progress, the tasks whose core dialog it rebuilds in dialogs of its own (the
+list is `taskRun()` in `src/search/searchTasks.ts`; the table below has a row
+for each), `CRM.loadForm` popups, and redirects to a new window. Selection
 follows core: per page or all pages (a `return: 'id'` run), Shift for a range,
 kept across sorting and paging, cleared by new filters and after a task.
 
