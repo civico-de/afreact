@@ -24,7 +24,7 @@ const COLUMN: Shape = {
   image: any("alt height width"),
   subsearch: {
     ...any("display search subsearch_mode"),
-    filters: any("parent_field subsearch_field"),
+    filters: any("parent_field subsearch_field value"),
   },
   tally: any("fn label rewrite target"),
 };

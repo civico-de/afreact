@@ -16,6 +16,26 @@ describe("unknownSettings", () => {
     ).toEqual([]);
   });
 
+  it("passes a subsearch filter that compares with a value, as its condition editor sets one", () => {
+    expect(
+      unknownSettings("table", {
+        columns: [
+          {
+            type: "subsearch",
+            subsearch: {
+              search: "s",
+              display: null,
+              filters: [
+                { subsearch_field: "contact_id", parent_field: "id" },
+                { subsearch_field: "status_id:name", value: "Completed" },
+              ],
+            },
+          },
+        ],
+      }),
+    ).toEqual([]);
+  });
+
   it("names unknown keys by their path, at every level it checks", () => {
     expect(
       unknownSettings("table", {
