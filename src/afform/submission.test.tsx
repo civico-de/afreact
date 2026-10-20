@@ -429,6 +429,33 @@ describe("drafts", () => {
   });
 
   // deviation:draft-pristine-label
+  it("load from a stored draft that lacks an entity, which Prefill returns as its definition", async () => {
+    // FormDataModel's entries, as Prefill::populateSubmissionData() keeps them.
+    const definitions = [
+      {
+        name: "Individual1",
+        values: {
+          type: "Contact",
+          name: "Individual1",
+          fields: {},
+          joins: {},
+          security: "RBAC",
+          actions: { create: true, update: true },
+        },
+      },
+      { name: "extra", values: { type: null, fields: [] } },
+    ];
+    const calls = renderForm({ "Afform.prefill": () => definitions });
+    await userEvent.type(await firstName(), "Bo");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(called(calls, "Afform.submit")[0]?.params.values).toEqual({
+        Individual1: [{ fields: { first_name: "Bo" }, joins: {} }],
+        extra: { fields: {} },
+      });
+    });
+  });
+
   it("are saved on request once the form holds changes", async () => {
     const box = { resolve: vi.fn(), reject: vi.fn() };
     vi.mocked(window.CRM.status).mockReturnValue(box);
