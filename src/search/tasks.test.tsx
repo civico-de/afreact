@@ -2208,6 +2208,27 @@ describe("AfreactSearch bulk actions", () => {
       });
     });
 
+    // deviation:alert-text-escaped
+    it("shows a merged tag's label as text in the notification", async () => {
+      serve({
+        tasks: [enable, tagMerge],
+        handlers: { "Tag.get": () => tags, "Tag.merge": () => [] },
+      });
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+      const dialog = await openMerge();
+      const labelBox = await within(dialog).findByRole("textbox", { name: "Label" });
+      await userEvent.clear(labelBox);
+      await userEvent.type(labelBox, "<img src=x>");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Merge tags" }));
+      await waitFor(() => {
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          '2 tags merged into "&lt;img src=x&gt;".',
+          "Merged",
+          "success",
+        );
+      });
+    });
+
     // deviation:tag-merge-none-left
     it("says when none of the selected tags exists any more", async () => {
       const calls = serve({ tasks: [enable, tagMerge], handlers: { "Tag.get": () => [] } });

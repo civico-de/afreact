@@ -56,6 +56,7 @@ import {
   type SchemaField,
   type SearchAdminMetadata,
 } from "./meta";
+import { asHtml } from "../../html";
 
 export type EditorRoute =
   | { mode: "create"; entity: string }
@@ -600,7 +601,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
     persist(sent, sentGroup, target).then(
       (result) => {
         const report = (failure: unknown) => {
-          window.CRM.alert(errorMessage(failure), ts("Error"), "error");
+          window.CRM.alert(asHtml(errorMessage(failure)), ts("Error"), "error");
         };
         if (result.reloadMetadata) refreshMetadata().catch(report);
         for (const refresh of result.refreshes) refresh.catch(report);
@@ -612,7 +613,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
       },
       (failure: unknown) => {
         setSaving(false);
-        window.CRM.alert(errorMessage(failure), ts("Error"), "error");
+        window.CRM.alert(asHtml(errorMessage(failure)), ts("Error"), "error");
       },
     );
   }
@@ -905,7 +906,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                                 warnEmbedded(list, key, display.label);
                               },
                               (error: unknown) => {
-                                window.CRM.alert(errorMessage(error), ts("Error"), "error");
+                                window.CRM.alert(asHtml(errorMessage(error)), ts("Error"), "error");
                               },
                             );
                           }
@@ -1188,7 +1189,7 @@ function warnEmbedded(
           1: using.length,
           2: label,
         });
-  window.CRM.alert(message, ts("Display embedded"), "alert");
+  window.CRM.alert(asHtml(message), ts("Display embedded"), "alert");
 }
 
 const classicOnly = () =>

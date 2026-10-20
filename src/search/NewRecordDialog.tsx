@@ -19,6 +19,7 @@ import {
   type SearchTask,
   type UpdateField,
 } from "./searchTasks";
+import { asHtml } from "../html";
 
 /** What a dialog that adds one record per selected contact asks, looks up and says. */
 export interface NewRecordKind {
@@ -165,7 +166,7 @@ export function NewRecordDialog({
     try {
       await api4("Case", "create", { values: { ...values, contact_id: contacts } });
       const message = ts("Successfully opened 1 case.");
-      window.CRM.alert(message, ts("Saved"), "success");
+      window.CRM.alert(asHtml(message), ts("Saved"), "success");
       onOpened(message);
       // deviation:open-case-batch-failure
     } catch (failure) {

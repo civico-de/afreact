@@ -27,6 +27,7 @@ import {
 } from "./listing";
 import { entitySelect, searchAdminSettings, useSearchMetadata } from "./meta";
 import { SegmentList } from "./SegmentList";
+import { asHtml } from "../../html";
 
 type SearchTab = Exclude<ListTab, "segment">;
 
@@ -270,7 +271,7 @@ function ListingTab({ tab }: { tab: SearchTab }) {
       },
       (error: unknown) => {
         formsLoad.current = null;
-        window.CRM.alert(errorMessage(error), ts("Error"), "error");
+        window.CRM.alert(asHtml(errorMessage(error)), ts("Error"), "error");
         return {};
       },
     );
@@ -289,7 +290,7 @@ function ListingTab({ tab }: { tab: SearchTab }) {
       status.resolve();
     } catch (error) {
       status.reject();
-      window.CRM.alert(errorMessage(error), ts("Error"), "error");
+      window.CRM.alert(asHtml(errorMessage(error)), ts("Error"), "error");
     }
     await refresh();
   }
@@ -306,7 +307,7 @@ function ListingTab({ tab }: { tab: SearchTab }) {
       status.resolve();
     } catch (error) {
       status.reject();
-      window.CRM.alert(errorMessage(error), ts("Error"), "error");
+      window.CRM.alert(asHtml(errorMessage(error)), ts("Error"), "error");
     }
     await refresh();
   }

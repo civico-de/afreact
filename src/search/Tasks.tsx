@@ -187,7 +187,7 @@ export function useTasks(options: TasksOptions) {
 
   const notSupported = (what: string) => {
     const text = ts("Not supported by the React renderer: %1", { 1: what });
-    window.CRM.alert(text, ts("Error"), "error");
+    window.CRM.alert(asHtml(text), ts("Error"), "error");
     setMessage(text);
   };
 
@@ -656,7 +656,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
         const title = apiBatch.successTitle
           ? ts(apiBatch.successTitle)
           : ts("%1 Complete", { 1: task.title });
-        if (text) window.CRM.alert(text, title, "success");
+        if (text) window.CRM.alert(asHtml(text), title, "success");
         else text = title;
       }
       finish({ ran, message: text });

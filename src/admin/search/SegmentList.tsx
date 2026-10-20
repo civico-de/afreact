@@ -5,6 +5,7 @@ import { Pager } from "../../search/Pager";
 import { ConfirmDialog } from "../widgets/ConfirmDialog";
 import { searchAdminSettings, useRefreshSearchMetadata } from "./meta";
 import { SegmentDialog } from "./SegmentDialog";
+import { asHtml } from "../../html";
 
 interface SegmentRow {
   id: number;
@@ -61,7 +62,7 @@ export function SegmentList({ dialog, onDialog }: SegmentListProps) {
       status.resolve();
     } catch (error) {
       status.reject();
-      window.CRM.alert(errorMessage(error), ts("Error"), "error");
+      window.CRM.alert(asHtml(errorMessage(error)), ts("Error"), "error");
     }
     await refresh();
   }
