@@ -125,10 +125,11 @@ describe("tallies", () => {
   ];
 
   // deviation:batch-count-zero
-  it("counts a typed 0 as filled, an unticked box not", () => {
+  it("counts a typed 0 as filled, an unticked box and an empty list not", () => {
     const zero: BatchRow[] = [
       { _id: 1, total_amount: 0, flag: false },
       { _id: 2, total_amount: "0", flag: null },
+      { _id: 3, total_amount: [], flag: [] },
     ];
     expect(tallyOf(zero, field("total_amount", { tally: { fn: "COUNT" } }))).toBe(2);
     expect(tallyOf(zero, field("flag", { tally: { fn: "COUNT" } }))).toBe(0);
