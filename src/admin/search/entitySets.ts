@@ -1,4 +1,5 @@
 import { getDefaultLabel, parseExpr, type ApiParams, type SearchInfo } from "./expr";
+import { fnState, writeExpr } from "./fn";
 import type { SchemaField, SearchAdminMetadata } from "./meta";
 
 /** A set's params; a column the set's entity lacks is null, so rows line up across sets. */
@@ -155,9 +156,6 @@ export function removeEntitySet(
 }
 
 const LOGIC = ["AND", "OR", "NOT"];
-/** A quoted literal, or a field name with its suffix: a name before "(" is a function. */
-const FUNCTION_TOKEN =
-  /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|(?<![\w.:])[A-Za-z_][\w.]*(?::\w+)?\b(?!\s*\()/g;
 
 /** Clauses with each field passed through `rename`: groups, and a value that is a field too. */
 function renameInClauses(clauses: unknown[][], rename: (key: string) => string): unknown[][] {
@@ -215,12 +213,17 @@ function renameColumns(
   // Having, grouping and sorting may name an outer column by its alias, which stays.
   const aliases = new Set(params.select.flatMap((col) => col.split(" AS ")[1] ?? []));
   const renameRef = (key: string) => (aliases.has(key) ? key : rename(key));
+  const outerMeta = withEntitySetFields(meta, params);
   const renameInFunction = (col: string) => {
-    const [stored = col, alias] = col.split(" AS ");
-    // Only the field names: a string literal keeps its exact text, escapes included.
-    const expr = stored.replace(FUNCTION_TOKEN, (token) =>
-      /^["']/.test(token) ? token : rename(token),
+    const state = fnState(outerMeta, col, { api_entity: "EntitySet", api_params: params });
+    const args = state.args.map((arg) =>
+      arg.type === "field" ? { ...arg, value: rename(String(arg.value)) } : arg,
     );
+    if (!state.fn || args.every((arg, i) => arg.value === state.args[i]?.value)) return col;
+    const [written = ""] = writeExpr({ ...state, args }, "select").split(" AS ");
+    const [stored = col, alias] = col.split(" AS ");
+    // writeExpr adds ":label" to a function with options; a stored expression may go without.
+    const expr = stored.endsWith(":label") ? written : written.replace(/:label$/, "");
     return alias === undefined ? expr : `${expr} AS ${alias}`;
   };
   const renameColumn = (col: string) => {

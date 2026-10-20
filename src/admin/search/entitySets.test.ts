@@ -230,6 +230,19 @@ describe("entity sets", () => {
     expect(params.select).toEqual(['GROUP_CONCAT(title SEPARATOR "\\n \\" visibility") AS n']);
   });
 
+  it("renames a field inside a function, not a parameter name it shares", () => {
+    const params = setEntitySet(
+      meta,
+      {
+        select: ['GROUP_CONCAT(SEPARATOR SEPARATOR ",") AS names'],
+        sets: [["UNION ALL", "Contact", "get", { select: ["display_name AS SEPARATOR"] }]],
+      },
+      0,
+      { select: ["display_name AS renamed"] },
+    );
+    expect(params.select).toEqual(['GROUP_CONCAT(renamed SEPARATOR ",") AS names']);
+  });
+
   it("renames no field into one that a row keeps, even in a swap", () => {
     const params = setEntitySet(
       meta,
