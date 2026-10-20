@@ -63,7 +63,7 @@ function loadRecaptcha(): Promise<Grecaptcha> {
 }
 
 /**
- * crm-recaptcha2: Google's checkbox, whose response goes with the submission as extra.recaptcha2.
+ * crm-recaptcha2: Google's checkbox, whose response goes with the submission (AfreactForm's submit()).
  * After a failed submission the used response is void, so the checkbox starts over.
  */
 export function Recaptcha2({ node }: { node: ElementNode }) {

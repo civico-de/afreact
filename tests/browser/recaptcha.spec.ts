@@ -1,6 +1,7 @@
 /**
  * crm-recaptcha2 on both renderers, with Google's script replaced by a stand-in and no request
- * leaving for Google: the same widget, the same refusal without a response, the same values sent.
+ * leaving for Google: the same widget, the same refusal without a response, the same values sent
+ * plus formprotection's key.
  */
 import { expect, test, type Browser, type Page, type Route } from "@playwright/test";
 import { api, API_PAGE, AUTH, isRecord, quietApi, type Renderer } from "./harness";
@@ -54,6 +55,13 @@ function submitted(route: Route): unknown {
     (each) => Array.isArray(each) && each[0] === "Afform" && each[1] === "submit",
   );
   return Array.isArray(call) && isRecord(call[2]) ? call[2].values : undefined;
+}
+
+/** The values without extra.recaptcha, formprotection's key, which React sends beside core's. */
+function withoutFormprotectionKey(values: unknown): unknown {
+  if (!isRecord(values) || !isRecord(values.extra)) return values;
+  const { recaptcha: _, ...extra } = values.extra;
+  return { ...values, extra };
 }
 
 async function open(page: Page, renderer: Renderer) {
@@ -121,6 +129,9 @@ test("sends the widget's response with the submission as Angular does", async ({
     await expect.poll(() => sent[renderer], LOAD).toBeDefined();
     await page.unrouteAll({ behavior: "ignoreErrors" });
   }
-  expect(sent.react).toEqual(sent.angular);
-  expect(sent.react).toMatchObject({ extra: { recaptcha2: "fake-response" } });
+  // deviation:captcha-response-both-keys
+  expect(sent.react).toMatchObject({
+    extra: { recaptcha2: "fake-response", recaptcha: "fake-response" },
+  });
+  expect(withoutFormprotectionKey(sent.react)).toEqual(sent.angular);
 });

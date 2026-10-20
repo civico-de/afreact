@@ -64,7 +64,8 @@ afterEach(() => {
 });
 
 describe("crm-recaptcha2", () => {
-  it("renders the widget with the form's key and sends its response as extra.recaptcha2", async () => {
+  // deviation:captcha-response-both-keys
+  it("renders the widget with the form's key and sends its response for both validators", async () => {
     const { widgets } = fakeGrecaptcha();
     const calls = renderCaptcha(() => [{}]);
     const submit = await screen.findByRole("button", { name: "Submit" });
@@ -75,7 +76,9 @@ describe("crm-recaptcha2", () => {
     widgets[0]?.callback("token-1");
     await userEvent.click(submit);
     await waitFor(() => {
-      expect(submitted(calls)).toEqual([{ extra: { recaptcha2: "token-1", fields: {} } }]);
+      expect(submitted(calls)).toEqual([
+        { extra: { recaptcha2: "token-1", recaptcha: "token-1", fields: {} } },
+      ]);
     });
   });
 
@@ -103,7 +106,11 @@ describe("crm-recaptcha2", () => {
       expect(submitted(calls)).toHaveLength(3);
     });
     // The used response is void after the failure, as Google answers it only once.
-    expect(submitted(calls)).toEqual([{}, { extra: { recaptcha2: "token-2", fields: {} } }, {}]);
+    expect(submitted(calls)).toEqual([
+      {},
+      { extra: { recaptcha2: "token-2", recaptcha: "token-2", fields: {} } },
+      {},
+    ]);
   });
 
   it("is noted outside af-form", () => {

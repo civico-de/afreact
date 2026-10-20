@@ -751,10 +751,10 @@ function LoadedForm(props: LoadedFormProps) {
     }
     setEdits((count) => count + 1);
     const response = recaptchaResponse.current;
-    save.mutate({
-      values: submission(data, response === null ? {} : { recaptcha2: response }),
-      saved: retry?.response,
-    });
+    // deviation:captcha-response-both-keys
+    // core's recaptcha extension validates extra.recaptcha2, formprotection extra.recaptcha.
+    const captcha = response === null ? {} : { recaptcha2: response, recaptcha: response };
+    save.mutate({ values: submission(data, captcha), saved: retry?.response });
   }
 
   // postProcess() leaves for a redirect before it would show a message.
