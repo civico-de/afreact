@@ -242,6 +242,14 @@ export function keyField(ctx: FieldContext, name: string): SchemaField | undefin
   return columnField(ctx, name) ?? getField(ctx.meta, name, ctx.search);
 }
 
+/** The option key a condition on `name` compares: what its column or expression returns. */
+// deviation:rule-condition-option-key
+export function keyOptionKey(ctx: FieldContext, name: string): string {
+  const expr = ctx.search.api_params.select.find((item) => item.split(" AS ")[1] === name) ?? name;
+  const suffix = parseExpr(ctx.meta, expr, ctx.search).args[0]?.suffix;
+  return suffix ? suffix.slice(1) : "id";
+}
+
 /** Labels of the columns whose default their number input refuses. deviation:batch-default-invalid-blocks-save */
 export function invalidDefaults(ctx: FieldContext, settings: unknown): string[] {
   if (!isAdminSettings(settings)) return [];

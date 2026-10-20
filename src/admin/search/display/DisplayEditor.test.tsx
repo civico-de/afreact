@@ -317,29 +317,39 @@ it("names each sort row's direction and clear button by its field", async () => 
 });
 
 // deviation:rule-condition-alias-field
-it("offers a field's options to a style condition on its aliased column", async () => {
-  mockApi({
-    "SearchDisplay.getSearchTasks": () => [],
-    "SearchDisplay.run": () => Object.assign([], { count: 0, countFetched: 0 }),
-    "Contact.getFields": () => [
-      { name: "gender_id", options: [{ id: 1, name: "Female", label: "Female" }] },
-    ],
-  });
-  const info = { ...search, api_params: { version: 4, select: ["gender_id:label AS g"] } };
-  renderWithQuery(
-    <Harness
-      info={info}
-      initial={{
-        id: 1,
-        name: "T",
-        label: "T",
-        type: "table",
-        settings: {
-          columns: [{ type: "field", key: "g", label: "G" }],
-          cssRules: [["bg-danger", "g", "=", ""]],
-        },
-      }}
-    />,
-  );
-  expect(await screen.findByRole("option", { name: "Female" })).toBeInTheDocument();
-});
+it.each([
+  ["gender_id:label AS g", "Weiblich"],
+  ["gender_id AS g", 1],
+])(
+  "offers the options of %s to a style condition, stored as the column returns them",
+  async (expr, stored) => {
+    mockApi({
+      "SearchDisplay.getSearchTasks": () => [],
+      "SearchDisplay.run": () => Object.assign([], { count: 0, countFetched: 0 }),
+      "Contact.getFields": () => [
+        { name: "gender_id", options: [{ id: 1, name: "Female", label: "Weiblich" }] },
+      ],
+    });
+    const info = { ...search, api_params: { version: 4, select: [expr] } };
+    renderWithQuery(
+      <Harness
+        info={info}
+        initial={{
+          id: 1,
+          name: "T",
+          label: "T",
+          type: "table",
+          settings: {
+            columns: [{ type: "field", key: "g", label: "G" }],
+            cssRules: [["bg-danger", "g", "=", ""]],
+          },
+        }}
+      />,
+    );
+    const option = await screen.findByRole("option", { name: "Weiblich" });
+    const list = option.closest("select");
+    if (!list) throw new Error("The options are not a select.");
+    await userEvent.selectOptions(list, option);
+    expect(latest?.settings?.cssRules).toEqual([["bg-danger", "g", "=", stored]]);
+  },
+);

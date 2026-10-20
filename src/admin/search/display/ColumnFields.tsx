@@ -14,6 +14,7 @@ import { SearchInput } from "../SearchInput";
 import { CssRules, LinkGroup, LinkSelect, TokenText } from "./common";
 import {
   keyField,
+  keyOptionKey,
   canBeEditable,
   canBeImage,
   colLabel,
@@ -982,7 +983,7 @@ function IconCondition({
           clause={clause}
           offset={1}
           operators={ctx.meta.operators}
-          optionKey="name"
+          optionKey={keyOptionKey(ctx, name)}
           options={field ? options.data?.[field.name] : undefined}
           onChange={onChange}
         />

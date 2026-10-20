@@ -4,6 +4,7 @@ import { draftOf, initialized } from "./DisplayEditor";
 import { fieldToColumn } from "../expr";
 import {
   colorFieldOf,
+  keyOptionKey,
   dateFormatChoice,
   addCol,
   addCssRule,
@@ -531,4 +532,19 @@ it("starts a style rule of an aliased column with a condition on it", () => {
   };
   addCssRule(aliased, item, "bg-danger", "g");
   expect(item.cssRules).toEqual([["bg-danger", "g", "="]]);
+});
+
+// deviation:rule-condition-option-key
+it("compares a condition's options as its column returns them", () => {
+  const search = {
+    api_entity: "Contact",
+    api_params: { version: 4, select: ["gender_id:label AS g", "gender_id AS r", "gender_id"] },
+  };
+  const at = { ...ctx, search };
+  expect(["g", "r", "gender_id", "gender_id:name"].map((key) => keyOptionKey(at, key))).toEqual([
+    "label",
+    "id",
+    "id",
+    "name",
+  ]);
 });

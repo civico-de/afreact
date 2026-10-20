@@ -10,6 +10,7 @@ import { useFieldOptions } from "../meta";
 import { SearchCondition } from "../SearchCondition";
 import {
   keyField,
+  keyOptionKey,
   addCssRule,
   changeLimit,
   changeLinkItem,
@@ -702,7 +703,7 @@ function RuleCondition({
           clause={clause}
           offset={at + 1}
           operators={ctx.meta.operators}
-          optionKey="name"
+          optionKey={keyOptionKey(ctx, name)}
           options={field ? options.data?.[field.name] : undefined}
           onChange={onChange}
         />

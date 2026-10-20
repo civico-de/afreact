@@ -1119,6 +1119,15 @@ column's key as a field (`searchAdminColors` `getField`, `getColorField`), so
 `gender_id AS g` gets no colours either. afreact takes the field from the column's select
 expression. `deviation:column-alias-color`
 
+**A style condition on a column without the `:label` suffix never matches.**
+Conditions of a display's styles, a column's icons and a link store an option's
+name (`option-key="'name'"` in `searchAdminCssRules.html`, `searchAdminIcons.html`,
+`crmSearchConditions.html`), and the server compares that with the row's value
+(`AbstractRunAction::getCssStyles`, `filterCompare`). That fits the `:name`
+expressions the field list offers, but a raw column such as `gender_id` holds
+the ID, so a rule on "Female" is never met. afreact stores the option by what
+the compared column returns: its ID, name or label. `deviation:rule-condition-option-key`
+
 **A column's format can list a column twice.** The format select of a column
 offers every suffix (`crmSearchAdminFields.html`), also one another column
 already selects, so `gender_id` switched to Label beside `gender_id:label` puts
