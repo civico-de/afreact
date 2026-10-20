@@ -6,6 +6,7 @@ import { useEditor } from "./context";
 import { plainLiteral } from "./fields";
 import type { GuiField } from "./meta";
 import { jsAttribute } from "./model";
+import { showsTime } from "../../afform/fields/dateTime";
 
 interface FieldValueProps {
   id: string;
@@ -61,7 +62,7 @@ export function FieldValue({ id, field, op, value, onChange }: FieldValueProps) 
   const attrs = isRecord(field.input_attrs) ? field.input_attrs : {};
 
   if (field.input_type === "Date") {
-    const time = !!attrs.time;
+    const time = showsTime(attrs.time, field.data_type);
     const current = text(value);
     return (
       <input

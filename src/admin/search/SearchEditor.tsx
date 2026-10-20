@@ -181,7 +181,17 @@ function useDynamicFields(meta: SearchAdminMetadata, entityName: string, params:
     queryFn: async () => {
       const fields = await api4<SchemaField>(entityName, "getFields", {
         action: "get",
-        loadOptions: ["id", "name", "label", "description", "color", "icon"],
+        loadOptions: [
+          "id",
+          "name",
+          "label",
+          "description",
+          "abbr",
+          "color",
+          "icon",
+          "grouping",
+          "url",
+        ],
         ...Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)),
       });
       return fields.map((field) => ({ ...field, fieldName: field.name }));

@@ -119,6 +119,21 @@ describe("assignValue", () => {
     expect(relativeDate("now -1 week", true, now)).toBe("2026-01-23 09:05:07");
   });
 
+  // deviation:date-time-by-type
+  it("works out a relative date with its time for a timestamp without a time setting", () => {
+    const now = new Date(2026, 0, 30, 9, 5, 7);
+    const created = field("created", { input_type: "Date", data_type: "Timestamp" });
+    expect(assignValue(empty, created, "now", { now }).values).toEqual({
+      created: "2026-01-30 09:05:07",
+    });
+    const dateOnly = field("created", {
+      input_type: "Date",
+      data_type: "Timestamp",
+      input_attrs: { time: false },
+    });
+    expect(assignValue(empty, dateOnly, "now", { now }).values).toEqual({ created: "2026-01-30" });
+  });
+
   // deviation:number-range-bounds
   it("reads a range as its bounds", () => {
     const count = field("count", {

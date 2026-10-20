@@ -11,7 +11,7 @@ import { getAllFields, getEntity, getField, getSelectFields, type SearchInfo } f
 import { useFieldOptions } from "../meta";
 import { SearchCondition } from "../SearchCondition";
 import { SearchInput } from "../SearchInput";
-import { CssRules, LinkGroup, LinkSelect, TokenText } from "./common";
+import { CssRules, LinkGroup, LinkSelect, TokenText, withRuleField } from "./common";
 import {
   keyField,
   keyOptionKey,
@@ -971,7 +971,7 @@ function IconCondition({
         placeholder={ts("Always")}
         className="crm-auto-width"
         single
-        options={fields}
+        options={withRuleField(ctx, fields, name)}
         value={name ? [name] : []}
         onChange={(picked) => {
           onChange(withConditionField(clause, 0, picked[0] === undefined ? "" : String(picked[0])));

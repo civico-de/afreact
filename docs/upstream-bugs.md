@@ -355,7 +355,8 @@ without a `format_type` carry no `time` setting, so a `date` column such as
 `Discount.start_date` asks for a time it cannot store, while the form builder's
 "Show Time" item is hidden for every such field. afreact reads a missing setting
 from the column: a timestamp takes date and time, as in core, a date only the
-date; the builder offers "Show Time" for a field that shows one. `deviation:date-time-by-type`
+date; the builder offers "Show Time" for a field that shows one, takes a default
+with time there, and a relative default such as `now` keeps its time. `deviation:date-time-by-type`
 
 **A saved search set in the route empties entity fields.** afField's
 routeParams watcher reads `_s` for every field outside the extra fieldset, and

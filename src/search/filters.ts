@@ -1,4 +1,5 @@
 import type { FieldDefn } from "../afform/types";
+import { showsTime } from "../afform/fields/dateTime";
 
 /**
  * The filter fields of a search form (an af-fieldset without entity) as afFieldset and
@@ -123,7 +124,11 @@ export function convertValue(defn: FieldDefn, raw: unknown, context: ValueContex
   if (!["DisplayOnly", "Location"].includes(defn.input_type) && !isNumberRange)
     value = correctValueType(value, defn.data_type);
   if (defn.input_type === "Date" && typeof value === "string" && value.startsWith("now")) {
-    value = relativeDate(value, !!defn.input_attrs?.time, context.now ?? new Date());
+    value = relativeDate(
+      value,
+      showsTime(defn.input_attrs?.time, defn.data_type),
+      context.now ?? new Date(),
+    );
   }
   const bounds = (text: string) => text.split("-");
   if (isNumberRange) {

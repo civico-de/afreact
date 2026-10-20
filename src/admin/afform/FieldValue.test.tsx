@@ -25,6 +25,26 @@ function Harness() {
 }
 
 describe("FieldValue", () => {
+  // deviation:date-time-by-type
+  it.each([
+    ["Timestamp", "datetime-local"],
+    ["Date", "date"],
+  ])("takes a %s default without a time setting in a %s input", (dataType, type) => {
+    const { editor } = fieldApi({ name: "created", data_type: dataType, input_attrs: {} }, {});
+    render(
+      <EditorContext.Provider value={editor}>
+        <label htmlFor="created">Created</label>
+        <FieldValue
+          id="created"
+          field={{ name: "created", data_type: dataType, input_type: "Date" }}
+          value={undefined}
+          onChange={() => undefined}
+        />
+      </EditorContext.Provider>,
+    );
+    expect(screen.getByLabelText("Created")).toHaveAttribute("type", type);
+  });
+
   it("keeps the decimal point of a number typed digit by digit", async () => {
     render(<Harness />);
     const input = screen.getByRole("textbox", { name: "Amount" });

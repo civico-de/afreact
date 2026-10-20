@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { metadata as meta } from "../../../test/searchMetadata";
+import { withRuleField } from "./common";
 import { draftOf, initialized } from "./DisplayEditor";
 import { fieldToColumn } from "../expr";
 import {
@@ -552,6 +553,33 @@ it("tests a label column's condition by the option's machine name", () => {
     "n",
     "id",
   ]);
+});
+
+// deviation:rule-condition-label-by-name
+it("keeps a label condition on a field without a :name suffix", () => {
+  const unnamed = structuredClone(meta);
+  const gender = unnamed.schema
+    .find((entity) => entity.name === "Contact")
+    ?.fields.find((field) => field.name === "gender_id");
+  if (!gender) throw new Error("The test metadata has no gender_id.");
+  gender.suffixes = ["label", "abbr"];
+  const search = {
+    api_entity: "Contact",
+    api_params: { version: 4, select: ["gender_id:label AS g"] },
+  };
+  expect(ruleField({ ...ctx, meta: unnamed, search }, "g")).toBe("g");
+});
+
+// deviation:rule-condition-label-by-name
+it("offers an older rule's column alias among its condition fields", () => {
+  const search = {
+    api_entity: "Contact",
+    api_params: { version: 4, select: ["gender_id:label AS g"] },
+  };
+  const at = { ...ctx, search };
+  const fields = [{ id: "gender_id:name", label: "Gender" }];
+  expect(withRuleField(at, fields, "gender_id:name")).toBe(fields);
+  expect(withRuleField(at, fields, "g").map((field) => field.id)).toEqual(["gender_id:name", "g"]);
 });
 
 // deviation:rule-condition-option-key

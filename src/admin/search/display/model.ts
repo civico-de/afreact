@@ -256,7 +256,8 @@ export function ruleField(ctx: FieldContext, key: string): string {
   const expr = ctx.search.api_params.select.find((item) => item.split(" AS ")[1] === key) ?? key;
   const info = parseExpr(ctx.meta, expr, ctx.search);
   const arg = info.args[0];
-  return !info.fn && arg?.suffix === ":label" ? `${arg.path ?? ""}:name` : key;
+  const named = !arg?.field?.suffixes || arg.field.suffixes.includes("name");
+  return !info.fn && arg?.suffix === ":label" && named ? `${arg.path ?? ""}:name` : key;
 }
 
 /** Labels of the columns whose default their number input refuses. deviation:batch-default-invalid-blocks-save */

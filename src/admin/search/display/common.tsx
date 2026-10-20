@@ -654,6 +654,18 @@ function conditionFields(ctx: DisplayContext, all: boolean): PickerOption[] {
     : select;
 }
 
+/** The condition fields with the rule's own, which an older rule names by its column alias. */
+// deviation:rule-condition-label-by-name
+export function withRuleField(
+  ctx: DisplayContext,
+  fields: PickerOption[],
+  name: string,
+): PickerOption[] {
+  if (!name || fields.some((field) => String(field.id) === name)) return fields;
+  const column = getSelectFields(ctx.meta, ctx.search).find((field) => String(field.id) === name);
+  return [...fields, { ...column, id: name, label: column?.label ?? name }];
+}
+
 /** A field picker and crmSearchCondition on `clause[at]` and the operator and value after it. */
 function RuleCondition({
   ctx,
@@ -689,7 +701,7 @@ function RuleCondition({
         placeholder={placeholder}
         className="crm-auto-width"
         single
-        options={fields}
+        options={withRuleField(ctx, fields, name)}
         value={name ? [name] : []}
         onChange={(picked) => {
           onChange(
