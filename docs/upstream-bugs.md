@@ -1370,9 +1370,9 @@ its rows, `reconcileAggregateColumns()` wraps every ungrouped column, and
 `getDefaultAggregateFn()` picks `COUNT` for an `id`, so the first column turns
 into `COUNT(id)`. `GroupContactCache::getApiSQL()` reads that column as
 `contact_id`, and the group gets the contacts whose IDs equal the counts
-(reproduced on 6.19; `COUNT` became the default for `id` in 5.51). afreact takes `MIN` for a smart group's first column and refuses to save one
-whose first column is an aggregate that returns no ID of its rows, as `COUNT`
-or `SUM` do. `deviation:smart-group-aggregate-refused`
+(reproduced on 6.19; `COUNT` became the default for `id` in 5.51). afreact refuses to save a smart group whose first column is an aggregate that
+returns no ID of its rows, as `COUNT` or `SUM` do; grouping by the contact ID,
+or choosing `MIN` or `MAX` for the column, still saves. `deviation:smart-group-aggregate-refused`
 
 **Selected columns stay selectable.** `fieldsForSelect()` passes a
 `disabledIf` callback without a `return`, so fields already in the select

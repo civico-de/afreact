@@ -113,13 +113,27 @@ describe("saving", () => {
         groups: [{ title: "G", description: "", visibility: "", group_type: [] }],
       });
     expect(validate(meta, group(["COUNT(id) AS COUNT_id", "gender_id"]), true)).toEqual([
-      { message: "A smart group's first column must hold contact IDs, not a Count.", tab: "group" },
+      {
+        message:
+          "A smart group's first column must hold contact IDs, not a Count. Group by the contact ID, or choose a function such as Min for this column.",
+        tab: "group",
+      },
     ]);
     expect(validate(meta, group(["SUM(id) AS SUM_id"]), true)).toHaveLength(1);
     expect(validate(meta, group(["COUNT(id) AS COUNT_id"]), false)).toEqual([]);
     expect(validate(withMin, group(["MIN(id) AS MIN_id", "gender_id"]), true)).toEqual([]);
     expect(validate(withMin, group(["GROUP_FIRST(id) AS GROUP_FIRST_id"]), true)).toEqual([]);
     expect(validate(meta, group(["id AS cid", "display_name"]), true)).toEqual([]);
+    const byContact = saved({
+      api_entity: "Email",
+      api_params: {
+        version: 4,
+        select: ["contact_id", "COUNT(id) AS COUNT_id"],
+        groupBy: ["contact_id"],
+      },
+      groups: [{ title: "G", description: "", visibility: "", group_type: [] }],
+    });
+    expect(validate(meta, byContact, true)).toEqual([]);
     expect(validate(meta, group(["employer_id", "COUNT(id) AS COUNT_id"]), true)).toEqual([]);
   });
 

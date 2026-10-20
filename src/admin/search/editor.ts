@@ -222,9 +222,10 @@ export function validate(
   const lead = groupExists ? parseExpr(meta, search.api_params.select[0] ?? "", search).fn : null;
   if (lead?.category === "aggregate" && !KEEPS_ID.includes(lead.name))
     errors.push({
-      message: ts("A smart group's first column must hold contact IDs, not a %1.", {
-        1: lead.title,
-      }),
+      message: ts(
+        "A smart group's first column must hold contact IDs, not a %1. Group by the contact ID, or choose a function such as Min for this column.",
+        { 1: lead.title },
+      ),
       tab: "group",
     });
   // The column is int unsigned. deviation:search-timeout-invalid-blocks-save
