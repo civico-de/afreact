@@ -1,5 +1,12 @@
 import type { PickerOption } from "../widgets/Picker";
-import { getEntity, getField, getJoin, type ApiParams, type SearchInfo } from "./expr";
+import {
+  getEntity,
+  getField,
+  getJoin,
+  reconcileAggregateColumns,
+  type ApiParams,
+  type SearchInfo,
+} from "./expr";
 import type { SearchAdminMetadata } from "./meta";
 
 export type JoinType = "LEFT" | "INNER" | "EXCLUDE";
@@ -113,19 +120,26 @@ function withoutJoinParts(
   const uses = (clause: unknown) => gone.some((a) => clauseUsesJoin(clause, a));
   const joinLabels = { ...search.form_values?.join };
   for (const a of gone) delete joinLabels[a];
+  const groupBy = params.groupBy?.filter((expr) => !gone.some((a) => exprUsesJoin(expr, a)));
+  const next: ApiParams = {
+    ...params,
+    select: params.select.filter((col) => !gone.some((a) => exprUsesJoin(col, a))),
+    ...(groupBy ? { groupBy } : {}),
+    ...(params.where ? { where: params.where.filter((clause) => !uses(clause)) } : {}),
+    ...(params.join
+      ? { join: params.join.filter((clause) => !nested.includes(aliasOf(clause))) }
+      : {}),
+  };
+  // Aggregates that a removed grouping required unwrap, as changeGroupBy does.
+  const regrouped = groupBy?.length !== params.groupBy?.length;
   return {
     ...search,
-    api_params: {
-      ...params,
-      select: params.select.filter((col) => !gone.some((a) => exprUsesJoin(col, a))),
-      ...(params.groupBy
-        ? { groupBy: params.groupBy.filter((expr) => !gone.some((a) => exprUsesJoin(expr, a))) }
-        : {}),
-      ...(params.where ? { where: params.where.filter((clause) => !uses(clause)) } : {}),
-      ...(params.join
-        ? { join: params.join.filter((clause) => !nested.includes(aliasOf(clause))) }
-        : {}),
-    },
+    api_params: regrouped
+      ? {
+          ...next,
+          select: [...new Set(reconcileAggregateColumns(meta, { ...search, api_params: next }))],
+        }
+      : next,
     ...(search.form_values ? { form_values: { ...search.form_values, join: joinLabels } } : {}),
   };
 }

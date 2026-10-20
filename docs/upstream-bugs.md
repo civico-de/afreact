@@ -1337,7 +1337,8 @@ drops only select entries that start with `alias.`, so a column such as
 `GROUP_CONCAT(alias.email) AS …` stays, and `groupBy` is never touched; the
 next run fails on a field of a join that no longer exists. afreact drops every
 select and group-by expression that refers to the removed join or its nested
-joins. `deviation:join-removal-prunes-expressions`
+joins, and unwraps the aggregates that a removed grouping required, as a
+change of the grouping does. `deviation:join-removal-prunes-expressions`
 
 **A function grouping's label points at nothing.** Each group-by row has
 `<label for="crm-search-groupBy-N">`, but the input with that id renders only

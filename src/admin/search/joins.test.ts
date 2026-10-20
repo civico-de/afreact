@@ -123,8 +123,27 @@ describe("removing and changing joins", () => {
       groupBy: ["id", "Contact_Email_contact_id_01.location_type_id"],
     });
     const after = removeJoin(meta, grouped, 0);
-    expect(after.api_params.select).toEqual(["id", "COUNT(id) AS COUNT_id"]);
+    expect(after.api_params.select).toEqual(["id"]);
     expect(after.api_params.groupBy).toEqual(["id"]);
+  });
+
+  it("unwraps the aggregates that a removed join's grouping required", () => {
+    const grouped = search({
+      select: [
+        "COUNT(id) AS COUNT_id",
+        "GROUP_CONCAT(DISTINCT display_name) AS GROUP_CONCAT_display_name",
+        "Contact_Email_contact_id_01.email",
+      ],
+      join: [[EMAIL, "LEFT"]],
+      groupBy: ["Contact_Email_contact_id_01.email"],
+    });
+    const after = removeJoin(meta, grouped, 0);
+    expect(after.api_params.select).toEqual(["id", "display_name"]);
+    expect(after.api_params.groupBy).toEqual([]);
+    expect(changeJoinType(meta, grouped, 0, "EXCLUDE").api_params.select).toEqual([
+      "id",
+      "display_name",
+    ]);
   });
 
   it("keeps the parent when a nested join goes", () => {
