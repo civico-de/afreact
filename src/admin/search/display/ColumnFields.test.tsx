@@ -102,4 +102,70 @@ describe("ColumnTypeFields", () => {
       expect(screen.queryByRole("textbox", { name: "Empty placeholder" })).toBeNull();
     });
   });
+
+  describe("text trimmed as ngModel trims it", () => {
+    it("trims a tooltip", async () => {
+      renderColumn({ type: "field", key: "display_name", title: "Display Name" });
+      const input = screen.getByRole("textbox", { name: "Tooltip" });
+      await userEvent.clear(input);
+      await userEvent.type(input, "  Full name ");
+      await userEvent.tab();
+      expect(saved?.title).toBe("Full name");
+    });
+
+    it("trims an HTML column's rewrite, which unlike a field's has no ng-trim=false", async () => {
+      renderColumn({ type: "html", key: "display_name", rewrite: "[display_name]" });
+      await userEvent.type(screen.getByRole("textbox", { name: "Rewrite HTML" }), "<br> ");
+      await userEvent.tab();
+      expect(saved?.rewrite).toBe("[display_name]<br>");
+    });
+
+    it("trims an image's alt text with every keystroke, keeping what is typed on show", async () => {
+      renderColumn({ type: "image", key: "display_name", image: { alt: "" } });
+      const input = screen.getByRole("textbox", { name: "Alt Text" });
+      await userEvent.type(input, "Photo of ");
+      expect(saved?.image).toEqual({ alt: "Photo of" });
+      expect(input).toHaveValue("Photo of ");
+      await userEvent.type(input, "[[display_name]");
+      expect(saved?.image).toEqual({ alt: "Photo of [display_name]" });
+    });
+
+    // deviation:date-format-custom-on-blur
+    it("keeps a custom date format's input while it is emptied, and trims the format", async () => {
+      renderColumn({ type: "field", key: "birth_date" });
+      await userEvent.selectOptions(screen.getByRole("combobox", { name: "Format" }), "other");
+      const input = screen.getByRole("textbox", { name: "Custom date format" });
+      expect(saved?.format).toBe("%Y-%m-%d");
+      await userEvent.clear(input);
+      await userEvent.type(input, " %d.%m.%Y ");
+      await userEvent.tab();
+      expect(saved?.format).toBe("%d.%m.%Y");
+    });
+
+    it("trims a template path", async () => {
+      renderColumn({ type: "include", path: "" });
+      await userEvent.type(
+        screen.getByRole("textbox", { name: /Template File/ }),
+        " ~/my/row.html ",
+      );
+      expect(saved?.path).toBe("~/my/row.html");
+    });
+
+    it("trims a link's own path, which an untrimmed space would put into the address", async () => {
+      renderColumn({ type: "field", key: "display_name" });
+      await userEvent.click(screen.getByRole("checkbox", { name: "Link" }));
+      const path = screen.getByRole("textbox", { name: /^Path of/ });
+      await userEvent.clear(path);
+      await userEvent.type(path, "civicrm/contact/view?cid=[[id] ");
+      await userEvent.tab();
+      expect(saved?.link?.path).toBe("civicrm/contact/view?cid=[id]");
+    });
+
+    it("keeps a menu's text as typed, as crm-ui-editable does", async () => {
+      renderColumn({ type: "menu", text: "Actions", style: "default", size: "btn-sm", links: [] });
+      await userEvent.type(screen.getByRole("textbox", { name: "Menu Text" }), " ");
+      await userEvent.tab();
+      expect(saved?.text).toBe("Actions ");
+    });
+  });
 });

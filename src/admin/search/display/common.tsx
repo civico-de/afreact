@@ -594,6 +594,7 @@ export function TokenText({
   multiline = false,
   hiddenLabel = true,
   live = false,
+  trim = true,
 }: {
   ctx: DisplayContext;
   label: string;
@@ -604,6 +605,7 @@ export function TokenText({
   hiddenLabel?: boolean;
   /** Takes every keystroke, where core's input has no `updateOn: 'blur'`. */
   live?: boolean;
+  trim?: boolean;
 }) {
   const id = useId();
   return (
@@ -616,6 +618,7 @@ export function TokenText({
         className="form-control crm-flex-1"
         multiline={multiline}
         live={live}
+        trim={trim}
         value={value}
         onChange={onChange}
       />

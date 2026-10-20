@@ -99,4 +99,16 @@ describe("ButtonElement", () => {
     await userEvent.selectOptions(color, "Default");
     expect(latest?.class).toBe("af-button btn btn-default");
   });
+
+  it("trims its text as it is typed, keeping the input as typed", async () => {
+    render(<Canvas element={ButtonElement} node={button({ class: "af-button btn" })} />);
+    await openMenu();
+    const text = screen.getByLabelText("Text:");
+    await userEvent.clear(text);
+    await userEvent.type(text, "Save ");
+    expect(latest?.["#children"]).toEqual([{ "#text": "Save" }]);
+    expect(text).toHaveValue("Save ");
+    await userEvent.type(text, "draft");
+    expect(latest?.["#children"]).toEqual([{ "#text": "Save draft" }]);
+  });
 });

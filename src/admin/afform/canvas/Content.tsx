@@ -1,6 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef } from "react";
 import { IconPicker } from "../../widgets/IconPicker";
 import { InlineEdit } from "../../widgets/InlineEdit";
+import { ModelText } from "../../widgets/ModelText";
 import { useEditor, type EditorApi } from "../context";
 import { filled, textAttribute } from "../model";
 import { modifyClasses, splitClass } from "../nodes";
@@ -213,13 +214,12 @@ export function ButtonElement({ path, node, handle, label }: ElementProps) {
               <>
                 <MenuControls inline={false}>
                   <label htmlFor={textId}>{ts("Text:")}</label>
-                  <input
+                  <ModelText
                     id={textId}
-                    type="text"
                     className="form-control"
+                    live
                     value={firstText(node)}
-                    onChange={(event) => {
-                      const text = event.target.value;
+                    onChange={(text) => {
                       ops.edit((current) => withText(current, text));
                     }}
                   />

@@ -4,6 +4,7 @@ import { api4 } from "../../../api/civi";
 import { itemText, searchPage, type AutocompleteItem } from "../../../afform/fields/autocomplete";
 import { adminVars } from "../../vars";
 import { IconPicker } from "../../widgets/IconPicker";
+import { ModelText } from "../../widgets/ModelText";
 import { Picker, type PickerOption } from "../../widgets/Picker";
 import { getAllFields, getEntity, getField, getSelectFields, type SearchInfo } from "../expr";
 import { useFieldOptions } from "../meta";
@@ -172,7 +173,8 @@ function RewriteRow({
   editCol,
   label,
   title,
-}: ColumnEditing & { label: string; title: string }) {
+  trim = true,
+}: ColumnEditing & { label: string; title: string; trim?: boolean }) {
   return (
     <Row>
       <Toggle
@@ -188,6 +190,7 @@ function RewriteRow({
           ctx={ctx}
           label={label}
           multiline
+          trim={trim}
           value={col.rewrite}
           onChange={(value) => {
             editCol((c) => {
@@ -349,14 +352,14 @@ function FieldColumn(props: ColumnEditing & { dateFormats: Record<string, string
               <label htmlFor={`${id}-date-custom`} className="sr-only">
                 {ts("Custom date format")}
               </label>
-              <input
+              {/* An emptied format reads as the default, so it is taken once left. */}
+              {/* deviation:date-format-custom-on-blur */}
+              <ModelText
                 id={`${id}-date-custom`}
-                type="text"
                 className="form-control"
                 placeholder={ts("Date Format")}
                 value={typeof col.format === "string" ? col.format : ""}
-                onChange={(event) => {
-                  const value = event.target.value;
+                onChange={(value) => {
                   editCol((c) => {
                     c.format = value;
                   });
@@ -423,6 +426,7 @@ function FieldColumn(props: ColumnEditing & { dateFormats: Record<string, string
         {...props}
         label={ts("Rewrite Text")}
         title={ts("Change the contents of this field, or combine multiple field values.")}
+        trim={false}
       />
       {!col.link && <LinebreaksRow col={col} editCol={editCol} />}
       <div className="form-inline">
@@ -606,17 +610,16 @@ function IncludeColumn({ col, editCol }: ColumnEditing) {
         <label htmlFor={id}>
           {ts("Template File")} <span className="crm-marker">*</span>
         </label>
-        <input
+        <ModelText
           id={id}
           className="form-control crm-flex-1"
-          type="text"
           required
           pattern="^~/.+/.+"
           placeholder="~/myModule/myTemplate.html"
           aria-describedby={`${id}-help`}
+          live
           value={col.path ?? ""}
-          onChange={(event) => {
-            const value = event.target.value;
+          onChange={(value) => {
             editCol((c) => {
               c.path = value;
             });
@@ -706,6 +709,7 @@ function LinksColumn({ ctx, col, links, editCol }: ColumnEditing) {
             <TokenText
               ctx={ctx}
               label={ts("Menu Text")}
+              trim={false}
               value={col.text ?? ""}
               onChange={(text) => {
                 editCol((c) => {
