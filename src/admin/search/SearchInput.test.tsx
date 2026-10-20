@@ -84,3 +84,32 @@ describe("SearchInput options", () => {
     expect(stored).toBe("CA");
   });
 });
+
+describe("SearchInput stored values", () => {
+  // deviation:option-value-unknown-shown
+  it("shows and keeps a stored value that no option has", async () => {
+    const values: unknown[] = [];
+    function Stored() {
+      const [value, setValue] = useState<unknown>("Female");
+      return (
+        <SearchInput
+          id="gender"
+          field={{ name: "gender_id", data_type: "Integer", options: true }}
+          op="="
+          options={[{ id: 1, name: "Female", label: "Weiblich" }]}
+          value={value}
+          onChange={(next) => {
+            values.push(next);
+            setValue(next);
+          }}
+        />
+      );
+    }
+    renderWithQuery(<Stored />);
+    const select = screen.getByRole("combobox");
+    expect(select).toHaveDisplayValue("Female (no such option)");
+    await userEvent.selectOptions(select, "Weiblich");
+    expect(values).toEqual([1]);
+    expect(screen.queryByRole("option", { name: "Female (no such option)" })).toBeNull();
+  });
+});

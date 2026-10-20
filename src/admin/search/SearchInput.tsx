@@ -208,12 +208,26 @@ export function OptionSelect({
     const key = attribute(option);
     return typeof key === "number" ? key : String(key);
   };
-  const byText = (raw: string) => list.map(keyOf).find((key) => String(key) === raw);
-  const choices = list.map((option) => (
-    <option key={String(keyOf(option))} value={String(keyOf(option))}>
-      {option.label}
-    </option>
-  ));
+  const keys = list.map(keyOf);
+  // A stored value no option has stays selected and on show instead of reading as empty.
+  // deviation:option-value-unknown-shown
+  const picked: unknown[] = Array.isArray(value) ? value : [value];
+  const strays = picked.filter(
+    (item) => text(item) !== "" && !keys.some((key) => String(key) === text(item)),
+  );
+  const byText = (raw: string) => [...keys, ...strays].find((key) => text(key) === raw);
+  const choices = [
+    ...strays.map((stray) => (
+      <option key={`stray-${text(stray)}`} value={text(stray)}>
+        {ts("%1 (no such option)", { 1: text(stray) })}
+      </option>
+    )),
+    ...list.map((option) => (
+      <option key={String(keyOf(option))} value={String(keyOf(option))}>
+        {option.label}
+      </option>
+    )),
+  ];
   if (multiple)
     return (
       <select
