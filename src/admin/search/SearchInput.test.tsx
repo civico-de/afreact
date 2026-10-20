@@ -112,4 +112,30 @@ describe("SearchInput stored values", () => {
     expect(values).toEqual([1]);
     expect(screen.queryByRole("option", { name: "Female (no such option)" })).toBeNull();
   });
+
+  it("keeps a stored value no option has selected in a multi-select, once", async () => {
+    const values: unknown[] = [];
+    function Stored() {
+      const [value, setValue] = useState<unknown>([7, 7]);
+      return (
+        <SearchInput
+          id="gender"
+          field={{ name: "gender_id", data_type: "Integer", options: true }}
+          op="IN"
+          options={[{ id: 1, name: "Female", label: "Weiblich" }]}
+          value={value}
+          onChange={(next) => {
+            values.push(next);
+            setValue(next);
+          }}
+        />
+      );
+    }
+    renderWithQuery(<Stored />);
+    const stray = screen.getAllByRole("option", { name: "7 (no such option)" });
+    expect(stray).toHaveLength(1);
+    expect(stray[0]).toHaveProperty("selected", true);
+    await userEvent.selectOptions(screen.getByRole("listbox"), "Weiblich");
+    expect(values).toEqual([[7, 1]]);
+  });
 });

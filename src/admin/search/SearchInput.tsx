@@ -212,9 +212,12 @@ export function OptionSelect({
   const keys = list.map(keyOf);
   // A stored value no option has stays selected and on show instead of reading as empty.
   // deviation:option-value-unknown-shown
-  const picked: unknown[] = Array.isArray(value) ? value : [value];
+  const stored: unknown[] = Array.isArray(value) ? value : [value];
+  const picked = stored.filter((item) => text(item) !== "");
   const strays = picked.filter(
-    (item) => text(item) !== "" && !keys.some((key) => String(key) === text(item)),
+    (item, index) =>
+      !keys.some((key) => String(key) === text(item)) &&
+      picked.findIndex((other) => text(other) === text(item)) === index,
   );
   const byText = (raw: string) => [...keys, ...strays].find((key) => text(key) === raw);
   const choices = [
@@ -235,7 +238,7 @@ export function OptionSelect({
         id={id}
         multiple
         className="form-control"
-        value={Array.isArray(value) ? value.map(String) : []}
+        value={picked.map(text)}
         onChange={(event) => {
           onChange([...event.target.selectedOptions].map((o) => byText(o.value)));
         }}
