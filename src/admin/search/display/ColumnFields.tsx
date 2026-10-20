@@ -610,6 +610,7 @@ function IncludeColumn({ col, editCol }: ColumnEditing) {
         <label htmlFor={id}>
           {ts("Template File")} <span className="crm-marker">*</span>
         </label>
+        {/* deviation:include-path-kept */}
         <ModelText
           id={id}
           className="form-control crm-flex-1"

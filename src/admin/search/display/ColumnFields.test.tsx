@@ -168,4 +168,13 @@ describe("ColumnTypeFields", () => {
       expect(saved?.text).toBe("Actions ");
     });
   });
+
+  // deviation:include-path-kept
+  it("keeps a template path that is not yet valid, which core's validators drop", async () => {
+    renderColumn({ type: "include", path: "" });
+    const path = screen.getByRole("textbox", { name: /Template File/ });
+    await userEvent.type(path, "~/my");
+    expect(path).toBeInvalid();
+    expect(saved?.path).toBe("~/my");
+  });
 });

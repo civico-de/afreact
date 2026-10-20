@@ -1063,6 +1063,12 @@ Float field that is not an ID or a reference turns into `0`, and text such
 as `abc` into `NaN`, which the save stores as `null`. afreact converts
 numeric text only and keeps an empty or non-numeric default as it is. `deviation:number-default-kept`
 
+**An unfinished template path is dropped.** The custom code column's path
+input is `required` with a pattern, so while it is empty or does not match
+`^~/.+/.+`, ngModel sets the path to `undefined` and the display is saved
+without one, losing what was typed. afreact keeps the typed path and marks the
+input invalid. `deviation:include-path-kept`
+
 ## FormBuilder
 
 **A style value with a colon is cut at it.** `afGui.getStyles()` splits each
