@@ -556,6 +556,32 @@ describe("live rules", () => {
     expect(screen.getByRole("note")).toHaveTextContent("Angular expression {{ cls }}");
   });
 
+  it("links crmUrl() with a query string to the URL CRM.url builds from it", async () => {
+    const url = vi.spyOn(window.CRM, "url").mockImplementation((path, query) => {
+      if (typeof query !== "string") throw new Error("The query reaches CRM.url as a string.");
+      return `/${path}?${query}`;
+    });
+    try {
+      renderForm(
+        form([
+          {
+            "#tag": "a",
+            "ng-href": "{{ crmUrl('civicrm/admin/component', 'reset=1') }}",
+            "#children": [{ "#text": "Components" }],
+          },
+        ]),
+        "",
+      );
+      expect(await screen.findByRole("link", { name: "Components" })).toHaveAttribute(
+        "href",
+        "/civicrm/admin/component?reset=1",
+      );
+      expect(screen.queryByRole("note")).not.toBeInTheDocument();
+    } finally {
+      url.mockRestore();
+    }
+  });
+
   it("reports a condition it cannot read and renders nothing of its element, as afIf", async () => {
     const calls = renderForm(
       form([

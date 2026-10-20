@@ -160,7 +160,8 @@ extensions.
 Angular code from elsewhere, which a React renderer cannot run:
 
 - Angular expressions other than `:: ts('…', {…})` and `crmUrl(…)` with
-  literal arguments and `routeParams.name`, and a one-time
+  literal arguments (its query as an object or, as `CRM.url` takes it, a
+  string such as `'reset=1'`) and `routeParams.name`, and a one-time
   `{{:: routeParams.name }}`, which keeps the first value the route gives it.
   An `ng-if` may test `routeParams.name`, its negation or its comparison with
   a string literal (`==`, `!=`, `===`, `!==`); other conditions are reported.

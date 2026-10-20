@@ -215,6 +215,7 @@ describe("layoutProblems", () => {
       },
       { "#comment": " note " },
       { "#text": "{{:: ts('Hello') }}" },
+      { "#tag": "a", "ng-href": "{{ crmUrl('civicrm/admin/component', 'reset=1') }}" },
       {
         "#tag": "p",
         title: "{{ routeParams.event }}",

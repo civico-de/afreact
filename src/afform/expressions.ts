@@ -1,19 +1,20 @@
 /**
  * The Angular expressions Afform layouts put into text and attributes: `ts('…', {…})` and
- * `crmUrl('…', {…})` with literal arguments, optionally one-time (`::`), and afCore's
- * `routeParams.name`. Anything else is reported as unsupported.
+ * `crmUrl('…', {…})` or `crmUrl('…', '…')` with literal arguments, optionally one-time (`::`), and
+ * afCore's `routeParams.name`. Anything else is reported as unsupported.
  */
 
 export interface ExpressionContext {
   translate: (text: string) => string;
-  url: (path: string, query?: Record<string, string | number>) => string;
+  /** CRM.url, which takes the query as an object or as a string. */
+  url: (path: string, query?: Record<string, string | number> | string) => string;
   /** afCore's routeParams as the route stands now. */
   routeParams: Record<string, string>;
 }
 
 const LITERAL = String.raw`'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"`;
 const CALL = new RegExp(
-  String.raw`^(?:::)?\s*(ts|crmUrl)\(\s*(${LITERAL})\s*(?:,\s*(\{[^}]*\})\s*)?\)$`,
+  String.raw`^(?:::)?\s*(ts|crmUrl)\(\s*(${LITERAL})\s*(?:,\s*(\{[^}]*\}|${LITERAL})\s*)?\)$`,
 );
 const PARAM = String.raw`routeParams\.(?<name>[A-Za-z_$][\w$]*)`;
 const EQUALS = String.raw`\s*(?<operator>[!=]==?)\s*`;
@@ -110,15 +111,17 @@ export function evaluateExpression(expression: string, context: ExpressionContex
   if (!match) return null;
   const [, name, argument = "''", query] = match;
   let text: string;
-  let params: Record<string, string | number> | undefined;
+  let params: Record<string, string | number> | string | undefined;
   try {
     text = literal(argument);
-    params = query === undefined ? undefined : objectLiteral(query);
+    if (query !== undefined) params = query.startsWith("{") ? objectLiteral(query) : literal(query);
   } catch (error) {
     if (error instanceof SyntaxError) return null;
     throw error;
   }
   if (name !== "ts") return context.url(text, params);
+  // ts() takes its parameters as an object only.
+  if (typeof params === "string") return null;
   if (params === undefined) return context.translate(text);
   const plural = params.plural;
   const form =

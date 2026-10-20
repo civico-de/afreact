@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import {
   evaluateExpression,
   interpolate,
@@ -8,9 +9,13 @@ import {
 
 const context: ExpressionContext = {
   translate: (text) => (text === "Save" ? "Speichern" : text),
+  // As CRM.url: a query string as it stands, an object as form parameters.
   url: (path, query = {}) => {
-    const search = new URLSearchParams(Object.entries(query).map(([k, v]) => [k, String(v)]));
-    return search.size ? `/${path}?${search.toString()}` : `/${path}`;
+    const search =
+      typeof query === "string"
+        ? query
+        : new URLSearchParams(Object.entries(query).map(([k, v]) => [k, String(v)])).toString();
+    return search ? `/${path}?${search}` : `/${path}`;
   },
   routeParams: { event: "12" },
 };
@@ -39,6 +44,21 @@ describe("evaluateExpression", () => {
     expect(evaluateExpression("crmUrl('civicrm/a', {})", context)).toBe("/civicrm/a");
   });
 
+  it("hands a crmUrl() query string to the URL builder as it stands, as CRM.url takes it", () => {
+    const url = vi.fn((path: string) => `/${path}`);
+    const recording = { ...context, url };
+    expect(evaluateExpression("crmUrl('civicrm/admin/component', 'reset=1')", recording)).toBe(
+      "/civicrm/admin/component",
+    );
+    evaluateExpression(':: crmUrl("civicrm/a", "action=add&reset=1")', recording);
+    evaluateExpression("crmUrl('civicrm/a', '')", recording);
+    expect(url.mock.calls).toEqual([
+      ["civicrm/admin/component", "reset=1"],
+      ["civicrm/a", "action=add&reset=1"],
+      ["civicrm/a", ""],
+    ]);
+  });
+
   it("fills ts() parameters given as literals, with the plural form past one", () => {
     expect(evaluateExpression("ts('%1 found', {1: 3})", context)).toBe("3 found");
     expect(evaluateExpression("ts('Save', {'escape': 'js'})", context)).toBe("Speichern");
@@ -59,6 +79,8 @@ describe("evaluateExpression", () => {
     expect(evaluateExpression("ts('%1 found', {1: n})", context)).toBeNull();
     expect(evaluateExpression("crmUrl('a', {x: y})", context)).toBeNull();
     expect(evaluateExpression("crmUrl(path)", context)).toBeNull();
+    expect(evaluateExpression("crmUrl('a', 'b', 'front')", context)).toBeNull();
+    expect(evaluateExpression("ts('Save', 'js')", context)).toBeNull();
     expect(evaluateExpression(":: routeParams.event", context)).toBeNull();
     expect(evaluateExpression("routeParams.event | uppercase", context)).toBeNull();
     expect(evaluateExpression("routeParams['event']", context)).toBeNull();
