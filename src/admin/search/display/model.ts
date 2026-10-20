@@ -236,6 +236,11 @@ export function columnField(ctx: FieldContext, key: string): SchemaField | undef
   return info && !info.fn ? info.args[0]?.field : undefined;
 }
 
+/** A condition's field, through a column's alias first. deviation:rule-condition-alias-field */
+export function conditionFieldOf(ctx: FieldContext, name: string): SchemaField | undefined {
+  return columnField(ctx, name) ?? getField(ctx.meta, name, ctx.search);
+}
+
 /** Labels of the columns whose default their number input refuses. deviation:batch-default-invalid-blocks-save */
 export function invalidDefaults(ctx: FieldContext, settings: unknown): string[] {
   if (!isAdminSettings(settings)) return [];

@@ -5,10 +5,11 @@ import { IconPicker } from "../../widgets/IconPicker";
 import { ModelText } from "../../widgets/ModelText";
 import { Picker, type PickerOption } from "../../widgets/Picker";
 import type { ConditionField } from "../condition";
-import { getAllFields, getField, getSelectFields } from "../expr";
+import { getAllFields, getSelectFields } from "../expr";
 import { useFieldOptions } from "../meta";
 import { SearchCondition } from "../SearchCondition";
 import {
+  conditionFieldOf,
   addCssRule,
   changeLimit,
   changeLinkItem,
@@ -671,7 +672,7 @@ function RuleCondition({
 }) {
   const id = useId();
   const name = typeof clause[at] === "string" ? clause[at] : "";
-  const field = name ? getField(ctx.meta, name, ctx.search) : undefined;
+  const field = name ? conditionFieldOf(ctx, name) : undefined;
   const options = useFieldOptions(field?.entity ?? ctx.search.api_entity);
   const conditionField: ConditionField | undefined = field && {
     ...field,

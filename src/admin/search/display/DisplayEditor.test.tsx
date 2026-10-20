@@ -315,3 +315,31 @@ it("names each sort row's direction and clear button by its field", async () => 
   await userEvent.click(screen.getByRole("button", { name: "Clear sorting by Display Name" }));
   expect(latest?.settings?.sort).toEqual([["id", "ASC"]]);
 });
+
+// deviation:rule-condition-alias-field
+it("offers a field's options to a style condition on its aliased column", async () => {
+  mockApi({
+    "SearchDisplay.getSearchTasks": () => [],
+    "SearchDisplay.run": () => Object.assign([], { count: 0, countFetched: 0 }),
+    "Contact.getFields": () => [
+      { name: "gender_id", options: [{ id: 1, name: "Female", label: "Female" }] },
+    ],
+  });
+  const info = { ...search, api_params: { version: 4, select: ["gender_id:label AS g"] } };
+  renderWithQuery(
+    <Harness
+      info={info}
+      initial={{
+        id: 1,
+        name: "T",
+        label: "T",
+        type: "table",
+        settings: {
+          columns: [{ type: "field", key: "g", label: "G" }],
+          cssRules: [["bg-danger", "g", "=", ""]],
+        },
+      }}
+    />,
+  );
+  expect(await screen.findByRole("option", { name: "Female" })).toBeInTheDocument();
+});

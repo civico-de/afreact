@@ -1105,6 +1105,13 @@ offered, such as one of a disabled extension, counts too, so ticking or
 unticking another task can switch to all enabled. afreact enables all once each
 offered task is on. `deviation:tasks-all-enabled-by-name`
 
+**A style condition on an aliased column loses its field.** The conditions of
+a display's styles, a column's icons and a link look up the chosen column as a
+field name (`searchAdminCssRules`, `searchAdminIcons`, `crmSearchConditions`
+`getField`), so for `gender_id:label AS g` they find
+no field and offer a plain text input instead of the options. afreact resolves
+the alias through the search's select first. `deviation:rule-condition-alias-field`
+
 **A column's format can list a column twice.** The format select of a column
 offers every suffix (`crmSearchAdminFields.html`), also one another column
 already selects, so `gender_id` switched to Label beside `gender_id:label` puts

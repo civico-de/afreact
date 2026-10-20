@@ -13,6 +13,7 @@ import { SearchCondition } from "../SearchCondition";
 import { SearchInput } from "../SearchInput";
 import { CssRules, LinkGroup, LinkSelect, TokenText } from "./common";
 import {
+  conditionFieldOf,
   canBeEditable,
   canBeImage,
   colLabel,
@@ -957,7 +958,7 @@ function IconCondition({
 }) {
   const id = useId();
   const name = typeof clause[0] === "string" ? clause[0] : "";
-  const field = name ? getField(ctx.meta, name, ctx.search) : undefined;
+  const field = name ? conditionFieldOf(ctx, name) : undefined;
   const options = useFieldOptions(field?.entity ?? ctx.search.api_entity);
   return (
     <>
