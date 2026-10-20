@@ -1098,6 +1098,13 @@ code, not run). The column is `int unsigned`. React marks a timeout that is
 negative or not whole invalid and refuses to save until it is fixed.
 `deviation:search-timeout-invalid-blocks-save`
 
+**Unticking an action can enable them all.** The actions menu config treats
+the list as complete once it has as many names as there are tasks
+(`searchAdminTasksConfig` `toggleTask`). A saved name of a task no longer
+offered, such as one of a disabled extension, counts too, so ticking or
+unticking another task can switch to all enabled. afreact enables all once each
+offered task is on. `deviation:tasks-all-enabled-by-name`
+
 **A column takes the field of another item's source.** Core's
 `getExprFromSelect` returns the first select item whose alias or source field
 matches a column key. With `["birth_date AS dob", "display_name AS birth_date"]`

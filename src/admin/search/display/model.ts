@@ -678,7 +678,8 @@ export function toggleActions(settings: AdminSettings): void {
 export function toggleTask(settings: AdminSettings, name: string, all: string[]): void {
   const enabled = typeof settings.actions === "boolean" ? all : (settings.actions ?? []);
   const next = enabled.includes(name) ? enabled.filter((n) => n !== name) : [...enabled, name];
-  settings.actions = next.length === all.length ? true : next;
+  // A saved name no longer offered does not count. deviation:tasks-all-enabled-by-name
+  settings.actions = all.every((n) => next.includes(n)) ? true : next;
 }
 
 export const taskEnabled = (settings: AdminSettings, name: string) =>

@@ -167,6 +167,17 @@ describe("pager and tasks", () => {
     toggleActions(settings);
     expect(settings).not.toHaveProperty("actions_display_mode");
   });
+
+  // deviation:tasks-all-enabled-by-name
+  it("enables all tasks only once each offered task is on, not by their count", () => {
+    const settings: Draft["settings"] = { actions: ["delete", "retired", "export"] };
+    toggleTask(settings, "delete", ["delete", "export", "tag"]);
+    expect(settings.actions).toEqual(["retired", "export"]);
+    toggleTask(settings, "tag", ["delete", "export", "tag"]);
+    expect(settings.actions).toEqual(["retired", "export", "tag"]);
+    toggleTask(settings, "delete", ["delete", "export", "tag"]);
+    expect(settings.actions).toBe(true);
+  });
 });
 
 describe("tally", () => {
