@@ -1,7 +1,7 @@
 import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { Suspense, use, useState, type ComponentType, type ReactNode } from "react";
 import { dragField, moveRow, withWeights } from "./dragOrder";
-import { asHtml } from "../html";
+import { crmAlert } from "../html";
 import { allKeyed, keyOf } from "./rows";
 import type * as SortableModule from "./Sortable";
 import { rowName } from "./Tasks";
@@ -76,7 +76,7 @@ export function useReorder({ type, settings, runKey, runParams }: ReorderOptions
         type === "tree"
           ? ts("%1 cannot move there.", { 1: rowName(row) })
           : ts("%1 stays where it is: a row moves among its siblings only.", { 1: rowName(row) });
-      window.CRM.alert(asHtml(text), ts("Not moved"), "info");
+      crmAlert(text, ts("Not moved"), "info");
       return;
     }
     if (moved.rows === page.rows) return;

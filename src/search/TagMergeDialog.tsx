@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api4, errorMessage } from "../api/civi";
 import { Icon } from "./LinkContent";
 import type { Key, SearchTask } from "./searchTasks";
-import { asHtml } from "../html";
+import { crmAlert } from "../html";
 
 interface MergeTag {
   id: number;
@@ -49,7 +49,7 @@ export function TagMergeDialog({ task, ids, onMerged, onCancel }: TagMergeDialog
       }),
     onSuccess: () => {
       const message = ts('%1 tags merged into "%2".', { 1: ids.length, 2: label });
-      window.CRM.alert(asHtml(message), ts("Merged"), "success");
+      crmAlert(message, ts("Merged"), "success");
       onMerged(message);
     },
   });

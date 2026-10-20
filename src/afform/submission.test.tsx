@@ -4,6 +4,7 @@ import { vi } from "vitest";
 import { SEARCH_DELAY_MS } from "../search/filters";
 import { jquerySelection } from "../test/jquery";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
+import { onCiviScreen } from "../test/notifications";
 import { fakeTimeouts, passTime } from "../test/timers";
 import { memoryStore, pageStore } from "../url/hash";
 import { AfreactForm } from "./AfreactForm";
@@ -119,6 +120,7 @@ describe("submitting", () => {
   describe("an error the server returns", () => {
     // deviation:submit-error-summary
     it("is a warning, in a summary that takes focus and lists each message", async () => {
+      onCiviScreen();
       const box = { resolve: vi.fn(), reject: vi.fn() };
       vi.mocked(window.CRM.status).mockReturnValue(box);
       const trigger = vi.fn(() => selection);
@@ -166,8 +168,7 @@ describe("submitting", () => {
   });
 
   it("alerts an invalid value on CiviCRM screens, where afForm does", async () => {
-    const container = document.body.appendChild(document.createElement("div"));
-    container.id = "crm-notification-container";
+    onCiviScreen();
     renderForm({});
     await userEvent.clear(await firstName());
     await userEvent.type(await firstName(), "x");
@@ -177,8 +178,8 @@ describe("submitting", () => {
     expect(window.CRM.alert).toHaveBeenCalledWith(
       "Please check all answers are valid.",
       "Form Error",
+      undefined,
     );
-    container.remove();
   });
 });
 

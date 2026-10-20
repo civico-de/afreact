@@ -622,8 +622,10 @@ enabled. `deviation:checkout-submit-once`
 tag merge task passes the kept tag's label into it as is
 (`crmSearchTaskTagMerge.ctrl.js`), as do its and the API batch's error
 messages, which can quote a submitted value; a tag named `<img src=x onerror=…>`
-runs its script in the success notification. afreact escapes the message of every
-notification it raises. `deviation:alert-text-escaped`
+runs its script in the success notification. afreact escapes the text and title
+of every notification it raises; where a screen has no notification container,
+`CRM.alert()` opens a dialog that shows text, and gets it unescaped.
+`deviation:alert-text-escaped`
 
 **A right icon on a single value shows only in the first column.** The
 field and subsearch templates read `icons.right[$index]`, where `$index` is

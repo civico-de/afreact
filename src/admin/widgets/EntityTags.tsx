@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { api4, errorMessage } from "../../api/civi";
-import { asHtml } from "../../html";
+import { crmAlert } from "../../html";
 
 export interface TagRecord {
   id: number;
@@ -106,7 +106,7 @@ export function EntityTags({
       onChange(next);
     } catch (error) {
       status.reject();
-      window.CRM.alert(asHtml(errorMessage(error)), ts("Error"), "error");
+      crmAlert(errorMessage(error), ts("Error"), "error");
     }
   }
 
@@ -122,7 +122,7 @@ export function EntityTags({
       setColor(randomColor());
       await toggle(tag);
     } catch (error) {
-      window.CRM.alert(asHtml(errorMessage(error)), ts("Error"), "error");
+      crmAlert(errorMessage(error), ts("Error"), "error");
     }
   }
 

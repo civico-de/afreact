@@ -50,7 +50,7 @@ declare global {
       $: (target: Element) => JQueryObject;
       /** Opens a form in a popup (js/crm.ajax.js); `post` sends data on its first load. */
       loadForm: (url: string, options?: { post?: unknown }) => JQueryObject;
-      /** A notification on CiviCRM screens, a dialog elsewhere; `text` is HTML (js/Common.js). */
+      /** A notification on CiviCRM screens, taking HTML; a text-only dialog elsewhere (js/Common.js). */
       alert: (
         text: string,
         title?: string,

@@ -42,7 +42,7 @@ import { searchDisplaysOnForm, withBlockActions } from "./nodes";
 import { Palette, scrollToEntity, type SearchOption } from "./palette/Palette";
 import { settingsProblems } from "./palette/SettingsTab";
 import type { ShallowNode } from "./tree";
-import { asHtml } from "../../html";
+import { crmAlert } from "../../html";
 
 export type FormRoute =
   | { mode: "create"; type: string; entity: string }
@@ -267,7 +267,7 @@ function Editor({
         })
         .catch((failure: unknown) => {
           setFailed((current) => [...current, key]);
-          window.CRM.alert(asHtml(errorMessage(failure)), ts("Error"), "error");
+          crmAlert(errorMessage(failure), ts("Error"), "error");
         })
         .finally(() => {
           setLoading((current) => current.filter((each) => each !== key));
@@ -282,7 +282,7 @@ function Editor({
     setLoading((current) => [...current, key]);
     work()
       .catch((failure: unknown) => {
-        window.CRM.alert(asHtml(errorMessage(failure)), ts("Error"), "error");
+        crmAlert(errorMessage(failure), ts("Error"), "error");
       })
       .finally(() => {
         setLoading((current) => current.filter((each) => each !== key));
@@ -459,7 +459,7 @@ function Editor({
         if (menuChanged(before, sent)) refreshMenubar();
       })
       .catch((failure: unknown) => {
-        window.CRM.alert(asHtml(errorMessage(failure)), ts("Save failed"), "error");
+        crmAlert(errorMessage(failure), ts("Save failed"), "error");
       })
       .finally(() => {
         setSaving(false);

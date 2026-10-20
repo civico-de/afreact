@@ -12,7 +12,7 @@ import {
 } from "react";
 import { api4, errorMessage, isApiError } from "../api/civi";
 import { DebugFacts, debugMode, DebugSection } from "../debug/debug";
-import { asHtml } from "../html";
+import { crmAlert } from "../html";
 import { RouteOptionsContext } from "../search/displayFilters";
 import { isRecord } from "../search/searchTasks";
 import type { ExpressionContext } from "./expressions";
@@ -312,8 +312,8 @@ function pointAt(control: Control): void {
 /** afForm's handleError(): validation messages as a warning, anything else as an error. */
 function alertFailure(error: unknown): void {
   if (isApiError(error) && error.error_code !== "1")
-    window.CRM.alert(asHtml(error.error_message), ts("Please resolve these issues"), "warning");
-  else window.CRM.alert(asHtml(errorMessage(error)), ts("There is a problem"), "error");
+    crmAlert(error.error_message, ts("Please resolve these issues"), "warning");
+  else crmAlert(errorMessage(error), ts("There is a problem"), "error");
 }
 
 /** crmStatus(): CRM.status's box follows the call. */
@@ -732,7 +732,7 @@ function LoadedForm(props: LoadedFormProps) {
 
   // afForm.disableForm() tells why the form cannot be submitted.
   useEffect(() => {
-    if (closed !== null) window.CRM.alert(asHtml(closed), ts("Sorry"), "error");
+    if (closed !== null) crmAlert(closed, ts("Sorry"), "error");
   }, [closed]);
 
   useEffect(() => {
@@ -781,7 +781,7 @@ function LoadedForm(props: LoadedFormProps) {
     if (message !== null) {
       // As afForm: on CiviCRM screens a notification too, elsewhere only the browser's own.
       if (document.getElementById("crm-notification-container"))
-        window.CRM.alert(asHtml(message), ts("Form Error"));
+        crmAlert(message, ts("Form Error"));
       return;
     }
     setEdits((count) => count + 1);

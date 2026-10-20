@@ -56,7 +56,7 @@ import { useCanvasBody, useCanvasItem } from "./dnd";
 import type { ContainerScope } from "./dropRules";
 import { childScope, knownEntityType } from "./scope";
 import { MenuLink } from "../../widgets/MenuLink";
-import { asHtml } from "../../../html";
+import { crmAlert } from "../../../html";
 
 /** The node's style attribute for React, as core's `style="{{ item.style }}"`. */
 export function styleOf(node: ShallowElement): CSSProperties {
@@ -942,8 +942,8 @@ export function Container({ type, ...props }: ElementProps & { type: ContainerTy
 
   const openSaveBlock = () => {
     if (scope.entityName && entityType === null) {
-      window.CRM.alert(
-        asHtml(ts("The form has no entity %1 to save this block for.", { 1: scope.entityName })),
+      crmAlert(
+        ts("The form has no entity %1 to save this block for.", { 1: scope.entityName }),
         ts("Save block"),
         "error",
       );

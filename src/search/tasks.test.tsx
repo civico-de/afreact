@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi, type Mock } from "vitest";
 import { events } from "../test/jquery";
 import { apiError, listParam, mockApi, renderWithQuery } from "../test/render";
+import { onCiviScreen } from "../test/notifications";
 import { AfreactSearch } from "./AfreactSearch";
 import type { SearchTask } from "./searchTasks";
 import type { DisplaySettings, Row } from "./types";
@@ -1988,7 +1989,11 @@ describe("AfreactSearch bulk actions", () => {
       expect(within(dialog).queryByRole("radio", { name: /single case/ })).not.toBeInTheDocument();
       await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
       await waitFor(() => {
-        expect(window.CRM.alert).toHaveBeenCalledWith("No cases to open.", "All contacts skipped");
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "No cases to open.",
+          "All contacts skipped",
+          undefined,
+        );
       });
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(named(calls, "Case.save")).toHaveLength(0);
@@ -2161,7 +2166,11 @@ describe("AfreactSearch bulk actions", () => {
       await userEvent.type(within(dialog).getByRole("textbox", { name: "Total Amount" }), "5");
       await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
       await waitFor(() => {
-        expect(window.CRM.alert).toHaveBeenCalledWith("No grants to add.", "All contacts skipped");
+        expect(window.CRM.alert).toHaveBeenCalledWith(
+          "No grants to add.",
+          "All contacts skipped",
+          undefined,
+        );
       });
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       await openActions();
@@ -2234,6 +2243,7 @@ describe("AfreactSearch bulk actions", () => {
 
     // deviation:alert-text-escaped
     it("shows a merged tag's label as text in the notification", async () => {
+      onCiviScreen();
       serve({
         tasks: [enable, tagMerge],
         handlers: { "Tag.get": () => tags, "Tag.merge": () => [] },

@@ -19,7 +19,7 @@ import {
   type SearchTask,
   type UpdateField,
 } from "./searchTasks";
-import { asHtml } from "../html";
+import { crmAlert } from "../html";
 
 /** What a dialog that adds one record per selected contact asks, looks up and says. */
 export interface NewRecordKind {
@@ -152,7 +152,7 @@ export function NewRecordDialog({
     const contacts = skip ? ids.filter((id) => !holders.has(String(id))) : ids;
     // deviation:skipped-contacts-send-nothing
     if (!contacts.length) {
-      window.CRM.alert(...kind.noneLeft());
+      crmAlert(...kind.noneLeft());
       dialog.current?.close();
       return;
     }
@@ -166,7 +166,7 @@ export function NewRecordDialog({
     try {
       await api4("Case", "create", { values: { ...values, contact_id: contacts } });
       const message = ts("Successfully opened 1 case.");
-      window.CRM.alert(asHtml(message), ts("Saved"), "success");
+      crmAlert(message, ts("Saved"), "success");
       onOpened(message);
       // deviation:open-case-batch-failure
     } catch (failure) {

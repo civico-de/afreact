@@ -6,7 +6,7 @@ import { findElements } from "./model";
 import { Monaco } from "./Monaco";
 import { convert } from "./save";
 import { isShallowNode, withoutMarks, type ShallowNode } from "./tree";
-import { asHtml } from "../../html";
+import { crmAlert } from "../../html";
 
 /** isValidLayout(): nodes throughout, and a form's one af-form kept. */
 export function validLayout(type: string, layout: unknown): layout is ShallowNode[] {
@@ -45,7 +45,7 @@ export function useMarkup(afform: AfformDefinition, apply: (layout: ShallowNode[
       })
       .catch((failure: unknown) => {
         setState((current) => ({ ...current, loading: false }));
-        window.CRM.alert(asHtml(errorMessage(failure)), ts("Error"), "error");
+        crmAlert(errorMessage(failure), ts("Error"), "error");
       });
   };
 
@@ -55,12 +55,8 @@ export function useMarkup(afform: AfformDefinition, apply: (layout: ShallowNode[
     convert(state.html, "html", "shallow").then(
       (layout) => {
         if (!validLayout(afform.type, layout)) {
-          window.CRM.alert(
-            asHtml(
-              ts(
-                "The markup could not be applied because it produced an invalid layout structure.",
-              ),
-            ),
+          crmAlert(
+            ts("The markup could not be applied because it produced an invalid layout structure."),
             ts("Invalid markup"),
             "error",
           );
@@ -71,7 +67,7 @@ export function useMarkup(afform: AfformDefinition, apply: (layout: ShallowNode[
         return layout;
       },
       (failure: unknown) => {
-        window.CRM.alert(asHtml(errorMessage(failure)), ts("Could not apply markup"), "error");
+        crmAlert(errorMessage(failure), ts("Could not apply markup"), "error");
         return null;
       },
     );

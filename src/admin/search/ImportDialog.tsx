@@ -3,7 +3,7 @@ import { errorMessage } from "../../api/civi";
 import { parseImport, previewImport, runImport, type ImportCheck } from "./exchange";
 import { searchAdminSettings, useRefreshSearchMetadata } from "./meta";
 import { useReturnFocus } from "../widgets/Dialog";
-import { asHtml } from "../../html";
+import { crmAlert } from "../../html";
 
 /** crmSearchAdminImport's debounce. */
 export const CHECK_DELAY_MS = 500;
@@ -67,13 +67,11 @@ export function ImportDialog({ onClose }: { onClose: (imported: boolean) => void
     setState({ kind: "running", check });
     try {
       const count = await runImport(check);
-      window.CRM.alert(
-        asHtml(
-          ts("1 record successfully imported.", {
-            plural: "%count records successfully imported.",
-            count,
-          }),
-        ),
+      crmAlert(
+        ts("1 record successfully imported.", {
+          plural: "%count records successfully imported.",
+          count,
+        }),
         ts("Saved"),
         "success",
       );

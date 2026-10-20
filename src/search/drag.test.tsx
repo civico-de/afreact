@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi, type MockInstance } from "vitest";
 import { editInfo } from "../test/editInfo";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
+import { onCiviScreen } from "../test/notifications";
 import { AfreactSearch } from "./AfreactSearch";
 import type { Column, DisplaySettings, Row } from "./types";
 
@@ -350,6 +351,7 @@ describe("AfreactSearch drag to reorder", () => {
     });
 
     it("shows the row's name in the notice as text, not as markup", async () => {
+      onCiviScreen();
       const marked = tree.map((node) =>
         node.key === 2 ? { ...node, columns: [{ val: "<b>Two</b>" }, { val: 10 }] } : node,
       );
