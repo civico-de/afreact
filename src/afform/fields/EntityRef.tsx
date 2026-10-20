@@ -43,7 +43,9 @@ export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: 
   const attrs = defn.input_attrs ?? {};
   const multiple = !!attrs.multiple;
   const ids = valueIds(value);
-  const missing = ids.filter((item) => !known.has(String(item)));
+  // A dynamic reference keeps its id when its entity changes, so a label is known per entity.
+  const keyOf = (item: unknown) => `${entity ?? ""}:${String(item)}`;
+  const missing = ids.filter((item) => !known.has(keyOf(item)));
   const resolved = useQuery({
     queryKey: [
       entity,
@@ -60,9 +62,9 @@ export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: 
         : skipToken,
   });
   const lookup = new Map(known);
-  for (const item of resolved.data ?? []) lookup.set(String(item.id), item);
-  const selected = ids.flatMap((item) => lookup.get(String(item)) ?? []);
-  const notFound = resolved.isSuccess ? ids.filter((item) => !lookup.has(String(item))) : [];
+  for (const item of resolved.data ?? []) lookup.set(keyOf(item.id), item);
+  const selected = ids.flatMap((item) => lookup.get(keyOf(item)) ?? []);
+  const notFound = resolved.isSuccess ? ids.filter((item) => !lookup.has(keyOf(item))) : [];
 
   const change = (next: (string | number)[]) => {
     const model = modelValue(defn, next);
@@ -110,7 +112,7 @@ export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: 
     itemText,
     load,
     onSelect: (item: AutocompleteItem) => {
-      setKnown((previous) => new Map(previous).set(String(item.id), item));
+      setKnown((previous) => new Map(previous).set(keyOf(item.id), item));
       change(multiple ? [...ids, item.id] : [item.id]);
     },
     onRemove: (item: AutocompleteItem) => {

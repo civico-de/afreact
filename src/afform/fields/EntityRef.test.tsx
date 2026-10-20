@@ -723,6 +723,47 @@ describe("EntityRef", () => {
     expect(input).toBeDisabled();
   });
 
+  it("shows a kept id by the label the newly controlled entity gives it", async () => {
+    renderForm(
+      form([
+        {
+          "#tag": "af-field",
+          name: "entity_table",
+          defn: {
+            name: "entity_table",
+            label: "Type",
+            input_type: "Select",
+            data_type: "String",
+            options: [
+              { id: "civicrm_activity", label: "Activity" },
+              { id: "civicrm_case", label: "Case" },
+            ],
+          },
+        },
+        entityRef("entity_id", {
+          label: "Record",
+          fk_entity: null,
+          dfk_entities: { civicrm_activity: "Activity", civicrm_case: "Case" },
+          input_attrs: { control_field: "entity_table" },
+        }),
+      ]),
+      {
+        "Activity.autocomplete": () => rows([{ id: 4, label: "Call" }]),
+        "Case.autocomplete": () => rows([{ id: 4, label: "Housing" }]),
+      },
+    );
+    const type = await screen.findByRole("combobox", { name: "Type" });
+    await userEvent.selectOptions(type, "Activity");
+    const input = screen.getByRole("combobox", { name: "Record" });
+    await userEvent.type(input, "c");
+    await userEvent.click(await screen.findByRole("option", { name: "Call" }));
+    expect(input).toHaveValue("Call");
+    await userEvent.selectOptions(type, "Case");
+    await waitFor(() => {
+      expect(input).toHaveValue("Housing");
+    });
+  });
+
   it("fills a join record with the record an autofill field selects in it", async () => {
     const calls = renderForm(
       form([
