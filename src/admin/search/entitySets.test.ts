@@ -443,6 +443,34 @@ describe("entity sets", () => {
     expect(next.select).toHaveLength(2);
   });
 
+  it("keeps one row of two aggregates that unwrap to the same column", () => {
+    const email = "Contact_Email_contact_id_01.email";
+    const join = [
+      "Email AS Contact_Email_contact_id_01",
+      "LEFT",
+      ["id", "=", "Contact_Email_contact_id_01.contact_id"],
+    ];
+    const params: ApiParams = {
+      select: ["COUNT_id", "SUM_id", email],
+      sets: [
+        [
+          "UNION ALL",
+          "Contact",
+          "get",
+          {
+            select: ["COUNT(id) AS COUNT_id", "SUM(id) AS SUM_id", email],
+            join: [join],
+            groupBy: [email],
+          },
+        ],
+        ["UNION ALL", "Contact", "get", { select: ["id", "display_name", "display_name"] }],
+      ],
+    };
+    const next = setEntitySetQuery(meta, params, 0, { select: ["id"], join: [], groupBy: [] });
+    expect(setsOf(next).map((set) => set[3].select)).toEqual([["id"], ["id"]]);
+    expect(next.select).toHaveLength(1);
+  });
+
   it("leaves an empty cell where a later set loses a joined column", () => {
     const join = [
       "Email AS Contact_Email_contact_id_01",

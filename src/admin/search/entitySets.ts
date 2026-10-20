@@ -295,7 +295,9 @@ export function setEntitySetQuery(
     : filled;
   let n = 0;
   const old = before.map((col) => (col === null ? null : (unwrapped[n++] ?? col)));
-  const select = realign(old, next.select);
+  // Two aggregates of one field unwrap to one column, which the API selects once.
+  const once = old.map((col, row) => (col !== null && old.indexOf(col) < row ? null : col));
+  const select = realign(once, next.select);
   // The outer columns come from the first set, so it keeps no empty cell.
   const dropped =
     index === 0
