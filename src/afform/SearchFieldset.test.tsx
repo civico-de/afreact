@@ -428,6 +428,48 @@ describe("SearchFieldset", () => {
     expect(screen.getByRole("status")).toHaveTextContent('{"title":"x"}');
   });
 
+  it("drops a typed value when an af-if hides its filter, but keeps a display-only one", () => {
+    const rule = JSON.stringify([["Individual1[0][fields][advanced]", "=", "true"]]);
+    const statusNode = field("status", {});
+    const [status] = filterFields([statusNode]);
+    if (!status) throw new Error("fixture");
+    const node: LayoutNode = {
+      "#tag": "div",
+      "#children": [
+        {
+          "#tag": "div",
+          "af-if": rule,
+          "#children": [statusNode, field("note", { input_type: "DisplayOnly" })],
+        },
+      ],
+    };
+    const Values = () => {
+      const fieldset = useSearchFieldset();
+      return (
+        <button
+          type="button"
+          onClick={() => fieldset?.dispatch({ type: "input", field: status, value: "4" })}
+        >
+          {JSON.stringify(fieldset?.state.values)}
+        </button>
+      );
+    };
+    const view = (advanced: boolean) => (
+      <SearchFieldset
+        node={node}
+        formName="afsearchGroups"
+        data={{ Individual1: [{ fields: { advanced } }] }}
+      >
+        <Values />
+      </SearchFieldset>
+    );
+    const { rerender } = renderWithQuery(view(true), memoryStore("#?note=a"));
+    fireEvent.click(screen.getByRole("button"));
+    expect(screen.getByRole("button")).toHaveTextContent('{"note":"a","status":"4"}');
+    rerender(view(false));
+    expect(screen.getByRole("button")).toHaveTextContent('{"note":"a"}');
+  });
+
   it("drops a filter an af-if hides from the hash on the next commit", () => {
     const rule = JSON.stringify([["Individual1[0][fields][advanced]", "=", "true"]]);
     const titleNode = field("title", {});
