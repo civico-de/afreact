@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId } from "react";
 import { api4 } from "../../../api/civi";
+import { ModelText } from "../../widgets/ModelText";
 import { Picker } from "../../widgets/Picker";
 import { permissionOptions, SortConfig, type Editing } from "./common";
 import { Columns } from "./Columns";
@@ -72,15 +73,14 @@ export function EntityEditor(props: Editing & { adopt: (change: (draft: Draft) =
             *
           </span>
         </label>{" "}
-        <input
+        <ModelText
           id={`${id}-label`}
-          type="text"
           className="form-control"
+          live
           required
           placeholder={ts("Untitled")}
           value={draft.label}
-          onChange={(event) => {
-            const label = event.target.value;
+          onChange={(label) => {
             edit((d) => {
               d.label = label;
             });
@@ -91,13 +91,14 @@ export function EntityEditor(props: Editing & { adopt: (change: (draft: Draft) =
         <label htmlFor={`${id}-description`} className="sr-only">
           {ts("Description")}
         </label>
-        <textarea
+        <ModelText
           id={`${id}-description`}
           className="form-control"
+          multiline
+          live
           placeholder={ts("Description")}
           value={s.description ?? ""}
-          onChange={(event) => {
-            const value = event.target.value;
+          onChange={(value) => {
             edit((d) => {
               d.settings.description = value;
             });
@@ -256,13 +257,12 @@ export function EntityEditor(props: Editing & { adopt: (change: (draft: Draft) =
                   }}
                 />
                 <label htmlFor={`${id}-col-${String(index)}-label`}>{ts("Label")}</label>
-                <input
+                <ModelText
                   id={`${id}-col-${String(index)}-label`}
                   className="form-control crm-flex-1"
-                  type="text"
+                  live
                   value={typeof col.label === "string" ? col.label : ""}
-                  onChange={(event) => {
-                    const value = event.target.value;
+                  onChange={(value) => {
                     editCol((c) => {
                       c.label = value;
                     });

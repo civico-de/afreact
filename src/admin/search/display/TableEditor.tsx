@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { ModelText } from "../../widgets/ModelText";
 import { Picker } from "../../widgets/Picker";
 import {
   Check,
@@ -62,12 +63,12 @@ export function TableEditor(props: TableEditorProps) {
       {s.tally?.[position] && (
         <div className="form-group">
           <label htmlFor={`${id}-tally-${position}`}>{ts("Label")}</label>{" "}
-          <input
+          <ModelText
             id={`${id}-tally-${position}`}
             className="form-control"
+            live
             value={s.tally.label ?? ""}
-            onChange={(event) => {
-              const value = event.target.value;
+            onChange={(value) => {
               edit((d) => {
                 if (d.settings.tally) d.settings.tally.label = value;
               });
@@ -259,13 +260,13 @@ export function TableEditor(props: TableEditorProps) {
               }}
             />
             {row.create && (
-              <input
+              <ModelText
                 className="form-control"
+                live
                 aria-label={ts("Add New Button label")}
                 placeholder={ts("(no label)")}
                 value={row.createLabel ?? ""}
-                onChange={(event) => {
-                  const value = event.target.value;
+                onChange={(value) => {
                   edit((d) => {
                     if (d.settings.editableRow) d.settings.editableRow.createLabel = value;
                   });
@@ -316,13 +317,12 @@ export function TableEditor(props: TableEditorProps) {
               <>
                 <div className="form-inline crm-search-admin-flex-row">
                   <label htmlFor={`${id}-header-${String(index)}`}>{ts("Header")}</label>
-                  <input
+                  <ModelText
                     id={`${id}-header-${String(index)}`}
                     className="form-control crm-flex-1"
-                    type="text"
+                    live
                     value={col.label ?? ""}
-                    onChange={(event) => {
-                      const value = event.target.value;
+                    onChange={(value) => {
                       editCol((c) => {
                         c.label = value;
                       });
@@ -383,14 +383,14 @@ export function TableEditor(props: TableEditorProps) {
               s.tally && (
                 <div className="form-inline">
                   <label htmlFor={`${id}-tally-label-${String(index)}`}>{ts("Totals")}</label>{" "}
-                  <input
+                  <ModelText
                     id={`${id}-tally-label-${String(index)}`}
                     className="form-control"
+                    live
                     placeholder={ts("No label")}
                     title={ts("Totals label")}
                     value={col.tally?.label ?? ""}
-                    onChange={(event) => {
-                      const value = event.target.value;
+                    onChange={(value) => {
                       editCol((c) => {
                         c.tally = { ...c.tally, label: value };
                       });
@@ -422,13 +422,12 @@ export function TableEditor(props: TableEditorProps) {
                   </label>
                   {col.tally?.rewrite !== undefined && col.tally.rewrite !== "" && (
                     <>
-                      <input
+                      <ModelText
                         className="form-control"
                         aria-label={ts("Totals rewrite with tokens")}
                         placeholder={ts("None")}
                         value={col.tally.rewrite}
-                        onChange={(event) => {
-                          const value = event.target.value;
+                        onChange={(value) => {
                           editCol((c) => {
                             c.tally = { ...c.tally, rewrite: value };
                           });

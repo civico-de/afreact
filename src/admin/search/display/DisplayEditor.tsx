@@ -4,6 +4,7 @@ import { api4 } from "../../../api/civi";
 import { AfreactSearch } from "../../../search/AfreactSearch";
 import { isDisplaySettings } from "../../../search/types";
 import type { EditorDisplay } from "../editor";
+import { ModelText } from "../../widgets/ModelText";
 import type { SearchInfo } from "../expr";
 import { useSearchTasks } from "./common";
 import { AutocompleteEditor } from "./AutocompleteEditor";
@@ -194,15 +195,14 @@ export function DisplayEditor(props: DisplayEditorProps) {
                   *
                 </span>
               </label>{" "}
-              <input
+              <ModelText
                 id={`${id}-label`}
-                type="text"
                 className="form-control"
+                live
                 required
                 placeholder={ts("Untitled")}
                 value={display.label}
-                onChange={(event) => {
-                  const label = event.target.value;
+                onChange={(label) => {
                   edit((d) => {
                     d.label = label;
                   });
@@ -247,13 +247,14 @@ export function DisplayEditor(props: DisplayEditorProps) {
               <label htmlFor={`${id}-description`} className="sr-only">
                 {ts("Description (shown above)")}
               </label>
-              <textarea
+              <ModelText
                 id={`${id}-description`}
                 className="form-control"
+                multiline
+                live
                 placeholder={ts("Description (shown above)")}
                 value={draft.settings.description ?? ""}
-                onChange={(event) => {
-                  const value = event.target.value;
+                onChange={(value) => {
                   edit((d) => {
                     d.settings.description = value;
                   });

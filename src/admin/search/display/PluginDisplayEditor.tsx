@@ -3,6 +3,7 @@ import { useDebugFacts } from "../../../debug/debug";
 import { getDefaultLabel, getField, parseExpr, type SearchInfo } from "../expr";
 import type { SearchAdminMetadata } from "../meta";
 import type { EditorDisplay } from "../editor";
+import { ModelText } from "../../widgets/ModelText";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -115,15 +116,13 @@ export function PluginDisplayEditor({
     <>
       <div className="form-group">
         <label htmlFor={`${id}-label`}>{ts("Display Label")}</label>
-        <input
+        <ModelText
           id={`${id}-label`}
           className="form-control"
-          type="text"
+          live
           required
           value={display.label}
-          onChange={(event) => {
-            onLabel(event.target.value);
-          }}
+          onChange={onLabel}
         />
       </div>
       <div ref={host} />

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useId, type ReactNode } from "react";
 import { loadChartKit } from "../../../search/ElementDisplay";
 import type { EditorDisplay } from "../editor";
+import { ModelText } from "../../widgets/ModelText";
 import {
   addColumn,
   settleColumnOptions,
@@ -99,15 +100,13 @@ function TextInput({
   return (
     <div className="form-inline">
       <label htmlFor={id}>{label}</label>{" "}
-      <input
+      <ModelText
         id={id}
-        type="text"
         className="form-control"
+        live
         placeholder={placeholder}
         value={str(value)}
-        onChange={(event) => {
-          onChange(event.target.value);
-        }}
+        onChange={onChange}
       />
     </div>
   );

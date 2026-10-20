@@ -2,6 +2,7 @@ import { useId } from "react";
 import { getField } from "../expr";
 import { useFieldOptions } from "../meta";
 import { SearchInput } from "../SearchInput";
+import { ModelText } from "../../widgets/ModelText";
 import { Check, PagerConfig, Section, type Editing } from "./common";
 import { Columns } from "./Columns";
 import {
@@ -38,13 +39,12 @@ function BatchColumn({
     <>
       <div className="form-inline crm-search-admin-flex-row">
         <label htmlFor={`${id}-header`}>{ts("Header")}</label>
-        <input
+        <ModelText
           id={`${id}-header`}
           className="form-control crm-flex-1"
-          type="text"
+          live
           value={typeof col.label === "string" ? col.label : ""}
-          onChange={(event) => {
-            const value = event.target.value;
+          onChange={(value) => {
             editCol((c) => {
               c.label = value;
             });
@@ -123,14 +123,14 @@ function BatchColumn({
       {isField && tally && (
         <div className="form-inline">
           <label htmlFor={`${id}-tally-label`}>{ts("Footer")}</label>{" "}
-          <input
+          <ModelText
             id={`${id}-tally-label`}
             className="form-control"
+            live
             placeholder={ts("No label")}
             title={ts("Totals label")}
             value={col.tally?.label ?? ""}
-            onChange={(event) => {
-              const value = event.target.value;
+            onChange={(value) => {
               editCol((c) => {
                 c.tally = { ...c.tally, label: value };
               });
@@ -189,15 +189,14 @@ export function BatchEditor(props: Editing) {
               *
             </span>
           </label>
-          <input
+          <ModelText
             id={`${id}-label`}
-            type="text"
             className="form-control crm-flex-1"
+            live
             required
             placeholder={ts("Untitled")}
             value={draft.label}
-            onChange={(event) => {
-              const label = event.target.value;
+            onChange={(label) => {
               edit((d) => {
                 d.label = label;
               });
@@ -208,13 +207,14 @@ export function BatchEditor(props: Editing) {
           <label htmlFor={`${id}-description`} className="sr-only">
             {ts("Description")}
           </label>
-          <textarea
+          <ModelText
             id={`${id}-description`}
             className="form-control"
+            multiline
+            live
             placeholder={ts("Description (shown above)")}
             value={s.description ?? ""}
-            onChange={(event) => {
-              const value = event.target.value;
+            onChange={(value) => {
               edit((d) => {
                 d.settings.description = value;
               });

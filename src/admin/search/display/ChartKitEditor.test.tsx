@@ -76,6 +76,22 @@ describe("chart display editor", () => {
     expect(onChange).toHaveBeenLastCalledWith({ ...line, label: "D" });
   });
 
+  it("trims a chart's title and a column's label as ngModel trims them", async () => {
+    const { onChange } = renderEditor(line);
+    const y = await screen.findByRole("group", { name: "Y field 1" });
+    fireEvent.change(within(y).getByRole("textbox", { name: "Label" }), {
+      target: { value: " Total " },
+    });
+    expect(onChange.mock.lastCall?.[0].settings?.columns).toEqual([
+      expect.objectContaining({ axis: "x" }),
+      expect.objectContaining({ label: "Total" }),
+    ]);
+    fireEvent.change(screen.getByRole("textbox", { name: "Title" }), {
+      target: { value: "  Sales  " },
+    });
+    expect(onChange.mock.lastCall?.[0].settings).toMatchObject({ format: { title: "Sales" } });
+  });
+
   // deviation:chart-scale-type-repicks
   it("re-picks the stat type a categorical scale no longer offers", async () => {
     const { onChange } = renderEditor(line);

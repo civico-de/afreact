@@ -355,13 +355,13 @@ export function NoResultsConfig({ draft, edit }: Omit<Editing, "ctx">) {
         {ts("No Results Text")}
       </label>
       {text !== false && (
-        <input
+        <ModelText
           className="form-control crm-flex-1"
+          live
           aria-label={ts("No Results Text")}
           placeholder={ts("None found.")}
           value={text ?? ""}
-          onChange={(event) => {
-            const value = event.target.value;
+          onChange={(value) => {
             edit((d) => {
               d.settings.noResultsText = value;
             });
@@ -408,14 +408,12 @@ export function SearchButtonConfig({ draft, edit }: Omit<Editing, "ctx">) {
           </button>
         </div>
         {!!button && (
-          <input
-            type="text"
+          <ModelText
             className="form-control"
             aria-label={ts("Search button text")}
             placeholder={ts("Search button text")}
             value={button}
-            onChange={(event) => {
-              const value = event.target.value;
+            onChange={(value) => {
               edit((d) => {
                 d.settings.button = value;
               });
@@ -761,14 +759,13 @@ export function CssRules({
               ruleLabel,
             )}
             {!(style in styles) && (
-              <input
-                type="text"
+              <ModelText
                 className="form-control"
                 aria-label={ts("CSS class of %1", { 1: ruleLabel })}
                 placeholder={ts("CSS class")}
                 value={style}
-                onChange={(event) => {
-                  set(index, [event.target.value, ...clause.slice(1)]);
+                onChange={(value) => {
+                  set(index, [value, ...clause.slice(1)]);
                 }}
               />
             )}{" "}

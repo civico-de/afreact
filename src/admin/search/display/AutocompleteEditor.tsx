@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { ModelText } from "../../widgets/ModelText";
 import { Picker } from "../../widgets/Picker";
 import { getAllFields, getEntity } from "../expr";
 import { SortConfig, TokenSelect, type Editing } from "./common";
@@ -100,15 +101,14 @@ export function AutocompleteEditor(props: Editing) {
             *
           </span>
         </label>{" "}
-        <input
+        <ModelText
           id={`${id}-label`}
-          type="text"
           className="form-control"
+          live
           required
           placeholder={ts("Untitled")}
           value={draft.label}
-          onChange={(event) => {
-            const label = event.target.value;
+          onChange={(label) => {
             edit((d) => {
               d.label = label;
             });

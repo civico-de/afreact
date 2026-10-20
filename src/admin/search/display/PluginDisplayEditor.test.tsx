@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { metadata } from "../../../test/searchMetadata";
 import {
@@ -58,6 +58,23 @@ describe("plugin display editor", () => {
     expect(pluginVerdict(container).invalid).toEqual([]);
     element.validationMessage = "Choose a chart type.";
     expect(pluginVerdict(container).invalid).toEqual(["Choose a chart type."]);
+  });
+
+  it("hands the display label on trimmed, as ngModel trims it", () => {
+    const onLabel = vi.fn<(label: string) => void>();
+    render(
+      <PluginDisplayEditor
+        meta={metadata}
+        search={search}
+        display={{ id: 1, label: "P", type: "probe", settings: {} }}
+        onLabel={onLabel}
+        onSettings={vi.fn<(settings: Record<string, unknown>) => void>()}
+      />,
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: "Display Label" }), {
+      target: { value: " Plot " },
+    });
+    expect(onLabel).toHaveBeenLastCalledWith("Plot");
   });
 
   it("answers core's searchMeta calls for the record, or the entity, they are given", () => {
