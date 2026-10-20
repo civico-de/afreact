@@ -27,6 +27,7 @@ import {
 } from "./editor";
 import { AngularIsland, hasIslandEditor } from "./display/AngularIsland";
 import { ClassicOnly } from "../ClassicOnly";
+import { ModelText } from "../widgets/ModelText";
 import { classicOnlyChanges } from "../foreign";
 import { usePageLoaded } from "../pageLoaded";
 import { DisplayEditor, hasDisplayEditor, PluginPreview } from "./display/DisplayEditor";
@@ -631,17 +632,16 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
       >
         <div className="crm-flex-box crm-search-admin-outer">
           <div className="crm-flex-1">
-            <input
+            <ModelText
               id="crm-saved-search-label"
               className="form-control"
-              type="text"
+              live
               required
               aria-label={ts("Saved Search label")}
               title={ts("Saved Search label")}
               placeholder={ts("Untitled Search")}
               value={search.label}
-              onChange={(event) => {
-                const label = event.target.value;
+              onChange={(label) => {
                 change((state) => ({ ...state, label }));
               }}
             />
@@ -1242,15 +1242,13 @@ function DisplayTab({ display, typeLabel, classic, searchId, onLabel }: DisplayT
     <>
       <div className="form-group">
         <label htmlFor={`${id}-label`}>{ts("Display Label")}</label>
-        <input
+        <ModelText
           id={`${id}-label`}
           className="form-control"
-          type="text"
+          live
           required
           value={display.label}
-          onChange={(event) => {
-            onLabel(event.target.value);
-          }}
+          onChange={onLabel}
         />
       </div>
       <div className="messages status no-popup" role="status">

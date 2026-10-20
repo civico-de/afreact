@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useId } from "react";
+import { ModelText } from "../../widgets/ModelText";
 import { Picker } from "../../widgets/Picker";
 import type { EditorSearch, SmartGroup } from "../editor";
 import { getEntity, getSmartGroupColumns } from "../expr";
@@ -52,15 +53,16 @@ export function GroupTab({ meta, search, onGroup, onSelect }: GroupTabProps) {
         <label htmlFor="crm-search-admin-group-title">
           {ts("Group Title")} <span className="crm-marker">*</span>
         </label>{" "}
-        <input
+        <ModelText
           id="crm-search-admin-group-title"
           className="form-control"
+          live
           placeholder={ts("Untitled")}
           value={group.title}
           disabled={disabled}
           required={!disabled}
-          onChange={(event) => {
-            set({ title: event.target.value });
+          onChange={(title) => {
+            set({ title });
           }}
         />{" "}
         <label htmlFor={`${id}-column`}>{ts("Contact Column")}</label>{" "}
@@ -82,12 +84,14 @@ export function GroupTab({ meta, search, onGroup, onSelect }: GroupTabProps) {
         <fieldset>
           <legend className="sr-only">{ts("Smart Group")}</legend>
           <label htmlFor={`${id}-description`}>{description?.label ?? ts("Description")}</label>
-          <textarea
+          <ModelText
             id={`${id}-description`}
             className="form-control"
+            multiline
+            live
             value={group.description}
-            onChange={(event) => {
-              set({ description: event.target.value });
+            onChange={(text) => {
+              set({ description: text });
             }}
           />
           {options.data ? (

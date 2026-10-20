@@ -59,3 +59,14 @@ describe("SettingsTab timeout", () => {
     expect(screen.queryByLabelText("Query Timeout (seconds)")).not.toBeInTheDocument();
   });
 });
+
+describe("SettingsTab description", () => {
+  it("is trimmed as ngModel trims it, in three rows as core's", async () => {
+    renderWithQuery(<Harness />);
+    const input = screen.getByRole("textbox", { name: "Description" });
+    expect(input).toHaveAttribute("rows", "3");
+    await userEvent.type(input, "  Members only  ");
+    expect(latest?.description).toBe("Members only");
+    expect(input).toHaveValue("  Members only  ");
+  });
+});

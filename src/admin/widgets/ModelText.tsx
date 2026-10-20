@@ -7,6 +7,7 @@ type Attributes = Pick<
   | "placeholder"
   | "title"
   | "required"
+  | "disabled"
   | "pattern"
   | "autoComplete"
   | "aria-label"
@@ -24,6 +25,7 @@ export function ModelText({
   live = false,
   trim = true,
   multiline = false,
+  rows = 2,
   ...attributes
 }: Attributes & {
   value: string;
@@ -31,8 +33,9 @@ export function ModelText({
   live?: boolean;
   /** ngTrim: off for an input with `ng-trim="false"`. */
   trim?: boolean;
-  /** A two-row textarea. */
+  /** A textarea, of two rows unless `rows` says otherwise. */
   multiline?: boolean;
+  rows?: number;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const parse = (text: string) => (trim ? text.trim() : text);
@@ -59,5 +62,5 @@ export function ModelText({
       setDraft(null);
     },
   };
-  return multiline ? <textarea rows={2} {...bound} /> : <input type="text" {...bound} />;
+  return multiline ? <textarea rows={rows} {...bound} /> : <input type="text" {...bound} />;
 }

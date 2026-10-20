@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { ModelText } from "../../widgets/ModelText";
 import { Picker } from "../../widgets/Picker";
 import {
   getAllFields,
@@ -97,15 +98,13 @@ export function ForTab({ meta, search, entityLocked, onEntity, onChange }: ForTa
                 ))}
               </select>
             ) : (
-              <input
+              <ModelText
                 id={`${id}-ui-${param.name}`}
                 className="form-control twenty"
-                type="text"
+                live
                 required={param.required}
                 value={text}
-                onChange={(event) => {
-                  setValue(event.target.value);
-                }}
+                onChange={setValue}
               />
             )}
           </div>

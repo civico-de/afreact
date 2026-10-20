@@ -122,6 +122,114 @@ it("counts a new smart group as saved once the save went through", async () => {
   expect(recordParam(groups[2]).records).toEqual([expect.objectContaining({ title: "G" })]);
 });
 
+describe("text trimmed as ngModel trims it", () => {
+  it("saves the label trimmed, keeping what is typed on show", async () => {
+    window.location.hash = "#/edit/5";
+    const calls = mockApi({
+      "SavedSearch.get": () => [stored],
+      "Group.delete": () => [],
+      "SavedSearch.save": (params) => [
+        { ...recordParam(listParam(params.records)[0]), displays: stored.displays },
+      ],
+    });
+    renderWithQuery(<SearchEditor mode="edit" id={5} />);
+    const label = await screen.findByRole("textbox", { name: "Saved Search label" });
+    fireEvent.change(label, { target: { value: "  All members  " } });
+    expect(label).toHaveValue("  All members  ");
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("button", { name: "Saved" })).toBeDisabled();
+    const save = calls.find((c) => c.call === "SavedSearch.save");
+    expect(recordParam(listParam(save?.params.records)[0])).toMatchObject({ label: "All members" });
+  });
+
+  it("stops at a label made of spaces as at a missing one", async () => {
+    window.location.hash = "#/edit/5";
+    const calls = mockApi({ "SavedSearch.get": () => [stored] });
+    renderWithQuery(<SearchEditor mode="edit" id={5} />);
+    fireEvent.change(await screen.findByRole("textbox", { name: "Saved Search label" }), {
+      target: { value: "   " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Search Label is a required field.");
+    expect(calls.some((c) => c.call === "SavedSearch.save")).toBe(false);
+  });
+
+  it("trims a smart group's title and description", async () => {
+    window.location.hash = "#/edit/5";
+    const calls = mockApi({
+      "SavedSearch.get": () => [stored],
+      "SavedSearch.save": (params) => [
+        {
+          ...recordParam(listParam(params.records)[0]),
+          groups: [{ id: 3 }],
+          displays: stored.displays,
+        },
+      ],
+    });
+    renderWithQuery(<SearchEditor mode="edit" id={5} />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Add..." }));
+    await user.click(screen.getByRole("menuitem", { name: "Smart Group", hidden: true }));
+    await user.type(screen.getByRole("textbox", { name: /Group Title/ }), " G ");
+    await user.type(screen.getByRole("textbox", { name: "Description" }), " About ");
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("button", { name: "Saved" })).toBeDisabled();
+    const save = calls.find((c) => c.call === "SavedSearch.save");
+    const groups = listParam(recordParam(save?.params.chain).groups);
+    expect(recordParam(groups[2]).records).toEqual([
+      expect.objectContaining({ title: "G", description: "About" }),
+    ]);
+  });
+
+  it("stops at a smart group title made of spaces", async () => {
+    window.location.hash = "#/edit/5";
+    mockApi({ "SavedSearch.get": () => [stored] });
+    renderWithQuery(<SearchEditor mode="edit" id={5} />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Add..." }));
+    await user.click(screen.getByRole("menuitem", { name: "Smart Group", hidden: true }));
+    fireEvent.change(screen.getByRole("textbox", { name: /Group Title/ }), {
+      target: { value: "  " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Group Title is a required field.");
+  });
+
+  it("trims the label of a display the React builder cannot edit", async () => {
+    window.location.hash = "#/edit/5";
+    const calls = mockApi({
+      "SavedSearch.get": () => [
+        { ...stored, displays: [{ id: 9, name: "Odd", label: "Odd", type: "odd", settings: {} }] },
+      ],
+      "Group.delete": () => [],
+      "SavedSearch.save": (params) => [
+        { ...recordParam(listParam(params.records)[0]), displays: [] },
+      ],
+    });
+    renderWithQuery(<SearchEditor mode="edit" id={5} />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Odd" }));
+    const label = screen.getByRole("textbox", { name: "Display Label" });
+    await user.clear(label);
+    await user.type(label, "   ");
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Display Label is a required field.",
+    );
+    await user.type(label, "Wide ");
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("button", { name: "Saved" })).toBeDisabled();
+    const save = calls.find((c) => c.call === "SavedSearch.save");
+    expect(listParam(recordParam(save?.params.chain).displays)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          records: [expect.objectContaining({ label: "Wide" })],
+        }),
+      ]),
+    );
+  });
+});
+
 it("offers to save a clone before anything in it changed", async () => {
   window.location.hash = "#/clone/5";
   mockApi({ "SavedSearch.get": () => [stored] });

@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { EntityTags } from "../../widgets/EntityTags";
+import { ModelText } from "../../widgets/ModelText";
 import { useCoreHas } from "../../version";
 import { SAVED_SEARCH_FIELDS, validTimeout, type EditorSearch } from "../editor";
 
@@ -29,14 +30,16 @@ export function SettingsTab({
     <>
       <div className="form-group">
         <label htmlFor={`${id}-description`}>{ts("Description")}</label>
-        <textarea
+        <ModelText
           id={`${id}-description`}
           className="form-control"
+          multiline
           rows={3}
+          live
           placeholder={ts("None")}
           value={search.description ?? ""}
-          onChange={(event) => {
-            onChange({ description: event.target.value });
+          onChange={(description) => {
+            onChange({ description });
           }}
         />
       </div>
