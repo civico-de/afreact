@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { EditorMeta } from "../meta";
 import { META } from "../testMeta";
 import { InputPreview } from "./FieldInputs";
@@ -36,6 +36,18 @@ describe("InputPreview", () => {
     const groups = container.querySelectorAll(".form-group");
     expect(groups).toHaveLength(2);
     expect(groups[0]?.querySelector(".af-field-range-sep")).toBeNull();
+  });
+
+  it("takes a placeholder trimmed while it shows what was typed, as core's ngModel does", () => {
+    const api = fieldApi(
+      { name: "birth_date", label: "Birth Date", input_type: "Date", input_attrs: {} },
+      {},
+    );
+    render(<InputPreview api={api} />);
+    const input = screen.getAllByRole("textbox", { name: "Placeholder text" })[0];
+    fireEvent.change(input!, { target: { value: " From " } });
+    expect(api.set).toHaveBeenLastCalledWith("input_attrs.placeholder", "From");
+    expect(input).toHaveValue(" From ");
   });
 
   // deviation:slider-defaults-not-written

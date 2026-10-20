@@ -1,6 +1,8 @@
 import { toLiteral } from "../literal";
 import { useId, useState } from "react";
 import { EntityRef } from "../../search/SearchInput";
+import { ModelNumber } from "../../widgets/ModelNumber";
+import { ModelText } from "../../widgets/ModelText";
 import { Picker } from "../../widgets/Picker";
 import { FieldValue } from "../FieldValue";
 import { textAttribute } from "../model";
@@ -122,15 +124,13 @@ function StyleItem({ api }: { api: FieldApi }) {
       </div>
       {selected === "_other_" && (
         <div className="af-gui-field-select-in-dropdown form-inline">
-          <input
-            key={current}
-            type="text"
+          <ModelText
             className="form-control"
             aria-label={ts("CSS class(es)")}
             placeholder={ts("CSS class(es)")}
-            defaultValue={current}
-            onBlur={(event) => {
-              api.set("input_style", event.target.value);
+            value={current}
+            onChange={(value) => {
+              api.set("input_style", value);
             }}
           />
         </div>
@@ -612,6 +612,7 @@ export function FieldMenu({ api, close }: { api: FieldApi; close: () => void }) 
   const dataType = text(defn.data_type);
   const autofill = isRecord(defn.input_attrs) && !!defn.input_attrs.autofill;
   const readOnly = isReadOnly(state);
+  const maxLength = text(getValue(state, "input_attrs.maxlength"));
   const hasOptions =
     (getProp(state, "input_type") === "Range" && !!api.options) ||
     (["CheckBox", "Toggle", "Radio", "Select"].includes(text(getProp(state, "input_type"))) &&
@@ -664,15 +665,15 @@ export function FieldMenu({ api, close }: { api: FieldApi; close: () => void }) 
       {(inputType === "Text" || inputType === "TextArea") && (
         <MenuControls inline={false}>
           <label htmlFor={lengthId}>{ts("Max Length:")}</label>
-          <input
+          <ModelNumber
             id={lengthId}
-            type="number"
-            min="1"
-            step="1"
+            min={1}
+            step={1}
             className="form-control"
-            value={text(getValue(state, "input_attrs.maxlength"))}
-            onChange={(event) => {
-              api.set("input_attrs.maxlength", numberOf(event.target.value));
+            value={maxLength === "" ? null : Number(maxLength)}
+            onChange={(value) => {
+              // getSet unsets an emptied value.
+              api.set("input_attrs.maxlength", value ?? undefined);
             }}
           />
         </MenuControls>

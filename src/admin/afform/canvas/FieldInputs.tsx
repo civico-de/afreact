@@ -2,6 +2,7 @@ import { toLiteral } from "../literal";
 import { useId } from "react";
 import { Dropdown } from "../../widgets/Dropdown";
 import { InlineEdit } from "../../widgets/InlineEdit";
+import { ModelText } from "../../widgets/ModelText";
 import { textAttribute } from "../model";
 import { MenuCheck } from "./common";
 import type { FieldApi } from "./Field";
@@ -53,16 +54,16 @@ function PlaceholderInput({
   className?: string;
 }) {
   return (
-    <input
+    <ModelText
+      live
       autoComplete="off"
       className={`${className} ${text(getProp(api.state, "input_style"))}`}
-      type="text"
       placeholder={placeholder}
       title={ts("Click to add placeholder text")}
       aria-label={ts("Placeholder text")}
       value={text(getValue(api.state, prop))}
-      onChange={(event) => {
-        api.set(prop, event.target.value);
+      onChange={(value) => {
+        api.set(prop, value);
       }}
     />
   );

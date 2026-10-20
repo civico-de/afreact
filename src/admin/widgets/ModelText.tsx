@@ -2,7 +2,15 @@ import { useEffect, useState, type ChangeEvent, type InputHTMLAttributes } from 
 
 type Attributes = Pick<
   InputHTMLAttributes<HTMLInputElement>,
-  "id" | "className" | "placeholder" | "title" | "required" | "pattern" | "aria-describedby"
+  | "id"
+  | "className"
+  | "placeholder"
+  | "title"
+  | "required"
+  | "pattern"
+  | "autoComplete"
+  | "aria-label"
+  | "aria-describedby"
 >;
 
 /**

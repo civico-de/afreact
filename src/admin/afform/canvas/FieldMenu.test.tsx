@@ -1,8 +1,9 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
+import { EditorContext } from "../context";
 import type { FieldApi } from "./Field";
-import { DefaultItems, EntityRefItems, MinMaxItem } from "./FieldMenu";
+import { DefaultItems, EntityRefItems, FieldMenu, MinMaxItem } from "./FieldMenu";
 import { mockApi, renderWithQuery } from "../../../test/render";
 import { getValue, withLocal } from "./fieldModel";
 import { fieldApi } from "./testField";
@@ -124,5 +125,43 @@ describe("EntityRefItems", () => {
     });
     expect(state && getValue(state, "input_attrs.quickAdd")).toBe("");
     expect(screen.queryByRole("button", { name: /^Remove New/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("FieldMenu", () => {
+  const renderMenu = (api: FieldApi) =>
+    renderWithQuery(
+      <EditorContext value={api.editor}>
+        <FieldMenu api={api} close={() => undefined} />
+      </EditorContext>,
+    );
+  const textField = () =>
+    fieldApi({ name: "nick_name", input_type: "Text", data_type: "String", input_attrs: {} }, {});
+
+  it("leaves out a maximum length below 1 or between whole numbers and keeps it on show", () => {
+    const api = textField();
+    renderMenu(api);
+    const length = screen.getByRole("spinbutton", { name: "Max Length:" });
+    for (const typed of ["0", "-3", "1.5"]) {
+      fireEvent.change(length, { target: { value: typed } });
+      expect(api.set).toHaveBeenLastCalledWith("input_attrs.maxlength", undefined);
+      expect(length).toHaveValue(Number(typed));
+    }
+    fireEvent.change(length, { target: { value: "12" } });
+    expect(api.set).toHaveBeenLastCalledWith("input_attrs.maxlength", 12);
+    fireEvent.change(length, { target: { value: "" } });
+    expect(api.set).toHaveBeenLastCalledWith("input_attrs.maxlength", undefined);
+  });
+
+  it("takes another CSS class trimmed once its input is left", () => {
+    const api = textField();
+    renderMenu(api);
+    fireEvent.change(screen.getByRole("combobox", { name: /style/i }), {
+      target: { value: "_other_" },
+    });
+    const classes = screen.getByRole("textbox", { name: "CSS class(es)" });
+    fireEvent.change(classes, { target: { value: " big-input " } });
+    fireEvent.blur(classes);
+    expect(api.set).toHaveBeenLastCalledWith("input_style", "big-input");
   });
 });

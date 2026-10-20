@@ -4,6 +4,7 @@ import { api4 } from "../../../api/civi";
 import { itemText, searchPage, type AutocompleteItem } from "../../../afform/fields/autocomplete";
 import { adminVars } from "../../vars";
 import { IconPicker } from "../../widgets/IconPicker";
+import { ModelNumber } from "../../widgets/ModelNumber";
 import { ModelText } from "../../widgets/ModelText";
 import { Picker, type PickerOption } from "../../widgets/Picker";
 import { getAllFields, getEntity, getField, getSelectFields, type SearchInfo } from "../expr";
@@ -512,41 +513,6 @@ function HtmlColumn(props: ColumnEditing) {
   );
 }
 
-/**
- * An image's width or height as core's `type="number" min="1"` ngModel takes it: emptied is null,
- * a value below 1 is left out and stays on show.
- */
-function SizeInput({
-  id,
-  value,
-  onChange,
-}: {
-  id: string;
-  value: number | null | undefined;
-  onChange: (value: number | null | undefined) => void;
-}) {
-  const [draft, setDraft] = useState<string | null>(null);
-  return (
-    <input
-      id={id}
-      type="number"
-      min={1}
-      className="form-control crm-flex-1"
-      placeholder="Auto"
-      value={draft ?? value ?? ""}
-      onChange={(event) => {
-        const { value: text, valueAsNumber, validity } = event.target;
-        setDraft(text);
-        if (text === "" && !validity.badInput) onChange(null);
-        else onChange(valueAsNumber >= 1 ? valueAsNumber : undefined);
-      }}
-      onBlur={() => {
-        setDraft(null);
-      }}
-    />
-  );
-}
-
 function ImageColumn(props: ColumnEditing) {
   const { ctx, col, editCol } = props;
   const id = useId();
@@ -572,16 +538,22 @@ function ImageColumn(props: ColumnEditing) {
         />
         <div className="crm-search-admin-flex-row">
           <label htmlFor={`${id}-w`}>{ts("Width")}</label>
-          <SizeInput
+          <ModelNumber
             id={`${id}-w`}
+            min={1}
+            className="form-control crm-flex-1"
+            placeholder="Auto"
             value={image.width}
             onChange={(value) => {
               setSize("width", value);
             }}
           />
           <label htmlFor={`${id}-h`}>{ts("Height")}</label>
-          <SizeInput
+          <ModelNumber
             id={`${id}-h`}
+            min={1}
+            className="form-control crm-flex-1"
+            placeholder="Auto"
             value={image.height}
             onChange={(value) => {
               setSize("height", value);
