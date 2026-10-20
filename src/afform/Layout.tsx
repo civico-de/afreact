@@ -527,6 +527,8 @@ interface Removal {
 /** An autofill selection whose answer is pending; `scope` follows its field as items go. */
 export interface AutofillRun {
   scope: Scope;
+  /** Applies an answer that arrived while the field's item was removed. */
+  landed?: () => void;
 }
 
 /** af-repeat in afRepeat.html's markup: one copy of the children per item, with add/copy/remove inside the min/max bounds. */
@@ -629,15 +631,15 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
             for (const [owner, file] of removal.files) uploads?.restored.set(owner, file);
             form.autofilled.clear();
             for (const [owner, filled] of removal.autofilled) form.autofilled.set(owner, filled);
-            // The item's own pending selections come back with it.
-            for (const [owner, run, place] of removal.runs) {
-              run.scope = place;
-              if (!form.autofillRuns.has(owner)) form.autofillRuns.set(owner, run);
-            }
+            // The item's own pending selections come back with it, and land if answered meanwhile.
+            const back = removal.runs.filter(([owner]) => !form.autofillRuns.has(owner));
+            for (const [, run, place] of removal.runs) run.scope = place;
+            for (const [owner, run] of back) form.autofillRuns.set(owner, run);
             restoreKeys(removal.keys);
             setRestored({ key: removal.key });
             setRemoval(null);
             form.update(() => removal.before);
+            for (const [, run] of back) run.landed?.();
           }}
         >
           <i className="crm-i fa-undo" aria-hidden="true" /> {ts("Undo")}
@@ -928,13 +930,18 @@ function fieldEnv(
           const run: AutofillRun = { scope };
           form.autofillRuns.set(key, run);
           const selection = await loadSelected(form.formName, scope, name, id, form.entities);
+          const land = () => {
+            // What the last selection filled as it stands now, moved with any item removed since.
+            const previous = form.autofilled.get(key) ?? {};
+            form.autofilled.set(key, selection.filled ?? previous);
+            // deviation:autofill-follows-moved-item
+            const place = run.scope;
+            form.edit((data) => selection.apply(data, place, previous));
+          };
           // deviation:autofill-latest-selection
-          if (form.autofillRuns.get(key) !== run) return;
-          // What the last selection filled as it stands now, moved with any item removed since.
-          const previous = form.autofilled.get(key) ?? {};
-          form.autofilled.set(key, selection.filled ?? previous);
-          // deviation:autofill-follows-moved-item
-          form.edit((data) => selection.apply(data, run.scope, previous));
+          // An answer for a removed item waits for Undo to bring the item back.
+          if (form.autofillRuns.get(key) === run) land();
+          else run.landed = land;
         }
       : undefined,
   };
