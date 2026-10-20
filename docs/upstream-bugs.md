@@ -1136,6 +1136,15 @@ toolbar is an empty list, which the server treats as none. A save without
 edits thus changes how the button looks and where it opens. afreact moves the
 button as the server shows it. `deviation:legacy-add-button-as-shown`
 
+**Editing a function changes its text arguments.** The function editor reads a
+quoted argument by cutting off its quotes and writes it with
+`JSON.stringify` (`crmSearchAdmin.module.js` `parseArg`,
+`crmSearchFunction.component.js`). The server unescapes only the quote
+(`SqlString`), so each edit in the editor adds an escape: `"a\"b"` turns into `"a\\\"b"`,
+and every backslash doubles. afreact reads and writes the argument as the
+server does, so an argument left alone is written back as it was.
+`deviation:function-string-escapes`
+
 **A style condition on an aliased column loses its field.** The conditions of
 a display's styles, a column's icons and a link look up the chosen column as a
 field name (`searchAdminCssRules`, `searchAdminIcons`, `crmSearchConditions`

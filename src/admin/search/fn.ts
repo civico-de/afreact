@@ -140,6 +140,17 @@ export function canRemoveArg(state: FnState, index: number): boolean {
 }
 
 /** writeExpr: the expression text, with `:label` and an alias for a column. */
+/** A string argument as SqlString reads it back; a backslash left odd before a quote is doubled. */
+// deviation:function-string-escapes
+function quote(value: string): string {
+  const escaped = value.replace(
+    /(\\*)("|$)/g,
+    (_, slashes: string, end: string) =>
+      slashes + (slashes.length % 2 ? "\\" : "") + (end ? '\\"' : ""),
+  );
+  return `"${escaped}"`;
+}
+
 export function writeExpr(state: FnState, mode: FnMode): string {
   const fnName = state.fn?.name ?? "";
   if (!fnName) return String(state.args[state.fieldIndex]?.value ?? "");
@@ -153,7 +164,7 @@ export function writeExpr(state: FnState, mode: FnMode): string {
     if (arg.optional && value === "" && !arg.flag_before) return "";
     const content = getParam(state, index)?.max_expr
       ? arg.type === "string" || value === ""
-        ? JSON.stringify(value)
+        ? quote(String(value))
         : String(value)
       : "";
     // A flag-only argument such as EXTRACT's unit takes no trailing space.

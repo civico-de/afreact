@@ -27,6 +27,18 @@ describe("function editor", () => {
     expect(writeExpr(distinct, "groupBy")).toBe("GROUP_CONCAT(DISTINCT display_name)");
   });
 
+  // deviation:function-string-escapes
+  it("reads a string argument as the server does and writes it back unchanged", () => {
+    const expr = String.raw`GROUP_CONCAT(display_name SEPARATOR "a\"b \\ \n")`;
+    const state = fnState(meta, expr, search());
+    expect(state.args.map((arg) => arg.value)).toContain(String.raw`a"b \\ \n`);
+    expect(writeExpr(state, "groupBy")).toBe(expr);
+    const typed = setArg(state, 1, { value: "ends in \\" });
+    expect(writeExpr(typed, "groupBy")).toBe(
+      String.raw`GROUP_CONCAT(display_name SEPARATOR "ends in \\")`,
+    );
+  });
+
   it("puts a leading flag before the field and offers labels for option results", () => {
     const extract = selectFunction(meta, fnState(meta, "birth_date", search()), "EXTRACT");
     expect(extract.fieldIndex).toBe(1);

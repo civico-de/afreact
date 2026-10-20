@@ -138,6 +138,13 @@ export function getFieldAndJoin(
 export const getField = (meta: SearchAdminMetadata, fieldName: string, search: SearchInfo) =>
   getFieldAndJoin(meta, fieldName, search).field;
 
+/** SqlString: only its own quote is unescaped, and a doubled backslash stays two. */
+// deviation:function-string-escapes
+const unquote = (arg: string) =>
+  arg
+    .slice(1, -1)
+    .replace(/\\([\\"'])/g, (escape, char: string) => (char === arg[0] ? char : escape));
+
 /** parseArg: a number, a quoted string, or a field path. */
 function parseArg(meta: SearchAdminMetadata, raw: string, search: SearchInfo): ExprArg | undefined {
   const arg = raw.trim();
@@ -148,7 +155,7 @@ function parseArg(meta: SearchAdminMetadata, raw: string, search: SearchInfo): E
       value: Number(arg),
     };
   if (arg.startsWith('"') || arg.startsWith("'"))
-    return { type: "string", data_type: "String", value: arg.slice(1, -1) };
+    return { type: "string", data_type: "String", value: unquote(arg) };
   if (!arg) return undefined;
   const { field, join } = getFieldAndJoin(meta, arg, search);
   if (!field) return undefined;
