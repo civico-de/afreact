@@ -2,6 +2,7 @@ import { useId } from "react";
 import { EntityTags } from "../../widgets/EntityTags";
 import { ModelText } from "../../widgets/ModelText";
 import { useCoreHas } from "../../version";
+import { fromLocalDateTime, toLocalDateTime } from "../../../afform/fields/dateTime";
 import { SAVED_SEARCH_FIELDS, validTimeout, type EditorSearch } from "../editor";
 
 interface SettingsTabProps {
@@ -10,11 +11,6 @@ interface SettingsTabProps {
   onChange: (change: Partial<EditorSearch>) => void;
   onToggleEntitySet: () => void;
 }
-
-/** "YYYY-MM-DD HH:MM:SS" as APIv4 stores it, and the value of a datetime-local input. */
-const toInput = (value: string | null | undefined) =>
-  value ? value.slice(0, 16).replace(" ", "T") : "";
-const fromInput = (value: string) => (value ? `${value.replace("T", " ")}:00` : null);
 
 /** crmSearch-settings: description, timeout, expiry, tags and combining searches. */
 export function SettingsTab({
@@ -70,9 +66,9 @@ export function SettingsTab({
             id={`${id}-expires`}
             type="datetime-local"
             className="form-control"
-            value={toInput(search.expires_date)}
+            value={toLocalDateTime(search.expires_date)}
             onChange={(event) => {
-              onChange({ expires_date: fromInput(event.target.value) });
+              onChange({ expires_date: fromLocalDateTime(event.target.value) });
             }}
           />
         </div>

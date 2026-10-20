@@ -45,6 +45,18 @@ describe("FieldValue", () => {
     expect(screen.getByLabelText("Created")).toHaveAttribute("type", type);
   });
 
+  it("shows a stored date without a time as midnight in a date-time input", () => {
+    const field = { name: "created", data_type: "Timestamp", input_type: "Date" };
+    const { editor } = fieldApi({ ...field, input_attrs: {} }, {});
+    render(
+      <EditorContext.Provider value={editor}>
+        <label htmlFor="created">Created</label>
+        <FieldValue id="created" field={field} value="2024-01-05" onChange={() => undefined} />
+      </EditorContext.Provider>,
+    );
+    expect(screen.getByLabelText("Created")).toHaveValue("2024-01-05T00:00");
+  });
+
   it("keeps the decimal point of a number typed digit by digit", async () => {
     render(<Harness />);
     const input = screen.getByRole("textbox", { name: "Amount" });

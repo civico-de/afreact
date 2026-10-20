@@ -14,7 +14,7 @@ import { RANGE_TYPES, SearchRange } from "./fields/SearchRange";
 import type { FieldDefn, FieldOption } from "./types";
 import { Markup } from "./Markup";
 import { Unsupported } from "./Unsupported";
-import { showsTime } from "./fields/dateTime";
+import { fromLocalDateTime, showsTime, toLocalDateTime } from "./fields/dateTime";
 
 /**
  * A field in the markup of core's afField templates (afField.html, fields/*.html), so the
@@ -143,17 +143,6 @@ function fieldOptions(defn: FieldDefn): FieldOption[] {
         { id: true, label: ts("Yes") },
         { id: false, label: ts("No") },
       ];
-}
-
-/** "2026-09-29 14:30:00" <-> "2026-09-29T14:30" for datetime-local; a bare date shows midnight. */
-export function toLocalDateTime(value: unknown): string {
-  if (typeof value !== "string") return "";
-  return /^\d{4}-\d{2}-\d{2}$/.test(value)
-    ? `${value}T00:00`
-    : value.replace(" ", "T").slice(0, 16);
-}
-export function fromLocalDateTime(value: string): string | null {
-  return value ? `${value.replace("T", " ")}:00` : null;
 }
 
 /** crm.datepicker.js: "yy" is a year input, any other format without a day a month picker. */

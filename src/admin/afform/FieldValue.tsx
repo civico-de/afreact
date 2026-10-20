@@ -6,7 +6,7 @@ import { useEditor } from "./context";
 import { plainLiteral } from "./fields";
 import type { GuiField } from "./meta";
 import { jsAttribute } from "./model";
-import { showsTime } from "../../afform/fields/dateTime";
+import { fromLocalDateTime, showsTime, toLocalDateTime } from "../../afform/fields/dateTime";
 
 interface FieldValueProps {
   id: string;
@@ -69,10 +69,10 @@ export function FieldValue({ id, field, op, value, onChange }: FieldValueProps) 
         id={id}
         className="form-control"
         type={time ? "datetime-local" : "date"}
-        value={time ? current.replace(" ", "T").slice(0, 16) : current.slice(0, 10)}
+        value={time ? toLocalDateTime(current) : current.slice(0, 10)}
         onChange={(event) => {
           const raw = event.target.value;
-          onChange(time && raw ? `${raw.replace("T", " ")}:00` : raw);
+          onChange(time ? (fromLocalDateTime(raw) ?? "") : raw);
         }}
       />
     );

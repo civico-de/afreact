@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { api4, errorMessage } from "../api/civi";
+import { fromLocalDateTime, toLocalDateTime } from "../afform/fields/dateTime";
 import { cellText } from "./Cell";
 import { EntityRefInput } from "./EntityRefInput";
 import { ListInput } from "./ListInput";
@@ -354,10 +355,6 @@ export interface InputProps {
 function asText(value: unknown): string {
   return value === null || value === undefined ? "" : cellText(value);
 }
-
-/** "2026-09-29 14:30:00" <-> "2026-09-29T14:30" for datetime-local inputs. */
-const toLocalDateTime = (value: unknown) => asText(value).replace(" ", "T").slice(0, 16);
-const fromLocalDateTime = (value: string) => (value ? `${value.replace("T", " ")}:00` : null);
 
 /** The input crmSearchInput shows for a field: in a cell, and in the update task's dialog. */
 // deviation:inplace-native-inputs

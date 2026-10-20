@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { ClearButton, fromLocalDateTime, toLocalDateTime } from "../Field";
+import { ClearButton } from "../Field";
+import { fromLocalDateTime, toLocalDateTime } from "./dateTime";
 import type { FieldDefn, FieldOption } from "../types";
 import { showsTime } from "./dateTime";
 

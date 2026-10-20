@@ -10,6 +10,7 @@ import {
 } from "../../afform/fields/autocomplete";
 import { ListInput } from "../../search/ListInput";
 import { adminVars } from "../vars";
+import { fromLocalDateTime, toLocalDateTime } from "../../afform/fields/dateTime";
 import {
   dateTypeOf,
   dateTypeValue,
@@ -417,10 +418,10 @@ function DateInput({
           aria-labelledby={id}
           type={timestamp ? "datetime-local" : "date"}
           required={required}
-          value={timestamp ? current.replace(" ", "T").slice(0, 16) : current.slice(0, 10)}
+          value={timestamp ? toLocalDateTime(current) : current.slice(0, 10)}
           onChange={(event) => {
             const raw = event.target.value;
-            onChange(timestamp && raw ? `${raw.replace("T", " ")}:00` : raw);
+            onChange(timestamp ? (fromLocalDateTime(raw) ?? "") : raw);
           }}
         />
       )}
