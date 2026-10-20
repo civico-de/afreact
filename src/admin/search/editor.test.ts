@@ -92,23 +92,48 @@ describe("creating and cloning", () => {
 describe("saving", () => {
   it("requires labels and the group title", () => {
     const errors = validate(
+      meta,
       saved({ label: "", displays: [{ label: "", type: "table" }], groups: [] }),
       true,
     );
     expect(errors.map((e) => e.tab)).toEqual([undefined, "group", "display_0"]);
-    expect(validate(saved(), false)).toEqual([]);
+    expect(validate(meta, saved(), false)).toEqual([]);
+  });
+
+  // deviation:batch-default-invalid-blocks-save
+  it("refuses a data entry default its number input would not take", () => {
+    const batch = (value: unknown, key = "duration") =>
+      saved({
+        api_entity: "Activity",
+        api_params: { version: 4, select: ["id", "duration AS minutes", "subject"] },
+        displays: [
+          {
+            label: "B",
+            type: "batch",
+            settings: { columns: [{ type: "field", key, label: "Minutes", default: value }] },
+          },
+        ],
+      });
+    expect(validate(meta, batch(1.5, "minutes"), false)).toEqual([
+      { message: "The default value of Minutes is not a valid number.", tab: "display_0" },
+    ]);
+    expect(validate(meta, batch("abc", "minutes"), false)).toHaveLength(1);
+    expect(validate(meta, batch(2, "minutes"), false)).toEqual([]);
+    expect(validate(meta, batch(null, "minutes"), false)).toEqual([]);
+    expect(validate(meta, batch("", "minutes"), false)).toEqual([]);
+    expect(validate(meta, batch("x", "subject"), false)).toEqual([]);
   });
 
   // deviation:search-timeout-invalid-blocks-save
   it("refuses a query timeout the unsigned whole-number column cannot hold", () => {
-    expect(validate(saved({ timeout: -5 }), false)).toEqual([
+    expect(validate(meta, saved({ timeout: -5 }), false)).toEqual([
       { message: "Query Timeout must be a whole number of seconds, 0 or more.", tab: "settings" },
     ]);
-    expect(validate(saved({ timeout: 1.5 }), false)).toHaveLength(1);
-    expect(validate(saved({ timeout: 4294967296 }), false)).toHaveLength(1);
-    expect(validate(saved({ timeout: 4294967295 }), false)).toEqual([]);
-    expect(validate(saved({ timeout: 0 }), false)).toEqual([]);
-    expect(validate(saved({ timeout: null }), false)).toEqual([]);
+    expect(validate(meta, saved({ timeout: 1.5 }), false)).toHaveLength(1);
+    expect(validate(meta, saved({ timeout: 4294967296 }), false)).toHaveLength(1);
+    expect(validate(meta, saved({ timeout: 4294967295 }), false)).toEqual([]);
+    expect(validate(meta, saved({ timeout: 0 }), false)).toEqual([]);
+    expect(validate(meta, saved({ timeout: null }), false)).toEqual([]);
   });
 
   it("deletes groups, displays and tags that are gone", () => {

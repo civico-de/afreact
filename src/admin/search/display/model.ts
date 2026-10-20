@@ -13,7 +13,7 @@ import {
   type ExprInfo,
   type SearchInfo,
 } from "../expr";
-import { formatValue } from "../condition";
+import { formatValue, inputKind } from "../condition";
 import type { EntityLink, SchemaField, SearchAdminMetadata } from "../meta";
 import { md5 } from "./md5";
 
@@ -221,15 +221,33 @@ export function getExprFromSelect(search: SearchInfo, key: string): string | nul
   return match ? (match.split(" AS ")[0] ?? null) : null;
 }
 
-const exprInfo = (ctx: DisplayContext, key: string | undefined): ExprInfo | null => {
+type FieldContext = Pick<DisplayContext, "meta" | "search">;
+
+const exprInfo = (ctx: FieldContext, key: string | undefined): ExprInfo | null => {
   const expr = key ? getExprFromSelect(ctx.search, key) : null;
   return expr ? parseExpr(ctx.meta, expr, ctx.search) : null;
 };
 
 /** The field a column shows as is, found through its select alias. deviation:batch-column-alias-field */
-export function columnField(ctx: DisplayContext, key: string): SchemaField | undefined {
+export function columnField(ctx: FieldContext, key: string): SchemaField | undefined {
   const info = exprInfo(ctx, key);
   return info && !info.fn ? info.args[0]?.field : undefined;
+}
+
+/** Labels of the columns whose default their number input refuses. deviation:batch-default-invalid-blocks-save */
+export function invalidDefaults(ctx: FieldContext, settings: unknown): string[] {
+  if (!isAdminSettings(settings)) return [];
+  return columnsOf(settings).flatMap((col) => {
+    const field = "default" in col && col.key ? columnField(ctx, col.key) : undefined;
+    const kind = field ? inputKind(field, undefined) : undefined;
+    if (kind !== "integer" && kind !== "float") return [];
+    const fits = (value: unknown) =>
+      value === null ||
+      value === "" ||
+      (typeof value === "number" &&
+        (kind === "integer" ? Number.isInteger(value) : Number.isFinite(value)));
+    return [col.default].flat().every(fits) ? [] : [col.label ?? col.key ?? ""];
+  });
 }
 
 /** The columns core starts a display with, and the defaults it fills in on opening. */

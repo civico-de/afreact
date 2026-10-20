@@ -1,6 +1,7 @@
 import { getEntity, type ApiParams, type SearchInfo } from "./expr";
 import type { SearchAdminMetadata } from "./meta";
 import { coreHas } from "../version";
+import { invalidDefaults } from "./display/model";
 
 export interface SmartGroup {
   id?: number;
@@ -205,7 +206,11 @@ export const validTimeout = (timeout: unknown) =>
   timeout === undefined ||
   (Number.isInteger(timeout) && Number(timeout) >= 0 && Number(timeout) <= INT_UNSIGNED_MAX);
 
-export function validate(search: EditorSearch, groupExists: boolean): EditorError[] {
+export function validate(
+  meta: SearchAdminMetadata,
+  search: EditorSearch,
+  groupExists: boolean,
+): EditorError[] {
   const required = (label: string) => ts("%1 is a required field.", { 1: label });
   const errors: EditorError[] = [];
   if (!search.label) errors.push({ message: required(ts("Search Label")) });
@@ -218,8 +223,14 @@ export function validate(search: EditorSearch, groupExists: boolean): EditorErro
       tab: "settings",
     });
   search.displays.forEach((display, index) => {
-    if (!display.trashed && !display.label)
-      errors.push({ message: required(ts("Display Label")), tab: `display_${String(index)}` });
+    const tab = `display_${String(index)}`;
+    if (display.trashed) return;
+    if (!display.label) errors.push({ message: required(ts("Display Label")), tab });
+    for (const label of invalidDefaults({ meta, search }, display.settings))
+      errors.push({
+        message: ts("The default value of %1 is not a valid number.", { 1: label }),
+        tab,
+      });
   });
   return errors;
 }

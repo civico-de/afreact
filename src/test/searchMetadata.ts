@@ -128,6 +128,7 @@ export const metadata: SearchAdminMetadata = {
         field("Activity", "id", "ID", "Integer"),
         field("Activity", "subject", "Subject", "String"),
         field("Activity", "activity_date_time", "Date", "Timestamp"),
+        field("Activity", "duration", "Duration", "Integer"),
       ],
     },
     {

@@ -1104,6 +1104,12 @@ looks up a column's key as a field name (`searchAdminDisplayBatch.component.js`
 display adds no total for the column, and its default value input is untyped.
 afreact resolves the alias through the search's select first. `deviation:batch-column-alias-field`
 
+**A data entry default that is not a valid number disappears on save.** The
+default value input is a number input; for `1.5` in an Integer field its
+`step` validation leaves the model `undefined`, so the column is saved without
+a default and core says nothing. afreact names the column and refuses to save
+until the default is fixed. `deviation:batch-default-invalid-blocks-save`
+
 **A new autocomplete display searches by description.** When it sets up a
 new autocomplete display, core adds `description` to the entity's
 `search_fields` array in the admin metadata instead of to a copy, so the

@@ -552,7 +552,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
 
   async function save() {
     setAttempts((count) => count + 1);
-    const problems = validate(search, groupExists);
+    const problems = validate(meta, search, groupExists);
     setErrors(problems.map((p) => p.message));
     if (problems.length) {
       const first = problems.find((p) => p.tab);
