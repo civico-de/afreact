@@ -260,7 +260,7 @@ export function SearchFieldset({ node, formName, data = NO_DATA, children }: Sea
     if (stores && Object.keys(state.values).length) window.CRM.cache?.set(cacheKey, state.values);
   }, [stores, cacheKey, state.values]);
 
-  useUrlWriter(fields, name, state, context, route, latestRoute, loadedSet);
+  useUrlWriter(fields, everyField, name, state, context, route, latestRoute, loadedSet);
 
   const [toggled, setToggled] = useState<Record<string, Record<string, string>>>({});
   const reportColumns = useCallback((key: string, picked: Record<string, string>) => {
@@ -313,6 +313,7 @@ export function SearchFieldset({ node, formName, data = NO_DATA, children }: Sea
 // deviation:param-set-edits-in-url
 function useUrlWriter(
   fields: FilterField[],
+  everyField: FilterField[],
   name: string,
   state: FieldsetReducerState,
   context: ValueContext,
@@ -322,10 +323,12 @@ function useUrlWriter(
 ) {
   const store = useParamStore();
   const prefix = useUrlPrefix(name);
-  const unique = useMemo(
-    () => fields.filter((field, index) => fields.findIndex((o) => o.name === field.name) === index),
-    [fields],
-  );
+  // Every filter once, a shown one ahead of a hidden one of the same name.
+  const unique = useMemo(() => {
+    const all = [...fields, ...everyField];
+    return all.filter((field, index) => all.findIndex((o) => o.name === field.name) === index);
+  }, [fields, everyField]);
+  const shown = useMemo(() => new Set(fields.map((field) => field.name)), [fields]);
   const defaults = useMemo(() => filterValues(defaultValues(fields, context)), [fields, context]);
   const write = useEffectEvent(() => {
     const setId = route.get("_s");
@@ -339,7 +342,8 @@ function useUrlWriter(
       const plain = field.name;
       const full = `${name}.${field.name}`;
       params.delete(prefix ? plain : full);
-      if (JSON.stringify(filters[plain]) === JSON.stringify(base[plain]))
+      // A filter an af-if hides has no value, so the hash carries none either.
+      if (!shown.has(plain) || JSON.stringify(filters[plain]) === JSON.stringify(base[plain]))
         params.delete(prefix ? full : plain);
       // A chosen operator travels with the value: a reload assumes the field's own.
       else params.set(prefix ? full : plain, urlText(state.applied[plain], operatorOf(field, {})));

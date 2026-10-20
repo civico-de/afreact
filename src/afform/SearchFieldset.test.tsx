@@ -428,6 +428,46 @@ describe("SearchFieldset", () => {
     expect(screen.getByRole("status")).toHaveTextContent('{"title":"x"}');
   });
 
+  it("drops a filter an af-if hides from the hash on the next commit", () => {
+    const rule = JSON.stringify([["Individual1[0][fields][advanced]", "=", "true"]]);
+    const titleNode = field("title", {});
+    const [title] = filterFields([titleNode]);
+    if (!title) throw new Error("fixture");
+    const node: LayoutNode = {
+      "#tag": "div",
+      "#children": [
+        titleNode,
+        { "#tag": "div", "af-if": rule, "#children": [field("status", {})] },
+      ],
+    };
+    const Type = () => {
+      const fieldset = useSearchFieldset();
+      return (
+        <button
+          type="button"
+          onClick={() => fieldset?.dispatch({ type: "input", field: title, value: "Ne" })}
+        >
+          Type
+        </button>
+      );
+    };
+    const store = memoryStore("#?status=5");
+    renderWithQuery(
+      <SearchFieldset
+        node={node}
+        formName="afsearchGroups"
+        data={{ Individual1: [{ fields: { advanced: false } }] }}
+      >
+        <Type />
+      </SearchFieldset>,
+      store,
+    );
+    fakeTimeouts();
+    fireEvent.click(screen.getByRole("button", { name: "Type" }));
+    passTime(SEARCH_DELAY_MS);
+    expect(store.params().toString()).toBe("title=Ne");
+  });
+
   it("gives a filter its default once an af-if shows it, and a stored value read at load", () => {
     const rule = JSON.stringify([["Individual1[0][fields][advanced]", "=", "true"]]);
     const children = [
