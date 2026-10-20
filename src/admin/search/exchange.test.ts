@@ -153,6 +153,29 @@ describe("import", () => {
     });
   });
 
+  it("counts records without a name as new ones, as core's preview does", async () => {
+    const calls = mockApi({
+      "Entity.get": () => [
+        { name: "SavedSearch", title: "Saved Search", title_plural: "Saved Searches" },
+        { name: "Group", title: "Group", title_plural: "Groups" },
+      ],
+      "SavedSearch.get": () => counted([], 1),
+    });
+    const check = parseImport(
+      JSON.stringify([
+        ["SavedSearch", "save", { records: [{ name: "a" }, { label: "B" }], match: ["name"] }],
+        ["Group", "save", { records: [{ title: "G" }, { title: "H" }] }],
+      ]),
+      false,
+    );
+    expect(await previewImport(check)).toEqual({
+      error: "",
+      preview:
+        "1 existing Saved Search will be updated. 1 new Saved Search will be created. 2 new Groups will be created.",
+    });
+    expect(calls.some(({ call }) => call === "Group.get")).toBe(false);
+  });
+
   // deviation:import-counts-records
   it("saves the calls in order and counts the saved records", async () => {
     const calls = mockApi({

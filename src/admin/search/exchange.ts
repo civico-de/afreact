@@ -105,8 +105,8 @@ type SaveCall = [
 
 export interface ImportCheck {
   calls: SaveCall[];
-  /** The count query per entity, and the names it looks for. */
-  counts: Record<string, { names: string[]; params: object }>;
+  /** Per entity, how many records it saves and the query counting existing ones by name. */
+  counts: Record<string, { records: number; params?: object }>;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -146,10 +146,15 @@ export function parseImport(text: string, afformEnabled: boolean): ImportCheck {
       throw new Error(ts('Duplicate API entity "%1".', { 1: entity }));
     calls.push(call);
     const records = Array.isArray(params.records) ? params.records : [];
+    if (!records.length) continue;
+    // A record without a name gets one from its label when saved, so it is always new.
     const names = records.flatMap((record) =>
       typeof record.name === "string" ? [record.name] : [],
     );
-    if (!names.length) continue;
+    if (!names.length) {
+      counts[entity] = { records: records.length };
+      continue;
+    }
     // deviation:import-checks-every-display
     // A display's name is unique only within its search.
     const pairs = records.flatMap((record) =>
@@ -167,7 +172,7 @@ export function parseImport(text: string, afformEnabled: boolean): ImportCheck {
     );
     const where: unknown[][] =
       entity === "SearchDisplay" ? [["OR", pairs]] : [["name", "IN", names]];
-    counts[entity] = { names, params: { select: ["row_count"], where } };
+    counts[entity] = { records: records.length, params: { select: ["row_count"], where } };
   }
   if (!Object.keys(counts).length) throw new Error(ts("No records to import."));
   return { calls, counts };
@@ -186,7 +191,10 @@ export async function previewImport(check: ImportCheck): Promise<ImportPreview> 
       select: ["name", "title", "title_plural"],
       where: [["name", "IN", entities]],
     }),
-    ...entities.map((entity) => api4(entity, "get", check.counts[entity]?.params ?? {})),
+    ...entities.map((entity) => {
+      const params = check.counts[entity]?.params;
+      return params ? api4(entity, "get", params) : undefined;
+    }),
   ]);
   const errors: string[] = [];
   const previews: string[] = [];
@@ -194,7 +202,7 @@ export async function previewImport(check: ImportCheck): Promise<ImportPreview> 
     const titles = info.find((row) => row.name === entity);
     const name = (n: number) =>
       n === 1 ? (titles?.title ?? entity) : (titles?.title_plural ?? entity);
-    const count = check.counts[entity]?.names.length ?? 0;
+    const count = check.counts[entity]?.records ?? 0;
     const found = existing[index]?.countMatched ?? existing[index]?.count ?? 0;
     const call = check.calls.find(([e]) => e === entity);
     if (found && entity !== "Afform" && !call?.[2].match?.length) {
