@@ -336,7 +336,7 @@ function ResultDisplay({
     loading,
     rowCount,
     pageNumber: page,
-    runParams: { ...params, sort: activeSort, limit },
+    runParams: { ...params, ...toggles.nextParams, sort: activeSort, limit },
     filtersKey,
     root,
   });

@@ -1046,6 +1046,30 @@ describe("AfreactSearch bulk actions", () => {
       expect(checkbox("Name 1")).toBeChecked();
     });
 
+    it("downloads only the columns picked to show, as core's getApiParams sends them", async () => {
+      const { fetchMock } = stubDownload(
+        new Response("x", { headers: { "Content-Disposition": 'attachment; filename="C.csv"' } }),
+      );
+      serve({ tasks: [enable, download] });
+      const picking: DisplaySettings = {
+        ...settings,
+        toggleColumns: true,
+        columns: [...columns, { type: "field", key: "email", label: "Email" }],
+      };
+      renderWithQuery(<AfreactSearch search="S" display="D" settings={picking} />);
+      await screen.findByText("Name 1");
+      await userEvent.click(screen.getByRole("checkbox", { name: "Email" }));
+      await selectRows("Name 1");
+      await openActions();
+      await userEvent.click(screen.getByRole("menuitem", { name: /Download/, hidden: true }));
+      const dialog = await screen.findByRole("dialog", { name: "Download Spreadsheet" });
+      await userEvent.click(within(dialog).getByRole("button", { name: "Download" }));
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalled();
+      });
+      expect(sentDownload(fetchMock).params).toMatchObject({ toggleColumns: [0] });
+    });
+
     // deviation:download-failure-closes
     it("offers every row without a selection and reports a failed download", async () => {
       const { fetchMock } = stubDownload(
