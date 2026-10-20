@@ -451,6 +451,15 @@ export function getSelectFields(meta: SearchAdminMetadata, search: SearchInfo): 
   });
 }
 
+/** The select led by a smart group column, one that needs no aggregate, if it lost that lead. */
+export function withGroupColumnFirst(meta: SearchAdminMetadata, search: SearchInfo): string[] {
+  const select = search.api_params.select;
+  const columns = getSmartGroupColumns(meta, search);
+  if (columns.some((col) => col.id === select[0])) return select;
+  const lead = columns.find((col) => !mustAggregate(meta, String(col.id), search));
+  return lead ? [String(lead.id), ...select.filter((col) => col !== String(lead.id))] : select;
+}
+
 /** getSmartGroupColumns: the columns that can serve as a smart group's contact ID. */
 export function getSmartGroupColumns(
   meta: SearchAdminMetadata,

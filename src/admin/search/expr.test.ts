@@ -7,6 +7,7 @@ import {
   getDefaultLabel,
   getJoin,
   getSmartGroupColumns,
+  withGroupColumnFirst,
   mustAggregate,
   parseExpr,
   reconcileAggregateColumns,
@@ -201,6 +202,21 @@ describe("field lists", () => {
       "Email AS Contact_Email_contact_id_01",
     );
     expect(fields[0]?.group).toBe("Contact Emails");
+  });
+
+  // deviation:smart-group-column-leads
+  it("leads with a contact ID for a smart group once the leading one went", () => {
+    const after = (select: string[], groupBy?: string[]) =>
+      withGroupColumnFirst(meta, {
+        ...joined,
+        api_params: { ...joined.api_params, select, groupBy },
+      });
+    expect(after(["display_name", "id"])).toEqual(["id", "display_name"]);
+    expect(after(["display_name"])).toEqual(["id", "display_name"]);
+    const kept = ["Contact_Email_contact_id_01.contact_id", "display_name"];
+    expect(after(kept)).toBe(kept);
+    // A grouping that aggregates every contact ID leaves the select to the save check.
+    expect(after(["COUNT(id) AS COUNT_id"], ["contact_type"])).toEqual(["COUNT(id) AS COUNT_id"]);
   });
 
   it("offers contact IDs of the entity and its joins for a smart group", () => {

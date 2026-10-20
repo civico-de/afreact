@@ -122,6 +122,40 @@ it("counts a new smart group as saved once the save went through", async () => {
   expect(recordParam(groups[2]).records).toEqual([expect.objectContaining({ title: "G" })]);
 });
 
+// deviation:smart-group-column-leads
+it("keeps a contact ID leading a smart group's columns when the join that held it goes", async () => {
+  window.location.hash = "#/edit/5";
+  const calls = mockApi({
+    "SavedSearch.get": () => [
+      {
+        ...stored,
+        api_params: {
+          version: 4,
+          select: ["Contact_Email_contact_id_01.contact_id", "display_name", "id"],
+          join: [["Email AS Contact_Email_contact_id_01", "LEFT"]],
+        },
+        groups: [{ id: 3, title: "G", description: "", visibility: "User and User Admin Only" }],
+      },
+    ],
+    "SavedSearch.save": (params) => [
+      {
+        ...recordParam(listParam(params.records)[0]),
+        groups: [{ id: 3 }],
+        displays: stored.displays,
+      },
+    ],
+  });
+  renderWithQuery(<SearchEditor mode="edit" id={5} />);
+  fireEvent.click(await screen.findByRole("button", { name: /^Remove join/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(await screen.findByRole("button", { name: "Saved" })).toBeDisabled();
+  const save = calls.find((c) => c.call === "SavedSearch.save");
+  expect(recordParam(listParam(save?.params.records)[0]).api_params).toMatchObject({
+    select: ["id", "display_name"],
+    join: [],
+  });
+});
+
 describe("text trimmed as ngModel trims it", () => {
   it("saves the label trimmed, keeping what is typed on show", async () => {
     window.location.hash = "#/edit/5";

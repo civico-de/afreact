@@ -47,7 +47,7 @@ import { SettingsTab } from "./editor/SettingsTab";
 import { withEntitySetFields } from "./entitySets";
 import { ExportDialog } from "./ExportDialog";
 import { BuilderPanels, pluginsReady, pluginVerdict } from "../BuilderPanels";
-import { getEntity, type ApiParams } from "./expr";
+import { getEntity, withGroupColumnFirst, type ApiParams } from "./expr";
 import { displayChanges, findCriticalChanges, postSaveDisplay, preSaveDisplay } from "./saveHooks";
 import {
   searchAdminSettings,
@@ -408,7 +408,8 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                 },
                 api_params: withSelect(
                   { ...next.api_params, select: state.api_params.select },
-                  next.api_params.select,
+                  // A removed join can take the group's contact column. deviation:smart-group-column-leads
+                  groupExists ? withGroupColumnFirst(meta, next) : next.api_params.select,
                 ),
               }));
             }}
