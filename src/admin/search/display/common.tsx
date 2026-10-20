@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, type ReactNode } from "react";
 import { api4 } from "../../../api/civi";
 import { IconPicker } from "../../widgets/IconPicker";
+import { ModelText } from "../../widgets/ModelText";
 import { Picker, type PickerOption } from "../../widgets/Picker";
 import type { ConditionField } from "../condition";
 import { getAllFields, getField, getSelectFields } from "../expr";
@@ -583,7 +584,7 @@ export function TokenSelect({
   );
 }
 
-/** A text input with crmSearchAdminTokenSelect beside it. */
+/** A text input with crmSearchAdminTokenSelect beside it, taking the text once it is left. */
 export function TokenText({
   ctx,
   label,
@@ -592,6 +593,7 @@ export function TokenText({
   suffix = ":label",
   multiline = false,
   hiddenLabel = true,
+  live = false,
 }: {
   ctx: DisplayContext;
   label: string;
@@ -600,6 +602,8 @@ export function TokenText({
   suffix?: string;
   multiline?: boolean;
   hiddenLabel?: boolean;
+  /** Takes every keystroke, where core's input has no `updateOn: 'blur'`. */
+  live?: boolean;
 }) {
   const id = useId();
   return (
@@ -607,27 +611,14 @@ export function TokenText({
       <label htmlFor={id} className={hiddenLabel ? "sr-only" : undefined}>
         {label}
       </label>
-      {multiline ? (
-        <textarea
-          id={id}
-          rows={2}
-          className="form-control crm-flex-1"
-          value={value}
-          onChange={(event) => {
-            onChange(event.target.value);
-          }}
-        />
-      ) : (
-        <input
-          id={id}
-          type="text"
-          className="form-control crm-flex-1"
-          value={value}
-          onChange={(event) => {
-            onChange(event.target.value);
-          }}
-        />
-      )}
+      <ModelText
+        id={id}
+        className="form-control crm-flex-1"
+        multiline={multiline}
+        live={live}
+        value={value}
+        onChange={onChange}
+      />
       <TokenSelect
         ctx={ctx}
         suffix={suffix}
@@ -1155,6 +1146,7 @@ export function LinkGroup({
                 <TokenText
                   ctx={ctx}
                   label={ts("Text of link %1", { 1: index + 1 })}
+                  live
                   value={item.text ?? ""}
                   onChange={(text) => {
                     set(index, (target) => {

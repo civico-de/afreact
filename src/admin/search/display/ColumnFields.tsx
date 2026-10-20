@@ -561,6 +561,7 @@ function ImageColumn(props: ColumnEditing) {
             label={ts("Alt Text")}
             hiddenLabel={false}
             suffix=""
+            live
             value={image.alt ?? ""}
             onChange={(alt) => {
               editCol((c) => {
