@@ -98,6 +98,35 @@ describe("ImportDialog", () => {
     expect(fetch).toHaveBeenCalled();
   });
 
+  // deviation:import-reload-failure-shown
+  it("closes as imported when only the reload of the metadata fails", async () => {
+    mockApi({
+      "Entity.get": () => [
+        { name: "SavedSearch", title: "Saved Search", title_plural: "Saved Searches" },
+      ],
+      "SavedSearch.get": () => counted([], 0),
+      "SavedSearch.save": () => [{ id: 1 }],
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("Network down"))),
+    );
+    const onClose = vi.fn<(saved: boolean) => void>();
+    renderWithQuery(<ImportDialog onClose={onClose} />);
+    fakeTimeouts();
+    fireEvent.change(screen.getByRole("textbox", { name: "Import" }), {
+      target: { value: '[["SavedSearch","save",{"records":[{"name":"a"}]}]]' },
+    });
+    passTime(CHECK_DELAY_MS);
+    vi.useRealTimers();
+    expect(await screen.findByText("1 new Saved Search will be created.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Import" }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledWith(true);
+    });
+    expect(window.CRM.alert).toHaveBeenCalledWith("Network down", "Error", "error");
+  });
+
   it("shows why input cannot be imported and keeps the button off", () => {
     mockApi({});
     renderWithQuery(<ImportDialog onClose={vi.fn<(imported: boolean) => void>()} />);

@@ -1316,6 +1316,12 @@ search; displays of further searches in the same bundle are not checked and
 collide on save. afreact checks every display against its own search, matching
 exact search and display name pairs. `deviation:import-checks-every-display`
 
+**A failed metadata reload after an import goes unreported.** After saving
+the imported records, core reloads the search metadata without handling a
+failure, so entities the import added may stay missing with no message.
+afreact closes the dialog as imported and reports the failed reload in an
+alert. `deviation:import-reload-failure-shown`
+
 **Listing accessibility.** Core's saved-search listing nests the count badge
 links inside the tab links (`nested-interactive`), labels its filter inputs
 only by `title` (`label-title-only`), and leaves the actions column header

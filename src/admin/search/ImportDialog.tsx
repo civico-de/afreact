@@ -65,21 +65,27 @@ export function ImportDialog({ onClose }: { onClose: (imported: boolean) => void
 
   async function run(check: ImportCheck) {
     setState({ kind: "running", check });
+    let count: number;
     try {
-      const count = await runImport(check);
-      crmAlert(
-        ts("1 record successfully imported.", {
-          plural: "%count records successfully imported.",
-          count,
-        }),
-        ts("Saved"),
-        "success",
-      );
-      await refreshMetadata();
-      onClose(true);
+      count = await runImport(check);
     } catch (error) {
       setState({ kind: "error", message: `${ts("Processing Error:")} ${errorMessage(error)}` });
+      return;
     }
+    crmAlert(
+      ts("1 record successfully imported.", {
+        plural: "%count records successfully imported.",
+        count,
+      }),
+      ts("Saved"),
+      "success",
+    );
+    // The records are saved, so a failed reload is reported without keeping the dialog open.
+    // deviation:import-reload-failure-shown
+    await refreshMetadata().catch((error: unknown) => {
+      crmAlert(errorMessage(error), ts("Error"), "error");
+    });
+    onClose(true);
   }
 
   const running = state.kind === "running";
