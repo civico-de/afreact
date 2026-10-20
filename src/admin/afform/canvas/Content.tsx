@@ -65,6 +65,8 @@ function ColorMenuItem({
           onChange(event.target.value);
         }}
       >
+        {/* Angular's unknown option: without a style class nothing is chosen, so Default can be. */}
+        {!styles.some(([style]) => style === value) && <option value={value} />}
         {styles.map(([style, label]) => (
           <option key={style} value={style} className={style.replace(prefix, "bg")}>
             {label}
