@@ -165,7 +165,9 @@ test("every form saves back unedited as core's builder would, without a notice",
       if (before !== (stored.description ?? "")) found.push(`${name}: description shown`);
       if (sent) {
         // The one edit made to enable saving, taken back.
-        if (sent.description !== `${before}${SUFFIX}`) found.push(`${name}: description sent`);
+        // Core's description textarea trims as every ngModel text input does.
+        if (sent.description !== `${before}${SUFFIX}`.trim())
+          found.push(`${name}: description sent`);
         sent.description = stored.description;
         // The builder sends its layout as HTML. Both sides are read back from HTML, so markup
         // compares without the indentation each conversion gives it.
