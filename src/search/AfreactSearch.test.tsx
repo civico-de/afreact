@@ -421,6 +421,29 @@ describe("AfreactSearch", () => {
     expect(store.params().get("_page")).toBe("3");
   });
 
+  it("shows the one page of a pager without a page size, also from a link to a later one", async () => {
+    const store = memoryStore("#?_page=3");
+    runs(2);
+    renderWithQuery(
+      <AfreactSearch search="S" display="D" settings={{ ...settings, limit: 0 }} />,
+      store,
+    );
+    expect(await currentPage()).toHaveTextContent("1");
+    expect(store.params().get("_page")).toBeNull();
+  });
+
+  it("keeps the page of a link while the display's settings load", async () => {
+    const store = memoryStore("#?_page=2");
+    mockApi({
+      "SearchDisplay.get": () => [{ label: "Contacts table", type: "table", settings }],
+      "SearchDisplay.run": (params) =>
+        params.return === "row_count" ? Object.assign([], { count: 4 }) : [row(3), row(4)],
+    });
+    renderWithQuery(<AfreactSearch search="S" display="D" />, store);
+    expect(await currentPage()).toHaveTextContent("2");
+    expect(store.params().get("_page")).toBe("2");
+  });
+
   // deviation:results-announced
   it("announces loading, then the result count", async () => {
     runs(5);

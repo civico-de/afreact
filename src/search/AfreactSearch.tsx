@@ -329,8 +329,10 @@ function ResultDisplay({
   const rowCount = rows.error ? null : (counted.data ?? null);
   // deviation:page-past-end-clamped
   // A page past the last one, after rows left the result or from an old link, moves to the last.
-  const lastPage =
-    limit && rowCount !== null && !counted.isFetching
+  // Without a page size the server returns every row on one page.
+  const lastPage = !limit
+    ? 1
+    : rowCount !== null && !counted.isFetching
       ? Math.max(1, Math.ceil(rowCount / limit))
       : null;
   useEffect(() => {
