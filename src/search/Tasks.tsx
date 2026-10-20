@@ -149,7 +149,11 @@ export function useTasks(options: TasksOptions) {
   });
 
   // New filters clear the selection, as onChangeFilters(); going back to the old ones keeps it clear.
-  const [chosen, setChosen] = useState({ key: filtersKey, selection: NO_SELECTION });
+  // `dropped` counts the rows edits took out of this selection, for the announcement.
+  const [chosen, setChosen] = useState<{ key: string; selection: Selection; dropped?: number }>({
+    key: filtersKey,
+    selection: NO_SELECTION,
+  });
   if (chosen.key !== filtersKey) setChosen({ key: filtersKey, selection: NO_SELECTION });
   const selection = chosen.key === filtersKey ? chosen.selection : NO_SELECTION;
   // The select-all run whose ids may still be taken, with the rows edits took out meanwhile;
@@ -173,13 +177,12 @@ export function useTasks(options: TasksOptions) {
     if (next.keys.length) setRequested(true);
   };
   // A row an edit deselected is announced once the selection without it shows.
-  const [deselected, setDeselected] = useState(0);
   const announce = useEffectEvent(() => {
     setMessage(countText(selection.keys.length));
   });
   useEffect(() => {
-    if (deselected) announce();
-  }, [deselected]);
+    if (chosen.dropped) announce();
+  }, [chosen.dropped]);
   // Rows of a grouped search have no key and nothing a task could act on. deviation:keyless-rows
   const pageKeys = page?.rows.flatMap((row) => (row.key === undefined ? [] : [row.key])) ?? [];
   const ready = !loading && !!page?.rows.length;
@@ -563,7 +566,6 @@ export function useTasks(options: TasksOptions) {
     /** A row an edit took out of the result leaves the selection. deviation:edited-row-deselected */
     deselect: (key: Key) => {
       pendingAll.current?.gone.add(key);
-      if (selection.keys.includes(key)) setDeselected((times) => times + 1);
       // The selection as it is by then, which may have changed while the edit was saved.
       setChosen((current) =>
         current.key === filtersKey && current.selection.keys.includes(key)
@@ -573,6 +575,7 @@ export function useTasks(options: TasksOptions) {
                 keys: current.selection.keys.filter((other) => other !== key),
                 all: false,
               },
+              dropped: (current.dropped ?? 0) + 1,
             }
           : current,
       );

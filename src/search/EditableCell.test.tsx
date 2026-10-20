@@ -346,6 +346,30 @@ describe("in-place editing", () => {
     expect(bob()).not.toBeChecked();
   });
 
+  it("announces a row ticked while the save that drops it runs", async () => {
+    let answer: (rows: Row[]) => void = () => undefined;
+    setup({ value_key: "job_title" }, "Pilot", {
+      inlineEdit: () =>
+        new Promise<Row[]>((resolve) => {
+          answer = resolve;
+        }),
+      settings: { actions: true },
+      handlers: { "SearchDisplay.getSearchTasks": () => [] },
+      more: [{ key: 8, columns: [{ val: "Bob" }, { val: "Cook" }], data: { id: 8 } }],
+    });
+    await open();
+    await userEvent.type(field(), "s{Enter}");
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Ada" }));
+    expect(
+      screen.getByText("1 selected of 2 results", { selector: "p.sr-only" }),
+    ).toBeInTheDocument();
+    answer([]);
+    await waitFor(() => {
+      expect(screen.getByRole("checkbox", { name: "Select Ada" })).not.toBeChecked();
+    });
+    expect(screen.getByText("2 results", { selector: "p.sr-only" })).toBeInTheDocument();
+  });
+
   it("leaves a row a save dropped out of a select-all still loading", async () => {
     let ids: (keys: number[]) => void = () => undefined;
     const ada: Row = {
