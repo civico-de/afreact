@@ -405,7 +405,8 @@ export function fieldsetReducer(
         action.paramSet,
         action.context,
       );
-      return { ...state, ...next, applied: next.values };
+      // Committed at once, so the hash follows the filters shown and hidden.
+      return { ...state, ...next, applied: next.values, commits: state.commits + 1 };
     }
   }
   // "route": a new hash or a loaded saved filter set applies at once.

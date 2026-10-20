@@ -501,7 +501,7 @@ describe("SearchFieldset", () => {
     expect(screen.getByRole("status")).toHaveTextContent('{"title":null,"status":"7"}');
   });
 
-  it("drops a filter an af-if hides from the hash on the next commit", () => {
+  it("keeps the hash to the filters an af-if shows, as each shows or hides", () => {
     const rule = JSON.stringify([["Individual1[0][fields][advanced]", "=", "true"]]);
     const titleNode = field("title", {});
     const [title] = filterFields([titleNode]);
@@ -524,20 +524,25 @@ describe("SearchFieldset", () => {
         </button>
       );
     };
-    const store = memoryStore("#?status=5");
-    renderWithQuery(
+    const view = (advanced: boolean) => (
       <SearchFieldset
         node={node}
         formName="afsearchGroups"
-        data={{ Individual1: [{ fields: { advanced: false } }] }}
+        data={{ Individual1: [{ fields: { advanced } }] }}
       >
         <Type />
-      </SearchFieldset>,
-      store,
+      </SearchFieldset>
     );
+    const store = memoryStore("#?status=5");
+    const { rerender } = renderWithQuery(view(false), store);
     fakeTimeouts();
     fireEvent.click(screen.getByRole("button", { name: "Type" }));
     passTime(SEARCH_DELAY_MS);
+    expect(store.params().toString()).toBe("title=Ne");
+    // Shown, the filter takes the link's value, which the hash carries again.
+    rerender(view(true));
+    expect(store.params().toString()).toBe("title=Ne&status=5");
+    rerender(view(false));
     expect(store.params().toString()).toBe("title=Ne");
   });
 
