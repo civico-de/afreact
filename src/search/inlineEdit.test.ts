@@ -159,4 +159,19 @@ describe("writePage", () => {
     expect([otherRun(), otherCount(), otherTally()]).toEqual([true, true, true]);
     expect([ownCount(), elsewhere()]).toEqual([false, false]);
   });
+
+  it("keeps the count of the same filters built in another order", () => {
+    const client = new QueryClient();
+    const params = (filters: Record<string, unknown>) => ({
+      savedSearch: "S",
+      display: "D",
+      filters,
+    });
+    const shown = ["SearchDisplay", "run", params({ a: 1, b: 2 }), {}, 50, 1, []];
+    client.setQueryData(shown, runPage([]));
+    const count = ["SearchDisplay", "count", params({ b: 2, a: 1 })];
+    client.setQueryData(count, 1);
+    writePage(client, shown, (page) => page);
+    expect(client.getQueryState(count)?.isInvalidated).toBe(false);
+  });
 });

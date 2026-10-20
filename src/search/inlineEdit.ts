@@ -119,7 +119,7 @@ export function writePage(client: QueryClient, key: QueryKey, change: (page: Run
 const parts = (params: unknown) =>
   params !== null && typeof params === "object" ? Object.entries(params) : [];
 const filterSet = (params: unknown) =>
-  JSON.stringify(parts(params).find(([name]) => name === "filters")?.[1]);
+  hashKey([parts(params).find(([name]) => name === "filters")?.[1]]);
 
 /** Two run params of one display, under whatever filters. */
 export function matchesDisplay(key: unknown, params: unknown): boolean {
