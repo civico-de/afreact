@@ -1,0 +1,37 @@
+# German translation of afreact's own texts; all others come from core's translations.
+# Copyright (C) civico GmbH
+msgid ""
+msgstr ""
+"Project-Id-Version: afreact\n"
+"PO-Revision-Date: 2026-10-20 00:00+0000\n"
+"Last-Translator: civico GmbH\n"
+"Language-Team: German\n"
+"MIME-Version: 1.0\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: de_DE\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Select…"
+msgstr "Auswählen …"
+
+msgid "at least"
+msgstr "mindestens"
+
+msgid "at most"
+msgstr "höchstens"
+
+msgid "exactly"
+msgstr "genau"
+
+msgid "all of"
+msgstr "alle"
+
+msgid "any of"
+msgstr "mindestens eine"
+
+msgid "Not counted"
+msgstr "Nicht gezählt"
+
+msgid "Try again"
+msgstr "Erneut versuchen"

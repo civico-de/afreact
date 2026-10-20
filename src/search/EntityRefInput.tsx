@@ -12,6 +12,7 @@ import {
   type SearchContext,
 } from "../afform/fields/autocomplete";
 import type { InputProps } from "./EditableCell";
+import { selectPlaceholder } from "../selectPlaceholder";
 
 /** Downshift loads with the first reference editor, as with the first EntityRef field. */
 const Combobox = lazy(async () => ({
@@ -52,7 +53,7 @@ export function EntityRefInput(props: InputProps & { params?: AutocompleteParams
         <Combobox
           id={common.id}
           label={undefined}
-          placeholder={ts("Select")}
+          placeholder={selectPlaceholder()}
           describedBy={common["aria-describedby"]}
           className={undefined}
           disabled={false}

@@ -4,6 +4,7 @@ import { api4, errorMessage } from "../../api/civi";
 import type { FieldDefn, FieldOption } from "../types";
 import { controlFieldName, valueIds } from "./autocomplete";
 import { useFieldEnv, type FieldEnv, useInvalid } from "./env";
+import { selectPlaceholder } from "../../selectPlaceholder";
 
 interface ChainSelectProps {
   id: string;
@@ -104,7 +105,7 @@ export function ChainSelect({
     // deviation:chain-select-control-name
     if (control !== null && !chained) return ts("Choose %1 first", { 1: controlLabel ?? control });
     if (attrs.placeholder) return attrs.placeholder;
-    return settled && !options.length ? ts("None Found") : ts("Select");
+    return settled && !options.length ? ts("None Found") : selectPlaceholder();
   })();
   const byId = (raw: string) => options.find((option) => String(option.id) === raw)?.id;
   const common = {

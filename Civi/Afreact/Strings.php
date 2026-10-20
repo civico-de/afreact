@@ -14,11 +14,6 @@ use CRM_Afreact_ExtensionUtil as E;
 final class Strings {
 
   /**
-   * @var array<string, true>
-   */
-  private static array $added = [];
-
-  /**
    * The text domain of each builder's strings in core.
    */
   public const DOMAINS = [
@@ -27,17 +22,19 @@ final class Strings {
   ];
 
   /**
-   * Adds the translations, in `$domain` first where one is given, then in core's.
+   * Adds the translations, in afreact's own first (l10n/), then in `$domain` where one is given,
+   * then in core's.
    */
   public static function add(?string $domain = NULL): void {
     // Each element on a page loads the assets.
-    if (isset(self::$added[$domain ?? ''])) {
+    $key = self::class . ':' . ($domain ?? '');
+    if (isset(\Civi::$statics[$key])) {
       return;
     }
-    self::$added[$domain ?? ''] = TRUE;
+    \Civi::$statics[$key] = TRUE;
     $translations = [];
     foreach (self::texts() as $text) {
-      $translated = _ts($text, ['domain' => [$domain, NULL], 'raw' => TRUE]);
+      $translated = _ts($text, ['domain' => array_unique([E::LONG_NAME, $domain, NULL]), 'raw' => TRUE]);
       if (is_string($translated) && $translated !== $text) {
         $translations[$text] = $translated;
       }

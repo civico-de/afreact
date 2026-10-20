@@ -21,6 +21,7 @@ import {
 } from "../editable";
 import { PartNotice, PluginElement } from "./plugins";
 import { showsTime } from "../../../afform/fields/dateTime";
+import { selectPlaceholder } from "../../../selectPlaceholder";
 
 const text = (value: unknown) =>
   typeof value === "string" || typeof value === "number" ? String(value) : "";
@@ -142,7 +143,7 @@ function SelectPreview({ api }: { api: FieldApi }) {
             <PlaceholderInput
               api={api}
               prop={`input_attrs.placeholder${suffix}`}
-              placeholder={ts("Select")}
+              placeholder={selectPlaceholder()}
             />
             <Dropdown
               groupClass="input-group-btn"
@@ -369,7 +370,11 @@ function ChainSelectPreview({ api }: { api: FieldApi }) {
   return (
     <div className={`form-inline ${text(getProp(api.state, "input_style"))}`}>
       <div className="input-group">
-        <PlaceholderInput api={api} prop="input_attrs.placeholder" placeholder={ts("Select")} />
+        <PlaceholderInput
+          api={api}
+          prop="input_attrs.placeholder"
+          placeholder={selectPlaceholder()}
+        />
         <div className="input-group-btn">
           <button
             type="button"

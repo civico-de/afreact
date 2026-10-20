@@ -24,6 +24,7 @@ import {
   type InlineEdit,
 } from "./inlineEdit";
 import type { Column, DisplaySettings, EditableInfo, EditOption, Row } from "./types";
+import { selectPlaceholder } from "../selectPlaceholder";
 
 interface EditableCellProps {
   edit: InlineEdit | null;
@@ -598,7 +599,7 @@ function Select({
         onChange(event.target.value === "" ? null : byId(event.target.value));
       }}
     >
-      <option value="">{nullable ? ts("None") : ts("Select")}</option>
+      <option value="">{nullable ? ts("None") : selectPlaceholder()}</option>
       {choices}
     </select>
   );

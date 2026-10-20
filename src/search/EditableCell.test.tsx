@@ -613,14 +613,15 @@ describe("in-place editors", () => {
     expect(edits()[0]?.values).toEqual({ gender_id: 2 });
   });
 
-  it("offers Select instead of None where the value is required", async () => {
+  // deviation:select-placeholder-text
+  it("offers Select… instead of None where the value is required", async () => {
     const { edits } = setup(
       { value_key: "s", options: [{ id: "a", label: "A" }], nullable: false },
       null,
       { shown: "" },
     );
     await open();
-    expect(screen.getByRole("option", { name: "Select" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Select…" })).toBeInTheDocument();
     expect(field()).toBeRequired();
     await userEvent.selectOptions(field(), "A");
     await userEvent.keyboard("{Enter}");
