@@ -1,7 +1,9 @@
 # Tests
 
 Unit tests (Vitest, jsdom) run with `bun run test`; the PHP gates and the headless
-PHPUnit suite with `ck ci` inside the container (README, "Checks"). The
+PHPUnit suite with `ck ci` inside the container (README, "Checks"). A unit
+test that times out keeps running its `userEvent` steps against the next test's
+page through `screen`, so read only the first failure after a timeout. The
 browser tests below run with Playwright against the dev stack, logged in as
 `admin`:
 
