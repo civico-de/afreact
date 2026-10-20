@@ -1369,8 +1369,8 @@ front. `deviation:smart-group-column-leads`
 its rows, `reconcileAggregateColumns()` wraps every ungrouped column, and
 `getDefaultAggregateFn()` picks `COUNT` for an `id`, so the first column turns
 into `COUNT(id)`. `GroupContactCache::getApiSQL()` reads that column as
-`contact_id`, and the group gets the contacts whose IDs equal the counts.
-afreact refuses to save a smart group whose first column is an aggregate other
+`contact_id`, and the group gets the contacts whose IDs equal the counts
+(reproduced on 6.19; `COUNT` became the default for `id` in 5.51). afreact refuses to save a smart group whose first column is an aggregate other
 than `MIN` or `MAX`. `deviation:smart-group-aggregate-refused`
 
 **Selected columns stay selectable.** `fieldsForSelect()` passes a
