@@ -2,7 +2,7 @@ import { useId } from "react";
 import { ModelText } from "../../widgets/ModelText";
 import { Picker } from "../../widgets/Picker";
 import { getAllFields, getEntity } from "../expr";
-import { SortConfig, TokenSelect, type Editing } from "./common";
+import { SortConfig, TokenText, type Editing } from "./common";
 import { IconsConfig } from "./ColumnFields";
 import { Columns } from "./Columns";
 import { colLabel, toggleEmptyVal, toggleRewrite, type AdminColumn, type Draft } from "./model";
@@ -25,7 +25,6 @@ function ColumnText({
   toggle: (col: AdminColumn) => void;
   editCol: (change: (col: AdminColumn, draft: Draft) => void) => void;
 }) {
-  const id = useId();
   const value = col[field];
   return (
     <div className="form-inline crm-search-admin-flex-row">
@@ -42,32 +41,17 @@ function ColumnText({
         {label}
       </label>
       {!!value && (
-        <>
-          <label htmlFor={id} className="sr-only">
-            {label}
-          </label>
-          <textarea
-            id={id}
-            rows={2}
-            className="form-control crm-flex-1"
-            defaultValue={value}
-            onBlur={(event) => {
-              const text = event.target.value;
-              editCol((c) => {
-                c[field] = text;
-              });
-            }}
-          />
-          <TokenSelect
-            ctx={ctx}
-            suffix=":label"
-            onToken={(token) => {
-              editCol((c) => {
-                c[field] = (c[field] ?? "") + token;
-              });
-            }}
-          />
-        </>
+        <TokenText
+          ctx={ctx}
+          label={label}
+          multiline
+          value={value}
+          onChange={(text) => {
+            editCol((c) => {
+              c[field] = text;
+            });
+          }}
+        />
       )}
     </div>
   );

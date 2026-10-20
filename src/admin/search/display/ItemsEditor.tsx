@@ -10,7 +10,7 @@ import {
   SearchButtonConfig,
   Section,
   SortConfig,
-  TokenSelect,
+  TokenText,
   ToolbarConfig,
   type Editing,
 } from "./common";
@@ -35,15 +35,12 @@ interface ItemsEditorProps extends Editing {
 function ItemHead({
   ctx,
   col,
-  index,
   editCol,
 }: {
   ctx: Editing["ctx"];
   col: AdminColumn;
-  index: number;
   editCol: (change: (col: AdminColumn, draft: Draft) => void) => void;
 }) {
-  const id = useId();
   return (
     <>
       <div className="form-inline">
@@ -86,32 +83,16 @@ function ItemHead({
           {ts("Label")}
         </label>
         {!!col.label && (
-          <>
-            <label htmlFor={`${id}-label-${String(index)}`} className="sr-only">
-              {ts("Label text")}
-            </label>
-            <input
-              id={`${id}-label-${String(index)}`}
-              className="form-control crm-flex-1"
-              type="text"
-              defaultValue={col.label}
-              onBlur={(event) => {
-                const value = event.target.value;
-                editCol((c) => {
-                  c.label = value;
-                });
-              }}
-            />
-            <TokenSelect
-              ctx={ctx}
-              suffix=":label"
-              onToken={(token) => {
-                editCol((c) => {
-                  c.label = (c.label ?? "") + token;
-                });
-              }}
-            />
-          </>
+          <TokenText
+            ctx={ctx}
+            label={ts("Label text")}
+            value={col.label}
+            onChange={(value) => {
+              editCol((c) => {
+                c.label = value;
+              });
+            }}
+          />
         )}
       </div>
       {!!col.label && (
@@ -213,9 +194,7 @@ function ItemFields(props: ItemsEditorProps & { defaults: { break?: boolean } })
         {...props}
         links={props.rowLinks}
         defaults={props.defaults}
-        head={(col, index, editCol) => (
-          <ItemHead ctx={props.ctx} col={col} index={index} editCol={editCol} />
-        )}
+        head={(col, _index, editCol) => <ItemHead ctx={props.ctx} col={col} editCol={editCol} />}
       />
     </fieldset>
   );

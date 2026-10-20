@@ -233,3 +233,59 @@ it("offers a default value input for an aliased column", async () => {
   await userEvent.type(screen.getByLabelText("Default value of Who"), "Bo");
   expect(firstColumn()).toMatchObject({ default: "Bo" });
 });
+
+it("shows a token inserted into a list item's label and keeps it when the label is left", async () => {
+  renderWithQuery(
+    <Harness
+      initial={{
+        id: 1,
+        name: "L",
+        label: "L",
+        type: "list",
+        settings: { columns: [{ type: "field", key: "display_name", label: "Name" }] },
+      }}
+    />,
+  );
+  const label = await retype("Label text", " Who ");
+  await userEvent.tab();
+  expect(firstColumn()).toMatchObject({ label: "Who" });
+  await userEvent.click(screen.getByRole("combobox", { name: "Insert Token" }));
+  // The column comes first, before the same field among the entity's fields.
+  const [column] = await screen.findAllByRole("option", { name: "Display Name" });
+  await userEvent.click(column ?? document.body);
+  expect(label).toHaveValue("Who[display_name]");
+  await userEvent.click(label);
+  await userEvent.tab();
+  expect(firstColumn()).toMatchObject({ label: "Who[display_name]" });
+});
+
+it("trims an autocomplete column's rewrite and placeholder and keeps an inserted token", async () => {
+  renderWithQuery(
+    <Harness
+      initial={{
+        id: 1,
+        name: "A",
+        label: "A",
+        type: "autocomplete",
+        settings: {
+          columns: [{ type: "field", key: "display_name", rewrite: "Hi", empty_value: "x" }],
+        },
+      }}
+    />,
+  );
+  const rewrite = await retype("Rewrite Text", " Hello ");
+  await userEvent.tab();
+  expect(firstColumn()).toMatchObject({ rewrite: "Hello" });
+  await userEvent.click(
+    screen.getAllByRole("combobox", { name: "Insert Token" })[1] ?? document.body,
+  );
+  const [column] = await screen.findAllByRole("option", { name: "Display Name" });
+  await userEvent.click(column ?? document.body);
+  expect(rewrite).toHaveValue("Hello[display_name]");
+  await userEvent.click(rewrite);
+  await userEvent.tab();
+  expect(firstColumn()).toMatchObject({ rewrite: "Hello[display_name]" });
+  await retype("Empty placeholder", "   ");
+  await userEvent.tab();
+  expect(firstColumn()).toMatchObject({ empty_value: "" });
+});
