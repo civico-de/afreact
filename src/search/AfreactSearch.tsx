@@ -5,7 +5,7 @@ import { Unsupported } from "../afform/Unsupported";
 import { api4, errorMessage, get, type ApiResult } from "../api/civi";
 import { useUrlPrefix } from "../url/UrlState";
 import { ColumnPicker, toggledColumns, useColumnToggles } from "./ColumnPicker";
-import { useInlineEdit } from "./inlineEdit";
+import { matchesDisplay, useInlineEdit } from "./inlineEdit";
 import { ItemList, TreeView } from "./Items";
 import { useFreshRows } from "./freshRows";
 import { useKeptFocus } from "./keptFocus";
@@ -293,11 +293,10 @@ function ResultDisplay({
   // A popup form of this display or of its form succeeded: reload as searchDisplayBaseTrait does,
   // under every filter set, as core runs again on the next filter change too.
   const refresh = () => {
-    const { filters: _, ...run } = params;
     for (const kind of ["run", "count", "tally"])
       void client.invalidateQueries({
         queryKey: ["SearchDisplay", kind],
-        predicate: ({ queryKey }) => matchesDisplay(queryKey[2], run),
+        predicate: ({ queryKey }) => matchesDisplay(queryKey[2], params),
       });
   };
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
@@ -551,11 +550,4 @@ async function withAutoColumns(search: string, settings: unknown): Promise<unkno
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** A query key's run params belong to the display, under whatever filters. */
-function matchesDisplay(key: unknown, run: Record<string, unknown>): boolean {
-  if (key === null || typeof key !== "object") return false;
-  const given = Object.fromEntries(Object.entries(key).filter(([name]) => name !== "filters"));
-  return JSON.stringify(given) === JSON.stringify(run);
 }

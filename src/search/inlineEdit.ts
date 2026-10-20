@@ -106,6 +106,26 @@ export function writePage(client: QueryClient, key: QueryKey, change: (page: Run
     queryKey: key.slice(0, 3),
     predicate: (query) => query.queryHash !== own,
   });
+  // Under other filters the display may show the changed rows too, so it runs afresh there.
+  const filters = filterSet(key[2]);
+  for (const kind of ["run", "count", "tally"])
+    void client.invalidateQueries({
+      queryKey: ["SearchDisplay", kind],
+      predicate: ({ queryKey }) =>
+        matchesDisplay(queryKey[2], key[2]) && filterSet(queryKey[2]) !== filters,
+    });
+}
+
+const parts = (params: unknown) =>
+  params !== null && typeof params === "object" ? Object.entries(params) : [];
+const filterSet = (params: unknown) =>
+  JSON.stringify(parts(params).find(([name]) => name === "filters")?.[1]);
+
+/** Two run params of one display, under whatever filters. */
+export function matchesDisplay(key: unknown, params: unknown): boolean {
+  const display = (p: unknown) =>
+    JSON.stringify(Object.fromEntries(parts(p).filter(([name]) => name !== "filters")));
+  return parts(key).length > 0 && display(key) === display(params);
 }
 
 export interface CellTarget {

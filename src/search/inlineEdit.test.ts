@@ -1,3 +1,4 @@
+import { QueryClient } from "@tanstack/react-query";
 import { editInfo } from "../test/editInfo";
 import {
   editorFor,
@@ -6,6 +7,7 @@ import {
   isNullable,
   mergeRow,
   unsupportedEditors,
+  writePage,
 } from "./inlineEdit";
 import { runPage } from "./rows";
 
@@ -131,5 +133,30 @@ describe("values", () => {
       columns: [{ val: "b" }],
       data: { _depth: 1, name: "b" },
     });
+  });
+});
+
+describe("writePage", () => {
+  it("lets the display run afresh under other filters, keeping the current ones' count", () => {
+    const client = new QueryClient();
+    const params = (filters: Record<string, unknown>) => ({
+      savedSearch: "S",
+      display: "D",
+      filters,
+    });
+    const shown = ["SearchDisplay", "run", params({ a: 1 }), {}, 50, 1, []];
+    const seed = (key: unknown[], data: unknown) => {
+      client.setQueryData(key, data);
+      return () => client.getQueryState(key)?.isInvalidated;
+    };
+    seed(shown, runPage([]));
+    const ownCount = seed(["SearchDisplay", "count", params({ a: 1 })], 1);
+    const otherRun = seed(["SearchDisplay", "run", params({}), {}, 50, 1, []], runPage([]));
+    const otherCount = seed(["SearchDisplay", "count", params({})], 3);
+    const otherTally = seed(["SearchDisplay", "tally", params({}), {}], {});
+    const elsewhere = seed(["SearchDisplay", "run", { ...params({}), display: "E" }], runPage([]));
+    writePage(client, shown, (page) => page);
+    expect([otherRun(), otherCount(), otherTally()]).toEqual([true, true, true]);
+    expect([ownCount(), elsewhere()]).toEqual([false, false]);
   });
 });
