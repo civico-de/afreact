@@ -196,6 +196,39 @@ describe("SegmentDialog", () => {
   });
 });
 
+describe("SegmentDialog text", () => {
+  it("trims the name, description and item labels as ngModel trims them", async () => {
+    const calls = mockApi({
+      "Contact.getFields": () => [],
+      "SearchSegment.save": () => [{ id: 3 }],
+    });
+    const onClose = vi.fn<(saved: boolean) => void>();
+    const user = userEvent.setup();
+    renderWithQuery(<SegmentDialog entity="Contact" onClose={onClose} />);
+    const dialog = await screen.findByRole("dialog", { name: "New Search Segment" });
+    const name = await within(dialog).findByRole("textbox", { name: "Name *" });
+    await user.type(name, " Kind ");
+    expect(name).toHaveValue(" Kind ");
+    await user.type(within(dialog).getByRole("textbox", { name: "Description" }), " About ");
+    await user.type(within(dialog).getByRole("textbox", { name: "Label of item 1" }), " Named ");
+    await user.type(within(dialog).getByRole("textbox", { name: "Value for First Name" }), "A");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledWith(true);
+    });
+    expect(calls.find((c) => c.call === "SearchSegment.save")?.params).toEqual({
+      records: [
+        {
+          label: "Kind",
+          description: "About",
+          entity_name: "Contact",
+          items: [{ label: "Named", when: [["first_name", "=", "A"]] }],
+        },
+      ],
+    });
+  });
+});
+
 describe("ExportDialog", () => {
   it("leaves out an unchecked group and copies the output", async () => {
     mockApi({

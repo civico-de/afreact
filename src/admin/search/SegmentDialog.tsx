@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api4, errorMessage } from "../../api/civi";
+import { ModelText } from "../widgets/ModelText";
 import { Picker } from "../widgets/Picker";
 import { entityOf, entitySelect, useFieldOptions, useSearchMetadata } from "./meta";
 import { SearchCondition } from "./SearchCondition";
@@ -125,14 +126,15 @@ export function SegmentDialog({ id, entity, onClose }: SegmentDialogProps) {
               <label htmlFor={`${titleId}-label`}>
                 {ts("Name")} <span className="crm-marker">*</span>
               </label>
-              <input
+              <ModelText
                 id={`${titleId}-label`}
                 className="form-control"
+                live
                 required
                 aria-describedby={`${titleId}-label-help`}
                 value={segment.label}
-                onChange={(event) => {
-                  update({ label: event.target.value });
+                onChange={(label) => {
+                  update({ label });
                 }}
               />
               <div className="help-block" id={`${titleId}-label-help`}>
@@ -141,12 +143,14 @@ export function SegmentDialog({ id, entity, onClose }: SegmentDialogProps) {
             </div>
             <div className="form-group">
               <label htmlFor={`${titleId}-description`}>{ts("Description")}</label>
-              <textarea
+              <ModelText
                 id={`${titleId}-description`}
                 className="form-control"
+                multiline
+                live
                 value={segment.description ?? ""}
-                onChange={(event) => {
-                  update({ description: event.target.value });
+                onChange={(description) => {
+                  update({ description });
                 }}
               />
             </div>
@@ -215,13 +219,14 @@ export function SegmentDialog({ id, entity, onClose }: SegmentDialogProps) {
                             </div>
                           </td>
                           <td>
-                            <input
+                            <ModelText
                               className="form-control"
+                              live
                               required
                               aria-label={ts("Label of item %1", { 1: index + 1 })}
                               value={item.label}
-                              onChange={(event) => {
-                                setItem(index, { ...item, label: event.target.value });
+                              onChange={(label) => {
+                                setItem(index, { ...item, label });
                               }}
                             />
                           </td>
