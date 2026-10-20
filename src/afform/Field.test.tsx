@@ -444,9 +444,13 @@ describe("Field", () => {
 
   // deviation:native-date-inputs
   it("shows the year of a year-only date and stores January 1st", async () => {
-    const values = setup({ input_type: "Date", input_attrs: { date: "yy" } }, "1990-05-17");
+    const values = setup(
+      { input_type: "Date", input_attrs: { date: "yy", placeholder: "Year" } },
+      "1990-05-17",
+    );
     const input = screen.getByRole("spinbutton", { name: "Field" });
     expect(input).toHaveValue(1990);
+    expect(input).toHaveAttribute("placeholder", "Year");
     // No year limit, as for the date input.
     expect(input).not.toHaveAttribute("min");
     await userEvent.clear(input);
@@ -460,9 +464,14 @@ describe("Field", () => {
 
   // deviation:month-date-any-format
   it.each(["yy-mm", "M yy"])("stores the 1st of the month for format %s", (date) => {
-    const values = setup({ input_type: "Date", input_attrs: { date } }, "1990-05-17");
+    const values = setup(
+      { input_type: "Date", input_attrs: { date, placeholder: "yyyy-mm" } },
+      "1990-05-17",
+    );
     const input = screen.getByLabelText("Field");
     expect(input).toHaveAttribute("type", "month");
+    // Shown where the browser makes the month input a text field.
+    expect(input).toHaveAttribute("placeholder", "yyyy-mm");
     expect(input).toHaveValue("1990-05");
     fireEvent.change(input, { target: { value: "2001-03" } });
     expect(values).toEqual(["2001-03-01"]);

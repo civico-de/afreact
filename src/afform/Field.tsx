@@ -348,13 +348,19 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
         return (
           <span className="crm-form-date-wrapper">
             {kind === "year" && (
-              <YearInput common={common} style={style} value={value} onChange={onChange} />
+              <YearInput
+                common={{ ...common, placeholder: attrs.placeholder }}
+                style={style}
+                value={value}
+                onChange={onChange}
+              />
             )}
             {kind === "month" && (
               <input
                 {...common}
                 type="month"
                 className="form-control crm-form-text crm-form-date"
+                placeholder={attrs.placeholder}
                 value={datePrefix(value, 7)}
                 onChange={(event) => {
                   const month = event.target.value;
