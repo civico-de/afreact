@@ -59,6 +59,7 @@ const meta = {
 const prefill = [{ name: "Individual1", values: [{ fields: { id: 5, first_name: "Ada" } }] }];
 const values = (firstName: string) => ({
   Individual1: [{ fields: { id: 5, first_name: firstName }, joins: {} }],
+  extra: { fields: {} },
 });
 
 function renderForm(

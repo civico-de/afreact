@@ -335,12 +335,24 @@ describe("extra fields", () => {
   it("submit as one record and come back from a stored draft", () => {
     const data = setValue(emptyData(["Individual1"]), EXTRA_SCOPE, "text1", "x");
     expect(submission(data)).toEqual({ Individual1: [], extra: { fields: { text1: "x" } } });
-    expect(submission(emptyData(["Individual1"]))).toEqual({ Individual1: [] });
+    expect(submission(emptyData(["Individual1"]))).toEqual({
+      Individual1: [],
+      extra: { fields: {} },
+    });
     const prefill: PrefillItem[] = [{ name: "extra", values: { fields: { text1: "y" } } }];
     expect(applyPrefill(emptyData([]), prefill, {}).extra).toEqual([
       { fields: { text1: "y" }, joins: {} },
     ]);
     expect(applyPrefill(emptyData([]), [{ name: "extra", values: [] }], {})).toEqual({});
+  });
+
+  it("ignore the definitions Prefill returns for what stored data lacks", () => {
+    // Prefill::populateSubmissionData() keeps FormDataModel's entry for a missing entity.
+    const prefill: PrefillItem[] = [
+      { name: "extra", values: { type: null, fields: { text1: { defn: { name: "text1" } } } } },
+      { name: "Activity1", values: { type: "Activity", security: "RBAC", actions: {}, min: 1 } },
+    ];
+    expect(applyPrefill(emptyData(["Activity1"]), prefill, {})).toEqual({ Activity1: [] });
   });
 
   // deviation:repeat-extra-fields-per-item
@@ -364,6 +376,7 @@ describe("extra fields", () => {
         { fields: {}, joins: {} },
         { fields: {}, joins: {}, extras: { text1: "b" } },
       ],
+      extra: { fields: {} },
     });
     expect(copyRepeatItem(data, people).Individual1?.[2]).toEqual({ fields: {}, joins: {} });
     expect(getValue(deleteValue(data, extras, "text1"), extras, "text1")).toBeUndefined();

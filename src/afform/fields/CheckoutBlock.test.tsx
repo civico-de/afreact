@@ -160,6 +160,7 @@ describe("CheckoutBlock", () => {
     await waitFor(() => {
       expect(calls.find(({ call }) => call === "Afform.submitDraft")?.params.values).toEqual({
         Contribution1: [{ fields: { checkout_option: "card" }, joins: {} }],
+        extra: { fields: {} },
       });
     });
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
@@ -171,6 +172,7 @@ describe("CheckoutBlock", () => {
             joins: {},
           },
         ],
+        extra: { fields: {} },
       });
     });
   });
@@ -216,6 +218,7 @@ describe("CheckoutBlock", () => {
             joins: {},
           },
         ],
+        extra: { fields: {} },
       });
     });
   });
@@ -272,6 +275,7 @@ describe("CheckoutBlock", () => {
             joins: {},
           },
         ],
+        extra: { fields: {} },
       });
     });
   });
@@ -349,6 +353,7 @@ describe("CheckoutBlock", () => {
             joins: {},
           },
         ],
+        extra: { fields: {} },
       });
     });
 
@@ -361,6 +366,7 @@ describe("CheckoutBlock", () => {
         Contribution1: [
           { fields: { checkout_option: "pay_later", checkout_params: {} }, joins: {} },
         ],
+        extra: { fields: {} },
       });
     });
   });
@@ -645,6 +651,7 @@ describe("CheckoutBlock with an option's Angular template", () => {
             joins: {},
           },
         ],
+        extra: { fields: {} },
       });
     });
   });
@@ -685,6 +692,7 @@ describe("CheckoutBlock with an option's Angular template", () => {
             joins: {},
           },
         ],
+        extra: { fields: {} },
       });
     });
   });
@@ -751,6 +759,7 @@ describe("CheckoutBlock with an option's Angular template", () => {
                 joins: {},
               },
             ],
+            extra: { fields: {} },
           },
         }),
       ],
@@ -803,6 +812,7 @@ describe("CheckoutBlock with an option's Angular template", () => {
             joins: {},
           },
         ],
+        extra: { fields: {} },
       });
     });
     // The island goes down before React removes the form around it.

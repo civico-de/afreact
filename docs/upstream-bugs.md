@@ -131,9 +131,10 @@ button disabled until the draft save has ended. `deviation:draft-save-holds-subm
 list: it treats `fields` as an item index and adds empty `joins` and `fields`
 keys among the field values, which the next save stores with them
 (`afForm.component.js` `loadData()`, `master` as of 2026-10-06; read from the
-code, not run). The React renderer restores the field values only. It sends
-`extra` only once a form holds an extra field's value; afForm always sends
-`extra: {fields: {}}`, which the server treats as no values. `deviation:draft-extra-fields-restored`
+code, not run). The React renderer restores the field values only. Like
+afForm it always sends `extra: {fields: {}}`: the server stores the values as
+sent, and `Prefill::populateSubmissionData()` hands back an entity the stored
+data lacks as its definition, which the React renderer ignores. `deviation:draft-extra-fields-restored`
 
 **A validate listener cannot see which record it validates.**
 `preprocessSubmittedValues()` keeps only the fields placed on the form, so the

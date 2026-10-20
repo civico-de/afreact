@@ -125,6 +125,7 @@ describe("Range fields", () => {
     await waitFor(() => {
       expect(calls.find(({ call }) => call === "Afform.submit")?.params.values).toEqual({
         Individual1: [{ fields: { rating: 4 }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });

@@ -107,9 +107,9 @@ describe("crm-recaptcha2", () => {
     });
     // The used response is void after the failure, as Google answers it only once.
     expect(submitted(calls)).toEqual([
-      {},
+      { extra: { fields: {} } },
       { extra: { recaptcha2: "token-2", recaptcha: "token-2", fields: {} } },
-      {},
+      { extra: { fields: {} } },
     ]);
   });
 

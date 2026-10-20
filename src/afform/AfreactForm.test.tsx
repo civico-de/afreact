@@ -201,6 +201,7 @@ describe("AfreactForm", () => {
             joins: { Email: [{ email: "ada@example.org", is_primary: true }] },
           },
         ],
+        extra: { fields: {} },
       },
     });
   });

@@ -119,9 +119,9 @@ describe("crm-turnstile", () => {
       expect(submitted(calls)).toHaveLength(3);
     });
     expect(submitted(calls)).toEqual([
-      {},
+      { extra: { fields: {} } },
       { extra: { recaptcha2: "token-2", recaptcha: "token-2", fields: {} } },
-      {},
+      { extra: { fields: {} } },
     ]);
   });
 

@@ -85,6 +85,7 @@ describe("live rules", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Individual1: [{ fields: { first_name: "Ada", job_title: "Engineer" }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });
@@ -175,6 +176,7 @@ describe("live rules", () => {
       expect(submitted(calls)).toEqual({
         Individual1: [{ fields: { first_name: "ada", nick_name: "Default" }, joins: {} }],
         Individual2: [],
+        extra: { fields: {} },
       });
     });
   });
@@ -214,6 +216,7 @@ describe("live rules", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Individual1: [{ fields: { first_name: "Adax", job_title: "Engineer" }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });
@@ -248,6 +251,7 @@ describe("live rules", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Individual1: [{ fields: { first_name: "Ada", nick_name: "A" }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });
@@ -283,6 +287,7 @@ describe("live rules", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Individual1: [{ fields: { first_name: "Adax" }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });
@@ -324,6 +329,7 @@ describe("live rules", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Individual1: [{ fields: { first_name: "Adab", nick_name: "A" }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });
@@ -414,6 +420,7 @@ describe("live rules", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Individual1: [{ fields: { first_name: "Ada", nick_name: "Dear Ada" }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });
@@ -449,6 +456,7 @@ describe("live rules", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Individual1: [{ fields: { source: "42", count: 42 }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });
@@ -485,6 +493,7 @@ describe("live rules", () => {
             joins: {},
           },
         ],
+        extra: { fields: {} },
       });
     });
     delete window.CRM.config;
@@ -512,6 +521,7 @@ describe("live rules", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Individual1: [{ fields: { first_name: "adax" }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });
@@ -619,7 +629,10 @@ describe("live rules", () => {
     expect(screen.queryByRole("textbox", { name: "nick_name" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     await waitFor(() => {
-      expect(submitted(calls)).toEqual({ Individual1: [{ fields: {}, joins: {} }] });
+      expect(submitted(calls)).toEqual({
+        Individual1: [{ fields: {}, joins: {} }],
+        extra: { fields: {} },
+      });
     });
   });
 
@@ -646,6 +659,7 @@ describe("live rules", () => {
             joins: { Email: [{ email: "a@example.org" }, { email: "b@example.org" }] },
           },
         ],
+        extra: { fields: {} },
       });
     });
   });
@@ -749,6 +763,7 @@ describe("live rules", () => {
           { fields: { first_name: "Ada" }, joins: { Email: [{}] } },
           { fields: { first_name: "Ada" }, joins: { Email: [{}] } },
         ],
+        extra: { fields: {} },
       });
     });
   });
@@ -774,6 +789,7 @@ describe("live rules", () => {
         Individual1: [
           { fields: {}, joins: { Email: [{ location_type_id: 1 }, { location_type_id: 1 }] } },
         ],
+        extra: { fields: {} },
       });
     });
   });

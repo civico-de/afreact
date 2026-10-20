@@ -104,6 +104,7 @@ describe("File fields", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Uploading ada.png");
     expect(calls.find(({ call }) => call === "Afform.submit")?.params.values).toEqual({
       Individual1: [{ fields: {}, joins: {} }],
+      extra: { fields: {} },
     });
     expect(sent(fetchMock)).toEqual({
       url: "/civicrm/ajax/api4/Afform/submitFile",
@@ -676,6 +677,7 @@ describe("File fields", () => {
     await waitFor(() => {
       expect(calls.find(({ call }) => call === "Afform.submit")?.params.values).toEqual({
         Individual1: [{ fields: { id: 3, image: { id: null, file_name: null } }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });

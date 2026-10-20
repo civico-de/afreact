@@ -63,10 +63,9 @@ export const isExtraScope = (scope: Scope): boolean => scope === EXTRA_SCOPE || 
 export type Submission = Record<string, EntityItem[] | ({ fields: Values } & Values)>;
 
 export function submission(data: FormData, beside: Values = {}): Submission {
+  // Always, as afForm: the server stores what is sent, and prefills a missing entity's definition.
   const { extra, ...entities } = data;
-  return extra || Object.keys(beside).length
-    ? { ...entities, extra: { ...beside, fields: extra?.[0]?.fields ?? {} } }
-    : entities;
+  return { ...entities, extra: { ...beside, fields: extra?.[0]?.fields ?? {} } };
 }
 
 /** The field a CheckoutBlock writes; card details never go into a draft. */
@@ -138,8 +137,11 @@ export function placementOptions(attribute: string | null): Record<string, unkno
 
 export interface PrefillItem {
   name: string;
-  /** Items by index; a stored draft's extra fields ("extra") come as one `{fields}` record. */
-  values: EntityItem[] | Record<string, EntityItem> | { fields: Values };
+  /**
+   * Items by index; a stored draft's extra fields ("extra") come as one `{fields}` record, and an
+   * entity the stored data lacks as its definition.
+   */
+  values: EntityItem[] | Record<string, unknown>;
 }
 
 const isEntityItem = (value: unknown): value is EntityItem =>
@@ -163,13 +165,16 @@ export function applyPrefill(
   for (const { name, values } of prefill) {
     // deviation:draft-extra-fields-restored
     // A stored draft holds extra fields as they were submitted.
+    // Data stored without `extra` comes back as FormDataModel's definition, `{type, fields}`.
     if (name === EXTRA_SCOPE.entity) {
-      const fields: unknown = Array.isArray(values) ? undefined : values.fields;
+      const fields: unknown = Array.isArray(values) || "type" in values ? undefined : values.fields;
       if (isRecord(fields)) next.extra = [{ fields: { ...fields }, joins: {} }];
       continue;
     }
     const items = (next[name] ??= []);
     for (const [index, item] of Object.entries(values)) {
+      // An entity the stored data lacks comes back as its definition, whose keys hold no record.
+      if (!/^\d+$/.test(index)) continue;
       if (!isEntityItem(item)) throw new Error(`Prefill of ${name} holds no record at ${index}.`);
       const current = items[Number(index)];
       // A stored draft also holds the extra fields of a repeated fieldset's items.

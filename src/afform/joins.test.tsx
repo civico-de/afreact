@@ -73,6 +73,7 @@ async function submitted(calls: ReturnType<typeof mockApi>): Promise<unknown> {
 
 const contact = (fields: Record<string, unknown>, Email: unknown[]) => ({
   Individual1: [{ fields, joins: { Email } }],
+  extra: { fields: {} },
 });
 
 describe("join blocks of one entity behind af-if", () => {
@@ -247,6 +248,7 @@ describe("join blocks in a repeated fieldset", () => {
         { fields: {}, joins: { Email: [{ email: "a@example.org" }] } },
         { fields: {}, joins: { Email: [{ email: "b@example.org" }] } },
       ],
+      extra: { fields: {} },
     });
   });
 
@@ -274,6 +276,7 @@ describe("join blocks in a repeated fieldset", () => {
     await userEvent.type(second, "new@example.org");
     expect(await submitted(calls)).toEqual({
       Individual1: [item(5, 11, "a@example.org"), item(6, 12, "new@example.org")],
+      extra: { fields: {} },
     });
   });
 });

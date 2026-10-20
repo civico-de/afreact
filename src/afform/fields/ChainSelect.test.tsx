@@ -101,6 +101,7 @@ describe("ChainSelect", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Individual1: [{ fields: { country_id: 2 }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });
@@ -133,6 +134,7 @@ describe("ChainSelect", () => {
             joins: { Address: [{ country_id: 1, state_province_id: [10, 11] }] },
           },
         ],
+        extra: { fields: {} },
       });
     });
   });

@@ -118,6 +118,7 @@ describe("EntityRef", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Individual1: [{ fields: { employer_id: 2 }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });
@@ -213,6 +214,7 @@ describe("EntityRef", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Individual1: [{ fields: { tag_ids: [3] }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });
@@ -810,7 +812,10 @@ describe("EntityRef", () => {
     await userEvent.click(screen.getByRole("button", { name: "Clear" }));
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     await waitFor(() => {
-      expect(submitted(calls)).toEqual({ Individual1: [{ fields: {}, joins: { Email: [{}] } }] });
+      expect(submitted(calls)).toEqual({
+        Individual1: [{ fields: {}, joins: { Email: [{}] } }],
+        extra: { fields: {} },
+      });
     });
   });
 
@@ -917,6 +922,7 @@ describe("EntityRef quick-add links", () => {
     await waitFor(() => {
       expect(submitted(calls)).toEqual({
         Individual1: [{ fields: { employer_id: 9 }, joins: {} }],
+        extra: { fields: {} },
       });
     });
   });
