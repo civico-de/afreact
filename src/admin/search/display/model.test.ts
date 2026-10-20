@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { metadata as meta } from "../../../test/searchMetadata";
+import { draftOf, initialized } from "./DisplayEditor";
 import {
   dateFormatChoice,
   addCol,
@@ -23,6 +24,7 @@ import {
   initTree,
   initPager,
   initPlaceholder,
+  initSubsearchFilters,
   initTable,
   initTasks,
   initToolbar,
@@ -418,5 +420,51 @@ describe("date format", () => {
     expect(dateFormatChoice({ type: "field", key: "created_date", format: "%Y" }, {})).toBe(
       "other",
     );
+  });
+});
+
+describe("subsearch filters on open", () => {
+  const subsearch = (filters: unknown[]) => ({
+    type: "subsearch",
+    subsearch: { search: "Members", display: null, filters, subsearch_mode: "dropdown" },
+  });
+
+  it("keeps one source per filter, as the condition editor's $onInit leaves it", () => {
+    const display = {
+      label: "T",
+      type: "list",
+      settings: {
+        columns: [
+          subsearch([
+            { subsearch_field: "a", parent_field: "id", value: 5 },
+            { subsearch_field: "b", parent_field: null, value: null },
+            { subsearch_field: "c", parent_field: null, value: 5 },
+            { subsearch_field: "d" },
+            { subsearch_field: "e", value: 0 },
+          ]),
+        ],
+      },
+    };
+    const opened = draftOf(initialized(ctx, display));
+    expect(opened?.settings.columns?.[0]?.subsearch?.filters).toEqual([
+      { subsearch_field: "a", parent_field: "id" },
+      { subsearch_field: "b", parent_field: null },
+      { subsearch_field: "c", value: 5 },
+      { subsearch_field: "d", parent_field: null },
+      { subsearch_field: "e", value: 0 },
+    ]);
+  });
+
+  it("leaves the filters of a column without a saved search, whose conditions do not render", () => {
+    const draft = table({
+      columns: [
+        {
+          type: "subsearch",
+          subsearch: { filters: [{ subsearch_field: "d" }], subsearch_mode: "" },
+        },
+      ],
+    });
+    initSubsearchFilters(draft);
+    expect(draft.settings.columns?.[0]?.subsearch?.filters).toEqual([{ subsearch_field: "d" }]);
   });
 });

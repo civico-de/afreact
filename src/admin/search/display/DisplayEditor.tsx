@@ -22,6 +22,7 @@ import {
   initList,
   initPager,
   initPlaceholder,
+  initSubsearchFilters,
   initTable,
   initTasks,
   initToolbar,
@@ -43,6 +44,7 @@ const EDITORS: Record<string, (ctx: DisplayContext, draft: Draft) => void> = {
     initTasks(draft.settings);
     initToolbar(draft.settings);
     initLinkGroups(ctx, draft);
+    initSubsearchFilters(draft);
   },
   list: (ctx, draft) => {
     initList(ctx, draft);
@@ -50,6 +52,7 @@ const EDITORS: Record<string, (ctx: DisplayContext, draft: Draft) => void> = {
     initPlaceholder(draft.settings);
     initToolbar(draft.settings);
     initLinkGroups(ctx, draft);
+    initSubsearchFilters(draft);
   },
   grid: (ctx, draft) => {
     initGrid(ctx, draft);
@@ -57,6 +60,7 @@ const EDITORS: Record<string, (ctx: DisplayContext, draft: Draft) => void> = {
     initPlaceholder(draft.settings);
     initToolbar(draft.settings);
     initLinkGroups(ctx, draft);
+    initSubsearchFilters(draft);
   },
   autocomplete: (ctx, draft) => {
     initAutocomplete(ctx, draft);
@@ -73,6 +77,7 @@ const EDITORS: Record<string, (ctx: DisplayContext, draft: Draft) => void> = {
     initPlaceholder(draft.settings);
     initToolbar(draft.settings);
     initLinkGroups(ctx, draft);
+    initSubsearchFilters(draft);
   },
   // Its defaults come from chart_kit's script, so ChartKitEditor adopts them once loaded.
   "chart-kit": () => undefined,

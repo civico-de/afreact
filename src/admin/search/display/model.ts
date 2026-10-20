@@ -730,6 +730,24 @@ export function initLinkGroups(ctx: DisplayContext, draft: Draft): void {
     draft.settings.toolbar = initLinkGroup(draft.settings.toolbar, buildLinks(ctx, false));
 }
 
+/**
+ * crmSearchAdminSubsearchCondition's $onInit on the filters of each subsearch column with a saved
+ * search: a filter keeps either its parent field or its value, preferring the one not null.
+ */
+export function initSubsearchFilters(draft: Draft): void {
+  for (const col of columnsOf(draft.settings)) {
+    const sub = col.type === "subsearch" ? col.subsearch : undefined;
+    if (!sub?.search || !Array.isArray(sub.filters)) continue;
+    for (const filter of sub.filters.filter(isRecord)) {
+      if ("parent_field" in filter && "value" in filter) {
+        if (filter.value === null || filter.parent_field !== null) delete filter.value;
+        else delete filter.parent_field;
+      }
+      if (!("parent_field" in filter) && !("value" in filter)) filter.parent_field = null;
+    }
+  }
+}
+
 export function changeLinkItem(item: LinkItem, next: LinkItem): void {
   linkItemDefaults(item, next.path === "civicrm/" ? defaultLinkItem() : next);
 }
