@@ -6,7 +6,7 @@
  */
 import { expect, type Page } from "@playwright/test";
 import { test } from "./coverage";
-import { api, API_PAGE, AUTH, quietApi, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, quietApi, saveForm, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const DEMO = "afformAfreactDemoJoins";
@@ -65,8 +65,7 @@ for (const renderer of ["react", "angular"] as const) {
       await input(page, "last_name").fill(lastName);
       await expect(input(page, "email")).toHaveCount(1);
       await input(page, "email").fill(`work.${lastName.toLowerCase()}@example.org`);
-      await page.getByRole("button", { name: "Save" }).click();
-      await expect(page.getByText("Contact saved.")).toBeVisible();
+      await saveForm(page);
       const [saved] = await api<{ id: number }>(page, "Individual", "get", {
         select: ["id"],
         where: [["last_name", "=", lastName]],
@@ -99,8 +98,7 @@ for (const renderer of ["react", "angular"] as const) {
         address(renderer === "react" ? "work" : "home"),
       );
       await input(page, "email").fill(address("new"));
-      await page.getByRole("button", { name: "Save" }).click();
-      await expect(page.getByText("Contact saved.")).toBeVisible();
+      await saveForm(page);
       const [home, work] = expected[renderer].updated;
       expect(await emails(page, contact!.id)).toEqual([
         { email: address(home), "location_type_id:name": "Home" },
@@ -181,8 +179,7 @@ test.describe("two fieldsets of one contact", () => {
         await input(page, "last_name").fill(lastName);
         await input(page, "email").nth(0).fill(address("home"));
         await input(page, "email").nth(1).fill(address("work"));
-        await page.getByRole("button", { name: "Save" }).click();
-        await expect(page.getByText("Contact saved.")).toBeVisible();
+        await saveForm(page);
         const [saved] = await api<{ id: number }>(page, "Individual", "get", {
           select: ["id"],
           where: [["last_name", "=", lastName]],
@@ -212,8 +209,7 @@ test.describe("two fieldsets of one contact", () => {
         await expect(input(page, "email").nth(0)).toHaveValue(address(home));
         await expect(input(page, "email").nth(1)).toHaveValue(address(work));
         await input(page, "email").nth(1).fill(address("new"));
-        await page.getByRole("button", { name: "Save" }).click();
-        await expect(page.getByText("Contact saved.")).toBeVisible();
+        await saveForm(page);
         const [homeAfter, workAfter] = split[renderer].updated;
         expect(await emails(page, contact!.id)).toEqual([
           { email: address(homeAfter), "location_type_id:name": "Home" },

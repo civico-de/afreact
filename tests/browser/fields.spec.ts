@@ -5,7 +5,7 @@
  */
 import { expect, type Page, type Request } from "@playwright/test";
 import { test } from "./coverage";
-import { api, API_PAGE, AUTH, isRecord, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, isRecord, saveForm, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const render = (form: string, renderer: Renderer) =>
@@ -96,8 +96,7 @@ for (const renderer of ["react", "angular"] as const) {
         );
       else await expect(field(page, "employer_id").getByRole("combobox")).toHaveValue(organization);
 
-      await page.getByRole("button", { name: "Save" }).click();
-      await expect(page.getByText("Contact saved.")).toBeVisible();
+      await saveForm(page);
       const record = await saved(page, lastName);
       expect(record).toMatchObject({
         gender_id: 3,
@@ -111,8 +110,7 @@ for (const renderer of ["react", "angular"] as const) {
       const lastName = `FieldsUntouched${RUN}${renderer}`;
       await page.goto(render("afformAfreactDemoFields", renderer));
       await field(page, "last_name").locator("input").fill(lastName);
-      await page.getByRole("button", { name: "Save" }).click();
-      await expect(page.getByText("Contact saved.")).toBeVisible();
+      await saveForm(page);
       expect(await saved(page, lastName)).toMatchObject({ gender_id: 2 });
     });
   });

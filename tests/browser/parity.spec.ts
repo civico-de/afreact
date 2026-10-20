@@ -5,7 +5,7 @@
  */
 import { expect, type Page, type Request } from "@playwright/test";
 import { test } from "./coverage";
-import { api, API_PAGE, AUTH, driver, PAGES, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, driver, PAGES, saveForm, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 
@@ -134,8 +134,7 @@ for (const renderer of ["react", "angular"] as const) {
       expect(await form.selected("location_type_id")).toBe("Work");
 
       await form.fill("first_name", "Paulina");
-      await page.getByRole("button", { name: "Save" }).click();
-      await expect(page.getByText("Contact saved.")).toBeVisible();
+      await saveForm(page);
       const [updated, ...more] = await savedContact(page, contact!.last_name);
       expect(more).toEqual([]);
       expect(updated).toMatchObject({

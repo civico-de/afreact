@@ -9,6 +9,16 @@ export const AUTH = "tests/browser/.auth/admin.json";
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** Saves the form and waits for its submit to answer before reading the confirmation. */
+export async function saveForm(page: Page): Promise<void> {
+  const [response] = await Promise.all([
+    page.waitForResponse("**/civicrm/ajax/api4/Afform/submit"),
+    page.getByRole("button", { name: "Save" }).click(),
+  ]);
+  expect(response.ok()).toBe(true);
+  await expect(page.getByText("Contact saved.")).toBeVisible();
+}
+
 /** A light CiviCRM page with CRM.api4, for test setup and cleanup. */
 export const API_PAGE = "/civicrm/admin/setting/afreact";
 

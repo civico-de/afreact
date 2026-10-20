@@ -5,7 +5,7 @@
  */
 import { expect, type Page } from "@playwright/test";
 import { test } from "./coverage";
-import { api, API_PAGE, AUTH, type Renderer } from "./harness";
+import { api, API_PAGE, AUTH, saveForm, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);
 const render = (renderer: Renderer) =>
@@ -87,8 +87,7 @@ for (const renderer of ["react", "angular"] as const) {
       await tab(page, "privacy").locator("a").click();
       await input(page, "is_opt_out").check();
       await tab(page, "contacts").locator("a").click();
-      await page.getByRole("button", { name: "Save" }).click();
-      await expect(page.getByText("Contact saved.")).toBeVisible();
+      await saveForm(page);
       const [saved] = await api<{ id: number; is_opt_out: boolean }>(page, "Individual", "get", {
         select: ["id", "is_opt_out"],
         where: [["last_name", "=", lastName]],
