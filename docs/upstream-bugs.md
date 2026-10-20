@@ -1361,7 +1361,9 @@ entity's search fields to that set's columns only, so the sets no longer
 select the same number of columns and the union fails; removing such a join
 shifts that set's remaining columns into the wrong rows. afreact keeps each
 set's columns in their rows: a join adds no columns there, and a removed
-column leaves an empty cell. `deviation:union-join-keeps-rows`
+column leaves an empty cell. In the first set, whose columns name the outer
+ones, the removed column's row leaves every set with its outer columns.
+`deviation:union-join-keeps-rows`
 
 **Renaming a combined search's column leaves stale references.** When the first
 set's column gets another name, core renames only an outer select item equal to

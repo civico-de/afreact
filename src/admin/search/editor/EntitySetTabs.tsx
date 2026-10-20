@@ -4,7 +4,7 @@ import {
   addEntitySet,
   addEntitySetRow,
   removeEntitySet,
-  realign,
+  setEntitySetQuery,
   removeEntitySetRow,
   setEntitySet,
   setsOf,
@@ -225,9 +225,7 @@ export function EntitySetQueryTab({ meta, params, index, onChange }: EntitySetQu
   // The inner editors work on a search whose select holds only real columns; nulls keep their rows.
   const info = setInfo(entity, set[3]);
   const setInner = (next: ApiParams) => {
-    onChange(
-      setEntitySet(meta, params, index, { ...next, select: realign(set[3].select, next.select) }),
-    );
+    onChange(setEntitySetQuery(meta, params, index, next));
   };
   return (
     <>

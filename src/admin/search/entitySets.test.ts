@@ -7,6 +7,7 @@ import {
   removeEntitySet,
   removeEntitySetRow,
   setEntitySet,
+  setEntitySetQuery,
   setsOf,
   withEntitySetFields,
 } from "./entitySets";
@@ -383,6 +384,55 @@ describe("entity sets", () => {
       "COUNT(id) AS COUNT_id",
       "subject",
     ]);
+  });
+
+  it("drops a row the first set loses with its join from every set and the outer search", () => {
+    const join = [
+      "Email AS Contact_Email_contact_id_01",
+      "LEFT",
+      ["id", "=", "Contact_Email_contact_id_01.contact_id"],
+    ];
+    const params: ApiParams = {
+      select: ["id", "display_name", "Contact_Email_contact_id_01.email"],
+      sets: [
+        [
+          "UNION ALL",
+          "Contact",
+          "get",
+          { select: ["id", "display_name", "Contact_Email_contact_id_01.email"], join: [join] },
+        ],
+        ["UNION ALL", "Contact", "get", { select: ["id", "display_name", "display_name"] }],
+      ],
+    };
+    const next = setEntitySetQuery(meta, params, 0, { select: ["id", "display_name"], join: [] });
+    expect(next.select).toEqual(["id", "display_name"]);
+    expect(setsOf(next).map((set) => set[3].select)).toEqual([
+      ["id", "display_name"],
+      ["id", "display_name"],
+    ]);
+  });
+
+  it("leaves an empty cell where a later set loses a joined column", () => {
+    const join = [
+      "Email AS Contact_Email_contact_id_01",
+      "LEFT",
+      ["id", "=", "Contact_Email_contact_id_01.contact_id"],
+    ];
+    const params: ApiParams = {
+      select: ["id", "display_name"],
+      sets: [
+        ["UNION ALL", "Contact", "get", { select: ["id", "display_name"] }],
+        [
+          "UNION ALL",
+          "Contact",
+          "get",
+          { select: ["id", "Contact_Email_contact_id_01.email"], join: [join] },
+        ],
+      ],
+    };
+    const next = setEntitySetQuery(meta, params, 1, { select: ["id"], join: [] });
+    expect(next.select).toEqual(["id", "display_name"]);
+    expect(setsOf(next)[1]?.[3].select).toEqual(["id", null]);
   });
 
   it("refuses a malformed set", () => {

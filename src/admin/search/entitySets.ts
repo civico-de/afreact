@@ -268,6 +268,30 @@ export function setEntitySet(
   };
 }
 
+/** A set's joins or grouping changed: the cells realign, and a row the first set loses leaves every set. */
+// deviation:union-join-keeps-rows
+export function setEntitySetQuery(
+  meta: SearchAdminMetadata,
+  params: ApiParams,
+  index: number,
+  next: ApiParams,
+): ApiParams {
+  const old = setsOf(params)[index]?.[3].select ?? [];
+  const select = realign(old, next.select);
+  // The outer columns come from the first set, so it keeps no empty cell.
+  const dropped =
+    index === 0
+      ? select.flatMap((col, row) => (col === null && old[row] !== null ? [row] : []))
+      : [];
+  const pruned = [...dropped]
+    .reverse()
+    .reduce((acc, row) => removeEntitySetRow(meta, acc, row), params);
+  return setEntitySet(meta, pruned, index, {
+    ...next,
+    select: select.filter((_, row) => !dropped.includes(row)),
+  });
+}
+
 /** updateEntitySetFields: the outer search's fields are the first set's columns, labelled across sets. */
 export function withEntitySetFields(
   meta: SearchAdminMetadata,
