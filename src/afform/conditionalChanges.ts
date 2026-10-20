@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 
 /** How long af-if changes gather before one announcement, so typing does not chatter. */
-const SETTLE_MS = 1000;
+export const SETTLE_MS = 1000;
 
 // deviation:af-if-focus-kept
 /**

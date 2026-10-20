@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { mockApi, renderWithQuery } from "../test/render";
 import { memoryStore } from "../url/hash";
+import { fakeTimeouts, passTime } from "../test/timers";
 import { AfreactForm } from "./AfreactForm";
+import { SETTLE_MS } from "./conditionalChanges";
 import type { FieldDefn, LayoutNode } from "./types";
 
 const field = (
@@ -54,6 +56,10 @@ const box = (name: string) => screen.getByRole("textbox", { name });
 const submitted = (calls: ReturnType<typeof mockApi>) =>
   calls.find(({ call }) => call === "Afform.submit")?.params.values;
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("live rules", () => {
   it("shows an af-if element while its condition holds and drops the values it hid", async () => {
     const calls = renderForm(
@@ -96,25 +102,23 @@ describe("live rules", () => {
       ]),
     );
     const first = await screen.findByRole("textbox", { name: "first_name" });
-    await userEvent.type(first, "ada");
     const live = () => document.querySelector(".afreact-form > p[aria-live]");
-    await waitFor(
-      () => {
-        expect(live()).toHaveTextContent("More fields are shown.");
-      },
-      { timeout: 2000 },
-    );
+    fakeTimeouts();
+    fireEvent.change(first, { target: { value: "ada" } });
+    passTime(SETTLE_MS - 1);
+    expect(live()).toHaveTextContent("");
+    passTime(1);
+    expect(live()).toHaveTextContent("More fields are shown.");
+    vi.useRealTimers();
     // A change from a control that took no focus (a click in Safari) returns the focus to it.
     await userEvent.click(box("nick_name"));
+    fakeTimeouts();
     fireEvent.change(first, { target: { value: "bob" } });
     expect(screen.queryByRole("textbox", { name: "nick_name" })).not.toBeInTheDocument();
     expect(first).toHaveFocus();
-    await waitFor(
-      () => {
-        expect(live()).toHaveTextContent("Some fields are hidden.");
-      },
-      { timeout: 2000 },
-    );
+    passTime(SETTLE_MS);
+    expect(live()).toHaveTextContent("Some fields are hidden.");
+    vi.useRealTimers();
     // A field that hides itself leaves the focus on its nearest remaining ancestor.
     fireEvent.change(first, { target: { value: "ada" } });
     const again = box("Again");
