@@ -12,7 +12,7 @@ import {
 import { createPortal } from "react-dom";
 import { checkConditions, parseConditions } from "./conditions";
 import { interpolate, type ExpressionContext } from "./expressions";
-import { ClearButton, Field, fieldClasses } from "./Field";
+import { ClearButton, Field, fieldClasses, templateNote } from "./Field";
 import { loadSelected, type Filled } from "./fields/autofill";
 import { TokenContext, withTokens } from "./Markup";
 import { FieldEnvContext, ItemPathContext, type FieldEnv } from "./fields/env";
@@ -790,6 +790,7 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
     !!autofill &&
     form.entities[scope.entity]?.actions[autofill] === false;
   const primary = name === "is_primary" && scope.repeated;
+  const primaryNote = primary ? templateNote(defn) : null;
   return createElement(
     "af-field",
     {
@@ -800,19 +801,22 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
         `${primary ? "af-field-type-radio" : fieldClasses(defn)} ${typeof node.class === "string" ? node.class : ""}`.trim(),
     },
     unknown.length > 0 && <Unsupported what={fieldAttributesNote(unknown, name)} />,
+    primaryNote !== null && <Unsupported what={primaryNote} />,
     primary ? (
-      <PrimaryField
-        label={typeof defn.label === "string" && defn.label !== "" ? defn.label : ts("Primary")}
-        group={`${form.formName}-${scope.entity}-${scope.index}-${scope.join ?? ""}`}
-        checked={value === true}
-        disabled={form.disabled || conditionallyDisabled}
-        onSelect={() => {
-          form.edit((data) => setPrimary(data, scope));
-        }}
-        onClear={() => {
-          form.edit((data) => ensurePrimary(setValue(data, scope, name, null), scope));
-        }}
-      />
+      primaryNote === null && (
+        <PrimaryField
+          label={typeof defn.label === "string" && defn.label !== "" ? defn.label : ts("Primary")}
+          group={`${form.formName}-${scope.entity}-${scope.index}-${scope.join ?? ""}`}
+          checked={value === true}
+          disabled={form.disabled || conditionallyDisabled}
+          onSelect={() => {
+            form.edit((data) => setPrimary(data, scope));
+          }}
+          onClear={() => {
+            form.edit((data) => ensurePrimary(setValue(data, scope, name, null), scope));
+          }}
+        />
+      )
     ) : (
       <FieldEnvContext.Provider value={fieldEnv(form, scope, name, autofill, itemPath)}>
         <Field

@@ -37,6 +37,7 @@ const layout: LayoutNode[] = [
         "#children": [
           field("first_name", {}, { "ng-model": "x", "af-required": "(broken" }),
           field("state", { label: "State", input_type: "Signature" }),
+          field("middle_name", { label: "Middle", template: "~/myExt/fields/Text.html" }),
           { "#tag": "div", "af-if": always, "#children": [field("last_name")] },
           {
             "#tag": "afblock-contact-email",
@@ -89,6 +90,7 @@ describe("noteKind", () => {
       'filters="{x: foo()}"',
       'total-count="x"',
       "Angular expression {{ x }}",
+      "field template ~/x.html (X)",
       "include column ~/afAdmin/afListPlacementColumn.html",
       "task download (Angular dialog ~/x.html)",
       "task go (Unsupported task expression: a.b())",
@@ -124,6 +126,7 @@ describe("layoutProblems", () => {
       "Angular expression {{ person.title }}",
       'ng-model, af-required="(broken" on first_name',
       "field type Signature (State)",
+      "field template ~/myExt/fields/Text.html (Middle)",
     ]);
   });
 
@@ -309,20 +312,67 @@ describe("layoutProblems", () => {
   });
 
   it("matches the notes the rendered form shows", async () => {
-    mockApi({
-      "Afreact.getForm": () => [
-        { name: "afformTest", title: "Test", type: "form", layout, strings: [] },
-      ],
-      "Afform.prefill": () => [],
-    });
-    renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />);
-    await screen.findByRole("button", { name: "Save" });
-    const shown = screen
-      .getAllByRole("note")
-      .map((note) => note.textContent?.replace("Not supported by the React renderer: ", ""));
-    expect(shown.sort()).toEqual(layoutProblems(layout).sort());
+    expect((await shownFormNotes(layout)).sort()).toEqual(layoutProblems(layout).sort());
+  });
+
+  it("reports a replaced template on the is_primary radio of a repeat", async () => {
+    const primary = form([
+      {
+        "#tag": "div",
+        "af-fieldset": "Individual1",
+        "#children": [
+          {
+            "#tag": "div",
+            "af-join": "Email",
+            "af-repeat": "Add",
+            min: "1",
+            "#children": [
+              field("email", { input_type: "Email" }),
+              field("is_primary", {
+                label: "Primary",
+                input_type: "Radio",
+                data_type: "Boolean",
+                template: "~/myExt/Primary.html",
+              }),
+            ],
+          },
+        ],
+      },
+    ]);
+    const report = ["field template ~/myExt/Primary.html (Primary)"];
+    expect(layoutProblems(primary)).toEqual(report);
+    expect(await shownFormNotes(primary)).toEqual(report);
   });
 });
+
+/** A form of one contact, saved by its button. */
+function form(children: LayoutNode[]): LayoutNode[] {
+  return [
+    {
+      "#tag": "af-form",
+      ctrl: "afform",
+      "#children": [
+        { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+        ...children,
+        { "#tag": "button", "ng-click": "afform.submit()", "#children": [{ "#text": "Save" }] },
+      ],
+    },
+  ];
+}
+
+async function shownFormNotes(formLayout: LayoutNode[]) {
+  mockApi({
+    "Afreact.getForm": () => [
+      { name: "afformTest", title: "Test", type: "form", layout: formLayout, strings: [] },
+    ],
+    "Afform.prefill": () => [],
+  });
+  renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />);
+  await screen.findByRole("button", { name: "Save" });
+  return screen
+    .queryAllByRole("note")
+    .map((note) => note.textContent?.replace("Not supported by the React renderer: ", "") ?? "");
+}
 
 const display = (settings: Record<string, unknown>, extra: Record<string, unknown> = {}) => ({
   "#tag": "crm-search-display-table",
@@ -373,6 +423,14 @@ const gappySearch = searchForm([
   field("title", {}, { "ng-model": "x" }),
   field("created_date", { label: "Created", input_type: "Radio", search_range: true }),
   field("parent", { label: "Parent", input_type: "File" }),
+  field("image", { label: "Image", input_type: "File", template: "~/myExt/File.html" }),
+  field("modified_date", {
+    label: "Modified",
+    input_type: "Date",
+    data_type: "Timestamp",
+    search_range: true,
+    template: "~/myExt/Range.html",
+  }),
   display(
     {
       columns: [
@@ -456,6 +514,8 @@ describe("search forms", () => {
       "ng-model on title",
       "search range (Created)",
       "file upload outside a form (Parent)",
+      "field template ~/myExt/File.html (Image)",
+      "field template ~/myExt/Range.html (Modified)",
       "ng-click on <crm-search-display-table>",
       'total-count="count"',
       "setting seeMore, setting pager.jump",

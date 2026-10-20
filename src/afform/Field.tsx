@@ -97,9 +97,25 @@ export const INPUT_TYPES: ReadonlySet<string> = new Set([
   "CheckoutBlock",
 ]);
 
+function noteLabel(defn: FieldDefn): string {
+  return defn.label === false ? defn.name : (defn.label ?? defn.name);
+}
+
 export function inputTypeNote(defn: FieldDefn): string {
-  const label = defn.label === false ? undefined : (defn.label ?? defn.name);
-  return `field type ${defn.input_type} (${label ?? defn.name})`;
+  return `field type ${defn.input_type} (${noteLabel(defn)})`;
+}
+
+/** The template core registers for an input type; CheckoutBlock's comes from civi_contribute. */
+function ownTemplate(type: string): string {
+  return type === "CheckoutBlock"
+    ? "~/afCheckout/inputType/CheckoutBlock.html"
+    : `~/af/fields/${type}.html`;
+}
+
+/** afField ng-includes defn.template; one other than the input type's own is Angular markup. */
+export function templateNote(defn: FieldDefn): string | null {
+  if (defn.template === undefined || defn.template === ownTemplate(defn.input_type)) return null;
+  return `field template ${String(defn.template)} (${noteLabel(defn)})`;
 }
 
 /** The classes afField adds to its element: af-field-type-<kebab input type>, plus -multiple. */
@@ -521,9 +537,8 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
     }
   })();
 
-  if (control === null) {
-    return <Unsupported what={inputTypeNote(defn)} />;
-  }
+  const note = control === null ? inputTypeNote(defn) : templateNote(defn);
+  if (note !== null) return <Unsupported what={note} />;
   return (
     <>
       {label && !booleanCheckbox && (

@@ -63,6 +63,8 @@ export interface FieldDefn {
   display_format?: "html" | "file" | "url";
   serialize?: number | null;
   afform_default?: unknown;
+  /** The template afField ng-includes: the input type's own unless an extension replaces it. */
+  template?: string | null;
   /** Search filters: the operator a value is sent with, e.g. {title: {CONTAINS: "x"}}. */
   search_operator?: string | null;
   /** Search filters: the user picks the operator from `operators` (operator => label). */

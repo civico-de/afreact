@@ -173,6 +173,11 @@ Angular code from elsewhere, which a React renderer cannot run:
   TextArea, Date, Select, Radio, CheckBox, DisplayOnly, EntityRef, ChainSelect,
   Toggle, RichTextEditor, File, Range and Location) and civi_contribute's
   CheckoutBlock. An extension's own field type brings its own Angular template.
+- a field whose `defn.template` is not its input type's own
+  (`~/af/fields/<Type>.html`, CheckoutBlock's
+  `~/afCheckout/inputType/CheckoutBlock.html`): afField `ng-include`s it, so an
+  extension that replaces a core type's template through
+  `civi.afform.input_types`, or a layout that names one, brings Angular markup
 - in a CheckoutBlock, a checkout option's own Angular template (a payment
   processor's module) and a checkout field of a type other than text, select,
   checkBox, expiryDate and the billing state chainSelect

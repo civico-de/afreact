@@ -36,8 +36,8 @@ type Unexplained<Hand, Seen, Ignored extends string> =
 
 /**
  * Not read in the browser: datepicker options for native date inputs, the reference filter the
- * server applies to the autocomplete, the ng-include path, unused option data, and the suffix of
- * a `field:name` field, whose options the server already keys by name.
+ * server applies to the autocomplete, unused option data, and the suffix of a `field:name` field,
+ * whose options the server already keys by name.
  */
 type FieldDefnIgnored =
   | "input_attrs.filter"
@@ -45,7 +45,6 @@ type FieldDefnIgnored =
   | "input_attrs.end_date_years"
   | "input_attrs.label"
   | "input_attrs.size"
-  | "template"
   | "options[].abbr"
   | "options[].color"
   | "options[].description"

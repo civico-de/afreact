@@ -7,7 +7,7 @@ import { referencedTasks } from "../search/searchTasks";
 import { displayTypeOf, isDisplaySettings, type DisplaySettings } from "../search/types";
 import { parseConditions } from "./conditions";
 import { interpolate, routeTest, type RouteTest } from "./expressions";
-import { INPUT_TYPES, inputTypeNote } from "./Field";
+import { INPUT_TYPES, inputTypeNote, templateNote } from "./Field";
 import { entityRefProblem } from "./fields/autocomplete";
 import { isTabOf, TAB_COUNT, tabOutsideNote, tabsetProblems, tabsOf } from "./tabsets";
 import { fileOutsideFormNote } from "./fields/File";
@@ -319,7 +319,7 @@ export function noteKind(note: string): NoteKind {
   if (note.startsWith("<crm-search-display-")) return "react";
   return DIRECTIVE.test(note) ||
     EXPRESSION_ATTRIBUTE.test(note) ||
-    /^Angular expression |^include column |\((Angular dialog|Unsupported task expression)/.test(
+    /^Angular expression |^include column |^field template |\((Angular dialog|Unsupported task expression)/.test(
       note,
     )
     ? "angular"
@@ -448,11 +448,12 @@ function filterFieldProblems(node: ElementNode): string[] {
   ];
   const problems = unknown.length ? [fieldAttributesNote(unknown, name)] : [];
   const label = defn.label === false ? name : (defn.label ?? name);
-  if (defn.search_range && !RANGE_TYPES.has(defn.input_type)) problems.push(searchRangeNote(label));
+  if (defn.search_range && !RANGE_TYPES.has(defn.input_type))
+    return [...problems, searchRangeNote(label)];
+  const input = inputProblems(defn);
   // A filter has no record to attach a file to.
-  else if (defn.input_type === "File") problems.push(fileOutsideFormNote(defn));
-  else problems.push(...inputProblems(defn));
-  return problems;
+  if (input.length === 0 && defn.input_type === "File") input.push(fileOutsideFormNote(defn));
+  return [...problems, ...input];
 }
 
 function fieldProblems(node: ElementNode, scope: Scope): string[] {
@@ -469,14 +470,19 @@ function fieldProblems(node: ElementNode, scope: Scope): string[] {
     ...conditionProblem(node, "af-disabled"),
   ];
   const problems = unknown.length ? [fieldAttributesNote(unknown, name)] : [];
+  // A repeat's is_primary is PrimaryField's radio, whatever its input type.
   const primary = name === "is_primary" && scope.repeated;
+  const template = templateNote(defn);
   if (!primary) problems.push(...inputProblems(defn));
+  else if (template !== null) problems.push(template);
   return problems;
 }
 
 /** The input type, or the part of an EntityRef's setup, the renderer cannot show. */
 function inputProblems(defn: FieldDefn): string[] {
   if (!INPUT_TYPES.has(defn.input_type)) return [inputTypeNote(defn)];
+  const template = templateNote(defn);
+  if (template !== null) return [template];
   const problem = defn.input_type === "EntityRef" ? entityRefProblem(defn) : null;
   return problem === null ? [] : [problem];
 }

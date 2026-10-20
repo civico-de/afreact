@@ -531,7 +531,20 @@ describe("Field", () => {
     expect(fieldClasses(defn({ input_type: "CheckBox" }))).toBe("af-field-type-check-box");
   });
 
+  it("notes a template an extension put in place of the input type's own", () => {
+    render(<Harness defn={{ template: "~/myExt/fields/Text.html" }} onValue={() => undefined} />);
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "Not supported by the React renderer: field template ~/myExt/fields/Text.html (Field)",
+    );
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
   it("renders a control for every input type the support report accepts, and a note otherwise", () => {
+    // The templates core's input types and civi_contribute's CheckoutBlock register.
+    const own = (type: string) =>
+      type === "CheckoutBlock"
+        ? "~/afCheckout/inputType/CheckoutBlock.html"
+        : `~/af/fields/${type}.html`;
     const options = [{ id: 1, label: "One" }];
     const env = {
       formName: "f",
@@ -547,7 +560,7 @@ describe("Field", () => {
         >
           <FieldEnvContext.Provider value={env}>
             <Harness
-              defn={{ input_type, options, fk_entity: "Contact" }}
+              defn={{ input_type, options, fk_entity: "Contact", template: own(input_type) }}
               onValue={() => undefined}
             />
           </FieldEnvContext.Provider>
