@@ -29,6 +29,8 @@ export interface PendingUpload {
   onUploaded: (file: FileInfo) => void;
   /** Whether the submit must upload the file again after a draft took it. */
   again: () => boolean;
+  /** Set once a draft holds the file, so later drafts leave it there. */
+  inDraft?: boolean;
 }
 
 /** The files chosen in a form's File fields, by field instance; uploaded after Afform.submit. */
@@ -90,12 +92,15 @@ export async function uploadAll(
   if (!uploads.size) return [];
   const failed: string[] = [];
   for (const [key, upload] of [...uploads]) {
+    // Each upload stores a new file, and a draft that took this one keeps it.
+    if (token === null && upload.inDraft) continue;
     onStart(upload.file.name);
     try {
       const stored = await uploadFile(formName, token, upload);
       // A file chosen or removed meanwhile stands; this one is outdated.
       if (uploads.get(key) !== upload) continue;
       if (token !== null || !upload.again()) uploads.delete(key);
+      else upload.inDraft = true;
       if (stored) upload.onUploaded(stored);
     } catch (error) {
       failed.push(

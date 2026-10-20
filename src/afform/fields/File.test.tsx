@@ -535,16 +535,23 @@ describe("File fields", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     const scan = { ...imageField, defn: { ...image, label: "Scan" } };
-    renderForm(
+    const calls = renderForm(
       form([{ "#tag": "div", "af-join": "Attachment", "#children": [scan] }, draftButton]),
       undefined,
       [],
       { "Afform.submitDraft": () => [{}] },
     );
+    const drafts = () => calls.filter(({ call }) => call === "Afform.submitDraft");
     await userEvent.upload(await screen.findByLabelText("Scan"), png());
     await userEvent.click(screen.getByRole("button", { name: "Save Draft" }));
     await screen.findByRole("link", { name: "ada.png" });
     expect(sent(fetchMock).params).not.toHaveProperty("token");
+    // A further draft keeps the file the first one took.
+    await userEvent.click(await screen.findByRole("button", { name: "Save Draft" }));
+    await waitFor(() => {
+      expect(drafts()).toHaveLength(2);
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
 
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     await waitFor(() => {
