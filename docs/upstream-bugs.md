@@ -1105,6 +1105,12 @@ offered, such as one of a disabled extension, counts too, so ticking or
 unticking another task can switch to all enabled. afreact enables all once each
 offered task is on. `deviation:tasks-all-enabled-by-name`
 
+**A column's format can list a column twice.** The format select of a column
+offers every suffix (`crmSearchAdminFields.html`), also one another column
+already selects, so `gender_id` switched to Label beside `gender_id:label` puts
+the same column in the search twice. afreact disables a format another column
+has. `deviation:column-format-once`
+
 **A smart group's contact column is listed twice.** When the smart group tab
 opens on a search whose first column is no contact ID, core puts the contact ID
 in front of the select (`crmSearchAdminGroup` `$onInit`), even where the search

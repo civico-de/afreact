@@ -66,6 +66,7 @@ export function FieldsTab({ meta, search, firstLocked, onChange }: FieldsTabProp
           const suffixOptions = Object.entries(meta.optionAttributes).filter(([attr]) =>
             suffixes?.includes(attr),
           );
+          const taken = (col: string) => col !== key && select.includes(col);
           const canMoveUp = index > (firstLocked ? 1 : 0);
           const canMoveDown = index < select.length - 1 && !(firstLocked && index === 0);
           return (
@@ -96,9 +97,16 @@ export function FieldsTab({ meta, search, firstLocked, onChange }: FieldsTabProp
                       setSelect(select.map((col, i) => (i === index ? event.target.value : col)));
                     }}
                   >
-                    <option value={rawKey}>{ts("Raw Value")}</option>
+                    {/* A format another column has would list it twice. deviation:column-format-once */}
+                    <option value={rawKey} disabled={taken(rawKey)}>
+                      {ts("Raw Value")}
+                    </option>
                     {suffixOptions.map(([attr, text]) => (
-                      <option key={attr} value={`${rawKey}:${attr}`}>
+                      <option
+                        key={attr}
+                        value={`${rawKey}:${attr}`}
+                        disabled={taken(`${rawKey}:${attr}`)}
+                      >
                         {text}
                       </option>
                     ))}
