@@ -470,6 +470,37 @@ describe("SearchFieldset", () => {
     expect(screen.getByRole("button")).toHaveTextContent('{"note":"a"}');
   });
 
+  it("gives a filter an af-if shows after a saved set loaded the set's value", async () => {
+    mockApi({ "SearchParamSet.get": () => [{ filters: { status: "7" } }] });
+    const rule = JSON.stringify([["Individual1[0][fields][advanced]", "=", "true"]]);
+    const node: LayoutNode = {
+      "#tag": "div",
+      "#children": [
+        field("title", {}),
+        { "#tag": "div", "af-if": rule, "#children": [field("status", { afform_default: "1" })] },
+      ],
+    };
+    const Applied = () => {
+      const fieldset = useSearchFieldset();
+      return <output>{fieldset?.ready ? JSON.stringify(fieldset.state.applied) : ""}</output>;
+    };
+    const view = (advanced: boolean) => (
+      <SearchFieldset
+        node={node}
+        formName="afsearchGroups"
+        data={{ Individual1: [{ fields: { advanced } }] }}
+      >
+        <Applied />
+      </SearchFieldset>
+    );
+    const { rerender } = renderWithQuery(view(false), memoryStore("#?_s=4"));
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent('{"title":null}');
+    });
+    rerender(view(true));
+    expect(screen.getByRole("status")).toHaveTextContent('{"title":null,"status":"7"}');
+  });
+
   it("drops a filter an af-if hides from the hash on the next commit", () => {
     const rule = JSON.stringify([["Individual1[0][fields][advanced]", "=", "true"]]);
     const titleNode = field("title", {});
