@@ -139,6 +139,17 @@ describe("entity sets", () => {
     });
   });
 
+  it("renames swapped columns from their old names at once", () => {
+    const params = setEntitySet(
+      meta,
+      { ...union(), select: ["id", "name"], orderBy: { id: "ASC", name: "DESC" } },
+      0,
+      { select: ["id AS name", "display_name AS id"] },
+    );
+    expect(params.select).toEqual(["name", "id"]);
+    expect(params.orderBy).toEqual({ name: "ASC", id: "DESC" });
+  });
+
   it("gives the outer search the first set's columns, labelled across sets", () => {
     const fields = withEntitySetFields(meta, union()).schema.find(
       (e) => e.name === "EntitySet",
@@ -170,6 +181,31 @@ describe("entity sets", () => {
       ["n", "Integer"],
       ["birth_date", "Date"],
     ]);
+    // Core's faux function for equations claims "Number", which is no field type.
+    const equation = meta.functions.flatMap((fn) =>
+      fn.name === "COUNT"
+        ? [
+            {
+              ...fn,
+              name: "e",
+              title: "Arithmetic",
+              category: "math",
+              data_type: "Number",
+              params: [
+                { label: "Value", min_expr: 1, max_expr: 1, must_be: ["SqlField", "SqlNumber"] },
+              ],
+            },
+          ]
+        : [],
+    );
+    const withE = { ...meta, functions: [...meta.functions, ...equation] };
+    const sum: ApiParams = {
+      version: 4,
+      select: ["x"],
+      sets: [["UNION ALL", "Contact", "get", { select: ["(id + 1) AS x"] }]],
+    };
+    const x = withEntitySetFields(withE, sum).schema.find((e) => e.name === "EntitySet")?.fields;
+    expect(x?.map((f) => [f.name, f.data_type])).toEqual([["x", "Integer"]]);
   });
 
   // deviation:union-join-keeps-rows

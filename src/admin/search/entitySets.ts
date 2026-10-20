@@ -170,7 +170,9 @@ export function setEntitySet(
   const sets = setsOf(params);
   const old = sets[index];
   if (!old) return params;
-  let outer = params;
+  // Every rename is taken from the old names at once, so names that swap do not merge.
+  const renamed = new Map<string, string>();
+  const fields = new Map<string, string>();
   if (index === 0)
     inner.select.forEach((expr, row) => {
       const before = old[3].select[row];
@@ -178,26 +180,30 @@ export function setEntitySet(
       const was = parseExpr(meta, before, infoOf(old)).alias;
       const now = parseExpr(meta, expr, infoOf([old[0], old[1], old[2], inner])).alias;
       if (!was || !now || was === now) return;
-      outer = { ...outer, select: outer.select.map((col) => (col === was ? now : col)) };
+      renamed.set(was, now);
       // Conditions, grouping and sorting name the field without its suffix, or with one of theirs.
       const [wasField = was, nowField = now] = [was.split(":")[0], now.split(":")[0]];
-      if (wasField === nowField) return;
-      const rename = (key: string) =>
-        key === wasField || key.startsWith(`${wasField}:`)
-          ? nowField + key.slice(wasField.length)
-          : key;
-      outer = {
-        ...outer,
-        ...(outer.where && { where: renameInClauses(outer.where, rename) }),
-        ...(outer.having && { having: renameInClauses(outer.having, rename) }),
-        ...(outer.groupBy && { groupBy: outer.groupBy.map(rename) }),
-        ...(outer.orderBy && {
+      if (wasField !== nowField) fields.set(wasField, nowField);
+    });
+  const rename = (key: string) => {
+    const field = key.split(":")[0] ?? key;
+    const now = fields.get(field);
+    return now === undefined ? key : now + key.slice(field.length);
+  };
+  const outer: ApiParams = !renamed.size
+    ? params
+    : {
+        ...params,
+        select: params.select.map((col) => renamed.get(col) ?? col),
+        ...(params.where && { where: renameInClauses(params.where, rename) }),
+        ...(params.having && { having: renameInClauses(params.having, rename) }),
+        ...(params.groupBy && { groupBy: params.groupBy.map(rename) }),
+        ...(params.orderBy && {
           orderBy: Object.fromEntries(
-            Object.entries(outer.orderBy).map(([key, dir]) => [rename(key), dir]),
+            Object.entries(params.orderBy).map(([key, dir]) => [rename(key), dir]),
           ),
         }),
       };
-    });
   return {
     ...outer,
     sets: sets.map((set, i): EntitySet => (i === index ? [set[0], set[1], set[2], inner] : set)),
@@ -218,9 +224,9 @@ export function withEntitySetFields(
   const fields: SchemaField[] = first[3].select.flatMap((expr, row) => {
     if (expr === null) return [];
     const info = parseExpr(meta, expr, infoOf(first));
-    // A function with a result type of its own, such as COUNT, is no longer its field.
-    // deviation:union-function-column-type
-    const typed = info.fn?.data_type;
+    // A function with a result type of its own, such as COUNT, is no longer its field; an
+    // equation (core's function "e") keeps it. deviation:union-function-column-type
+    const typed = info.fn?.name === "e" ? undefined : info.fn?.data_type;
     const base = typed ? undefined : info.args.find((arg) => arg.type === "field")?.field;
     const name = info.alias.split(":")[0] ?? info.alias;
     const labels = sets.flatMap((set) => {
