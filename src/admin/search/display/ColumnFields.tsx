@@ -1366,7 +1366,9 @@ function SubsearchCondition({
           <SearchInput
             id={id}
             field={{ ...field, entity: field.entity ?? search.api_entity }}
-            optionKey="name"
+            // The value filters the subsearch by its field as written: `:name` by name, else by id.
+            // deviation:subsearch-filter-value-key
+            optionKey={filter.subsearch_field?.split(":")[1] ?? "id"}
             options={options.data?.[field.name]}
             value={filter.value}
             onChange={(value) => {

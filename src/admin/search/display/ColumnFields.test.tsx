@@ -3,7 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { mockApi, renderWithQuery } from "../../../test/render";
 import { metadata as meta } from "../../../test/searchMetadata";
-import { changeFilterField, ColumnTypeFields, filterMode } from "./ColumnFields";
+import {
+  changeFilterField,
+  ColumnTypeFields,
+  filterMode,
+  type SubsearchFilter,
+} from "./ColumnFields";
 import { buildLinks, type AdminColumn, type DisplayContext, type LinkItem } from "./model";
 
 const ctx: DisplayContext = {
@@ -388,14 +393,17 @@ describe("ColumnTypeFields", () => {
       api_entity: "Contact",
       api_params: { version: 4, select: ["id", "display_name"] },
     };
-    const column = (search: string): AdminColumn => ({
+    const column = (
+      search: string,
+      filters: SubsearchFilter[] = [{ subsearch_field: "id", parent_field: "id" }],
+    ): AdminColumn => ({
       type: "subsearch",
       label: "Members",
       rewrite: "Members",
       subsearch: {
         search,
         display: "Members_table",
-        filters: [{ subsearch_field: "id", parent_field: "id" }],
+        filters,
         subsearch_mode: "dropdown",
       },
     });
@@ -440,6 +448,29 @@ describe("ColumnTypeFields", () => {
       expect(saved?.subsearch?.display).toBeNull();
       await userEvent.selectOptions(display, "Members table");
       expect(saved?.subsearch?.display).toBe("Members_table");
+    });
+
+    // deviation:subsearch-filter-value-key
+    it.each([
+      ["gender_id", 1],
+      ["gender_id:name", "Female"],
+    ])("stores a value on %s as that field compares it", async (field, stored) => {
+      mockApi({
+        "SavedSearch.get": () => [
+          {
+            ...members,
+            api_params: { version: 4, select: ["id", "gender_id", "gender_id:label"] },
+          },
+        ],
+        "SearchDisplay.get": () => [{ name: "Members_table", label: "Members table" }],
+        "Contact.getFields": () => [
+          { name: "gender_id", options: [{ id: 1, name: "Female", label: "Weiblich" }] },
+        ],
+      });
+      renderColumn(column("Members", [{ subsearch_field: field, value: null }]));
+      const input = await screen.findByRole("combobox", { name: "Value of filter 1" });
+      await userEvent.selectOptions(input, await screen.findByRole("option", { name: "Weiblich" }));
+      expect(saved?.subsearch?.filters).toEqual([{ subsearch_field: field, value: stored }]);
     });
 
     // deviation:subsearch-missing-search-kept

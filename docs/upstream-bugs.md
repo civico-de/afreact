@@ -1178,6 +1178,12 @@ should remove a filter when its field is cleared, but `onChangeFilter()` tests
 `filter.field` while filters store `subsearch_field`, so every change of the
 field deletes the row. afreact removes a filter only when its field is cleared. `deviation:subsearch-filter-change`
 
+**A subsearch filter on an unsuffixed field matches nothing.** The value
+input of a subsearch filter always stores the option's name, while a filter
+on a column selected without a suffix (`gender_id`) compares ids, so the
+subsearch runs `gender_id = 'Female'` and shows no rows. afreact stores the
+name only for a `:name` filter field and the id otherwise. `deviation:subsearch-filter-value-key`
+
 **Import reports calls as records.** The import dialog's success message
 counts the API calls of the bundle, not the records they save, so a bundle
 with one search and three displays reports two items. afreact counts the
