@@ -215,10 +215,10 @@ export const getColumnIndex = (settings: AdminSettings, key: string) =>
 export function getExprFromSelect(search: SearchInfo, key: string): string | null {
   const fieldKey = key.split(":")[0];
   const select = search.api_params.select;
-  // An alias names its column even where another item selects a field of that name.
-  // deviation:column-alias-before-field
+  // An alias names its column even where another item selects a field of that name;
+  // a key with a suffix is never an alias. deviation:column-alias-before-field
   const match =
-    select.find((expr) => expr.split(" AS ")[1] === fieldKey) ??
+    select.find((expr) => expr.split(" AS ")[1] === key) ??
     select.find((expr) => expr.split(" AS ")[0]?.split(":")[0] === fieldKey);
   return match ? (match.split(" AS ")[0] ?? null) : null;
 }

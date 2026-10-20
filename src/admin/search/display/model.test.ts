@@ -5,6 +5,8 @@ import { draftOf, initialized } from "./DisplayEditor";
 import { fieldToColumn } from "../expr";
 import {
   colorFieldOf,
+  getExprFromSelect,
+  keyField,
   keyOptionKey,
   ruleField,
   dateFormatChoice,
@@ -523,6 +525,15 @@ it("labels a column by the item its key aliases, not a field of the same name", 
   const swapped = { ...ctx, search: { ...ctx.search, api_params: { version: 4, select } } };
   expect(getFieldLabel(swapped, "birth_date")).toBe("Display Name");
   expect(getFieldLabel(swapped, "dob")).toBe("Birth Date");
+});
+
+// deviation:column-alias-before-field
+it("finds a key with a suffix by its field, which no alias can name", () => {
+  const select = ["birth_date AS gender_id", "gender_id:name"];
+  const aliased = { ...ctx, search: { ...ctx.search, api_params: { version: 4, select } } };
+  expect(getExprFromSelect(aliased.search, "gender_id:name")).toBe("gender_id:name");
+  expect(keyField(aliased, "gender_id:name")?.name).toBe("gender_id");
+  expect(keyField(aliased, "gender_id")?.name).toBe("birth_date");
 });
 
 // deviation:column-alias-color
