@@ -412,6 +412,37 @@ describe("entity sets", () => {
     ]);
   });
 
+  it("keeps the unwrapped columns of a grouping that left with a join", () => {
+    const email = "Contact_Email_contact_id_01.email";
+    const join = [
+      "Email AS Contact_Email_contact_id_01",
+      "LEFT",
+      ["id", "=", "Contact_Email_contact_id_01.contact_id"],
+    ];
+    const grouped = [
+      "GROUP_CONCAT(DISTINCT display_name) AS GROUP_CONCAT_display_name",
+      "COUNT(id) AS COUNT_id",
+      email,
+    ];
+    const params: ApiParams = {
+      select: ["GROUP_CONCAT_display_name", "COUNT_id", email],
+      sets: [
+        ["UNION ALL", "Contact", "get", { select: grouped, join: [join], groupBy: [email] }],
+        ["UNION ALL", "Contact", "get", { select: ["display_name", "id", "display_name"] }],
+      ],
+    };
+    const next = setEntitySetQuery(meta, params, 0, {
+      select: ["display_name", "id"],
+      join: [],
+      groupBy: [],
+    });
+    expect(setsOf(next).map((set) => set[3].select)).toEqual([
+      ["display_name", "id"],
+      ["display_name", "id"],
+    ]);
+    expect(next.select).toHaveLength(2);
+  });
+
   it("leaves an empty cell where a later set loses a joined column", () => {
     const join = [
       "Email AS Contact_Email_contact_id_01",

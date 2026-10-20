@@ -1,4 +1,10 @@
-import { getDefaultLabel, parseExpr, type ApiParams, type SearchInfo } from "./expr";
+import {
+  getDefaultLabel,
+  parseExpr,
+  reconcileAggregateColumns,
+  type ApiParams,
+  type SearchInfo,
+} from "./expr";
 import { fnState, writeExpr } from "./fn";
 import type { SchemaField, SearchAdminMetadata } from "./meta";
 
@@ -276,7 +282,19 @@ export function setEntitySetQuery(
   index: number,
   next: ApiParams,
 ): ApiParams {
-  const old = setsOf(params)[index]?.[3].select ?? [];
+  const set = setsOf(params)[index];
+  const before = set?.[3].select ?? [];
+  // Aggregates a changed grouping unwrapped still stand in their rows.
+  const regrouped = (set?.[3].groupBy ?? []).length !== (next.groupBy ?? []).length;
+  const filled = before.filter((col): col is string => col !== null);
+  const unwrapped = regrouped
+    ? reconcileAggregateColumns(meta, {
+        api_entity: set?.[1] ?? "",
+        api_params: { ...next, select: filled },
+      })
+    : filled;
+  let n = 0;
+  const old = before.map((col) => (col === null ? null : (unwrapped[n++] ?? col)));
   const select = realign(old, next.select);
   // The outer columns come from the first set, so it keeps no empty cell.
   const dropped =
