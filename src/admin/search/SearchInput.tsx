@@ -206,8 +206,7 @@ export function OptionSelect(props: SearchInputProps & { multiple: boolean; requ
   const { id, field, optionKey = "id", options, value, onChange, multiple, required } = props;
   const aria = ariaOf(props);
   const all = Array.isArray(field.options) ? field.options.filter(isOption) : options;
-  if (!all)
-    return <select id={id} {...aria} disabled aria-busy className="form-control loading" />;
+  if (!all) return <select id={id} {...aria} disabled aria-busy className="form-control loading" />;
   const attribute = (option: FieldOption): unknown =>
     Object.entries(option).find(([name]) => name === optionKey)?.[1];
   // An option without the keyed attribute has no value the field could hold.
