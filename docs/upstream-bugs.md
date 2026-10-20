@@ -1111,7 +1111,9 @@ field name (`searchAdminCssRules`, `searchAdminIcons`, `crmSearchConditions`
 `getField`), so for `gender_id:label AS g` they find
 no field and offer a plain text input instead of the options; a new style rule
 of such a column starts without a condition on it. afreact resolves
-the alias through the search's select first. `deviation:rule-condition-alias-field`
+the alias through the search's select first. Its condition then offers the
+operators core allows for that field, so a rule saved with another one, such as
+LIKE on an aliased date, takes the field's first operator when it is opened. `deviation:rule-condition-alias-field`
 
 **An aliased column cannot be coloured.** The colour option looks up the
 column's key as a field (`searchAdminColors` `getField`, `getColorField`), so
