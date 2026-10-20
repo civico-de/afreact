@@ -196,6 +196,135 @@ describe("ColumnTypeFields", () => {
     });
   });
 
+  describe("a field column's settings, as core's field.html saves them", () => {
+    const extra = (name: string, label: string, data_type: string, more: object = {}) => ({
+      name,
+      label,
+      data_type,
+      type: "Field",
+      entity: "Contact",
+      fieldName: name,
+      ...more,
+    });
+    const richer: DisplayContext = {
+      meta: {
+        ...meta,
+        schema: meta.schema.map((entity) =>
+          entity.name === "Contact"
+            ? {
+                ...entity,
+                fields: [
+                  ...entity.fields,
+                  extra("total", "Total", "Money"),
+                  extra("score", "Score", "Float"),
+                  extra("contact_type", "Contact Type", "String", {
+                    options: true,
+                    suffixes: ["name", "label", "icon"],
+                  }),
+                ],
+              }
+            : entity,
+        ),
+      },
+      search: {
+        api_entity: "Contact",
+        api_params: {
+          version: 4,
+          select: ["id", "display_name", "gender_id:label", "total", "score", "contact_type"],
+        },
+      },
+      defaultPagerSize: 50,
+      entityIndex: true,
+    };
+
+    it("turns into an HTML column without link, in-place edit and icons, and back", async () => {
+      renderColumn({
+        type: "field",
+        key: "display_name",
+        editable: true,
+        link: { path: "civicrm/x" },
+        icons: [{ field: "contact_type:icon", side: "left" }],
+      });
+      await userEvent.click(screen.getByRole("checkbox", { name: "Allow HTML" }));
+      expect(saved).toEqual({ type: "html", key: "display_name" });
+      await userEvent.click(screen.getByRole("checkbox", { name: "Allow HTML" }));
+      expect(saved).toEqual({ type: "field", key: "display_name" });
+    });
+
+    it("switches an option field between its formats by the key's suffix", async () => {
+      renderColumn({ type: "field", key: "gender_id:label" });
+      const format = screen.getByRole("combobox", { name: "Format" });
+      await userEvent.selectOptions(format, "Raw Value");
+      expect(saved?.key).toBe("gender_id");
+      await userEvent.selectOptions(format, "Machine Name");
+      expect(saved?.key).toBe("gender_id:name");
+    });
+
+    it("formats money as a number or as currency", async () => {
+      renderColumn({ type: "field", key: "total" }, richer);
+      const format = screen.getByRole("combobox", { name: "Format" });
+      await userEvent.selectOptions(format, "Number");
+      expect(saved?.format).toBe("number");
+      await userEvent.selectOptions(format, "Currency");
+      expect(saved?.format).toBe("");
+    });
+
+    it("keeps a decimal's number attributes, an emptied one as null", async () => {
+      renderColumn({ type: "field", key: "score" }, richer);
+      const places = screen.getByRole("spinbutton", { name: "Max Decimal Places" });
+      await userEvent.type(places, "2");
+      expect(saved?.format).toEqual({ 6: 2 });
+      await userEvent.clear(places);
+      expect(saved?.format).toEqual({ 6: null });
+    });
+
+    it("shows line breaks and edits in place, until it is a link", async () => {
+      renderColumn({ type: "field", key: "display_name" });
+      await userEvent.click(screen.getByRole("checkbox", { name: "Show Linebreaks" }));
+      expect(saved?.show_linebreaks).toBe(true);
+      const edit = screen.getByRole("checkbox", { name: "In-Place Edit" });
+      await userEvent.click(edit);
+      expect(saved?.editable).toBe(true);
+      await userEvent.click(edit);
+      expect(saved).not.toHaveProperty("editable");
+      await userEvent.click(edit);
+      await userEvent.click(screen.getByRole("checkbox", { name: "Link" }));
+      expect(saved).not.toHaveProperty("editable");
+      expect(screen.getByRole("checkbox", { name: "In-Place Edit" })).toBeDisabled();
+      expect(screen.queryByRole("checkbox", { name: "Show Linebreaks" })).toBeNull();
+      await userEvent.selectOptions(
+        screen.getByRole("combobox", { name: "Open link in" }),
+        "New tab",
+      );
+      expect(saved?.link?.target).toBe("_blank");
+    });
+
+    it("adds, moves and removes an icon of a field", async () => {
+      renderColumn({ type: "field", key: "display_name" }, richer);
+      await userEvent.selectOptions(
+        screen.getByRole("combobox", { name: "Icon" }),
+        "Contact - Contact Type",
+      );
+      expect(saved?.icons).toEqual([{ field: "contact_type:icon", side: "left" }]);
+      await userEvent.selectOptions(
+        screen.getByRole("combobox", { name: "Side of Icon 1" }),
+        "Align right",
+      );
+      expect(saved?.icons).toEqual([{ field: "contact_type:icon", side: "right" }]);
+      await userEvent.click(screen.getByRole("button", { name: "Remove icon" }));
+      expect(saved?.icons).toEqual([]);
+    });
+
+    it("shows an option field as a badge of its colour", async () => {
+      renderColumn({ type: "field", key: "gender_id:label" });
+      const color = screen.getByRole("checkbox", { name: "Use Gender color" });
+      await userEvent.click(color);
+      expect(saved?.colors).toEqual([{ field: "gender_id:color" }]);
+      await userEvent.click(color);
+      expect(saved).not.toHaveProperty("colors");
+    });
+  });
+
   describe("a field's link", () => {
     const joined: DisplayContext = {
       ...ctx,
@@ -291,6 +420,24 @@ describe("ColumnTypeFields", () => {
       await userEvent.click(screen.getByRole("button", { name: "Clear" }));
       expect(saved?.subsearch).toEqual({ display: null, filters: [], subsearch_mode: "dropdown" });
       expect(screen.queryByRole("columnheader", { name: "Filter Subsearch Display" })).toBeNull();
+    });
+
+    it("switches a filter between a value and a parent field, and embeds the chosen display", async () => {
+      mockApi({
+        "SavedSearch.get": () => [members],
+        "SearchDisplay.get": () => [{ name: "Members_table", label: "Members table" }],
+      });
+      renderColumn(column("Members"));
+      const kind = await screen.findByRole("combobox", { name: "Kind of Value of filter 1" });
+      await userEvent.selectOptions(kind, "Value");
+      expect(saved?.subsearch?.filters).toEqual([{ subsearch_field: "id", value: null }]);
+      await userEvent.selectOptions(kind, "Field");
+      expect(saved?.subsearch?.filters).toEqual([{ subsearch_field: "id", parent_field: null }]);
+      const display = screen.getByRole("combobox", { name: "Display" });
+      await userEvent.selectOptions(display, "Search results table");
+      expect(saved?.subsearch?.display).toBeNull();
+      await userEvent.selectOptions(display, "Members table");
+      expect(saved?.subsearch?.display).toBe("Members_table");
     });
 
     // deviation:subsearch-missing-search-kept
