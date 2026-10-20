@@ -190,7 +190,11 @@ type Joins = NonNullable<EntityItem["joins"]>;
 export function mergeJoins(current: Joins | undefined, loaded: Joins | undefined): Joins {
   const joins = { ...current };
   for (const [name, records] of Object.entries(loaded ?? {})) {
-    const merged = [...(current?.[name] ?? [])];
+    // Past the loaded records, a stored one belongs to another record; a typed one stays.
+    // deviation:loaded-joins-replace-stored
+    const merged = (current?.[name] ?? []).filter(
+      (record, index) => index < records.length || record?.id === undefined || record.id === null,
+    );
     for (const [index, record] of Object.entries(records)) {
       const before = merged[Number(index)];
       merged[Number(index)] = record === null ? null : { ...before, ...record };

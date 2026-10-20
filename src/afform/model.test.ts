@@ -11,6 +11,7 @@ import {
   fieldPlace,
   getValue,
   keepOffered,
+  mergeJoins,
   placementOptions,
   removeRepeatItem,
   repeatCount,
@@ -377,5 +378,22 @@ describe("extra fields", () => {
       { fields: { first_name: "A" }, joins: {} },
       { fields: {}, joins: {}, extras: { text1: "y" } },
     ]);
+  });
+});
+
+// deviation:loaded-joins-replace-stored
+describe("mergeJoins", () => {
+  it("drops the stored join records past the loaded ones, keeping the typed", () => {
+    const current = {
+      Email: [
+        { id: 1, email: "a1@example.org" },
+        { id: 2, email: "a2@example.org" },
+        { email: "new" },
+      ],
+    };
+    expect(mergeJoins(current, { Email: [{ id: 3, email: "b1@example.org" }] })).toEqual({
+      Email: [{ id: 3, email: "b1@example.org" }, { email: "new" }],
+    });
+    expect(mergeJoins(current, { Email: [] })).toEqual({ Email: [{ email: "new" }] });
   });
 });

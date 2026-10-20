@@ -398,6 +398,15 @@ as answers. `deviation:condition-is-empty-values`
 
 ## Joins and repeats
 
+**Selecting another record keeps the last one's join records.** An autofill
+field merges the selected record's joins into the form by position
+(`afForm.component.js` `loadData`, `angular.merge`). The prefill returns only
+the new record's join records (`AbstractProcessor::loadJoins`), so after
+contact A with two emails, picking contact B with one leaves A's second email,
+id included, and the submission saves it as B's. afreact keeps a join record
+past the loaded ones only when it has no id, as one typed into the form.
+`deviation:loaded-joins-replace-stored`
+
 **Repeat buttons without a name.** `afRepeat.html` gives the remove button
 only its icon, and the add button only the `af-repeat` value, which may be
 empty; `crm-icon` hides the icon from assistive technology, so screen readers
