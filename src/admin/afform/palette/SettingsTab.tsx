@@ -211,7 +211,9 @@ function ServerRoute({ required }: { required: boolean }) {
   const route = useDebounced(text(editor.afform.server_route), (value) => {
     editor.change((afform) => ({ ...afform, server_route: value }));
   });
-  const invalid = route.value !== "" && !new RegExp(ROUTE_PATTERN).test(route.value);
+  // As ngModel checks it: trimmed.
+  const typed = route.value.trim();
+  const invalid = typed !== "" && !new RegExp(ROUTE_PATTERN).test(typed);
   const title = useFieldTitle()("server_route");
   return (
     <div className={`form-group${invalid ? " has-error" : ""}`}>
@@ -637,7 +639,8 @@ function Redirect() {
   const redirect = useDebounced(text(editor.afform.redirect), (value) => {
     editor.change((afform) => ({ ...afform, redirect: value }));
   });
-  const invalid = redirect.value !== "" && !new RegExp(REDIRECT_PATTERN).test(redirect.value);
+  const typed = redirect.value.trim();
+  const invalid = typed !== "" && !new RegExp(REDIRECT_PATTERN).test(typed);
   return (
     <div className={`form-group${invalid ? " has-error" : ""}`}>
       <label htmlFor={id}>{title}</label>

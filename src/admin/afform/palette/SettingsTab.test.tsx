@@ -61,6 +61,31 @@ describe("SettingsTab", () => {
     expect(redirect.validity.patternMismatch).toBe(true);
   });
 
+  it("checks a post-submit page and a route by the trimmed text the form takes", async () => {
+    renderWithQuery(
+      <Harness
+        initial={{
+          type: "form",
+          title: "Probe",
+          layout: [],
+          submit_enabled: true,
+          confirmation_type: "redirect_to_url",
+        }}
+      />,
+    );
+    const redirect = screen.getByTitle(/^Post-Submit Page must be/);
+    await userEvent.type(redirect, " /thanks ");
+    await userEvent.tab();
+    expect(latest?.redirect).toBe("/thanks");
+    expect(redirect).not.toHaveAttribute("aria-invalid");
+    const route = screen.getByTitle('Path must begin with "civicrm/"');
+    await userEvent.click(route);
+    await userEvent.keyboard("probe ");
+    await userEvent.tab();
+    expect(latest?.server_route).toBe("civicrm/probe");
+    expect(route).not.toHaveAttribute("aria-invalid");
+  });
+
   // deviation:menu-item-title-label
   it("labels the menu item's title apart from the form's", () => {
     renderWithQuery(
