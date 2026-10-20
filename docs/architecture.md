@@ -109,7 +109,11 @@ while the entry keeps its fixed name and CiviCRM's cache code. Libraries
 shared with lazy chunks sit in a `vendor` chunk, because a lazy chunk that
 imported the entry would load it a second time and define the elements
 twice; the build fails if one does. The entry's static chunks are preloaded
-from the page head (`Civi\Afreact\Assets::load`).
+from the page head (`Civi\Afreact\Assets::load`). React, React DOM and the
+scheduler sit in one `react` chunk that both entries and the kit's entries
+under `dist/kit/` load; the build fails if React lands anywhere else or an
+entry does not reach that chunk, and if TanStack Query or the shared query
+client sits in more than one chunk or in an entry ([kit.md](kit.md)).
 
 No library covers the rest: Afform and SearchKit semantics (conditions,
 filters, tasks, placements) are where most of the code is.

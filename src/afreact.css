@@ -191,3 +191,8 @@ body.af-gui-dragging { cursor: grabbing; }
 #afGuiEditor .afreact-permission-row > select { width: auto; }
 /* Core dims the badges to 2:1 contrast. deviation:condition-badge-contrast */
 .afreact-dialog.af-gui-conditional-dialog .api4-clause-badge .badge { opacity: 1; }
+/* The kit's components (docs/kit.md). */
+.afreact-quantity { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; }
+.afreact-condition-group-op { display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; }
+.afreact-quantity .afreact-quantity-number { width: 6em; }
+.afreact-steps .afreact-step-error { font-weight: bold; }

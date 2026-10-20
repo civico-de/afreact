@@ -4,7 +4,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && tsc -p tsconfig.kit.json",
     "test": "tsc --noEmit && vitest run",
     "test:e2e": "playwright test",
     "video": "playwright test -c tests/browser/video.config.ts demo && ffmpeg -y -loglevel error -i video/angular.webm -i video/react.webm -filter_complex hstack=inputs=2 -c:v libx264 -pix_fmt yuv420p -movflags +faststart video/angular-vs-react.mp4",

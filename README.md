@@ -42,6 +42,7 @@ naming it. A setting the React editors cannot edit is saved back unchanged.
 | [docs/afform-markup.md](docs/afform-markup.md) | the Afform markup as a language: vocabulary, attribute types, the three layout formats, what core could change for a second renderer |
 | [docs/load-metrics.md](docs/load-metrics.md) | measured load times of both renderers and the layout sources |
 | [docs/testing.md](docs/testing.md) | every browser spec, the sweeps, the demo videos |
+| [docs/kit.md](docs/kit.md) | the kit: React, TanStack Query and afreact's components for other extensions' modules, through `afreact/` in core's import map |
 | [docs/builders.md](docs/builders.md) | the React builders: server contracts, takeover and fallback, Angular islands, plugin contract, round trip, testing, core versions |
 | [docs/adr/](docs/adr/) | decision records: why afreact is built the way it is |
 

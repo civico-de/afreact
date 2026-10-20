@@ -236,6 +236,9 @@ menu stays editable.
 Other extensions' builder plugins keep working in the classic builder until
 they adopt the contract; the support report lists them.
 
+A plugin written in React builds on afreact's own React and components
+through the kit ([kit.md](kit.md)) instead of bundling a second copy.
+
 ## Round trip
 
 A builder loads a record through core's calls, edits a copy and sends it
