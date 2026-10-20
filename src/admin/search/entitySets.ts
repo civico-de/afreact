@@ -144,13 +144,17 @@ export function removeEntitySet(params: ApiParams, index: number): ApiParams {
 
 const LOGIC = ["AND", "OR", "NOT"];
 
-/** Clauses with each field key passed through `rename`, inside AND, OR and NOT groups too. */
+/** Clauses with each field passed through `rename`: groups, and a value that is a field too. */
 function renameInClauses(clauses: unknown[][], rename: (key: string) => string): unknown[][] {
-  return clauses.map(([head, ...rest]) =>
-    typeof head === "string" && LOGIC.includes(head) && Array.isArray(rest[0])
-      ? [head, renameInClauses(rest[0].filter(Array.isArray), rename)]
-      : [typeof head === "string" ? rename(head) : head, ...rest],
-  );
+  return clauses.map((clause) => {
+    const [head, group] = clause;
+    if (typeof head === "string" && LOGIC.includes(head) && Array.isArray(group))
+      return [head, renameInClauses(group.filter(Array.isArray), rename)];
+    const next = [...clause];
+    if (typeof head === "string") next[0] = rename(head);
+    if (next[3] === true && typeof next[2] === "string") next[2] = rename(next[2]);
+    return next;
+  });
 }
 
 /**
@@ -174,11 +178,16 @@ export function setEntitySet(
       const was = parseExpr(meta, before, infoOf(old)).alias;
       const now = parseExpr(meta, expr, infoOf([old[0], old[1], old[2], inner])).alias;
       if (!was || !now || was === now) return;
+      outer = { ...outer, select: outer.select.map((col) => (col === was ? now : col)) };
+      // Conditions, grouping and sorting name the field without its suffix, or with one of theirs.
+      const [wasField = was, nowField = now] = [was.split(":")[0], now.split(":")[0]];
+      if (wasField === nowField) return;
       const rename = (key: string) =>
-        key === was || key.startsWith(`${was}:`) ? now + key.slice(was.length) : key;
+        key === wasField || key.startsWith(`${wasField}:`)
+          ? nowField + key.slice(wasField.length)
+          : key;
       outer = {
         ...outer,
-        select: outer.select.map(rename),
         ...(outer.where && { where: renameInClauses(outer.where, rename) }),
         ...(outer.having && { having: renameInClauses(outer.having, rename) }),
         ...(outer.groupBy && { groupBy: outer.groupBy.map(rename) }),

@@ -88,7 +88,7 @@ describe("entity sets", () => {
             "OR",
             [
               ["name:label", "IS NULL"],
-              ["id", ">", 1],
+              ["id", "=", "name", true],
             ],
           ],
         ],
@@ -107,13 +107,35 @@ describe("entity sets", () => {
           "OR",
           [
             ["title:label", "IS NULL"],
-            ["id", ">", 1],
+            ["id", "=", "title", true],
           ],
         ],
       ],
       having: [["title", "IS NOT NULL"]],
       groupBy: ["title"],
       orderBy: { title: "ASC", id: "DESC" },
+    });
+  });
+
+  it("renames the outer conditions by the field, whatever suffix the column changes to", () => {
+    const gender = (select: string): ApiParams => ({
+      version: 4,
+      select: [select],
+      where: [["gender_id", "=", 1]],
+      groupBy: ["gender_id"],
+      sets: [["UNION ALL", "Contact", "get", { select: [select] }]],
+    });
+    const labelled = setEntitySet(meta, gender("gender_id"), 0, { select: ["gender_id:label"] });
+    expect(labelled).toMatchObject({
+      select: ["gender_id:label"],
+      where: [["gender_id", "=", 1]],
+      groupBy: ["gender_id"],
+    });
+    const renamed = setEntitySet(meta, gender("gender_id:label"), 0, { select: ["display_name"] });
+    expect(renamed).toMatchObject({
+      select: ["display_name"],
+      where: [["display_name", "=", 1]],
+      groupBy: ["display_name"],
     });
   });
 
