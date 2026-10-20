@@ -7,6 +7,7 @@ import {
   addCssRule,
   changeLimit,
   getColumnIndex,
+  getFieldLabel,
   createSqlName,
   initAutocomplete,
   initBatch,
@@ -484,4 +485,12 @@ describe("subsearch filters on open", () => {
     initSubsearchFilters(draft);
     expect(draft.settings.columns?.[0]?.subsearch?.filters).toEqual([{ subsearch_field: "d" }]);
   });
+});
+
+// deviation:column-alias-before-field
+it("labels a column by the item its key aliases, not a field of the same name", () => {
+  const select = ["birth_date AS dob", "display_name AS birth_date"];
+  const swapped = { ...ctx, search: { ...ctx.search, api_params: { version: 4, select } } };
+  expect(getFieldLabel(swapped, "birth_date")).toBe("Display Name");
+  expect(getFieldLabel(swapped, "dob")).toBe("Birth Date");
 });

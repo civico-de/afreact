@@ -1098,6 +1098,12 @@ code, not run). The column is `int unsigned`. React marks a timeout that is
 negative or not whole invalid and refuses to save until it is fixed.
 `deviation:search-timeout-invalid-blocks-save`
 
+**A column takes the field of another item's source.** Core's
+`getExprFromSelect` returns the first select item whose alias or source field
+matches a column key. With `["birth_date AS dob", "display_name AS birth_date"]`
+the column `birth_date` is labelled and typed as Birth Date, although it shows
+the display name. afreact matches an alias first. `deviation:column-alias-before-field`
+
 **A data entry column with an alias loses its field.** The batch display editor
 looks up a column's key as a field name (`searchAdminDisplayBatch.component.js`
 `toggleTally`, `getField`), so for `id AS entry_id` it finds no field: the new

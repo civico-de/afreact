@@ -216,6 +216,7 @@ export function getExprFromSelect(search: SearchInfo, key: string): string | nul
   const fieldKey = key.split(":")[0];
   const select = search.api_params.select;
   // An alias names its column even where another item selects a field of that name.
+  // deviation:column-alias-before-field
   const match =
     select.find((expr) => expr.split(" AS ")[1] === fieldKey) ??
     select.find((expr) => expr.split(" AS ")[0]?.split(":")[0] === fieldKey);
