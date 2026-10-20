@@ -246,7 +246,9 @@ export function invalidDefaults(ctx: FieldContext, settings: unknown): string[] 
       value === "" ||
       (typeof value === "number" &&
         (kind === "integer" ? Number.isInteger(value) : Number.isFinite(value)));
-    return [col.default].flat().every(fits) ? [] : [col.label ?? col.key ?? ""];
+    // Typed as the input types it on render, so a stored "5" fits.
+    const typed = formatValue(field, undefined, undefined, col.default);
+    return [typed].flat().every(fits) ? [] : [col.label ?? col.key ?? ""];
   });
 }
 

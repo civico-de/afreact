@@ -119,6 +119,8 @@ describe("saving", () => {
     ]);
     expect(validate(meta, batch("abc", "minutes"), false)).toHaveLength(1);
     expect(validate(meta, batch(2, "minutes"), false)).toEqual([]);
+    expect(validate(meta, batch("5", "minutes"), false)).toEqual([]);
+    expect(validate(meta, batch(["5", 6], "minutes"), false)).toEqual([]);
     expect(validate(meta, batch(null, "minutes"), false)).toEqual([]);
     expect(validate(meta, batch("", "minutes"), false)).toEqual([]);
     expect(validate(meta, batch("x", "subject"), false)).toEqual([]);
