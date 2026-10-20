@@ -385,6 +385,25 @@ describe("blocks", () => {
     expect(email).toHaveClass("afform-directive");
     expect(email?.parentElement?.tagName).toBe("DIV");
   });
+
+  it("reports an expression in a block's title as the rendered block notes it", async () => {
+    const titled = form([
+      {
+        "#tag": "div",
+        "af-fieldset": "Individual1",
+        "#children": [
+          {
+            "#tag": "afblock-name-individual",
+            "af-title": "{{ foo.bar }}",
+            "#children": [field("first_name")],
+          },
+        ],
+      },
+    ]);
+    const report = layoutProblems(titled);
+    expect(report).toHaveLength(1);
+    expect(await shownFormNotes(titled)).toEqual(report);
+  });
 });
 
 describe("afFieldset bindings", () => {

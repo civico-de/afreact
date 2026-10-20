@@ -557,6 +557,7 @@ const KIND_PROBLEMS: Record<NodeKind, (node: ElementNode, scope: Scope) => strin
   field: fieldProblems,
   block: (node, scope) => [
     ...[unknownBlockAttributes(node)].filter((note) => note !== null),
+    ...elementProblems(node),
     ...childProblems(node, scope),
   ],
   form: (node, scope) => childProblems(node, { ...scope, form: true }),
