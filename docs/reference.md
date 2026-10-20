@@ -242,6 +242,9 @@ Development section): `civicrm/afreact/demo` renders its forms and tables with R
 `civicrm/afreact/angular` the same with the Angular runtime; both share one
 markup (`PagesHeadlessTest`). `civicrm/afreact/demo/join` and `…/demo/members`
 are a membership sign-up and a members page built from core parts only.
+`civicrm/afreact/kit` puts a module built on the kit (`js/kit-consumer.js`)
+beside an afreact form; `civicrm/afreact/kit-only` shows it without afreact's
+bundle, and `civicrm/afreact/kit-host` loads that page as a snippet.
 
 ## Layout
 
@@ -259,6 +262,7 @@ are a membership sign-up and a members page built from core parts only.
 | `src/search/` | SearchKit display renderer: columns, row menus, toolbar, totals, editing, tasks, pager, filters and URL keys |
 | `src/url/` | the URL hash as state for all elements of a page |
 | `src/admin/` | the React builders (`search/`, `afform/`) |
+| `src/kit/`, `Civi/Afreact/Kit.php`, `tsconfig.kit.json` | the kit other extensions import through `afreact/` ([kit.md](kit.md)) |
 | `src/compare/`, `src/support/` | load metrics the browser tests measure; support report |
 | `tests/browser/`, `tests/phpunit/` | browser tests; headless PHPUnit suite |
 | `scripts/` | type generator, inventory, core watch |

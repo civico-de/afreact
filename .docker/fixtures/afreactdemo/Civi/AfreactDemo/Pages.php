@@ -6,6 +6,7 @@ namespace Civi\AfreactDemo;
 
 use Civi\Afreact\Assets;
 use Civi\Afreact\Chrome;
+use Civi\Afreact\Kit;
 
 /**
  * Route callbacks for the demo pages.
@@ -52,6 +53,38 @@ final class Pages {
       '<afsearch-afreact-demo-contacts></afsearch-afreact-demo-contacts>',
     );
     return Chrome::page('<crm-angular-js modules="' . implode(' ', self::FORMS) . '">' . $demo . '</crm-angular-js>');
+  }
+
+  /**
+   * Route civicrm/afreact/kit: another extension's module built on the kit, beside an afreact form.
+   */
+  public static function kit(): string {
+    \CRM_Utils_System::setTitle('Afreact kit consumer');
+    Assets::load();
+    Kit::load();
+    \Civi::resources()->addModuleFile('afreactdemo', 'js/kit-consumer.js');
+    return Chrome::page(
+      '<div id="bootstrap-theme" class="afreact-kit-demo">'
+      . '<section aria-labelledby="afreact-kit-form"><h2 id="afreact-kit-form">Contact form</h2>'
+      . '<afreact-form name="afformAfreactDemoContact" source="api"></afreact-form></section>'
+      . '<section id="afreact-kit-consumer" aria-labelledby="afreact-kit-consumer-title"><afreactdemo-segment></afreactdemo-segment></section>'
+      . '</div>',
+    );
+  }
+
+  /**
+   * Route civicrm/afreact/kit-host: a page that loads the kit's consumer module and then
+   * civicrm/afreact/kit-only as a snippet, as a tab or a popup brings one.
+   */
+  public static function kitHost(): string {
+    \CRM_Utils_System::setTitle('Afreact kit host');
+    Kit::load();
+    \Civi::resources()
+      ->addModuleFile('afreactdemo', 'js/kit-consumer.js')
+      ->addScript(
+        "CRM.\$(() => CRM.loadPage(CRM.url('civicrm/afreact/kit-only', {reset: 1}), {target: '#afreact-kit-host'}));",
+      );
+    return Chrome::page('<div id="afreact-kit-host"></div>');
   }
 
   private static function demo(string $renderer, string $form, string $search): string {

@@ -12,4 +12,22 @@
     <title>Afreact demo (Angular)</title>
     <access_arguments>access CiviCRM</access_arguments>
   </item>
+  <item>
+    <path>civicrm/afreact/kit</path>
+    <page_callback>Civi\AfreactDemo\Pages::kit</page_callback>
+    <title>Afreact kit consumer</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+  <item>
+    <path>civicrm/afreact/kit-only</path>
+    <page_callback>Civi\AfreactDemo\Page\KitOnly</page_callback>
+    <title>Afreact kit only</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+  <item>
+    <path>civicrm/afreact/kit-host</path>
+    <page_callback>Civi\AfreactDemo\Pages::kitHost</page_callback>
+    <title>Afreact kit host</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
 </menu>
