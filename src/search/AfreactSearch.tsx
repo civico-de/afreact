@@ -200,7 +200,9 @@ function ResultDisplay({
   const paged = type !== "tree" && !!settings?.pager;
   const exposedLimit = settings?.pager ? settings.pager.expose_limit : false;
   const limit = (exposedLimit ? url.limit : undefined) ?? settings?.limit ?? 0;
-  const page = filtersChanged || !paged ? 1 : (url.page ?? 1);
+  const linkedPage = filtersChanged || !paged ? 1 : (url.page ?? 1);
+  // Without a page size the server returns every row on one page.
+  const page = limit ? linkedPage : 1;
   const runSearch = inline?.search ?? search;
   const runDisplay = inline?.display ?? display;
   const params = {
@@ -328,16 +330,15 @@ function ResultDisplay({
   const rowCount = rows.error ? null : (counted.data ?? null);
   // deviation:page-past-end-clamped
   // A page past the last one, after rows left the result or from an old link, moves to the last.
-  // Without a page size the server returns every row on one page.
   const lastPage = !limit
     ? 1
     : rowCount !== null && !counted.isFetching
       ? Math.max(1, Math.ceil(rowCount / limit))
       : null;
   useEffect(() => {
-    if (lastPage !== null && page > lastPage)
+    if (lastPage !== null && linkedPage > lastPage)
       void setUrl({ page: lastPage === 1 ? null : lastPage });
-  }, [lastPage, page, setUrl]);
+  }, [lastPage, linkedPage, setUrl]);
   const tasks = useTasks({
     search: runSearch,
     display: runDisplay,

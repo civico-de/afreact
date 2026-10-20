@@ -423,13 +423,14 @@ describe("AfreactSearch", () => {
 
   it("shows the one page of a pager without a page size, also from a link to a later one", async () => {
     const store = memoryStore("#?_page=3");
-    runs(2);
+    const calls = runs(2);
     renderWithQuery(
       <AfreactSearch search="S" display="D" settings={{ ...settings, limit: 0 }} />,
       store,
     );
     expect(await currentPage()).toHaveTextContent("1");
     expect(store.params().get("_page")).toBeNull();
+    expect(calls.map(({ params }) => params.return)).not.toContain("page:3");
   });
 
   it("keeps the page of a link while the display's settings load", async () => {
