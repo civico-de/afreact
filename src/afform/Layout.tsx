@@ -931,6 +931,7 @@ function fieldEnv(
           form.autofillRuns.set(key, run);
           const selection = await loadSelected(form.formName, scope, name, id, form.entities);
           const land = () => {
+            run.landed = undefined;
             // What the last selection filled as it stands now, moved with any item removed since.
             const previous = form.autofilled.get(key) ?? {};
             form.autofilled.set(key, selection.filled ?? previous);

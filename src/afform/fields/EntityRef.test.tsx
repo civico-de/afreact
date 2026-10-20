@@ -880,6 +880,13 @@ describe("EntityRef", () => {
       await waitFor(() => {
         expect(screen.getAllByRole("textbox", { name: "First" })[1]).toHaveValue("Ada");
       });
+      // A landed answer stays landed through a later remove and Undo.
+      const first = screen.getAllByRole("textbox", { name: "First" })[1];
+      if (!first) throw new Error("no second item");
+      await userEvent.type(first, "lheid");
+      await userEvent.click(screen.getByRole("button", { name: /^Remove item 2/ }));
+      await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+      expect(screen.getAllByRole("textbox", { name: "First" })[1]).toHaveValue("Adalheid");
     },
   );
 
