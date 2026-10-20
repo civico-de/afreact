@@ -118,3 +118,22 @@ test("lists and filters its options at once, with no search wait as a server sea
     vi.useRealTimers();
   }
 });
+
+test("marks the combobox invalid and points at the error only when asked", async () => {
+  const props = {
+    id: "pick",
+    label: "Field",
+    placeholder: "Select",
+    single: true as const,
+    options,
+    value: [],
+    onChange: vi.fn<(value: (string | number)[]) => void>(),
+  };
+  const { rerender } = render(<Picker {...props} />);
+  const input = await screen.findByRole("combobox", { name: "Field" });
+  expect(input).not.toHaveAttribute("aria-invalid");
+  expect(input).not.toHaveAttribute("aria-describedby");
+  rerender(<Picker {...props} invalid describedBy="err" />);
+  expect(input).toHaveAttribute("aria-invalid", "true");
+  expect(input).toHaveAttribute("aria-describedby", "err");
+});

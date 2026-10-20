@@ -30,11 +30,16 @@ interface SearchConditionProps {
   /** Fields the value may name instead of a value; without them only values. */
   fields?: PickerOption[];
   onChange: (clause: unknown[]) => void;
+  /** Marks the operator and the value inputs as invalid (`aria-invalid`). */
+  invalid?: boolean;
+  /** The id of the text that describes those inputs, such as their error. */
+  describedBy?: string;
 }
 
 /** crmSearchCondition: the operator, the value-or-field toggle and the value of one clause. */
 export function SearchCondition(props: SearchConditionProps) {
   const { label, field, clause, offset, operators, format, fields, onChange } = props;
+  const { invalid, describedBy } = props;
   const id = useId();
   const allowed = allowedOperators(field, operators);
   const allowedKey = allowed.map((o) => o.key).join();
@@ -60,6 +65,8 @@ export function SearchCondition(props: SearchConditionProps) {
         <select
           className="form-control api4-operator crm-auto-width"
           aria-label={ts("Operator for %1", { 1: label })}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
           value={op}
           onChange={(event) => {
             onChange(withOperator(clause, offset, event.target.value));
@@ -105,6 +112,8 @@ export function SearchCondition(props: SearchConditionProps) {
             options={props.options}
             value={value}
             onChange={setValue}
+            invalid={invalid}
+            describedBy={describedBy}
           />
         </>
       )}
@@ -119,6 +128,8 @@ export function SearchCondition(props: SearchConditionProps) {
             label={ts("Field")}
             placeholder={ts("Field")}
             options={fields}
+            invalid={invalid}
+            describedBy={describedBy}
             single
             value={typeof value === "string" && value ? [value] : []}
             onChange={(picked) => {

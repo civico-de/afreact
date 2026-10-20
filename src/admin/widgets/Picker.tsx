@@ -33,6 +33,10 @@ interface PickerBase {
   /** Takes the focus and shows the list on mount, for a picker that opens in a menu. */
   openOnMount?: boolean;
   disabled?: boolean;
+  /** Marks the input as invalid (`aria-invalid`). */
+  invalid?: boolean;
+  /** The id of the text that describes the input, such as its error (`aria-describedby`). */
+  describedBy?: string;
 }
 
 /** One value: choosing replaces it. */
@@ -72,6 +76,8 @@ export function Picker(props: PickerProps) {
     clearable = false,
     openOnMount = false,
     disabled = false,
+    invalid,
+    describedBy,
   } = props;
   const single = props.single === true;
   const byId = new Map(options.map((option) => [String(option.id), option]));
@@ -89,13 +95,23 @@ export function Picker(props: PickerProps) {
         </>
       )}
       <Suspense
-        fallback={<input id={id} className="form-control" disabled placeholder={placeholder} />}
+        fallback={
+          <input
+            id={id}
+            className="form-control"
+            disabled
+            placeholder={placeholder}
+            aria-invalid={invalid}
+            aria-describedby={describedBy}
+          />
+        }
       >
         <Combobox
           id={id}
           label={label}
           placeholder={placeholder}
-          describedBy={undefined}
+          describedBy={describedBy}
+          invalid={invalid}
           className={className}
           disabled={disabled}
           required={false}

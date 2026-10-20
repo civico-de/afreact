@@ -22,7 +22,9 @@ import {
   type ConditionField,
   type DateType,
 } from "./condition";
+import { useDateRanges } from "./dateRanges";
 import type { FieldOption } from "./meta";
+import { selectPlaceholder } from "../../selectPlaceholder";
 
 const Combobox = lazy(async () => ({
   default: (await import("../../afform/fields/Combobox")).Combobox,
@@ -39,7 +41,17 @@ export interface SearchInputProps {
   options?: FieldOption[];
   value: unknown;
   onChange: (value: unknown) => void;
+  /** Marks the focusable input as invalid (`aria-invalid`). */
+  invalid?: boolean;
+  /** The id of the text that describes the input, such as its error (`aria-describedby`). */
+  describedBy?: string;
 }
+
+/** The ARIA state a caller sets on the focusable input. */
+const ariaOf = ({ invalid, describedBy }: SearchInputProps) => ({
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
+});
 
 const text = (value: unknown) =>
   typeof value === "string" || typeof value === "number" || typeof value === "boolean"
@@ -84,7 +96,7 @@ function InputVal(props: SearchInputProps) {
   const { id, field, op, value, onChange } = props;
   const multiple = isMulti(field, op);
   const required = !field.nullable || !!field.required;
-  const common = { id, required, "aria-invalid": undefined, "aria-describedby": undefined };
+  const common = { id, required, ...ariaOf(props) };
   const kind = inputKind(field, op);
   if (
     multiple &&
@@ -115,13 +127,14 @@ function InputVal(props: SearchInputProps) {
       return (
         <select
           id={id}
+          {...ariaOf(props)}
           className="form-control"
           value={value === true ? "1" : value === false ? "0" : ""}
           onChange={(event) => {
             onChange(event.target.value === "" ? null : event.target.value === "1");
           }}
         >
-          <option value="">{ts("Select")}</option>
+          <option value="">{selectPlaceholder()}</option>
           <option value="1">{ts("Yes")}</option>
           <option value="0">{ts("No")}</option>
         </select>
@@ -130,6 +143,7 @@ function InputVal(props: SearchInputProps) {
       return (
         <input
           id={id}
+          {...ariaOf(props)}
           type="color"
           value={text(value) || "#000000"}
           onChange={(event) => {
@@ -188,18 +202,12 @@ const isOption = (value: unknown): value is FieldOption =>
   typeof value === "object" && value !== null && "id" in value && "label" in value;
 
 /** select.html: the field's options by `optionKey`, one or several. */
-export function OptionSelect({
-  id,
-  field,
-  optionKey = "id",
-  options,
-  value,
-  onChange,
-  multiple,
-  required,
-}: SearchInputProps & { multiple: boolean; required: boolean }) {
+export function OptionSelect(props: SearchInputProps & { multiple: boolean; required: boolean }) {
+  const { id, field, optionKey = "id", options, value, onChange, multiple, required } = props;
+  const aria = ariaOf(props);
   const all = Array.isArray(field.options) ? field.options.filter(isOption) : options;
-  if (!all) return <select id={id} disabled aria-busy className="form-control loading" />;
+  if (!all)
+    return <select id={id} {...aria} disabled aria-busy className="form-control loading" />;
   const attribute = (option: FieldOption): unknown =>
     Object.entries(option).find(([name]) => name === optionKey)?.[1];
   // An option without the keyed attribute has no value the field could hold.
@@ -236,6 +244,7 @@ export function OptionSelect({
     return (
       <select
         id={id}
+        {...aria}
         multiple
         className="form-control"
         value={picked.map(text)}
@@ -249,6 +258,7 @@ export function OptionSelect({
   return (
     <select
       id={id}
+      {...aria}
       className="form-control"
       required={required}
       value={text(value)}
@@ -256,7 +266,7 @@ export function OptionSelect({
         onChange(event.target.value === "" ? null : byText(event.target.value));
       }}
     >
-      <option value="">{field.nullable ? ts("None") : ts("Select")}</option>
+      <option value="">{field.nullable ? ts("None") : selectPlaceholder()}</option>
       {choices}
     </select>
   );
@@ -286,6 +296,8 @@ export function EntityRef({
   required,
   params: given,
   statics,
+  invalid,
+  describedBy,
 }: SearchInputProps & {
   multiple: boolean;
   required: boolean;
@@ -315,12 +327,23 @@ export function EntityRef({
   };
   return (
     <span className="afreact-entityref">
-      <Suspense fallback={<input id={id} className="form-control loading" disabled />}>
+      <Suspense
+        fallback={
+          <input
+            id={id}
+            aria-invalid={invalid}
+            aria-describedby={describedBy}
+            className="form-control loading"
+            disabled
+          />
+        }
+      >
         <Combobox
           id={id}
           label={undefined}
-          placeholder={ts("Select")}
-          describedBy={undefined}
+          placeholder={selectPlaceholder()}
+          describedBy={describedBy}
+          invalid={invalid}
           className={undefined}
           disabled={false}
           required={required}
@@ -382,14 +405,10 @@ const DATE_TYPES: DateType[] = ["fixed", "range", "now", "now -", "now +"];
 const isDateType = (value: string): value is DateType => DATE_TYPES.some((type) => type === value);
 
 /** date.html: a fixed date, a named range or a time relative to now. */
-function DateInput({
-  id,
-  field,
-  value,
-  onChange,
-  required,
-}: SearchInputProps & { required: boolean }) {
-  const ranges = adminVars().searchTasks?.dateRanges ?? [];
+function DateInput(props: SearchInputProps & { required: boolean }) {
+  const { id, field, value, onChange, required } = props;
+  const aria = ariaOf(props);
+  const ranges = useDateRanges();
   const type = dateTypeOf(value, ranges);
   const timestamp = field.data_type === "Timestamp";
   const current = text(value);
@@ -401,6 +420,7 @@ function DateInput({
     <span className="form-group afreact-date-input">
       <select
         id={id}
+        {...aria}
         className="form-control"
         value={type}
         onChange={(event) => {
@@ -419,6 +439,7 @@ function DateInput({
         <input
           className="form-control"
           aria-labelledby={id}
+          {...aria}
           type={timestamp ? "datetime-local" : "date"}
           required={required}
           value={timestamp ? toLocalDateTime(current) : current.slice(0, 10)}
@@ -432,6 +453,7 @@ function DateInput({
         <select
           className="form-control"
           aria-labelledby={id}
+          {...aria}
           value={current}
           onChange={(event) => {
             onChange(event.target.value);
@@ -449,6 +471,7 @@ function DateInput({
           <input
             className="form-control four"
             aria-labelledby={id}
+            {...aria}
             type="number"
             min={1}
             step={1}
@@ -473,6 +496,7 @@ function DateInput({
           <select
             className="form-control eight"
             aria-labelledby={id}
+            {...aria}
             value={relative.unit}
             onChange={(event) => {
               onChange(relativeValue(current, relative.number, event.target.value));
@@ -504,7 +528,8 @@ const isLocation = (value: unknown): value is LocationValue =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 /** location.html: a distance from an address, geocoded on leaving the address input. */
-function LocationInput({ id, value, onChange }: SearchInputProps) {
+function LocationInput(props: SearchInputProps) {
+  const { id, value, onChange } = props;
   const unit = adminVars().searchAdmin?.defaultDistanceUnit ?? "km";
   const location: LocationValue = isLocation(value) ? value : { distance_unit: unit };
   const [address, setAddress] = useState(location.address ?? "");
@@ -530,6 +555,7 @@ function LocationInput({ id, value, onChange }: SearchInputProps) {
     <span className="form-group afreact-location-input" role="group" aria-labelledby={id}>
       <input
         id={id}
+        {...ariaOf(props)}
         className="form-control"
         type="number"
         aria-label={ts("Distance")}
@@ -553,6 +579,7 @@ function LocationInput({ id, value, onChange }: SearchInputProps) {
       <input
         className="form-control"
         aria-label={ts("Address")}
+        {...ariaOf(props)}
         placeholder={ts("Street, City, State, Country")}
         value={address}
         onChange={(event) => {
