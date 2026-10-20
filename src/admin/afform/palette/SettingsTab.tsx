@@ -39,8 +39,13 @@ const list = (value: unknown): string[] =>
 
 const numberOrNull = (value: string) => (value === "" ? null : Number(value));
 
+// A limit hand-written into a form file may be a numeric string.
 const validLimit = (value: unknown) =>
-  value === null || value === undefined || (Number.isInteger(value) && Number(value) >= 1);
+  value === null ||
+  value === undefined ||
+  ((typeof value === "number" || (typeof value === "string" && value.trim() !== "")) &&
+    Number.isInteger(Number(value)) &&
+    Number(value) >= 1);
 
 /**
  * Settings a save must not send: a submission limit below 1 or not whole.

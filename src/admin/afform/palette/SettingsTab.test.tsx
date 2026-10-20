@@ -223,6 +223,14 @@ describe("SettingsTab", () => {
     expect(latest && settingsProblems(latest)).toEqual([]);
   });
 
+  it("takes a submission limit a form file holds as a numeric string", () => {
+    const stored: AfformDefinition = { type: "form", title: "Probe", layout: [] };
+    Reflect.set(stored, "submit_limit", "5");
+    expect(settingsProblems(stored)).toEqual([]);
+    Reflect.set(stored, "submit_limit", "0");
+    expect(settingsProblems(stored)).toHaveLength(1);
+  });
+
   it("warns of placement filters stored as a list and replaces them once a filter is chosen", async () => {
     renderWithQuery(
       <Harness
