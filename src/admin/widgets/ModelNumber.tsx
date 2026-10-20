@@ -7,7 +7,8 @@ type Attributes = Pick<
 
 /**
  * A number input bound as core's `type="number"` ngModel binds one: emptied is null, a number
- * below `min` or off a whole `step` from it is undefined, and the typed text stays on show.
+ * below `min` or off a whole `step` from it is undefined, and the typed text stays on show, also
+ * once the input is left.
  */
 export function ModelNumber({
   value,
@@ -21,7 +22,8 @@ export function ModelNumber({
   min?: number;
   step?: number;
 }) {
-  const [draft, setDraft] = useState<string | null>(null);
+  // The typed text, on show while the value is the one it made.
+  const [draft, setDraft] = useState<{ text: string; at: number | null | undefined } | null>(null);
   const valid = (number: number) =>
     Number.isFinite(number) &&
     (min === undefined || number >= min) &&
@@ -32,15 +34,17 @@ export function ModelNumber({
       type="number"
       min={min}
       step={step}
-      value={draft ?? value ?? ""}
+      value={draft && (draft.at ?? null) === (value ?? null) ? draft.text : (value ?? "")}
       onChange={(event) => {
         const { value: text, valueAsNumber, validity } = event.target;
-        setDraft(text);
-        if (text === "" && !validity.badInput) onChange(null);
-        else onChange(valid(valueAsNumber) ? valueAsNumber : undefined);
-      }}
-      onBlur={() => {
-        setDraft(null);
+        const next =
+          text === "" && !validity.badInput
+            ? null
+            : valid(valueAsNumber)
+              ? valueAsNumber
+              : undefined;
+        setDraft({ text, at: next });
+        onChange(next);
       }}
     />
   );

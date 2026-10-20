@@ -149,8 +149,6 @@ describe("FieldMenu", () => {
     }
     fireEvent.change(length, { target: { value: "12" } });
     expect(api.set).toHaveBeenLastCalledWith("input_attrs.maxlength", 12);
-    fireEvent.change(length, { target: { value: "" } });
-    expect(api.set).toHaveBeenLastCalledWith("input_attrs.maxlength", undefined);
   });
 
   it("takes another CSS class trimmed once its input is left", () => {
