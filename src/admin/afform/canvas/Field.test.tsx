@@ -195,6 +195,18 @@ describe("FieldElement", () => {
   });
 
   describe("a field's options", () => {
+    it("keeps a saved default's controls when the value is emptied to pick a date", async () => {
+      render(
+        <Canvas
+          field={{ "#tag": "af-field", name: "receive_date", defn: "{afform_default: 'now'}" }}
+        />,
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Configure" }));
+      await userEvent.selectOptions(screen.getByLabelText("Default date"), "Pick Date");
+      expect(savedDefn()).toBeUndefined();
+      expect(screen.getByLabelText("Default date")).toHaveValue("fixed");
+    });
+
     it("gives a yes/no field a default of yes at once", async () => {
       render(<Canvas field={{ "#tag": "af-field", name: "is_test" }} />);
       await userEvent.click(screen.getByRole("button", { name: "Configure" }));

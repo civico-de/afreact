@@ -123,9 +123,16 @@ function useFieldApi(
 ): FieldApi & { editingOptions: boolean; closeOptions: () => void } {
   const owner = textAttribute(ops.node, "name") ?? "";
   const fieldId = useId();
-  const [pendingDefault, setPendingDefault] = useFlag(owner);
   const [editingOptions, setEditingOptions] = useFlag(owner);
-  const hasDefault = !!getValue(state, "afform_default") || pendingDefault;
+  // As afGuiField's hasDefaultValue: read from the field once, then on until switched off,
+  // so emptying the default keeps its input.
+  const stored = getValue(state, "afform_default") !== "";
+  const [shown, setShown] = useState({ owner, on: stored });
+  if (shown.owner !== owner) setShown({ owner, on: stored });
+  const hasDefault = shown.owner === owner ? shown.on : stored;
+  const setPendingDefault = (on: boolean) => {
+    setShown({ owner, on });
+  };
   const update = (change: (state: FieldState) => FieldState) => {
     ops.edit((node) => {
       const local = localDefn(node);
