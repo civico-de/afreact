@@ -118,6 +118,10 @@ describe("tokenValues and refersToItself", () => {
     expect(refersToItself("[Individual1.0.email]", { ...scope, join: "Email" }, "email")).toBe(
       false,
     );
+    // A token reads the item's fields; an extra field of the same name keeps its value in `extras`.
+    expect(
+      refersToItself("[Individual1.0.first_name]", { ...scope, extras: true }, "first_name"),
+    ).toBe(false);
   });
 });
 

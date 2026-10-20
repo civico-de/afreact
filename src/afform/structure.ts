@@ -78,7 +78,9 @@ export function tokenValues(value: string, data: FormData): string[] {
 
 /** Whether a token default refers to the field it fills, which would recalculate without end. */
 export function refersToItself(value: string, scope: Scope, field: string): boolean {
-  return scope.join === undefined && value.includes(`[${scope.entity}.${scope.index}.${field}]`);
+  // A token reads an item's fields, never the extra fields it keeps in `extras`.
+  if (scope.join !== undefined || scope.extras) return false;
+  return value.includes(`[${scope.entity}.${scope.index}.${field}]`);
 }
 
 /** A default without tokens; afField calculates token defaults live, see FieldNode. */

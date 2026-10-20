@@ -430,8 +430,11 @@ its records, also on `master`: a join record holds only the join entity's
 fields, so the submission has no place for a value per record, and the React
 renderer shares this. For a fieldset's items it keeps `extras` on every
 version; the stored submission keeps them per item on 6.19.1, and 6.19 and
-6.20 hand them to submit subscribers (read from the code, not run).
-`deviation:repeat-extra-fields-per-item`
+6.20 hand them to submit subscribers (read from the code, not run). For an
+extra chain select, afField asks `Afform.getOptions` under the fieldset's
+entity, so a field of that entity with the same name answers; the React
+renderer asks under `extra`, as both renderers name it for an autocomplete
+(read from the code, not run). `deviation:repeat-extra-fields-per-item`
 
 **A repeat shows more items at first than its maximum.** `afRepeat` adds items
 up to `af-repeat-default` (or `min`) without looking at `max`, so a block set to

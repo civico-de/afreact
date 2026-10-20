@@ -204,7 +204,8 @@ function entityItemAt(data: FormData, scope: Scope): EntityItem | undefined {
   return data[scope.entity]?.[scope.index];
 }
 
-function recordAt(data: FormData, scope: Scope): Values | null | undefined {
+/** The record a scope's values live in: an item's fields, extras or join record. */
+export function recordAt(data: FormData, scope: Scope): Values | null | undefined {
   const entityItem = entityItemAt(data, scope);
   if (scope.extras) return entityItem?.extras;
   return scope.join === undefined

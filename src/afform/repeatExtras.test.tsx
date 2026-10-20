@@ -45,6 +45,7 @@ function renderPeople(hash: string, prefill: () => unknown = () => [], person = 
     ],
     "Afform.prefill": prefill,
     "Afform.submit": () => [{}],
+    "Afform.getOptions": () => [{ id: 5, label: "Bavaria" }],
   });
   renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash }} />);
   return calls;
@@ -106,5 +107,42 @@ describe("extra fields in a repeated fieldset", () => {
     expect(people).toMatchObject({
       Individual1: [{ extras: { note: "Linked" } }, { extras: { note: "Linked!" } }],
     });
+  });
+
+  it("ask for an extra chain select's options as extra fields, with the item's extras", async () => {
+    const region: LayoutNode = {
+      "#tag": "af-field",
+      defn: {
+        name: "region",
+        label: "Region",
+        input_type: "ChainSelect",
+        data_type: "Integer",
+        input_attrs: { control_field: "country" },
+      },
+    };
+    const calls = renderPeople("#?country=Germany&first_name=Ann", () => [], [
+      ...PERSON,
+      extra("country", "Country"),
+      region,
+    ]);
+    await screen.findByRole("option", { name: "Bavaria" });
+    expect(calls.find(({ call }) => call === "Afform.getOptions")?.params).toEqual({
+      name: "afformTest",
+      modelName: "extra",
+      fieldName: "region",
+      joinEntity: null,
+      values: { country: "Germany" },
+    });
+  });
+
+  it("calculate a token default from the item's entity field of the same name", async () => {
+    const copy: LayoutNode = {
+      "#tag": "af-field",
+      defn: { ...defn("first_name", "Copy"), afform_default: "[Individual1.0.first_name]" },
+    };
+    renderPeople("", () => [], [PERSON[0]!, copy]);
+    await userEvent.type(await screen.findByRole("textbox", { name: "First" }), "Ann");
+    expect(screen.getByRole("textbox", { name: "Copy" })).toHaveValue("Ann");
+    expect(screen.queryByText(/refers to its own field/)).toBeNull();
   });
 });

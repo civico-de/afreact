@@ -22,10 +22,13 @@ import {
   copyRepeatItem,
   deleteValue,
   ensurePrimary,
+  EXTRA_SCOPE,
   fieldPlace,
   findElements,
   getValue,
+  isExtraScope,
   keepOffered,
+  recordAt,
   removeRepeatItem,
   repeatCount,
   setPrimary,
@@ -865,18 +868,15 @@ function fieldEnv(
   autofill: string | undefined,
   itemPath: string,
 ): FieldEnv {
-  const entityItem = form.data[scope.entity]?.[scope.index];
-  const values =
-    scope.join === undefined
-      ? entityItem?.fields
-      : entityItem?.joins?.[scope.join]?.[scope.joinIndex ?? 0];
+  // The server names an extra field "extra:<name>", also when its item keeps the value.
+  const modelName = isExtraScope(scope) ? EXTRA_SCOPE.entity : scope.entity;
   return {
     formName: form.formName,
-    modelName: scope.entity,
+    modelName,
     joinEntity: scope.join,
     fieldName: name,
-    values: values ?? {},
-    entityData: form.entities[scope.entity]?.data,
+    values: recordAt(form.data, scope) ?? {},
+    entityData: form.entities[modelName]?.data,
     entityIndex: scope.index,
     joinIndex: scope.join === undefined ? undefined : (scope.joinIndex ?? 0),
     onSelect: autofill
