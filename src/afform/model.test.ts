@@ -344,13 +344,22 @@ describe("extra fields", () => {
       { fields: { text1: "y" }, joins: {} },
     ]);
     expect(applyPrefill(emptyData([]), [{ name: "extra", values: [] }], {})).toEqual({});
+    const processed: PrefillItem[] = [
+      { name: "extra", values: { fields: { text1: "y", joins: [] } } },
+    ];
+    expect(applyPrefill(emptyData([]), processed, {}).extra).toEqual([
+      { fields: { text1: "y" }, joins: {} },
+    ]);
   });
 
   it("ignore the definitions Prefill returns for what stored data lacks", () => {
     // Prefill::populateSubmissionData() keeps FormDataModel's entry for a missing entity.
     const prefill: PrefillItem[] = [
       { name: "extra", values: { type: null, fields: { text1: { defn: { name: "text1" } } } } },
-      { name: "Activity1", values: { type: "Activity", security: "RBAC", actions: {}, min: 1 } },
+      {
+        name: "Activity1",
+        values: { type: "Activity", name: "Activity1", fields: {}, joins: {}, security: "RBAC" },
+      },
     ];
     expect(applyPrefill(emptyData(["Activity1"]), prefill, {})).toEqual({ Activity1: [] });
   });

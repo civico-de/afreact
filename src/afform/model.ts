@@ -168,7 +168,11 @@ export function applyPrefill(
     // Data stored without `extra` comes back as FormDataModel's definition, `{type, fields}`.
     if (name === EXTRA_SCOPE.entity) {
       const fields: unknown = Array.isArray(values) || "type" in values ? undefined : values.fields;
-      if (isRecord(fields)) next.extra = [{ fields: { ...fields }, joins: {} }];
+      if (!isRecord(fields)) continue;
+      // A processed submission's data adds `joins: []` among them (combineValuesAndIds()).
+      const { joins, ...rest } = fields;
+      const kept = Array.isArray(joins) && !joins.length ? rest : fields;
+      next.extra = [{ fields: { ...kept }, joins: {} }];
       continue;
     }
     const items = (next[name] ??= []);
