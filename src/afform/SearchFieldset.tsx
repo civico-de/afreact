@@ -45,7 +45,8 @@ import {
 } from "./support";
 import { TabCount, useTab } from "./Tabs";
 import { TAB_COUNT } from "./tabsets";
-import type { ElementNode, LayoutNode } from "./types";
+import { checkConditions, parseConditions } from "./conditions";
+import type { ElementNode, FormData, LayoutNode } from "./types";
 import { isElement, isFieldDefn } from "./types";
 import { FieldEnvContext } from "./fields/env";
 import { RANGE_TYPES } from "./fields/SearchRange";
@@ -82,14 +83,25 @@ export function useSearchFieldset(): FieldsetContextValue | null {
   return useContext(SearchFieldsetContext);
 }
 
-/** The af-fields of a fieldset, without those of fieldsets nested in it. */
-export function filterFields(nodes: LayoutNode[]): FilterField[] {
+/** The af-fields of a fieldset, without those of fieldsets nested in it, with their af-if rules. */
+export function filterFields(nodes: LayoutNode[], outer: string[] = []): FilterField[] {
   return nodes.filter(isElement).flatMap((node) => {
     if (node["af-fieldset"] !== undefined) return [];
+    const rule = node["af-if"];
+    const conditions = typeof rule === "string" ? [...outer, rule] : outer;
     if (node["#tag"] === "af-field" && isFieldDefn(node.defn))
-      return [{ name: String(node.name), defn: node.defn }];
-    return filterFields(node["#children"] ?? []);
+      return [{ name: String(node.name), defn: node.defn, conditions }];
+    return filterFields(node["#children"] ?? [], conditions);
   });
+}
+
+/** Whether every af-if around a field holds; a rule that cannot be read hides it, as afIf. */
+function holds(field: FilterField, data: FormData): boolean {
+  try {
+    return (field.conditions ?? []).every((rule) => checkConditions(parseConditions(rule), data));
+  } catch {
+    return false;
+  }
 }
 
 /** afFieldset.getName() without an entity: the first search display inside. */
@@ -134,12 +146,25 @@ const UNLOADED: ParamSet = { missing: true };
 interface SearchFieldsetProps {
   node: ElementNode;
   formName: string;
+  /** The form's data, which the fields' af-if rules read. */
+  data?: FormData;
   children: ReactNode;
 }
 
-export function SearchFieldset({ node, formName, children }: SearchFieldsetProps) {
+const NO_DATA: FormData = {};
+
+export function SearchFieldset({ node, formName, data = NO_DATA, children }: SearchFieldsetProps) {
   const store = useParamStore();
-  const fields = useMemo(() => filterFields(node["#children"] ?? []), [node]);
+  const everyField = useMemo(() => filterFields(node["#children"] ?? []), [node]);
+  // A filter under an af-if that fails neither starts with a value nor keeps one, as afIf.
+  const shownKey = everyField
+    .filter((field) => holds(field, data))
+    .map((field) => field.name)
+    .join("\n");
+  const fields = useMemo(() => {
+    const shown = new Set(shownKey.split("\n"));
+    return everyField.filter((field) => shown.has(field.name));
+  }, [everyField, shownKey]);
   const name = useMemo(() => fieldsetName(node["#children"] ?? []), [node]);
   const cacheKey = `afform:${formName}${name}`;
   const stores = storesValues(node["store-values"]);
@@ -189,6 +214,27 @@ export function SearchFieldset({ node, formName, children }: SearchFieldsetProps
       fields,
       fieldsetName: name,
       params: route,
+      paramSet: loadedSet,
+      context,
+    });
+  }
+  const [shownBefore, setShownBefore] = useState(shownKey);
+  if (shownBefore !== shownKey) {
+    setShownBefore(shownKey);
+    const before = new Set(shownBefore.split("\n"));
+    dispatch({
+      type: "shown",
+      shown: fields.filter((field) => !before.has(field.name)),
+      // afIfDestroy leaves a display-only field's value.
+      hidden: everyField.filter(
+        (field) =>
+          before.has(field.name) &&
+          !fields.includes(field) &&
+          field.defn.input_type !== "DisplayOnly",
+      ),
+      fieldsetName: name,
+      params: route,
+      stored: stores ? readStored(cacheKey) : undefined,
       paramSet: loadedSet,
       context,
     });

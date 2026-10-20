@@ -13,6 +13,8 @@ export const SEARCH_DELAY_MS = 300;
 export interface FilterField {
   name: string;
   defn: FieldDefn;
+  /** The af-if rules of the field and the elements around it. */
+  conditions?: string[];
 }
 
 /**
@@ -331,6 +333,17 @@ export type FieldsetAction =
   | { type: "operator"; field: FilterField; operator: string }
   | { type: "commit" }
   | {
+      type: "shown";
+      /** The fields whose af-if rules now hold and those that now fail. */
+      shown: FilterField[];
+      hidden: FilterField[];
+      fieldsetName: string;
+      params: URLSearchParams;
+      stored?: FilterValues;
+      paramSet: ParamSet | undefined;
+      context?: ValueContext;
+    }
+  | {
       type: "route";
       fields: FilterField[];
       fieldsetName: string;
@@ -372,6 +385,28 @@ export function fieldsetReducer(
       return state.applied === state.values
         ? state
         : { ...state, applied: state.values, commits: state.commits + 1 };
+    case "shown": {
+      // As afIf compiles and destroys afField: a field shown takes its first value anew, a
+      // hidden one drops its own, and the displays search at once.
+      const drop = new Set(action.hidden.map((field) => field.name));
+      const without = <T>(entries: Record<string, T>) =>
+        Object.fromEntries(Object.entries(entries).filter(([name]) => !drop.has(name)));
+      let next: FieldsetState = {
+        values: without(state.values),
+        operators: without(state.operators),
+      };
+      for (const field of action.shown)
+        next = initializeValue(next, field, action.stored, action.context ?? {});
+      next = applyRoute(
+        next,
+        action.shown,
+        action.fieldsetName,
+        action.params,
+        action.paramSet,
+        action.context,
+      );
+      return { ...state, ...next, applied: next.values };
+    }
   }
   // "route": a new hash or a loaded saved filter set applies at once.
   const next = applyRoute(

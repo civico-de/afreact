@@ -401,6 +401,33 @@ describe("SearchFieldset", () => {
     expect(store.params().toString()).toBe("_s=4");
   });
 
+  it("gives a filter under a failing af-if no value, and its default once the rule holds", () => {
+    const rule = JSON.stringify([["Individual1[0][fields][advanced]", "=", "true"]]);
+    const node: LayoutNode = {
+      "#tag": "div",
+      "#children": [
+        field("title", { afform_default: "x" }),
+        { "#tag": "div", "af-if": rule, "#children": [field("status", { afform_default: "1" })] },
+      ],
+    };
+    const Applied = () => <output>{JSON.stringify(useSearchFieldset()?.state.applied)}</output>;
+    const view = (advanced: boolean) => (
+      <SearchFieldset
+        node={node}
+        formName="afsearchGroups"
+        data={{ Individual1: [{ fields: { advanced } }] }}
+      >
+        <Applied />
+      </SearchFieldset>
+    );
+    const { rerender } = renderWithQuery(view(false), memoryStore("#?status=2"));
+    expect(screen.getByRole("status")).toHaveTextContent('{"title":"x"}');
+    rerender(view(true));
+    expect(screen.getByRole("status")).toHaveTextContent('{"title":"x","status":"2"}');
+    rerender(view(false));
+    expect(screen.getByRole("status")).toHaveTextContent('{"title":"x"}');
+  });
+
   it("adds the display's own filters from the route, which win on the same key", async () => {
     const { runs } = renderSearch(
       "#?job_type=import&title=x",

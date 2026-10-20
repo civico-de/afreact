@@ -427,8 +427,9 @@ function FieldsetNode({ node }: { node: ElementNode }) {
 }
 
 function SearchFieldsetNode({ node }: { node: ElementNode }) {
+  const { formName, data } = useForm();
   return (
-    <SearchFieldset node={node} formName={useForm().formName}>
+    <SearchFieldset node={node} formName={formName} data={data}>
       <Element node={node} />
     </SearchFieldset>
   );
