@@ -214,10 +214,11 @@ export const getColumnIndex = (settings: AdminSettings, key: string) =>
 
 export function getExprFromSelect(search: SearchInfo, key: string): string | null {
   const fieldKey = key.split(":")[0];
-  const match = search.api_params.select.find((expr) => {
-    const parts = expr.split(" AS ");
-    return parts[1] === fieldKey || parts[0]?.split(":")[0] === fieldKey;
-  });
+  const select = search.api_params.select;
+  // An alias names its column even where another item selects a field of that name.
+  const match =
+    select.find((expr) => expr.split(" AS ")[1] === fieldKey) ??
+    select.find((expr) => expr.split(" AS ")[0]?.split(":")[0] === fieldKey);
   return match ? (match.split(" AS ")[0] ?? null) : null;
 }
 

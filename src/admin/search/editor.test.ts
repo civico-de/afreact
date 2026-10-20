@@ -124,6 +124,9 @@ describe("saving", () => {
     expect(validate(meta, batch(null, "minutes"), false)).toEqual([]);
     expect(validate(meta, batch("", "minutes"), false)).toEqual([]);
     expect(validate(meta, batch("x", "subject"), false)).toEqual([]);
+    const swapped = batch("Call", "duration");
+    swapped.api_params.select = ["duration AS minutes", "subject AS duration"];
+    expect(validate(meta, swapped, false)).toEqual([]);
   });
 
   // deviation:search-timeout-invalid-blocks-save
