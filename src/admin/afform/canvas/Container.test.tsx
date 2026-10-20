@@ -5,7 +5,8 @@ import { EditorContext, type EditorApi } from "../context";
 import type { EditorMeta } from "../meta";
 import { META } from "../testMeta";
 import type { ShallowElement } from "../tree";
-import { MultiToggle, RepeatMenuItems } from "./Container";
+import { mockApi, renderWithQuery } from "../../../test/render";
+import { MultiToggle, RepeatMenuItems, SaveBlockDialog } from "./Container";
 
 const email = META.gui.entities.Email;
 if (!email) throw new Error("The test metadata has no Email entity.");
@@ -131,5 +132,32 @@ describe("RepeatMenuItems", () => {
       />,
     );
     expect(screen.getByRole("spinbutton", { name: /Initially show/ })).toBeInvalid();
+  });
+});
+
+describe("SaveBlockDialog", () => {
+  it("saves the block under its title trimmed and takes no title of spaces alone", async () => {
+    const calls = mockApi({
+      "Afform.convert": () => [{ layout: "" }],
+      "Afform.save": () => [{ name: "afblockProbe", directive_name: "afblock-probe" }],
+    });
+    renderWithQuery(
+      <EditorContext value={editor}>
+        <SaveBlockDialog
+          initial={{ type: "block", layout: [], entity_type: "Individual" }}
+          original={null}
+          onSaved={() => undefined}
+          onClose={() => undefined}
+        />
+      </EditorContext>,
+    );
+    const title = screen.getByRole("textbox", { name: /Title/ });
+    const save = screen.getByRole("button", { name: "Save" });
+    await userEvent.type(title, "   ");
+    expect(save).toBeDisabled();
+    await userEvent.type(title, "Probe  ");
+    await userEvent.click(save);
+    const saved = calls.find((c) => c.call === "Afform.save");
+    expect(saved?.params).toMatchObject({ records: [{ title: "Probe" }] });
   });
 });

@@ -5,6 +5,7 @@ import { Dialog } from "../../widgets/Dialog";
 import { Dropdown } from "../../widgets/Dropdown";
 import { IconDialog } from "../../widgets/IconPicker";
 import { InlineEdit } from "../../widgets/InlineEdit";
+import { ModelText } from "../../widgets/ModelText";
 import { useEditor, type EditorApi } from "../context";
 import { saveAfform } from "../save";
 import { nodeDefn } from "../fields";
@@ -504,7 +505,7 @@ function MultiToggleGroup({
 }
 
 /** saveBlock.html: the container's contents saved as a block, new or over the one it came from. */
-function SaveBlockDialog({
+export function SaveBlockDialog({
   initial,
   original,
   onSaved,
@@ -571,14 +572,13 @@ function SaveBlockDialog({
         <label htmlFor={`${id}-title`}>
           {ts("Title:")} <span className="crm-marker">*</span>
         </label>
-        <input
+        <ModelText
+          live
           id={`${id}-title`}
           className="form-control"
           required
           value={title}
-          onChange={(event) => {
-            setTitle(event.target.value);
-          }}
+          onChange={setTitle}
         />
       </div>
       {original && (

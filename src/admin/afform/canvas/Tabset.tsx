@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import { Dropdown } from "../../widgets/Dropdown";
 import { InlineEdit } from "../../widgets/InlineEdit";
+import { ModelText } from "../../widgets/ModelText";
 import { TabList, TabPanel } from "../../widgets/Tabs";
 import { useEditor } from "../context";
 import { displayKey } from "../meta";
@@ -77,15 +78,15 @@ function TabMenu({
   return (
     <>
       <MenuControls>
-        <input
+        <ModelText
+          live
           className="form-control"
           required
           aria-label={ts("Tab title")}
           title={ts("Tab title")}
           placeholder={ts("Tab title")}
           value={textAttribute(tab, "title") ?? ""}
-          onChange={(event) => {
-            const title = event.target.value;
+          onChange={(title) => {
             editTab((current) => ({ ...current, title }));
           }}
         />

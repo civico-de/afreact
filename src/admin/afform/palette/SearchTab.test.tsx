@@ -309,4 +309,39 @@ describe("SearchTab", () => {
     const display = nodeAt(latest.layout, [0, 0]);
     expect(display && "#tag" in display ? display.filters : "missing").toBeUndefined();
   });
+
+  it("stores a URL variable's name trimmed, as core's ngModel does", async () => {
+    let latest = searchForm("{financial_type_id: routeParams.type}");
+    function Stateful() {
+      const [afform, setAfform] = useState(latest);
+      latest = afform;
+      const api: EditorApi = {
+        meta: META,
+        afform,
+        entities: formEntities(afform, META),
+        change: (update) => {
+          setAfform(update);
+        },
+        selected: null,
+        select: () => undefined,
+        addMeta: () => undefined,
+        removeEntity: () => undefined,
+        saveBlocked: null,
+        openDialog: () => undefined,
+      };
+      return (
+        <EditorContext value={api}>
+          <SearchTab display={{ key: "contributions.table", path: [0, 0], fieldsetPath: [0] }} />
+        </EditorContext>
+      );
+    }
+    renderWithQuery(<Stateful />);
+    const variable = await screen.findByRole("textbox", { name: "Url variable" });
+    await userEvent.clear(variable);
+    await userEvent.type(variable, " kind ");
+    const display = nodeAt(latest.layout, [0, 0]);
+    expect(display && "#tag" in display ? display.filters : "missing").toBe(
+      "{financial_type_id: routeParams.kind}",
+    );
+  });
 });

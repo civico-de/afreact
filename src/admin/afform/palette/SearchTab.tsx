@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useId } from "react";
 import { api4, errorMessage } from "../../../api/civi";
 import { Dropdown } from "../../widgets/Dropdown";
+import { ModelText } from "../../widgets/ModelText";
 import { Picker } from "../../widgets/Picker";
 import { editNode, useEditor } from "../context";
 import { FieldValue } from "../FieldValue";
@@ -178,15 +179,16 @@ function FilterRow({
           )}
         </Dropdown>
         {filter.mode === "routeParams" && (
-          <input
+          <ModelText
+            live
             className="form-control"
             aria-label={ts("Url variable")}
             value={filter.value}
             title={ts("Append %1 to the URL to pass a parameter value to the form", {
               1: `'#/?${filter.value}=value'`,
             })}
-            onChange={(event) => {
-              onChange({ ...filter, value: event.target.value });
+            onChange={(value) => {
+              onChange({ ...filter, value });
             }}
           />
         )}

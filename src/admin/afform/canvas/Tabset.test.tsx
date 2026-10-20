@@ -1,5 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import type { AfformDefinition } from "../meta";
+import { nodeAt } from "../tree";
 import { EditorContext, type EditorApi } from "../context";
 import { META } from "../testMeta";
 import { RenderContext } from "./common";
@@ -112,5 +115,33 @@ describe("TabsetElement", () => {
     expect(screen.queryByRole("button", { name: /Next/ })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Back/ }));
     expect(selected()).toHaveTextContent("One");
+  });
+
+  it("stores a tab title trimmed, as core's ngModel does", async () => {
+    let latest: AfformDefinition = {
+      ...editor.afform,
+      layout: [{ "#tag": "af-tabset", "#children": [tab("One")] }],
+    };
+    function Stateful() {
+      const [afform, setAfform] = useState(latest);
+      latest = afform;
+      const node = nodeAt(afform.layout, [0]);
+      if (!node || !("#tag" in node)) throw new Error("No tabset");
+      return (
+        <EditorContext value={{ ...editor, afform, change: setAfform }}>
+          <RenderContext value={() => null}>
+            <TabsetElement path={[0]} node={node} scope={scope} handle={handle} label="Tabs" />
+          </RenderContext>
+        </EditorContext>
+      );
+    }
+    render(<Stateful />);
+    await userEvent.click(screen.getByRole("button", { name: "Configure One" }));
+    const title = await screen.findByLabelText("Tab title");
+    await userEvent.clear(title);
+    await userEvent.type(title, "  Two  ");
+    const tabset = nodeAt(latest.layout, [0]);
+    const first = tabset && "#tag" in tabset ? tabset["#children"]?.[0] : undefined;
+    expect(first && "#tag" in first ? first.title : "missing").toBe("Two");
   });
 });
