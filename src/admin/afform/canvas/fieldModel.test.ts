@@ -4,6 +4,7 @@ import { textAttribute } from "../model";
 import {
   canBeMultiple,
   canBeRange,
+  defaultContains,
   defaultDateType,
   getProp,
   getValue,
@@ -61,6 +62,16 @@ describe("getSet()", () => {
       input_attrs: { min: 0 },
     });
     expect(setValue(field(), "required", false, false).local).toEqual({});
+  });
+
+  // deviation:field-falsy-setting-kept
+  it("reads back a default of false or 0 as set", () => {
+    const zero = setValue(field(), "afform_default", 0, true);
+    expect(getValue(zero, "afform_default")).toBe(0);
+    expect(defaultContains(zero, 0)).toBe(true);
+    expect(getValue(setValue(field(), "afform_default", false, true), "afform_default")).toBe(
+      false,
+    );
   });
 
   // deviation:date-time-by-type

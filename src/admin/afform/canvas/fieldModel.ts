@@ -2,7 +2,7 @@ import { showsTime } from "../../../afform/fields/dateTime";
 import { plainLiteral } from "../fields";
 import { encodeLiteral, isLiteralObject, parseAttribute, type Literal } from "../literal";
 import { getField, type EditorMeta, type GuiField } from "../meta";
-import { filled, textAttribute } from "../model";
+import { textAttribute } from "../model";
 import { withoutAttributes } from "../nodes";
 import type { ShallowElement } from "../tree";
 
@@ -58,9 +58,18 @@ export const propIsset = (state: FieldState, prop: string) => {
   return value !== undefined && value !== null;
 };
 
-/** getSet() as a getter: the value, or "" where it is falsy. */
-export const getValue = (state: FieldState, prop: string): unknown =>
-  filled(getProp(state, prop)) ?? "";
+/** A value that reads as no setting; a default of false or a 0 is a setting. deviation:field-falsy-setting-kept */
+const unset = (prop: string, value: unknown) =>
+  value === undefined ||
+  value === null ||
+  value === "" ||
+  (value === false && prop !== "afform_default");
+
+/** getSet() as a getter: the value, or "" where it is no setting. */
+export const getValue = (state: FieldState, prop: string): unknown => {
+  const value = getProp(state, prop);
+  return unset(prop, value) ? "" : value;
+};
 
 /** isEmpty(): [], {}, "", null and undefined, but not false or 0. */
 function isEmptyValue(value: Literal | undefined): boolean {
@@ -96,13 +105,6 @@ export const withLocal = (
   ...state,
   local: setPath(state.local, path, value),
 });
-
-/** A value that reads as no setting; a default of false or a 0 is a setting. deviation:field-falsy-setting-kept */
-const unset = (prop: string, value: unknown) =>
-  value === undefined ||
-  value === null ||
-  value === "" ||
-  (value === false && prop !== "afform_default");
 
 /** The bare setter of getSet(): a value is kept only where it differs from the metadata's. */
 function withProp(state: FieldState, prop: string, value: Literal | undefined): FieldState {
