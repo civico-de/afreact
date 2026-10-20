@@ -429,6 +429,9 @@ as the server and the 6.21 builder do. Each item of a repeated fieldset is a
 record of its own with that list of blocks, so all items use the same numbers.
 React sends `null` for a block without a record, as core's own prefill does for
 a missing location type; the server drops the nulls and keeps the positions.
+A repeated join block is left out of the runtime's numbers but counted by the
+builder's tokens; a layout mixing repeated and single blocks of one join has no
+consistent numbering, since the server merges all of that join's blocks into one.
 `deviation:join-blocks-layout-order`
 
 **The primary radio of a repeat has no name.** In a repeated join, afField
