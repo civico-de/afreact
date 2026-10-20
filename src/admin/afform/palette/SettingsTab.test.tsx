@@ -5,7 +5,7 @@ import { mockApi, renderWithQuery } from "../../../test/render";
 import { EditorContext, formEntities, type EditorApi } from "../context";
 import type { AfformDefinition, EditorMeta } from "../meta";
 import { META } from "../testMeta";
-import { SettingsTab } from "./SettingsTab";
+import { SettingsTab, settingsProblems } from "./SettingsTab";
 
 let latest: AfformDefinition | undefined;
 let replace: (afform: AfformDefinition) => void = () => undefined;
@@ -192,6 +192,35 @@ describe("SettingsTab", () => {
     expect(order).toHaveValue(1.5);
     // The "1" typed on the way is stored; the fraction is not.
     expect(latest?.navigation?.weight).toBe(1);
+  });
+
+  // deviation:submit-limit-invalid-blocks-save
+  it("marks a submission limit below 1 or not whole and keeps it from being saved", async () => {
+    renderWithQuery(
+      <Harness
+        initial={{
+          type: "form",
+          title: "Probe",
+          layout: [],
+          submit_enabled: true,
+          create_submission: true,
+        }}
+      />,
+    );
+    const total = screen.getByRole("spinbutton", { name: "Max Submissions (total)" });
+    const perUser = screen.getByRole("spinbutton", { name: "Max Submissions (per user)" });
+    await userEvent.type(total, "0");
+    expect(total).toHaveAttribute("aria-invalid", "true");
+    expect(latest && settingsProblems(latest)).toHaveLength(1);
+    await userEvent.clear(total);
+    await userEvent.type(perUser, "1.5");
+    expect(total).not.toHaveAttribute("aria-invalid");
+    expect(perUser).toHaveAttribute("aria-invalid", "true");
+    expect(latest && settingsProblems(latest)).toHaveLength(1);
+    await userEvent.clear(perUser);
+    await userEvent.type(perUser, "3");
+    expect(perUser).not.toHaveAttribute("aria-invalid");
+    expect(latest && settingsProblems(latest)).toEqual([]);
   });
 
   it("warns of placement filters stored as a list and replaces them once a filter is chosen", async () => {

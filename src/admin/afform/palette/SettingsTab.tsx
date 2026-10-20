@@ -39,6 +39,18 @@ const list = (value: unknown): string[] =>
 
 const numberOrNull = (value: string) => (value === "" ? null : Number(value));
 
+const validLimit = (value: unknown) =>
+  value === null || value === undefined || (Number.isInteger(value) && Number(value) >= 1);
+
+/**
+ * Settings a save must not send: a submission limit below 1 or not whole.
+ * deviation:submit-limit-invalid-blocks-save
+ */
+export const settingsProblems = (afform: AfformDefinition): string[] =>
+  validLimit(afform.submit_limit) && validLimit(afform.submit_limit_per_user)
+    ? []
+    : [ts("Max Submissions must be a whole number of at least 1, or empty for unlimited.")];
+
 interface MenuItem {
   id: number;
   name: string;
@@ -506,7 +518,7 @@ function Submissions() {
           />
           {!!afform.create_submission && (
             <div className="crm-flex-box">
-              <div className="form-group">
+              <div className={`form-group${validLimit(afform.submit_limit) ? "" : " has-error"}`}>
                 <label htmlFor={`${id}-limit`}>{ts("Max Submissions (total)")}</label>
                 <input
                   className="form-control eight"
@@ -516,12 +528,15 @@ function Submissions() {
                   id={`${id}-limit`}
                   placeholder={ts("Unlimited")}
                   value={text(afform.submit_limit)}
+                  aria-invalid={!validLimit(afform.submit_limit) || undefined}
                   onChange={(event) => {
                     set({ submit_limit: numberOrNull(event.target.value) });
                   }}
                 />
               </div>
-              <div className="form-group">
+              <div
+                className={`form-group${validLimit(afform.submit_limit_per_user) ? "" : " has-error"}`}
+              >
                 <label htmlFor={`${id}-limit-user`}>{ts("Max Submissions (per user)")}</label>
                 <input
                   className="form-control eight"
@@ -531,6 +546,7 @@ function Submissions() {
                   id={`${id}-limit-user`}
                   placeholder={ts("Unlimited")}
                   value={text(afform.submit_limit_per_user)}
+                  aria-invalid={!validLimit(afform.submit_limit_per_user) || undefined}
                   onChange={(event) => {
                     set({ submit_limit_per_user: numberOrNull(event.target.value) });
                   }}

@@ -1204,6 +1204,13 @@ passes through 1 and leaves the minimum at 1. React lets a bound be typed
 freely and moves the other bound to meet it once the input is left.
 `deviation:repeat-bounds-on-blur`
 
+**An invalid submission limit is dropped without a word.** "Max Submissions"
+(total and per user) are `type="number" min="1" step="1"` ngModel inputs, so
+`0` or `1.5` set the model to undefined; the saved JSON then lacks the key and
+`Afform.save` keeps the stored limit while the input still shows the typed
+number. React marks such a limit invalid and refuses to save until it is fixed.
+`deviation:submit-limit-invalid-blocks-save`
+
 **Typing a field's maximum below its minimum's first digit loses it.** A number
 field's minimum and maximum (and a multi-select's option count) are clamped on
 each keystroke (`onChangeMin`/`onChangeMax` in `afGuiField.component.js`), so

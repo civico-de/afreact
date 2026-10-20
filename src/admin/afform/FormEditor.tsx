@@ -40,6 +40,7 @@ import {
 } from "./model";
 import { searchDisplaysOnForm, withBlockActions } from "./nodes";
 import { Palette, scrollToEntity, type SearchOption } from "./palette/Palette";
+import { settingsProblems } from "./palette/SettingsTab";
 import type { ShallowNode } from "./tree";
 
 export type FormRoute =
@@ -417,6 +418,11 @@ function Editor({
     const target = root.current ?? document;
     if (saveBlocked) {
       setErrors([saveBlocked]);
+      return;
+    }
+    const problems = settingsProblems(afform);
+    if (problems.length) {
+      setErrors(problems);
       return;
     }
     const sent = afform;
