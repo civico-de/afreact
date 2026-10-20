@@ -102,6 +102,8 @@ export interface FormState {
   itemKeys: Map<string, number[]>;
   /** Per autofill field, what its selection filled into other entities. */
   autofilled: Map<string, Filled>;
+  /** Per autofill field, its latest selection; an answer to an earlier one is dropped. */
+  autofillRuns: Map<string, object>;
   /** An af-if showed or hid its content after the form loaded. */
   toggled: (shown: boolean) => void;
   /** afForm.resetForm(); undefined outside af-form. */
@@ -575,6 +577,9 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
               ([owner]) => owner.startsWith(inItem) || owner.startsWith(`${id}#${key}:`),
             );
             for (const [owner] of autofilled) form.autofilled.delete(owner);
+            for (const owner of [...form.autofillRuns.keys()])
+              if (owner.startsWith(inItem) || owner.startsWith(`${id}#${key}:`))
+                form.autofillRuns.delete(owner);
             const before = form.data;
             setRemoval({ position, key, keys, before, edits: form.edits + 1, files, autofilled });
             removeKey(position);
@@ -895,6 +900,8 @@ function fieldEnv(
           // Keyed by the item's place in the layout, which survives removing an earlier repeat item.
           const key = `${itemPath}:${name}`;
           const previous = form.autofilled.get(key);
+          const run = {};
+          form.autofillRuns.set(key, run);
           const selection = await loadSelected(
             form.formName,
             scope,
@@ -903,6 +910,8 @@ function fieldEnv(
             form.entities,
             previous,
           );
+          // deviation:autofill-latest-selection
+          if (form.autofillRuns.get(key) !== run) return;
           form.autofilled.set(key, selection.filled);
           form.edit(selection.apply);
         }

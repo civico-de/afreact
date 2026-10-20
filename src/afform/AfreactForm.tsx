@@ -639,6 +639,7 @@ function LoadedForm(props: LoadedFormProps) {
   const displays = useMemo(() => countDisplays(form.layout), [form]);
   const [itemKeys] = useState(() => new Map<string, number[]>());
   const [autofilled] = useState(() => new Map<string, Filled>());
+  const [autofillRuns] = useState(() => new Map<string, object>());
   const conditional = useConditionalChanges(host, data, ts);
   const [labels, setLabels] = useState<string[]>([]);
   // deviation:draft-pristine-label
@@ -689,6 +690,7 @@ function LoadedForm(props: LoadedFormProps) {
     expressions,
     itemKeys,
     autofilled,
+    autofillRuns,
     toggled: conditional.toggled,
     ...(isForm(form) && {
       reset: () => {

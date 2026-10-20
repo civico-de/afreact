@@ -174,6 +174,13 @@ of the failing submit only, none when `Afform.submit` itself failed. `deviation:
 
 ## Fields and filters
 
+**A late prefill overrides a newer selection.** Each choice in an autofill
+field sends `Afform.prefill` and applies the answer whenever it arrives
+(`afForm.component.js` `loadData`). Cleared while the request runs, the field
+fills again with the cleared record; picking A and then B ends with A when A's
+answer comes last. afreact applies only the answer to the field's latest
+selection. `deviation:autofill-latest-selection`
+
 **A required rich text or proximity field can be submitted empty.**
 `fields/RichTextEditor.html` and `afLocationInput` set no `ng-required`, so
 the form shows the required marker but sends the empty field; only the server

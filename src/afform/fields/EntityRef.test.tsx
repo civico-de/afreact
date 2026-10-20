@@ -288,6 +288,38 @@ describe("EntityRef", () => {
     });
   });
 
+  // deviation:autofill-latest-selection
+  it("drops the prefill of a selection that was cleared before it arrived", async () => {
+    let answer: (records: unknown) => void = () => undefined;
+    renderForm(
+      form([
+        entityRef("id", { label: "Existing", input_attrs: { autofill: "update" } }),
+        {
+          "#tag": "af-field",
+          name: "first_name",
+          defn: { name: "first_name", label: "First", input_type: "Text", data_type: "String" },
+        },
+      ]),
+      {
+        "Contact.autocomplete": () => rows([ADA]),
+        "Afform.prefill": ({ fillMode }) =>
+          fillMode === "entity"
+            ? new Promise((resolve) => {
+                answer = resolve;
+              })
+            : [],
+      },
+    );
+    const input = await screen.findByRole("combobox", { name: "Existing" });
+    await userEvent.type(input, "a");
+    await userEvent.click(await screen.findByRole("option", { name: "Ada" }));
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    answer([{ name: "Individual1", values: [{ fields: { id: 1, first_name: "Ada" } }] }]);
+    await userEvent.type(screen.getByRole("textbox", { name: "First" }), "B");
+    expect(screen.getByRole("textbox", { name: "First" })).toHaveValue("B");
+    expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
+  });
+
   it("merges the selected record's join records into the ones typed, by position", async () => {
     const text = (name: string, label: string): LayoutNode => ({
       "#tag": "af-field",
