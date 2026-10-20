@@ -1105,6 +1105,13 @@ offered, such as one of a disabled extension, counts too, so ticking or
 unticking another task can switch to all enabled. afreact enables all once each
 offered task is on. `deviation:tasks-all-enabled-by-name`
 
+**A smart group's contact column is listed twice.** When the smart group tab
+opens on a search whose first column is no contact ID, core puts the contact ID
+in front of the select (`crmSearchAdminGroup` `$onInit`), even where the search
+already selects it further on. Picking another contact column likewise keeps
+its old place. The search then has the column twice. afreact moves the column
+to the front instead. `deviation:group-contact-column-once`
+
 **A column takes the field of another item's source.** Core's
 `getExprFromSelect` returns the first select item whose alias or source field
 matches a column key. With `["birth_date AS dob", "display_name AS birth_date"]`
