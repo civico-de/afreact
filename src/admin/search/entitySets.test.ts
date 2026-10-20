@@ -52,6 +52,19 @@ describe("entity sets", () => {
     expect(setsOf(params).map((set) => set[3].select)).toEqual([["id"], ["id"]]);
   });
 
+  // deviation:union-remove-row-keeps-shared-field
+  it("keeps the outer columns of a field that another row still selects", () => {
+    const params = removeEntitySetRow(
+      meta,
+      {
+        select: ["gender_id", "gender_id:label"],
+        sets: [["UNION ALL", "Contact", "get", { select: ["gender_id", "gender_id:label"] }]],
+      },
+      1,
+    );
+    expect(params.select).toEqual(["gender_id"]);
+  });
+
   it("lets the next set name the columns when the first goes, without its empty rows", () => {
     const params: ApiParams = {
       select: ["id", "name"],

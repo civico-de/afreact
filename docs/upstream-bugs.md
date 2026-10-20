@@ -1214,6 +1214,12 @@ suffixes such as `:label` and aliases, and inside an outer column's function
 such as `COUNT(name)`. A change of suffix alone leaves them as they are, and so
 do a field that another column still selects and an outer column's alias. `deviation:union-rename-outer-references`
 
+**Removing a combined search's row drops columns another row still provides.**
+Core removes every outer column built on the removed row's field
+(`crmSearchAdminEntitySetSelect` `removeEntitySetRow`), so with the rows
+`gender_id` and `gender_id:label`, removing the second also removes the outer
+`gender_id`. afreact then removes only the outer column named like the row. `deviation:union-remove-row-keeps-shared-field`
+
 **Removing a combined search's first set leaves stale references.** Core then
 rebuilds the outer select from the next set's column names
 (`crmSearchAdminEntitySetSelect` `removeEntitySet`), dropping outer functions

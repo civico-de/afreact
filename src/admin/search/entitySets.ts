@@ -99,18 +99,29 @@ export function removeEntitySetRow(
   const sets = setsOf(params);
   const first = sets[0];
   const firstExpr = first?.[3].select[index];
-  const target =
-    first && firstExpr ? parseExpr(meta, firstExpr, infoOf(first)).alias.split(":")[0] : undefined;
+  const alias = first && firstExpr ? parseExpr(meta, firstExpr, infoOf(first)).alias : undefined;
+  const target = alias?.split(":")[0];
   const outer: SearchInfo = { api_entity: "EntitySet", api_params: params };
   const outerMeta = withEntitySetFields(meta, params);
-  const select = target
-    ? params.select.filter(
-        (col) =>
-          !parseExpr(outerMeta, col, outer).args.some(
-            (arg) => arg.type === "field" && (arg.path === target || arg.field?.name === target),
-          ),
-      )
-    : params.select;
+  // A field another row still selects keeps its outer columns, but for this row's own.
+  // deviation:union-remove-row-keeps-shared-field
+  const shared =
+    first?.[3].select.some(
+      (expr, row) =>
+        row !== index &&
+        expr &&
+        parseExpr(meta, expr, infoOf(first)).alias.split(":")[0] === target,
+    ) ?? false;
+  const select = shared
+    ? params.select.filter((col) => col !== alias)
+    : target
+      ? params.select.filter(
+          (col) =>
+            !parseExpr(outerMeta, col, outer).args.some(
+              (arg) => arg.type === "field" && (arg.path === target || arg.field?.name === target),
+            ),
+        )
+      : params.select;
   return {
     ...params,
     select,
