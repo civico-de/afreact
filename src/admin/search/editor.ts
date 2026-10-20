@@ -1,4 +1,4 @@
-import { getEntity, getSmartGroupColumns, type ApiParams, type SearchInfo } from "./expr";
+import { getEntity, type ApiParams, type SearchInfo } from "./expr";
 import type { SearchAdminMetadata } from "./meta";
 import { coreHas } from "../version";
 import { invalidDefaults } from "./display/model";
@@ -216,17 +216,6 @@ export function validate(
   if (!search.label) errors.push({ message: required(ts("Search Label")) });
   if (groupExists && !search.groups[0]?.title)
     errors.push({ message: required(ts("Group Title")), tab: "group" });
-  // The group's members are read from the first column. deviation:smart-group-column-leads
-  const columns = getSmartGroupColumns(meta, search);
-  if (
-    groupExists &&
-    columns.length &&
-    !columns.some((col) => col.id === search.api_params.select[0])
-  )
-    errors.push({
-      message: ts("The first column must be the smart group's Contact Column."),
-      tab: "group",
-    });
   // The column is int unsigned. deviation:search-timeout-invalid-blocks-save
   if (!validTimeout(search.timeout))
     errors.push({

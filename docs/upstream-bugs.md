@@ -1361,10 +1361,9 @@ for that column on either tab. `deviation:smart-group-column-kept`
 members are read from the first column, and the Group tab puts a contact ID
 there only when it opens. Removing or excluding the join that column belongs
 to drops it, and the next column takes its place unchecked, so the group is
-built from whatever IDs that column holds. afreact moves a contact ID back to
-the front after such a change, and refuses to save a smart group whose first
-column is no contact ID, as when a grouping aggregates every one.
-`deviation:smart-group-column-leads`
+built from whatever IDs that column holds. When a change of the joins drops
+the first column, afreact moves a contact ID that needs no aggregate to the
+front. `deviation:smart-group-column-leads`
 
 **Selected columns stay selectable.** `fieldsForSelect()` passes a
 `disabledIf` callback without a `return`, so fields already in the select

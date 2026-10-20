@@ -409,7 +409,9 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                 api_params: withSelect(
                   { ...next.api_params, select: state.api_params.select },
                   // A removed join can take the group's contact column. deviation:smart-group-column-leads
-                  groupExists ? withGroupColumnFirst(meta, next) : next.api_params.select,
+                  groupExists && !next.api_params.select.includes(state.api_params.select[0] ?? "")
+                    ? withGroupColumnFirst(meta, next)
+                    : next.api_params.select,
                 ),
               }));
             }}

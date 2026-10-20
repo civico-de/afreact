@@ -2,7 +2,7 @@ import { useEffect, useEffectEvent, useId } from "react";
 import { ModelText } from "../../widgets/ModelText";
 import { Picker } from "../../widgets/Picker";
 import type { EditorSearch, SmartGroup } from "../editor";
-import { getEntity, getSmartGroupColumns, withGroupColumnFirst } from "../expr";
+import { getEntity, getSmartGroupColumns } from "../expr";
 import { useFieldOptions, type SearchAdminMetadata } from "../meta";
 import { SearchInput } from "../SearchInput";
 
@@ -27,9 +27,10 @@ export function GroupTab({ meta, search, onGroup, onSelect }: GroupTabProps) {
   // A column moved to the front leaves its old place, where core's unshift lists it twice.
   // deviation:group-contact-column-once
   const toFront = (column: string, rest: string[]) => [column, ...rest.filter((c) => c !== column)];
+  const leading = columns[0]?.id;
   const lead = useEffectEvent(() => {
-    const led = withGroupColumnFirst(meta, search);
-    if (led !== select) onSelect(led);
+    if (leading !== undefined && !columns.some((col) => col.id === first))
+      onSelect(toFront(String(leading), select));
   });
   // Once, when the tab opens, as core's $onInit.
   useEffect(() => {

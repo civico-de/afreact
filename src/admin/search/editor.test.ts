@@ -100,22 +100,6 @@ describe("saving", () => {
     expect(validate(meta, saved(), false)).toEqual([]);
   });
 
-  // deviation:smart-group-column-leads
-  it("refuses a smart group whose first column is no contact ID", () => {
-    const group = (select: string[]) =>
-      saved({
-        api_params: { version: 4, select },
-        groups: [{ title: "G", description: "", visibility: "", group_type: [] }],
-      });
-    expect(validate(meta, group(["display_name", "id"]), true)).toEqual([
-      { message: "The first column must be the smart group's Contact Column.", tab: "group" },
-    ]);
-    expect(validate(meta, group(["COUNT(id) AS COUNT_id"]), true)).toHaveLength(1);
-    expect(validate(meta, group(["id", "display_name"]), true)).toEqual([]);
-    expect(validate(meta, group(["employer_id", "id"]), true)).toEqual([]);
-    expect(validate(meta, group(["display_name", "id"]), false)).toEqual([]);
-  });
-
   // deviation:batch-default-invalid-blocks-save
   it("refuses a data entry default its number input would not take", () => {
     const batch = (value: unknown, key = "duration") =>
