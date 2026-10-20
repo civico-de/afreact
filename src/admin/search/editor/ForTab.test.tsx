@@ -62,3 +62,41 @@ describe("ForTab entity parameters", () => {
     expect(input).toHaveValue(" North ");
   });
 });
+
+describe("ForTab joins", () => {
+  let latest: SearchInfo | undefined;
+
+  function Harness() {
+    const [search, setSearch] = useState<SearchInfo>({
+      api_entity: "Contact",
+      api_params: {
+        version: 4,
+        select: ["id"],
+        join: [["Email AS Contact_Email_contact_id_01", "LEFT"]],
+      },
+    });
+    latest = search;
+    return (
+      <ForTab
+        meta={metadata}
+        search={search}
+        entityLocked
+        onEntity={() => undefined}
+        onChange={setSearch}
+      />
+    );
+  }
+
+  it("trims a join's label once it is left, as ngModel trims it", async () => {
+    render(<Harness />);
+    const input = screen.getByRole("textbox", { name: "Optional label for this join" });
+    await userEvent.clear(input);
+    await userEvent.type(input, " Mail ");
+    await userEvent.tab();
+    expect(latest?.form_values?.join).toEqual({ Contact_Email_contact_id_01: "Mail" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "   ");
+    await userEvent.tab();
+    expect(latest?.form_values?.join).toEqual({});
+  });
+});

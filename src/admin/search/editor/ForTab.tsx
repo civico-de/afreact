@@ -165,15 +165,15 @@ export function Joins({ meta, search, onChange, editableLabels = true }: JoinsPr
                   <span className="input-group-addon" title={join.defaultLabel}>
                     <i className={`crm-i ${join.icon ?? ""}`} role="img" aria-hidden="true" />
                   </span>
-                  <input
+                  <ModelText
                     className="form-control crm-search-join-label twenty"
                     aria-label={ts("Optional label for this join")}
                     placeholder={join.defaultLabel}
-                    defaultValue={search.form_values?.join?.[join.alias] ?? join.defaultLabel}
-                    onBlur={(event) => {
+                    value={search.form_values?.join?.[join.alias] ?? join.defaultLabel}
+                    onChange={(label) => {
                       onChange({
                         ...search,
-                        form_values: setJoinLabel(meta, search, name, event.target.value),
+                        form_values: setJoinLabel(meta, search, name, label),
                       });
                     }}
                   />
