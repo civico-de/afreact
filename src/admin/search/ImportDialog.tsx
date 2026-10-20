@@ -5,7 +5,7 @@ import { searchAdminSettings, useRefreshSearchMetadata } from "./meta";
 import { useReturnFocus } from "../widgets/Dialog";
 
 /** crmSearchAdminImport's debounce. */
-const CHECK_DELAY_MS = 500;
+export const CHECK_DELAY_MS = 500;
 
 type State =
   | { kind: "empty" }

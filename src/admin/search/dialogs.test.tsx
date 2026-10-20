@@ -2,9 +2,10 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState, type ReactNode } from "react";
 import { mockApi, renderWithQuery } from "../../test/render";
+import { fakeTimeouts, passTime } from "../../test/timers";
 import { IconDialog } from "../widgets/IconPicker";
 import { ExportDialog } from "./ExportDialog";
-import { ImportDialog } from "./ImportDialog";
+import { CHECK_DELAY_MS, ImportDialog } from "./ImportDialog";
 import { SearchCondition } from "./SearchCondition";
 import { SearchInput } from "./SearchInput";
 import { SegmentDialog } from "./SegmentDialog";
@@ -56,6 +57,7 @@ beforeEach(() => {
   );
 });
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   delete window.CRM.vars;
   delete window.CRM.cache;
@@ -73,12 +75,16 @@ describe("ImportDialog", () => {
     const onClose = vi.fn<(saved: boolean) => void>();
     renderWithQuery(<ImportDialog onClose={onClose} />);
     const input = screen.getByRole("textbox", { name: "Import" });
+    fakeTimeouts();
     fireEvent.change(input, {
       target: { value: '[["SavedSearch","save",{"records":[{"name":"a"}]}]]' },
     });
-    expect(
-      await screen.findByText("1 new Saved Search will be created.", {}, { timeout: 2000 }),
-    ).toBeInTheDocument();
+    passTime(CHECK_DELAY_MS - 1);
+    expect(calls).toEqual([]);
+    passTime(1);
+    expect(calls.map((c) => c.call)).toEqual(["Entity.get", "SavedSearch.get"]);
+    vi.useRealTimers();
+    expect(await screen.findByText("1 new Saved Search will be created.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Import" }));
     await waitFor(() => {
       expect(onClose).toHaveBeenCalledWith(true);
@@ -92,15 +98,15 @@ describe("ImportDialog", () => {
     expect(fetch).toHaveBeenCalled();
   });
 
-  it("shows why input cannot be imported and keeps the button off", async () => {
+  it("shows why input cannot be imported and keeps the button off", () => {
     mockApi({});
     renderWithQuery(<ImportDialog onClose={vi.fn<(imported: boolean) => void>()} />);
+    fakeTimeouts();
     fireEvent.change(screen.getByRole("textbox", { name: "Import" }), {
       target: { value: "[[1]]" },
     });
-    expect(await screen.findByRole("alert", {}, { timeout: 2000 })).toHaveTextContent(
-      'only "save"',
-    );
+    passTime(CHECK_DELAY_MS);
+    expect(screen.getByRole("alert")).toHaveTextContent('only "save"');
     expect(screen.getByRole("button", { name: "Import" })).toBeDisabled();
   });
 });

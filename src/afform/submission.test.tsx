@@ -1,8 +1,10 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
+import { SEARCH_DELAY_MS } from "../search/filters";
 import { jquerySelection } from "../test/jquery";
 import { apiError, mockApi, renderWithQuery } from "../test/render";
+import { fakeTimeouts, passTime } from "../test/timers";
 import { memoryStore, pageStore } from "../url/hash";
 import { AfreactForm } from "./AfreactForm";
 import { isElement, type LayoutNode } from "./types";
@@ -353,6 +355,7 @@ describe("the page title", () => {
 
   afterEach(() => {
     document.title = "";
+    vi.useRealTimers();
   });
 
   it("starts with the labels of the display's filters on the form's page", async () => {
@@ -379,7 +382,7 @@ describe("the page title", () => {
     ];
     document.body.innerHTML = `<h1 id="title">Search</h1>`;
     document.title = "Search | CiviCRM";
-    mockApi({
+    const calls = mockApi({
       "Afreact.getForm": () => [
         { name: "afsearchTest", title: "Search", type: "search", layout: filtered, strings: [] },
       ],
@@ -395,13 +398,18 @@ describe("the page title", () => {
       memoryStore(hash),
     );
     await waitFor(() => expect(document.getElementById("title")).toHaveTextContent("Ada Search"));
-    await userEvent.clear(screen.getByRole("textbox", { name: "Title" }));
-    await waitFor(
-      () => {
-        expect(document.getElementById("title")).toHaveTextContent(/^Search$/);
-      },
-      { timeout: 2000 },
-    );
+    fakeTimeouts();
+    fireEvent.change(screen.getByRole("textbox", { name: "Title" }), { target: { value: "" } });
+    passTime(SEARCH_DELAY_MS);
+    expect(called(calls, "SearchDisplay.run").map(({ params }) => params.filters)).toEqual([
+      { title: "Ada" },
+      {},
+    ]);
+    vi.useRealTimers();
+    // The search without the title filter answers without its label.
+    await waitFor(() => {
+      expect(document.getElementById("title")).toHaveTextContent(/^Search$/);
+    });
     expect(document.title).toBe("Search | CiviCRM");
   });
 

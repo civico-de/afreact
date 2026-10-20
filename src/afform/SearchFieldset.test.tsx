@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useEffect, useRef } from "react";
 import { SEARCH_DELAY_MS } from "../search/filters";
 import { mockApi, renderWithQuery } from "../test/render";
+import { fakeTimeouts, passTime } from "../test/timers";
 import { memoryStore, pageStore, type ParamStore } from "../url/hash";
 import { AfreactForm } from "./AfreactForm";
 import { filterFields, SearchFieldset, useSearchFieldset } from "./SearchFieldset";
@@ -81,21 +82,6 @@ function renderSearch(
   const runs = () =>
     calls.filter(({ call }) => call === "SearchDisplay.run").map(({ params }) => params.filters);
   return { store, calls, runs, view };
-}
-
-// Only timeouts are fake, the debounce's and those of the next-tick flushes; awaiting
-// anything needs real timers again.
-const fakeTimers = () =>
-  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldClearNativeTimers: true });
-
-/** Lets `ms` pass on the fake timers, then what that scheduled for the next tick. */
-function pass(ms: number) {
-  act(() => {
-    vi.advanceTimersByTime(ms);
-  });
-  act(() => {
-    vi.advanceTimersByTime(0);
-  });
 }
 
 describe("SearchFieldset", () => {
@@ -250,10 +236,10 @@ describe("SearchFieldset", () => {
         }),
     });
     const title = await screen.findByRole("textbox", { name: "Title" });
-    fakeTimers();
+    fakeTimeouts();
     fireEvent.change(title, { target: { value: "Ne" } });
     // The search delay passes while the set is still loading.
-    pass(SEARCH_DELAY_MS);
+    passTime(SEARCH_DELAY_MS);
     vi.useRealTimers();
     expect(store.params().toString()).toBe("_s=4");
     act(() => {
@@ -271,12 +257,12 @@ describe("SearchFieldset", () => {
       "SearchParamSet.get": () => [],
     });
     await screen.findByRole("cell", { name: "Row" });
-    fakeTimers();
+    fakeTimeouts();
     fireEvent.change(screen.getByRole("textbox", { name: "Title" }), { target: { value: "Ne" } });
-    pass(SEARCH_DELAY_MS - 1);
+    passTime(SEARCH_DELAY_MS - 1);
     expect(runs()).toHaveLength(1);
     expect(store.params().toString()).toBe("_s=4&other=x");
-    pass(1);
+    passTime(1);
     // The id stays in the URL; only what differs from the defaults is written.
     expect(store.params().toString()).toBe("_s=4&other=x&title=Ne");
     expect(runs()).toHaveLength(2);
@@ -289,9 +275,9 @@ describe("SearchFieldset", () => {
     const short = field("name", { label: "Name", input_attrs: { minlength: 4 } });
     const { runs } = renderSearch("", searchForm({}, [display("Groups")], [short]));
     await screen.findByRole("cell", { name: "Row" });
-    fakeTimers();
+    fakeTimeouts();
     fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "ab" } });
-    pass(SEARCH_DELAY_MS);
+    passTime(SEARCH_DELAY_MS);
     expect(runs()).toHaveLength(2);
     expect(runs()[1]).toEqual({ is_active: true, name: "ab" });
   });
@@ -315,9 +301,9 @@ describe("SearchFieldset", () => {
   it("leaves defaults out of the URL", async () => {
     const { store, runs } = renderSearch("#?is_active=0");
     await screen.findByRole("cell", { name: "Row" });
-    fakeTimers();
+    fakeTimeouts();
     fireEvent.click(screen.getByRole("radio", { name: "Yes" }));
-    pass(SEARCH_DELAY_MS);
+    passTime(SEARCH_DELAY_MS);
     expect(runs()).toHaveLength(2);
     expect(store.params().toString()).toBe("");
   });
@@ -330,9 +316,9 @@ describe("SearchFieldset", () => {
     await waitFor(() => {
       expect(screen.getAllByRole("cell", { name: "Row" })).toHaveLength(2);
     });
-    fakeTimers();
+    fakeTimeouts();
     fireEvent.change(screen.getByRole("textbox", { name: "Title" }), { target: { value: "New" } });
-    pass(SEARCH_DELAY_MS);
+    passTime(SEARCH_DELAY_MS);
     expect(store.params().toString()).toBe("Groups.title=New");
   });
 
@@ -366,9 +352,9 @@ describe("SearchFieldset", () => {
       </SearchFieldset>,
       store,
     );
-    fakeTimers();
+    fakeTimeouts();
     fireEvent.click(screen.getByRole("button", { name: "Type" }));
-    pass(SEARCH_DELAY_MS);
+    passTime(SEARCH_DELAY_MS);
     expect(store.params().toString()).toBe("_s=4");
   });
 
@@ -455,12 +441,12 @@ describe("SearchFieldset", () => {
     const store = memoryStore("");
     const { runs } = renderSearch("", layout, {}, store);
     await screen.findByRole("cell", { name: "Row" });
-    fakeTimers();
+    fakeTimeouts();
     fireEvent.change(screen.getByRole("combobox", { name: "Operator" }), {
       target: { value: "=" },
     });
     fireEvent.change(screen.getByRole("textbox", { name: "Title" }), { target: { value: "A" } });
-    pass(SEARCH_DELAY_MS);
+    passTime(SEARCH_DELAY_MS);
     expect(runs().at(-1)).toEqual({ title: { "=": "A" } });
     // The URL keeps the chosen operator, so a reload or a shared link searches the same.
     expect(store.params().get("title")).toBe('{"=":"A"}');
@@ -498,9 +484,9 @@ describe("SearchFieldset", () => {
     );
     await screen.findByRole("cell", { name: "Row Old" });
     const title = screen.getByRole("textbox", { name: "Title" });
-    fakeTimers();
+    fakeTimeouts();
     fireEvent.change(title, { target: { value: "New" } });
-    pass(SEARCH_DELAY_MS);
+    passTime(SEARCH_DELAY_MS);
     vi.useRealTimers();
     expect(window.location.hash).toBe("#?title=New");
     expect(await screen.findByRole("cell", { name: "Row New" })).toBeInTheDocument();

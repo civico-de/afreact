@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { SEARCH_DELAY_MS } from "../search/filters";
 import { mockApi, renderWithQuery } from "../test/render";
+import { fakeTimeouts } from "../test/timers";
 import { memoryStore } from "../url/hash";
 import { AfreactForm } from "./AfreactForm";
 import { layoutProblems } from "./support";
@@ -102,7 +103,7 @@ describe("ParamSets", () => {
     const { store } = renderPicker("");
     const select = await screen.findByRole("combobox", { name: "Saved searches" });
     const title = screen.getByRole("textbox", { name: "Title" });
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldClearNativeTimers: true });
+    fakeTimeouts();
     fireEvent.change(title, { target: { value: "Ne" } });
     // Typing pauses and the filter commits; the pick follows before the next tick.
     act(() => {
