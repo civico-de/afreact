@@ -169,6 +169,8 @@ export function SearchFieldset({ node, formName, data = NO_DATA, children }: Sea
   const cacheKey = `afform:${formName}${name}`;
   const stores = storesValues(node["store-values"]);
   const [context] = useState<ValueContext>(() => ({ userContactId: window.CRM.config?.cid }));
+  // Read once, as afFieldset's reloadedStoredValues: a filter shown later still finds its value.
+  const [stored] = useState(() => (stores ? readStored(cacheKey) : undefined));
   const [route, setRoute] = useState(() => store.params());
   // The route last set, ahead of `route` until the render that shows it.
   const latestRoute = useRef(route);
@@ -197,7 +199,7 @@ export function SearchFieldset({ node, formName, data = NO_DATA, children }: Sea
       fields,
       fieldsetName: name,
       params: route,
-      stored: stores ? readStored(cacheKey) : undefined,
+      stored,
       paramSet: loadedSet,
       context,
     });
@@ -234,7 +236,7 @@ export function SearchFieldset({ node, formName, data = NO_DATA, children }: Sea
       ),
       fieldsetName: name,
       params: route,
-      stored: stores ? readStored(cacheKey) : undefined,
+      stored,
       paramSet: loadedSet,
       context,
     });

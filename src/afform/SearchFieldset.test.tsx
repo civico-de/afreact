@@ -428,6 +428,40 @@ describe("SearchFieldset", () => {
     expect(screen.getByRole("status")).toHaveTextContent('{"title":"x"}');
   });
 
+  it("gives a filter its default once an af-if shows it, and a stored value read at load", () => {
+    const rule = JSON.stringify([["Individual1[0][fields][advanced]", "=", "true"]]);
+    const children = [
+      field("title", {}),
+      { "#tag": "div", "af-if": rule, "#children": [field("status", { afform_default: "1" })] },
+    ];
+    const Applied = () => <output>{JSON.stringify(useSearchFieldset()?.state.applied)}</output>;
+    const view = (stored: boolean, advanced: boolean) => (
+      <SearchFieldset
+        node={{ "#tag": "div", "#children": children, ...(stored && { "store-values": "1" }) }}
+        formName="afsearchGroups"
+        data={{ Individual1: [{ fields: { advanced } }] }}
+      >
+        <Applied />
+      </SearchFieldset>
+    );
+    const first = renderWithQuery(view(false, false), memoryStore(""));
+    first.rerender(view(false, true));
+    expect(screen.getByRole("status")).toHaveTextContent('{"status":"1"}');
+    first.unmount();
+    // A cache that hands back what was last stored, as CRM.cache does.
+    let cached: unknown = { title: "t", status: "3" };
+    window.CRM.cache = {
+      get: () => cached,
+      set: (_name: string, value: unknown) => {
+        cached = value;
+      },
+    };
+    const { rerender } = renderWithQuery(view(true, false), memoryStore(""));
+    expect(screen.getByRole("status")).toHaveTextContent('{"title":"t"}');
+    rerender(view(true, true));
+    expect(screen.getByRole("status")).toHaveTextContent('{"title":"t","status":"3"}');
+  });
+
   it("adds the display's own filters from the route, which win on the same key", async () => {
     const { runs } = renderSearch(
       "#?job_type=import&title=x",
