@@ -73,11 +73,8 @@ function Canvas({
   scope?: ContainerScope;
   type?: string;
 }) {
-  const [afform, setAfform] = useState<AfformDefinition>({
-    type,
-    title: "Probe",
-    layout: [field],
-  });
+  const initial: AfformDefinition = { type, title: "Probe", layout: [field] };
+  const [afform, setAfform] = useState(initial);
   const [node] = afform.layout;
   latest = isElement(node) ? node : undefined;
   const editor: EditorApi = {
@@ -97,6 +94,14 @@ function Canvas({
   if (!latest) return null;
   return (
     <CoreVersion value="6.20.0">
+      <button
+        type="button"
+        onClick={() => {
+          setAfform(initial);
+        }}
+      >
+        Undo all
+      </button>
       <EditorContext value={editor}>
         <FieldElement
           path={[0]}
@@ -205,6 +210,19 @@ describe("FieldElement", () => {
       await userEvent.selectOptions(screen.getByLabelText("Default date"), "Pick Date");
       expect(savedDefn()).toBeUndefined();
       expect(screen.getByLabelText("Default date")).toHaveValue("fixed");
+    });
+
+    it("shows a default's controls again when undo restores it", async () => {
+      render(
+        <Canvas
+          field={{ "#tag": "af-field", name: "receive_date", defn: "{afform_default: 'now'}" }}
+        />,
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Configure" }));
+      await userEvent.click(screen.getByText("Default value"));
+      expect(screen.queryByLabelText("Default date")).toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "Undo all" }));
+      expect(screen.getByLabelText("Default date")).toHaveValue("now");
     });
 
     it("gives a yes/no field a default of yes at once", async () => {

@@ -124,12 +124,12 @@ function useFieldApi(
   const owner = textAttribute(ops.node, "name") ?? "";
   const fieldId = useId();
   const [editingOptions, setEditingOptions] = useFlag(owner);
-  // As afGuiField's hasDefaultValue: read from the field once, then on until switched off,
-  // so emptying the default keeps its input.
+  // On while a default is stored, and from switching on until switched off,
+  // so emptying the default keeps its input and undo brings it back.
   const stored = getValue(state, "afform_default") !== "";
   const [shown, setShown] = useState({ owner, on: stored });
   if (shown.owner !== owner) setShown({ owner, on: stored });
-  const hasDefault = shown.owner === owner ? shown.on : stored;
+  const hasDefault = stored || (shown.owner === owner && shown.on);
   const setPendingDefault = (on: boolean) => {
     setShown({ owner, on });
   };
