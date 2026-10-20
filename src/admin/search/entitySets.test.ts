@@ -61,10 +61,35 @@ describe("entity sets", () => {
         ["UNION ALL", "Email", "get", { select: ["id", "email"] }],
       ],
     };
-    const after = removeEntitySet(params, 0);
+    const after = removeEntitySet(meta, params, 0);
     expect(after.select).toEqual(["key"]);
     expect(setsOf(after).map((set) => set[3].select)).toEqual([["id AS key"], ["id"]]);
-    expect(removeEntitySet(params, 2).select).toEqual(["id", "name"]);
+    expect(removeEntitySet(meta, params, 2).select).toEqual(["id", "name"]);
+  });
+
+  // deviation:union-remove-first-renames-outer
+  it("renames the outer references to the next set's columns when the first goes", () => {
+    const after = removeEntitySet(
+      meta,
+      {
+        select: ["id", "COUNT(name) AS n", "name"],
+        where: [["name", "=", "Ada"]],
+        groupBy: ["name"],
+        orderBy: { name: "ASC" },
+        sets: [
+          ["UNION ALL", "Contact", "get", { select: ["id", "display_name AS name"] }],
+          ["UNION ALL", "Activity", "get", { select: ["id", "subject"] }],
+        ],
+      },
+      0,
+    );
+    expect(after).toMatchObject({
+      select: ["id", "COUNT(subject) AS n", "subject"],
+      where: [["subject", "=", "Ada"]],
+      groupBy: ["subject"],
+      orderBy: { subject: "ASC" },
+    });
+    expect(setsOf(after).map((set) => set[3].select)).toEqual([["id", "subject"]]);
   });
 
   it("renames the outer column with the first set's alias", () => {
@@ -82,6 +107,7 @@ describe("entity sets", () => {
       meta,
       {
         ...union(),
+        select: ["id", "name", "GROUP_CONCAT(DISTINCT name:label ORDER BY id) AS names"],
         where: [
           ["name", "=", "Ada"],
           [
@@ -100,7 +126,7 @@ describe("entity sets", () => {
       { select: ["id", "display_name AS title"] },
     );
     expect(params).toMatchObject({
-      select: ["id", "title"],
+      select: ["id", "title", "GROUP_CONCAT(DISTINCT title:label ORDER BY id) AS names"],
       where: [
         ["title", "=", "Ada"],
         [

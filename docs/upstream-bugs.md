@@ -1209,9 +1209,16 @@ column leaves an empty cell. `deviation:union-join-keeps-rows`
 set's column gets another name, core renames only an outer select item equal to
 the old name (`crmSearchAdminEntitySetSelect`), so outer conditions, grouping
 and sorting keep naming a column the search no longer has. afreact
-renames the field in them too, keeping their own suffixes such as `:label`; a
-change of suffix alone leaves them as they are. A function expression such as
-`COUNT(name)` keeps the old name in both. `deviation:union-rename-outer-references`
+renames the field in them too, keeping their own suffixes such as `:label`, and
+inside an outer column's function such as `COUNT(name)`; a change of suffix
+alone leaves them as they are. `deviation:union-rename-outer-references`
+
+**Removing a combined search's first set leaves stale references.** Core then
+rebuilds the outer select from the next set's column names
+(`crmSearchAdminEntitySetSelect` `removeEntitySet`), dropping outer functions
+such as `COUNT(name) AS n`, while outer conditions, grouping and sorting keep the
+old names. afreact renames the outer select, conditions, grouping and sorting
+to the next set's columns, as when a column is renamed. `deviation:union-remove-first-renames-outer`
 
 **A combined search's function column takes its field's type.** The fields of
 an entity set search copy the first set's field behind each column

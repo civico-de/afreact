@@ -93,7 +93,7 @@ export function EntitySetsTab({ meta, params, onChange }: EntitySetsTabProps) {
                         className="btn btn-xs btn-danger-outline pull-right"
                         aria-label={ts("Remove Search %1", { 1: title })}
                         onClick={() => {
-                          onChange(removeEntitySet(params, setIndex));
+                          onChange(removeEntitySet(meta, params, setIndex));
                         }}
                       >
                         <i className="crm-i fa-trash" role="img" aria-hidden="true" />

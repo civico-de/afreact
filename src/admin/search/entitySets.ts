@@ -1,4 +1,5 @@
 import { getDefaultLabel, parseExpr, type ApiParams, type SearchInfo } from "./expr";
+import { fnState, writeExpr } from "./fn";
 import type { SchemaField, SearchAdminMetadata } from "./meta";
 
 /** A set's params; a column the set's entity lacks is null, so rows line up across sets. */
@@ -122,24 +123,25 @@ export function removeEntitySetRow(
   };
 }
 
-/** removeEntitySet: without the first set, the next one's empty rows go and it names the columns. */
-export function removeEntitySet(params: ApiParams, index: number): ApiParams {
+/**
+ * removeEntitySet: without the first set, the next one's empty rows go and it names the columns,
+ * in the outer references too. deviation:union-remove-first-renames-outer
+ */
+export function removeEntitySet(
+  meta: SearchAdminMetadata,
+  params: ApiParams,
+  index: number,
+): ApiParams {
   const sets = setsOf(params).filter((_, i) => i !== index);
-  const first = sets[0];
-  if (index !== 0 || !first) return { ...params, sets };
-  const empty = new Set(first[3].select.flatMap((field, i) => (field === null ? [i] : [])));
-  const trimmed = sets.map(
-    ([op, entity, action, inner]): EntitySet => [
-      op,
-      entity,
-      action,
-      { ...inner, select: inner.select.filter((_, i) => !empty.has(i)) },
-    ],
-  );
-  const select = columns(trimmed[0]?.[3].select ?? []).map(
-    (field) => field.split(" AS ").at(-1) ?? field,
-  );
-  return { ...params, select, sets: trimmed };
+  const next = sets[0];
+  if (index !== 0 || !next) return { ...params, sets };
+  const empty = next[3].select.flatMap((field, i) => (field === null ? [i] : []));
+  const trimmed = [...empty]
+    .reverse()
+    .reduce((acc, row) => removeEntitySetRow(meta, acc, row), params);
+  const [first, ...rest] = setsOf(trimmed);
+  if (!first || !rest[0]) return params;
+  return { ...renameColumns(meta, trimmed, first, rest[0]), sets: rest };
 }
 
 const LOGIC = ["AND", "OR", "NOT"];
@@ -157,6 +159,58 @@ function renameInClauses(clauses: unknown[][], rename: (key: string) => string):
   });
 }
 
+/** The outer params with the columns of set `from` renamed to those of set `to`, row by row. */
+function renameColumns(
+  meta: SearchAdminMetadata,
+  params: ApiParams,
+  from: EntitySet,
+  to: EntitySet,
+): ApiParams {
+  // Every rename is taken from the old names at once, so names that swap do not merge.
+  const renamed = new Map<string, string>();
+  const fields = new Map<string, string>();
+  to[3].select.forEach((expr, row) => {
+    const before = from[3].select[row];
+    if (!before || !expr || before === expr) return;
+    const was = parseExpr(meta, before, infoOf(from)).alias;
+    const now = parseExpr(meta, expr, infoOf(to)).alias;
+    if (!was || !now || was === now) return;
+    renamed.set(was, now);
+    // Conditions, grouping and sorting name the field without its suffix, or with one of theirs.
+    const [wasField = was, nowField = now] = [was.split(":")[0], now.split(":")[0]];
+    if (wasField !== nowField) fields.set(wasField, nowField);
+  });
+  const rename = (key: string) => {
+    const field = key.split(":")[0] ?? key;
+    const now = fields.get(field);
+    return now === undefined ? key : now + key.slice(field.length);
+  };
+  const outerMeta = withEntitySetFields(meta, params);
+  const renameInFunction = (col: string) => {
+    const state = fnState(outerMeta, col, { api_entity: "EntitySet", api_params: params });
+    const args = state.args.map((arg) =>
+      arg.type === "field" ? { ...arg, value: rename(String(arg.value)) } : arg,
+    );
+    if (!state.fn || args.every((arg, i) => arg.value === state.args[i]?.value)) return col;
+    const [expr = "", alias] = writeExpr({ ...state, args }, "select").split(" AS ");
+    return alias === undefined ? expr : `${expr} AS ${col.split(" AS ")[1] ?? alias}`;
+  };
+  return !renamed.size
+    ? params
+    : {
+        ...params,
+        select: params.select.map((col) => renamed.get(col) ?? renameInFunction(col)),
+        ...(params.where && { where: renameInClauses(params.where, rename) }),
+        ...(params.having && { having: renameInClauses(params.having, rename) }),
+        ...(params.groupBy && { groupBy: params.groupBy.map(rename) }),
+        ...(params.orderBy && {
+          orderBy: Object.fromEntries(
+            Object.entries(params.orderBy).map(([key, dir]) => [rename(key), dir]),
+          ),
+        }),
+      };
+}
+
 /**
  * A set's params changed; a renamed column of the first set is renamed in the outer select,
  * conditions, grouping and sorting. deviation:union-rename-outer-references
@@ -170,40 +224,8 @@ export function setEntitySet(
   const sets = setsOf(params);
   const old = sets[index];
   if (!old) return params;
-  // Every rename is taken from the old names at once, so names that swap do not merge.
-  const renamed = new Map<string, string>();
-  const fields = new Map<string, string>();
-  if (index === 0)
-    inner.select.forEach((expr, row) => {
-      const before = old[3].select[row];
-      if (!before || !expr || before === expr) return;
-      const was = parseExpr(meta, before, infoOf(old)).alias;
-      const now = parseExpr(meta, expr, infoOf([old[0], old[1], old[2], inner])).alias;
-      if (!was || !now || was === now) return;
-      renamed.set(was, now);
-      // Conditions, grouping and sorting name the field without its suffix, or with one of theirs.
-      const [wasField = was, nowField = now] = [was.split(":")[0], now.split(":")[0]];
-      if (wasField !== nowField) fields.set(wasField, nowField);
-    });
-  const rename = (key: string) => {
-    const field = key.split(":")[0] ?? key;
-    const now = fields.get(field);
-    return now === undefined ? key : now + key.slice(field.length);
-  };
-  const outer: ApiParams = !renamed.size
-    ? params
-    : {
-        ...params,
-        select: params.select.map((col) => renamed.get(col) ?? col),
-        ...(params.where && { where: renameInClauses(params.where, rename) }),
-        ...(params.having && { having: renameInClauses(params.having, rename) }),
-        ...(params.groupBy && { groupBy: params.groupBy.map(rename) }),
-        ...(params.orderBy && {
-          orderBy: Object.fromEntries(
-            Object.entries(params.orderBy).map(([key, dir]) => [rename(key), dir]),
-          ),
-        }),
-      };
+  const outer =
+    index === 0 ? renameColumns(meta, params, old, [old[0], old[1], old[2], inner]) : params;
   return {
     ...outer,
     sets: sets.map((set, i): EntitySet => (i === index ? [set[0], set[1], set[2], inner] : set)),
