@@ -391,6 +391,11 @@ function ResultDisplay({
   const searchAgain = () => {
     const before = client.getQueryState(countKey)?.dataUpdatedAt;
     void client.invalidateQueries({ queryKey: tallyKey });
+    // Every page loads afresh when next shown, as core runs each page it shows.
+    void client.invalidateQueries({
+      queryKey: ["SearchDisplay", "run", params],
+      refetchType: "none",
+    });
     // The click returns to page 1, so that page is the one to load afresh.
     void client
       .fetchQuery({ queryKey: pageKey(1), queryFn: () => fetchPage(1), staleTime: 0 })

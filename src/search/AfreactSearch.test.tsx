@@ -798,6 +798,12 @@ describe("AfreactSearch", () => {
         expect(returns.slice(before)).toContain("page:1");
       });
       expect(returns.slice(before)).not.toContain("page:2");
+      // A page seen before the click loads afresh too.
+      const again = returns.length;
+      await userEvent.click(await screen.findByRole("link", { name: "2" }));
+      await waitFor(() => {
+        expect(returns.slice(again)).toContain("page:2");
+      });
     });
 
     it("changes the page size once typing pauses", async () => {
