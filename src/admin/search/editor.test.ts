@@ -100,6 +100,25 @@ describe("saving", () => {
     expect(validate(meta, saved(), false)).toEqual([]);
   });
 
+  // deviation:smart-group-aggregate-refused
+  it("refuses a smart group whose first column counts or sums instead of naming contacts", () => {
+    const count = meta.functions.find((fn) => fn.name === "COUNT")!;
+    const withMin = { ...meta, functions: [...meta.functions, { ...count, name: "MIN" }] };
+    const group = (select: string[]) =>
+      saved({
+        api_params: { version: 4, select, groupBy: ["gender_id"] },
+        groups: [{ title: "G", description: "", visibility: "", group_type: [] }],
+      });
+    expect(validate(meta, group(["COUNT(id) AS COUNT_id", "gender_id"]), true)).toEqual([
+      { message: "A smart group's first column must hold contact IDs, not a Count.", tab: "group" },
+    ]);
+    expect(validate(meta, group(["SUM(id) AS SUM_id"]), true)).toHaveLength(1);
+    expect(validate(meta, group(["COUNT(id) AS COUNT_id"]), false)).toEqual([]);
+    expect(validate(withMin, group(["MIN(id) AS MIN_id", "gender_id"]), true)).toEqual([]);
+    expect(validate(meta, group(["id AS cid", "display_name"]), true)).toEqual([]);
+    expect(validate(meta, group(["employer_id", "COUNT(id) AS COUNT_id"]), true)).toEqual([]);
+  });
+
   // deviation:batch-default-invalid-blocks-save
   it("refuses a data entry default its number input would not take", () => {
     const batch = (value: unknown, key = "duration") =>

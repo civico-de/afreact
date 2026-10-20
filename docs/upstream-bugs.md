@@ -1365,6 +1365,14 @@ built from whatever IDs that column holds. When a change of the joins drops
 the first column, afreact moves a contact ID that needs no aggregate to the
 front. `deviation:smart-group-column-leads`
 
+**Grouping a smart group counts its contact column.** Once the search groups
+its rows, `reconcileAggregateColumns()` wraps every ungrouped column, and
+`getDefaultAggregateFn()` picks `COUNT` for an `id`, so the first column turns
+into `COUNT(id)`. `GroupContactCache::getApiSQL()` reads that column as
+`contact_id`, and the group gets the contacts whose IDs equal the counts.
+afreact refuses to save a smart group whose first column is an aggregate other
+than `MIN` or `MAX`. `deviation:smart-group-aggregate-refused`
+
 **Selected columns stay selectable.** `fieldsForSelect()` passes a
 `disabledIf` callback without a `return`, so fields already in the select
 are never disabled; picking one does nothing because `addParam()` skips

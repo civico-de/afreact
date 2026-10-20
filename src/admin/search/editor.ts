@@ -1,4 +1,4 @@
-import { getEntity, type ApiParams, type SearchInfo } from "./expr";
+import { getEntity, parseExpr, type ApiParams, type SearchInfo } from "./expr";
 import type { SearchAdminMetadata } from "./meta";
 import { coreHas } from "../version";
 import { invalidDefaults } from "./display/model";
@@ -216,6 +216,15 @@ export function validate(
   if (!search.label) errors.push({ message: required(ts("Search Label")) });
   if (groupExists && !search.groups[0]?.title)
     errors.push({ message: required(ts("Group Title")), tab: "group" });
+  // Core reads the members from the first column. deviation:smart-group-aggregate-refused
+  const lead = groupExists ? parseExpr(meta, search.api_params.select[0] ?? "", search).fn : null;
+  if (lead?.category === "aggregate" && !["MIN", "MAX"].includes(lead.name))
+    errors.push({
+      message: ts("A smart group's first column must hold contact IDs, not a %1.", {
+        1: lead.title,
+      }),
+      tab: "group",
+    });
   // The column is int unsigned. deviation:search-timeout-invalid-blocks-save
   if (!validTimeout(search.timeout))
     errors.push({
