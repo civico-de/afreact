@@ -438,8 +438,22 @@ describe("Field", () => {
   });
 
   it("shows the date of a prefilled datetime in a date-only input", () => {
-    setup({ input_type: "Date", data_type: "Timestamp" }, "2026-09-29 14:30:00");
+    setup(
+      { input_type: "Date", data_type: "Timestamp", input_attrs: { time: false } },
+      "2026-09-29 14:30:00",
+    );
     expect(screen.getByLabelText("Field")).toHaveValue("2026-09-29");
+  });
+
+  // deviation:date-time-by-type
+  it.each([
+    ["Timestamp", "datetime-local", "2026-09-29T14:30"],
+    ["Date", "date", "2026-09-29"],
+  ])("gives a %s field without a time setting a %s input", (dataType, type, shown) => {
+    setup({ input_type: "Date", data_type: dataType }, "2026-09-29 14:30:00");
+    const input = screen.getByLabelText("Field");
+    expect(input).toHaveAttribute("type", type);
+    expect(input).toHaveValue(shown);
   });
 
   // deviation:native-date-inputs

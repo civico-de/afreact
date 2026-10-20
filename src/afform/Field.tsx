@@ -14,6 +14,7 @@ import { RANGE_TYPES, SearchRange } from "./fields/SearchRange";
 import type { FieldDefn, FieldOption } from "./types";
 import { Markup } from "./Markup";
 import { Unsupported } from "./Unsupported";
+import { showsTime } from "./fields/dateTime";
 
 /**
  * A field in the markup of core's afField templates (afField.html, fields/*.html), so the
@@ -344,7 +345,8 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
         );
       }
       case "Date": {
-        const kind = attrs.time ? "date" : dateFormatKind(attrs.date);
+        const time = showsTime(attrs.time, defn.data_type);
+        const kind = time ? "date" : dateFormatKind(attrs.date);
         return (
           <span className="crm-form-date-wrapper">
             {kind === "year" && (
@@ -373,7 +375,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                 }}
               />
             )}
-            {kind === "date" && attrs.time && (
+            {kind === "date" && time && (
               <input
                 {...common}
                 type="datetime-local"
@@ -384,7 +386,7 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                 }}
               />
             )}
-            {kind === "date" && !attrs.time && (
+            {kind === "date" && !time && (
               <input
                 {...common}
                 type="date"

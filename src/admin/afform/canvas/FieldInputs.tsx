@@ -20,6 +20,7 @@ import {
   inputTypeTag,
 } from "../editable";
 import { PartNotice, PluginElement } from "./plugins";
+import { showsTime } from "../../../afform/fields/dateTime";
 
 const text = (value: unknown) =>
   typeof value === "string" || typeof value === "number" ? String(value) : "";
@@ -103,7 +104,7 @@ function NumberPreview({ api }: { api: FieldApi }) {
 
 // deviation:date-range-separator-once
 function DatePreview({ api }: { api: FieldApi }) {
-  const time = !!getProp(api.state, "input_attrs.time");
+  const time = showsTime(getProp(api.state, "input_attrs.time"), api.state.base.data_type);
   return (
     <div className={`form-inline ${text(getProp(api.state, "input_style"))}`}>
       {rangeElements(api, "Date").map((suffix) => (

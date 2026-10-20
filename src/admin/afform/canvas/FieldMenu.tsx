@@ -37,6 +37,7 @@ import {
   type FieldState,
 } from "./fieldModel";
 import { FormTokenSelect } from "./TokenSelect";
+import { showsTime } from "../../../afform/fields/dateTime";
 
 const text = (value: unknown) =>
   typeof value === "string" || typeof value === "number" ? String(value) : "";
@@ -651,12 +652,15 @@ export function FieldMenu({ api, close }: { api: FieldApi; close: () => void }) 
         </li>
       )}
       <StyleItem api={api} />
-      {inputType === "Date" && !!state.base.input_attrs.time && (
+      {inputType === "Date" && showsTime(state.base.input_attrs.time, state.base.data_type) && (
         <MenuCheck
-          checked={!!getProp(state, "input_attrs.time")}
+          checked={showsTime(getProp(state, "input_attrs.time"), state.base.data_type)}
           title={ts("Input date + time")}
           onClick={() => {
-            api.set("input_attrs.time", !getValue(state, "input_attrs.time"));
+            api.set(
+              "input_attrs.time",
+              !showsTime(getProp(state, "input_attrs.time"), state.base.data_type),
+            );
           }}
         >
           {ts("Show Time")}

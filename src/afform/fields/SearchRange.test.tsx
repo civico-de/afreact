@@ -110,7 +110,14 @@ describe("search ranges", () => {
   // deviation:range-bounds-labelled
   it("fills a date range from the URL and clears one bound", async () => {
     const { runs, lastRun } = renderSearch(
-      [field("created_date", { label: "Created", input_type: "Date", data_type: "Timestamp" })],
+      [
+        field("created_date", {
+          label: "Created",
+          input_type: "Date",
+          data_type: "Timestamp",
+          input_attrs: { time: false },
+        }),
+      ],
       `#?created_date=${encodeURIComponent('{">=":"2026-01-01","<=":"2026-01-31"}')}`,
     );
     await screen.findByRole("cell", { name: "Row" });
@@ -123,22 +130,26 @@ describe("search ranges", () => {
     expect(lastRun()).toEqual({ created_date: { ">=": "2026-01-01" } });
   });
 
-  it("writes date and time bounds of a field with time as the datepicker does", async () => {
-    const { lastRun } = renderSearch([
-      field("start", {
-        label: "Start",
-        input_type: "Date",
-        data_type: "Timestamp",
-        input_attrs: { time: true },
-      }),
-    ]);
-    await screen.findByRole("cell", { name: "Row" });
-    const low = screen.getByLabelText("Start from");
-    expect(low).toHaveAttribute("type", "datetime-local");
-    fakeTimeouts();
-    enter(low, "2026-02-03T04:05");
-    expect(lastRun()).toEqual({ start: { ">=": "2026-02-03 04:05:00" } });
-  });
+  // deviation:date-time-by-type
+  it.each([{ time: true }, {}])(
+    "writes date and time bounds of a timestamp with time settings %o as the datepicker does",
+    async (attrs) => {
+      const { lastRun } = renderSearch([
+        field("start", {
+          label: "Start",
+          input_type: "Date",
+          data_type: "Timestamp",
+          input_attrs: attrs,
+        }),
+      ]);
+      await screen.findByRole("cell", { name: "Row" });
+      const low = screen.getByLabelText("Start from");
+      expect(low).toHaveAttribute("type", "datetime-local");
+      fakeTimeouts();
+      enter(low, "2026-02-03T04:05");
+      expect(lastRun()).toEqual({ start: { ">=": "2026-02-03 04:05:00" } });
+    },
+  );
 
   // deviation:date-range-bound-type
   it("shows both bounds of a date field without time as date inputs", async () => {
@@ -214,6 +225,7 @@ describe("search ranges", () => {
         label: "Created",
         input_type: "Select",
         data_type: "Timestamp",
+        input_attrs: { time: false },
         is_date: 1,
         afform_default: "this.month",
         options: [

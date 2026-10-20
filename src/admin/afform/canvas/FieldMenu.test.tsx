@@ -151,6 +151,26 @@ describe("FieldMenu", () => {
     expect(api.set).toHaveBeenLastCalledWith("input_attrs.maxlength", 12);
   });
 
+  // deviation:date-time-by-type
+  it.each([
+    ["Timestamp", true],
+    ["Date", false],
+  ])("offers Show Time on a %s field without a time setting: %s", (dataType, offered) => {
+    const api = fieldApi(
+      { name: "created_date", input_type: "Date", data_type: dataType, input_attrs: {} },
+      {},
+    );
+    renderMenu(api);
+    const toggle = screen.queryByRole("button", { name: /Show Time/ });
+    if (!offered) {
+      expect(toggle).toBeNull();
+      return;
+    }
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(toggle ?? document.body);
+    expect(api.set).toHaveBeenLastCalledWith("input_attrs.time", false);
+  });
+
   it("takes another CSS class trimmed once its input is left", () => {
     const api = textField();
     renderMenu(api);

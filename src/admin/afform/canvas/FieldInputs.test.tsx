@@ -21,6 +21,28 @@ const fieldApi = (base: BaseDefn, local: FieldApi["state"]["local"]) =>
   probe(base, local, { meta });
 
 describe("InputPreview", () => {
+  // deviation:date-time-by-type
+  it.each([
+    ["Timestamp", 1],
+    ["Date", 0],
+  ])("previews a time input on a %s field without a time setting: %i", (dataType, count) => {
+    const { container } = render(
+      <InputPreview
+        api={fieldApi(
+          {
+            name: "created_date",
+            label: "Created",
+            input_type: "Date",
+            data_type: dataType,
+            input_attrs: {},
+          },
+          {},
+        )}
+      />,
+    );
+    expect(container.querySelectorAll(".crm-form-time")).toHaveLength(count);
+  });
+
   // deviation:date-range-separator-once
   it("puts the separator of a date range between its two inputs only", () => {
     const { container } = render(

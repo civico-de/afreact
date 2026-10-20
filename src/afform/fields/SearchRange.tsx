@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ClearButton, fromLocalDateTime, toLocalDateTime } from "../Field";
 import type { FieldDefn, FieldOption } from "../types";
+import { showsTime } from "./dateTime";
 
 /** The input types whose afField templates have a `search_range` branch. */
 export const RANGE_TYPES: ReadonlySet<string> = new Set([
@@ -103,7 +104,7 @@ export function SearchRange({ id, labelId, defn, value, onChange, disabled }: Se
         {...input(bound)}
         // Date.html requires the low datepicker only.
         required={bound === ">=" && defn.required === true}
-        time={!!attrs.time}
+        time={showsTime(attrs.time, defn.data_type)}
         value={range[bound]}
         onChange={(next) => {
           set(bound, next);

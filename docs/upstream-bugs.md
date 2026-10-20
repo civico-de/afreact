@@ -343,9 +343,19 @@ fills `inputAttrs` for a `search_range` date in a `$timeout`, but
 `fields/Date.html` binds each bound's `crm-ui-datepicker=":: $ctrl.inputAttrs[n]"`
 once, when it links, before that timeout; the datepicker starts from empty
 options and shows date and time even for a field whose `input_attrs` say
-`time: false`, and the bounds' placeholders are lost (`master` as of
-2026-10-08; seen on the demo's birth date range). The React renderer renders
-the bounds from the field's own attributes: a date input for a date field. `deviation:date-range-bound-type`
+`time: false`, and the bounds' placeholders are lost (seen on the demo's birth
+date range; fixed on `master` by civicrm-core#37112 of 2026-09-28, which sets
+`inputAttrs` before the template links). The React renderer renders the bounds
+from the field's own attributes: a date input for a date field. `deviation:date-range-bound-type`
+
+**A date-only column without a time setting asks for a time.** The datepicker
+shows a time input unless `input_attrs.time` is `false` (`crm.datepicker.js`),
+and `crmUiDatepicker` then calls a value without time incomplete. Core fields
+without a `format_type` carry no `time` setting, so a `date` column such as
+`Discount.start_date` asks for a time it cannot store, while the form builder's
+"Show Time" item is hidden for every such field. afreact reads a missing setting
+from the column: a timestamp takes date and time, as in core, a date only the
+date; the builder offers "Show Time" for a field that shows one. `deviation:date-time-by-type`
 
 **A saved search set in the route empties entity fields.** afField's
 routeParams watcher reads `_s` for every field outside the extra fieldset, and
