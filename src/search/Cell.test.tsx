@@ -94,6 +94,21 @@ describe("other column types", () => {
     expect(image.closest("a")).toHaveAttribute("href", "/a");
   });
 
+  // deviation:image-task-link
+  it("runs an image's task link on a click or Enter", async () => {
+    const link: Link = { task: "delete", text: "Delete", title: "Delete Contact" };
+    const { clicked } = cell(
+      { type: "image", key: "image_URL" },
+      { val: "Photo of Ada", img: { src: "/p.png" }, links: [link] },
+    );
+    const button = screen.getByRole("button", { name: "Photo of Ada" });
+    await userEvent.click(button);
+    button.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(clicked).toHaveBeenCalledTimes(2);
+    expect(clicked.mock.calls[0]?.[0]).toBe(link);
+  });
+
   it("renders nothing for an image column without an image", () => {
     expect(cell({ type: "image" }, { val: null }).container).toBeEmptyDOMElement();
   });

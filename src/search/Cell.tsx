@@ -45,7 +45,7 @@ export function Cell(props: CellProps) {
     case "html":
       return <HtmlValue value={cell.val} />;
     case "image":
-      return <Image cell={cell} />;
+      return <Image {...props} />;
     case "links":
       return <LinksColumn {...props} />;
     case "buttons":
@@ -145,7 +145,7 @@ function HtmlValue({ value }: { value: unknown }) {
   return <span dangerouslySetInnerHTML={{ __html: cellText(value) }} />;
 }
 
-function Image({ cell }: { cell: CellData }) {
+function Image({ cell, onLinkClick }: CellProps) {
   const img = cell.img;
   if (!img) return null;
   const image = (
@@ -156,7 +156,16 @@ function Image({ cell }: { cell: CellData }) {
     <span>
       {cell.links.map((link, index) => (
         <span key={index}>
-          <a target={link.target} href={link.url}>
+          {/* A task link runs on its click, which core's image.html leaves out. deviation:image-task-link */}
+          <a
+            target={link.target}
+            href={link.url}
+            title={link.title}
+            {...taskLinkProps(link)}
+            onClick={(event) => {
+              onLinkClick(link, event);
+            }}
+          >
             {image}
           </a>
         </span>

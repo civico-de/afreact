@@ -662,6 +662,13 @@ field and subsearch templates read `icons.right[$index]`, where `$index` is
 the column's position, while the run sends the icon at index 0: a right icon
 on any later column never shows. React reads index 0. `deviation:single-value-right-icon`
 
+**An image that links to a task does nothing.** The display editor offers the
+search's tasks as an image column's link, and the run sends such a link
+without a URL, but `colType/image.html` renders `<a ng-attr-href="{{ link.url
+|| '' }}">` without `onClickLink()`, so a click reloads the page instead of
+opening the task (read from the code, not run). React runs the task on a click
+or Enter, as in a field's link. `deviation:image-task-link`
+
 **A page past the last one stays empty.** `searchDisplayBaseTrait` keeps
 `page` when a reload or an old link leaves it beyond the last page, e.g. after
 the only row of the last page was deleted: the display shows "no results"
