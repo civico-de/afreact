@@ -28,6 +28,10 @@ const tick = () =>
   });
 
 describe("useGuardedHashPath", () => {
+  afterEach(() => {
+    window.history.replaceState(null, "", "/");
+  });
+
   it("follows the hash without its parameters", async () => {
     window.location.hash = "#/list?tab=custom";
     const { result } = renderHook(() => useGuardedHashPath());

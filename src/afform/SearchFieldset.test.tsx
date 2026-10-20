@@ -87,6 +87,7 @@ function renderSearch(
 describe("SearchFieldset", () => {
   afterEach(() => {
     delete window.CRM.cache;
+    delete window.CRM.config;
     vi.useRealTimers();
     window.history.replaceState(null, "", "/");
   });
@@ -419,7 +420,6 @@ describe("SearchFieldset", () => {
       values: { created_id: 3 },
       ids: [3],
     });
-    delete window.CRM.config;
   });
 
   it("offers the operators a field exposes and searches with the chosen one", async () => {

@@ -163,6 +163,10 @@ const save = async () => {
 };
 
 describe("AfreactForm", () => {
+  afterEach(() => {
+    window.history.replaceState(null, "", "/");
+  });
+
   it("prefills from the route arguments and submits the edited record", async () => {
     const calls = renderForm(() => [{ message: "<p>Contact saved.</p>" }]);
     const form = await screen.findByRole("form", { name: "Test form" });
@@ -563,7 +567,6 @@ describe("AfreactForm", () => {
       expect(last).toHaveValue("Ray");
     });
     expect(first).toHaveValue("Anne");
-    go("");
   });
 
   it("reports an invalid value apart from a missing one", async () => {
@@ -694,7 +697,6 @@ describe("AfreactForm", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     expect(screen.getByText("Saving…")).toBeInTheDocument();
     expect(screen.queryByText("Thanks")).not.toBeInTheDocument();
-    window.location.hash = "";
   });
 
   // deviation:repeat-primary-radio-name
