@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { api, axeFindings, coreBuilders, isRecord, keysListened, quietApi } from "./harness";
 
 coreBuilders();
@@ -891,19 +891,20 @@ test.describe("FormBuilder editor", () => {
 
 test.describe("FormBuilder routes against core's editor", () => {
   const TITLE = "Afreact route parity";
-  const made: string[] = [];
 
-  test.afterAll(async ({ browser }) => {
+  // By title, so a save whose URL check failed, here or in an earlier run, goes too.
+  const removeSaved = async ({ browser }: { browser: Browser }) => {
     const page = await browser.newPage();
-    if (made.length)
-      await quietApi(page, "Afform", "revert", {
-        where: [
-          ["name", "IN", made],
-          ["has_base", "=", false],
-        ],
-      });
+    await quietApi(page, "Afform", "revert", {
+      where: [
+        ["title", "=", TITLE],
+        ["has_base", "=", false],
+      ],
+    });
     await page.close();
-  });
+  };
+  test.beforeAll(removeSaved);
+  test.afterAll(removeSaved);
 
   /** Saves what a route opens, titled alike, and reads it back without the names saving made. */
   async function saveFrom(page: Page, renderer: "angular" | "react", route: string) {
@@ -916,7 +917,6 @@ test.describe("FormBuilder routes against core's editor", () => {
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page).toHaveURL(/#\/edit\/\w+$/);
     const name = /#\/edit\/(\w+)$/.exec(page.url())?.[1] ?? "";
-    made.push(name);
     const [form] = await api<Record<string, unknown>>(page, "Afform", "get", {
       layoutFormat: "shallow",
       formatWhitespace: true,
