@@ -120,13 +120,13 @@ describe("entity sets", () => {
       meta,
       {
         ...union(),
-        select: ["id", "name", "GROUP_CONCAT(DISTINCT name:label ORDER BY id) AS names"],
+        select: ["id", "name", "GROUP_CONCAT(DISTINCT name ORDER BY id) AS names"],
         where: [
           ["name", "=", "Ada"],
           [
             "OR",
             [
-              ["name:label", "IS NULL"],
+              ["name", "IS NULL"],
               ["id", "=", "name", true],
             ],
           ],
@@ -139,13 +139,13 @@ describe("entity sets", () => {
       { select: ["id", "display_name AS title"] },
     );
     expect(params).toMatchObject({
-      select: ["id", "title", "GROUP_CONCAT(DISTINCT title:label ORDER BY id) AS names"],
+      select: ["id", "title", "GROUP_CONCAT(DISTINCT title ORDER BY id) AS names"],
       where: [
         ["title", "=", "Ada"],
         [
           "OR",
           [
-            ["title:label", "IS NULL"],
+            ["title", "IS NULL"],
             ["id", "=", "title", true],
           ],
         ],
@@ -198,16 +198,64 @@ describe("entity sets", () => {
   });
 
   it("renames an outer column with a suffix or alias of its own, and a function's without adding an alias", () => {
+    const group = (to: string) =>
+      setEntitySet(
+        meta,
+        {
+          select: ["visibility:label", "visibility AS v", "COUNT(visibility)"],
+          sets: [["UNION ALL", "Group", "get", { select: ["visibility"] }]],
+        },
+        0,
+        { select: [to] },
+      ).select;
+    expect(group("group_type")).toEqual([
+      "group_type:label",
+      "group_type AS v",
+      "COUNT(group_type)",
+    ]);
+    // A field without options takes no suffix, so that reference stays as in core.
+    expect(group("title")).toEqual(["visibility:label", "title AS v", "COUNT(title)"]);
+  });
+
+  it("renames no field into one that a row keeps, even in a swap", () => {
     const params = setEntitySet(
       meta,
       {
-        select: ["gender_id:label", "gender_id AS g", "COUNT(gender_id)"],
-        sets: [["UNION ALL", "Contact", "get", { select: ["gender_id"] }]],
+        select: ["gender_id", "display_name", "gender_id:label"],
+        where: [
+          ["gender_id", "=", 1],
+          ["display_name", "=", "x"],
+        ],
+        sets: [
+          [
+            "UNION ALL",
+            "Contact",
+            "get",
+            { select: ["gender_id", "display_name", "gender_id:label"] },
+          ],
+        ],
       },
       0,
-      { select: ["employer_id"] },
+      { select: ["display_name", "gender_id", "gender_id:label"] },
     );
-    expect(params.select).toEqual(["employer_id:label", "employer_id AS g", "COUNT(employer_id)"]);
+    expect(params.where).toEqual([
+      ["gender_id", "=", 1],
+      ["display_name", "=", "x"],
+    ]);
+  });
+
+  it("spares only a reference that is an outer alias as a whole", () => {
+    const params = setEntitySet(
+      meta,
+      {
+        select: ["COUNT(title) AS visibility", "visibility:label"],
+        orderBy: { "visibility:label": "ASC", visibility: "DESC" },
+        sets: [["UNION ALL", "Group", "get", { select: ["title", "visibility"] }]],
+      },
+      0,
+      { select: ["title", "group_type"] },
+    );
+    expect(params.orderBy).toEqual({ "group_type:label": "ASC", visibility: "DESC" });
   });
 
   it("keeps a renamed function's own suffix, and a sort on an outer alias of the field's name", () => {

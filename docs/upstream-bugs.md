@@ -1218,7 +1218,8 @@ and sorting keep naming a column the search no longer has. afreact
 renames the field in them and in the outer select too, keeping their own
 suffixes such as `:label` and aliases, and inside an outer column's function
 such as `COUNT(name)`. A change of suffix alone leaves them as they are, and so
-do a field that another column still selects and an outer column's alias. `deviation:union-rename-outer-references`
+do a field that another column still selects or that becomes one a column
+keeps, a suffix the new field lacks, and an outer column's alias. `deviation:union-rename-outer-references`
 
 **Removing a combined search's row drops columns another row still provides.**
 Core removes every outer column built on the removed row's field

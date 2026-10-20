@@ -180,6 +180,7 @@ function renameColumns(
   // Every rename is taken from the old names at once, so names that swap do not merge.
   const renamed = new Map<string, string>();
   const fields = new Map<string, string>();
+  const suffixes = new Map<string, string[]>();
   const base = (set: EntitySet, row: number) => {
     const expr = set[3].select[row];
     return expr ? parseExpr(meta, expr, infoOf(set)).alias.split(":")[0] : undefined;
@@ -197,16 +198,21 @@ function renameColumns(
     renamed.set(was, now);
     // Conditions, grouping and sorting name the field without its suffix, or with one of theirs.
     const [wasField = was, nowField = now] = [was.split(":")[0], now.split(":")[0]];
-    if (wasField !== nowField && !kept.has(wasField)) fields.set(wasField, nowField);
+    if (wasField !== nowField && !kept.has(wasField) && !kept.has(nowField))
+      fields.set(wasField, nowField);
+    suffixes.set(nowField, parseExpr(meta, expr, infoOf(to)).args[0]?.field?.suffixes ?? []);
   });
   const rename = (key: string) => {
     const field = key.split(":")[0] ?? key;
     const now = fields.get(field);
-    return now === undefined ? key : now + key.slice(field.length);
+    const suffix = key.slice(field.length);
+    // A suffix the new field lacks would make the reference invalid; it stays as in core.
+    if (now === undefined || (suffix && !suffixes.get(now)?.includes(suffix.slice(1)))) return key;
+    return now + suffix;
   };
   // Having, grouping and sorting may name an outer column by its alias, which stays.
   const aliases = new Set(params.select.flatMap((col) => col.split(" AS ")[1] ?? []));
-  const renameRef = (key: string) => (aliases.has(key.split(":")[0] ?? key) ? key : rename(key));
+  const renameRef = (key: string) => (aliases.has(key) ? key : rename(key));
   const outerMeta = withEntitySetFields(meta, params);
   const renameInFunction = (col: string) => {
     const state = fnState(outerMeta, col, { api_entity: "EntitySet", api_params: params });
