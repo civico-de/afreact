@@ -33,6 +33,20 @@ bun run coverage --coverage.reporter=json   # optional
 bun tests/browser/coverage-report.ts        # writes coverage/e2e/coverage-final.json
 ```
 
+Work in progress. The first full run (2026-10-20) measured these lines, with
+some specs failing under coverage, so they are a lower bound:
+
+| Area | Browser statements | Browser branches | Vitest lines | Both, lines |
+|---|---|---|---|---|
+| `src/search/` | 80.9 % | 71.6 % | 97.9 % | 99.3 % |
+| `src/admin/search/` | 64.4 % | 55.9 % | 78.9 % | 85.7 % |
+| `src/afform/` | 78.6 % | 65.2 % | 98.4 % | 99.2 % |
+| `src/admin/afform/` | 79.1 % | 66.8 % | 76.4 % | 89.3 % |
+
+Open: with `resetOnNavigation: false` a page's coverage grows with every load
+of the bundle, so the long sweeps (`sweep`, `display-sweep`, `palette-sweep`)
+crash the tab or overflow `stopJSCoverage` and fail under coverage.
+
 ## Browser specs
 
 | Spec | Checks |
