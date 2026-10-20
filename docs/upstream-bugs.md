@@ -210,6 +210,16 @@ set's values never reach the search; fix proposed in
 [civicrm-core#37200](https://github.com/civicrm/civicrm-core/pull/37200). The
 React renderer keeps them (fields the URL leaves out take the set's values). `deviation:saved-filter-set-kept`
 
+**A saved filter set that fails to load is passed over without a word.**
+afFieldset loads the set the URL names (`#?_s=<id>`) with no rejection
+handler, so a failed load shows no message and never resets the form: the
+fields the URL leaves out keep the empty value they hold until the set
+arrives, without their defaults, and the search runs without them
+(`afFieldset.directive.js`, `afField.component.js`, master, read from the
+code, not run). The React renderer shows the error above the fields, gives
+those fields their defaults, as for an id that names no set, and searches
+with them. `deviation:param-set-load-error-shown`
+
 **The saved search picker loses or hides errors.** `afSearchParamSets` turns
 a failed list into a fake set named "Error fetching Saved Searches", leaves
 its saving spinner up forever when an update fails, and drops a failed delete

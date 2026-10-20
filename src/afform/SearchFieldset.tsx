@@ -128,6 +128,9 @@ async function loadParamSet(formName: string, id: string): Promise<ParamSet> {
   return found ?? { missing: true };
 }
 
+/** What a set that failed to load counts as: one the id names not. */
+const UNLOADED: ParamSet = { missing: true };
+
 interface SearchFieldsetProps {
   node: ElementNode;
   formName: string;
@@ -161,36 +164,39 @@ export function SearchFieldset({ node, formName, children }: SearchFieldsetProps
     queryFn: () => loadParamSet(formName, setId ?? ""),
     enabled: !!setId,
   });
+  // deviation:param-set-load-error-shown
+  const loadedSet = paramSet.data ?? (paramSet.isError ? UNLOADED : undefined);
+  const loadedAt = paramSet.dataUpdatedAt || paramSet.errorUpdatedAt;
   const [state, dispatch] = useReducer(fieldsetReducer, null, () => {
     const initial = initialState({
       fields,
       fieldsetName: name,
       params: route,
       stored: stores ? readStored(cacheKey) : undefined,
-      paramSet: paramSet.data,
+      paramSet: loadedSet,
       context,
     });
     return { ...initial, applied: initial.values, commits: 0 };
   });
 
-  // A new hash or a loaded saved set sets the fields again, as afField's routeParams watcher.
-  // Compared by identity: own writes leave `route` behind, so a link back to it is new.
-  const [seen, setSeen] = useState({ route, loaded: paramSet.dataUpdatedAt });
-  if (seen.route !== route || seen.loaded !== paramSet.dataUpdatedAt) {
-    setSeen({ route, loaded: paramSet.dataUpdatedAt });
+  // A new hash or a settled saved set (loaded or failed) sets the fields again, as afField's
+  // routeParams watcher; by identity, as own writes leave `route` behind and a link back is new.
+  const [seen, setSeen] = useState({ route, loaded: loadedAt });
+  if (seen.route !== route || seen.loaded !== loadedAt) {
+    setSeen({ route, loaded: loadedAt });
     dispatch({
       type: "route",
       fields,
       fieldsetName: name,
       params: route,
-      paramSet: paramSet.data,
+      paramSet: loadedSet,
       context,
     });
   }
 
-  // A commit without a change leaves the state as it is. Until a saved set has loaded
-  // nothing commits: the set replaces what was typed, as in afField.
-  const ready = !setId || paramSet.isSuccess;
+  // A commit without a change leaves the state as it is. Until a saved set has loaded or
+  // failed to, nothing commits: the set replaces what was typed, as in afField.
+  const ready = !setId || loadedSet !== undefined;
   useEffect(() => {
     if (!ready) return undefined;
     const timer = setTimeout(() => {
@@ -206,7 +212,7 @@ export function SearchFieldset({ node, formName, children }: SearchFieldsetProps
     if (stores && Object.keys(state.values).length) window.CRM.cache?.set(cacheKey, state.values);
   }, [stores, cacheKey, state.values]);
 
-  useUrlWriter(fields, name, state, context, route, latestRoute, paramSet.data);
+  useUrlWriter(fields, name, state, context, route, latestRoute, loadedSet);
 
   const [toggled, setToggled] = useState<Record<string, Record<string, string>>>({});
   const reportColumns = useCallback((key: string, picked: Record<string, string>) => {
@@ -223,7 +229,7 @@ export function SearchFieldset({ node, formName, children }: SearchFieldsetProps
     },
     [store, reroute],
   );
-  const columns = paramSet.data?.columns;
+  const columns = loadedSet?.columns;
   const value = useMemo(
     () => ({
       state,

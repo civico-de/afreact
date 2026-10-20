@@ -2,7 +2,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect, useRef } from "react";
 import { SEARCH_DELAY_MS } from "../search/filters";
-import { mockApi, renderWithQuery } from "../test/render";
+import { apiError, mockApi, renderWithQuery } from "../test/render";
 import { fakeTimeouts, passTime } from "../test/timers";
 import { memoryStore, pageStore, type ParamStore } from "../url/hash";
 import { AfreactForm } from "./AfreactForm";
@@ -173,6 +173,28 @@ describe("SearchFieldset", () => {
     });
     expect(runs()).toEqual([{ title: { CONTAINS: "Set" }, is_active: true }]);
     expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Set");
+  });
+
+  // deviation:param-set-load-error-shown
+  it("says why a saved filter set failed to load and searches as for an id that names no set", async () => {
+    const { store, runs } = renderSearch("#?_s=4&title=Old", searchForm(), {
+      "SearchParamSet.get": () => {
+        throw apiError("Permission denied");
+      },
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Permission denied");
+    expect(await screen.findByRole("cell", { name: "Row" })).toBeInTheDocument();
+    // The URL's values stand; the fields it leaves out take their defaults.
+    const title = screen.getByRole("textbox", { name: "Title" });
+    expect(title).toHaveValue("Old");
+    expect(screen.getByRole("radio", { name: "Yes" })).toBeChecked();
+    expect(runs()).toEqual([{ title: { CONTAINS: "Old" }, is_active: true }]);
+    fakeTimeouts();
+    fireEvent.change(title, { target: { value: "Ne" } });
+    passTime(SEARCH_DELAY_MS);
+    expect(runs().at(-1)).toEqual({ title: { CONTAINS: "Ne" }, is_active: true });
+    // The id stays for a reload; only what differs from the defaults is written.
+    expect(store.params().toString()).toBe("_s=4&title=Ne");
   });
 
   it("shows the columns a saved filter set picked for its display", async () => {
