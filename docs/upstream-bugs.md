@@ -824,7 +824,8 @@ so:
   `selectAllPages()` sets `selectedRows` whenever the ids arrive, so choosing
   "None" meanwhile ends with every row selected (read from the code, not run).
   React drops the ids once the selection changed, a task ran or the filters
-  changed. `deviation:select-all-latest-choice`
+  changed, leaves out the rows an edit took out of the result meanwhile, and
+  reports only the latest run's failure. `deviation:select-all-latest-choice`
 - A row an inline edit takes out of the result stays selected:
   `onPostRun()` deselects an edited row that left the results, but
   `searchDisplayEditableTrait` reloads through `getResultsPronto()` without

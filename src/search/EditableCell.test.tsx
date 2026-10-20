@@ -318,6 +318,8 @@ describe("in-place editing", () => {
     await waitFor(() => {
       expect(screen.getByRole("checkbox", { name: "Select Ada" })).not.toBeChecked();
     });
+    // The display's live region tells of the smaller selection.
+    expect(screen.getByText("1 result", { selector: "p.sr-only" })).toBeInTheDocument();
   });
 
   it("keeps a selection changed while the save that drops a row runs", async () => {
@@ -342,6 +344,40 @@ describe("in-place editing", () => {
       expect(screen.getByRole("checkbox", { name: "Select Ada" })).not.toBeChecked();
     });
     expect(bob()).not.toBeChecked();
+  });
+
+  it("leaves a row a save dropped out of a select-all still loading", async () => {
+    let ids: (keys: number[]) => void = () => undefined;
+    const ada: Row = {
+      key: 7,
+      columns: [{ val: "Ada" }, { val: "Pilot", edit: true }],
+      data: { id: 7 },
+    };
+    setup({ value_key: "job_title" }, "Pilot", {
+      inlineEdit: () => [],
+      settings: { actions: true, limit: 1, pager: {} },
+      handlers: {
+        "SearchDisplay.getSearchTasks": () => [],
+        "SearchDisplay.run": (params) => {
+          if (params.return === "row_count") return Object.assign([], { count: 3 });
+          if (params.return === "id")
+            return new Promise<number[]>((resolve) => {
+              ids = resolve;
+            });
+          return Object.assign([ada], {
+            editable: { job_title: editInfo({ value_key: "job_title" }) },
+          });
+        },
+      },
+    });
+    await userEvent.click(await screen.findByRole("checkbox", { name: "Select all" }));
+    await open();
+    await userEvent.type(field(), "s{Enter}");
+    ids([7, 8, 9]);
+    await waitFor(() => {
+      expect(screen.getAllByText("2 selected of 3 results").length).toBeGreaterThan(0);
+    });
+    expect(screen.getByRole("checkbox", { name: "Select Ada" })).not.toBeChecked();
   });
 
   // deviation:next-page-prefetched

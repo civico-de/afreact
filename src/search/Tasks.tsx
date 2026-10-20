@@ -1,5 +1,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { api4, errorMessage } from "../api/civi";
 import { cellText } from "./Cell";
 import { crmAlert } from "../html";
@@ -144,8 +152,10 @@ export function useTasks(options: TasksOptions) {
   const [chosen, setChosen] = useState({ key: filtersKey, selection: NO_SELECTION });
   if (chosen.key !== filtersKey) setChosen({ key: filtersKey, selection: NO_SELECTION });
   const selection = chosen.key === filtersKey ? chosen.selection : NO_SELECTION;
-  // The select-all run whose ids may still be taken; any later choice or new filters void it.
-  const pendingAll = useRef<object | null>(null);
+  // The select-all run whose ids may still be taken, with the rows edits took out meanwhile;
+  // any later choice or new filters void it. The last run started owns the loading state.
+  const pendingAll = useRef<{ gone: Set<Key> } | null>(null);
+  const lastAll = useRef<object | null>(null);
   useEffect(() => {
     pendingAll.current = null;
   }, [filtersKey]);
@@ -154,33 +164,41 @@ export function useTasks(options: TasksOptions) {
   const [running, setRunning] = useState<RunningTask | null>(null);
   const [failure, setFailure] = useState<unknown>(null);
 
+  const countText = (selected: number) =>
+    rowCount === null ? ts("%1 selected", { 1: selected }) : resultCount(rowCount, selected);
   const select = (next: Selection) => {
     pendingAll.current = null;
     setChosen({ key: filtersKey, selection: next });
-    setMessage(
-      rowCount === null
-        ? ts("%1 selected", { 1: next.keys.length })
-        : resultCount(rowCount, next.keys.length),
-    );
+    setMessage(countText(next.keys.length));
     if (next.keys.length) setRequested(true);
   };
+  // A row an edit deselected is announced once the selection without it shows.
+  const [deselected, setDeselected] = useState(0);
+  const announce = useEffectEvent(() => {
+    setMessage(countText(selection.keys.length));
+  });
+  useEffect(() => {
+    if (deselected) announce();
+  }, [deselected]);
   // Rows of a grouped search have no key and nothing a task could act on. deviation:keyless-rows
   const pageKeys = page?.rows.flatMap((row) => (row.key === undefined ? [] : [row.key])) ?? [];
   const ready = !loading && !!page?.rows.length;
 
   const selectAllPages = async () => {
     setLoadingAll(true);
-    const run = {};
+    const run = { gone: new Set<Key>() };
     pendingAll.current = run;
+    lastAll.current = run;
     try {
-      const ids = await api4<Key>("SearchDisplay", "run", { ...runParams, return: "id" });
+      const ids = new Set(await api4<Key>("SearchDisplay", "run", { ...runParams, return: "id" }));
+      const keys = [...ids].filter((key) => !run.gone.has(key));
       // deviation:select-all-latest-choice
-      if (pendingAll.current === run) select({ keys: [...new Set(ids)], all: true });
+      if (pendingAll.current === run) select({ keys, all: keys.length === ids.size });
     } catch (error) {
       // deviation:bulk-select-all-error
-      setFailure(error);
+      if (pendingAll.current === run) setFailure(error);
     } finally {
-      setLoadingAll(false);
+      if (lastAll.current === run) setLoadingAll(false);
     }
   };
   const toggleAll = () => {
@@ -544,6 +562,8 @@ export function useTasks(options: TasksOptions) {
     selected: count,
     /** A row an edit took out of the result leaves the selection. deviation:edited-row-deselected */
     deselect: (key: Key) => {
+      pendingAll.current?.gone.add(key);
+      if (selection.keys.includes(key)) setDeselected((times) => times + 1);
       // The selection as it is by then, which may have changed while the edit was saved.
       setChosen((current) =>
         current.key === filtersKey && current.selection.keys.includes(key)

@@ -372,6 +372,46 @@ describe("AfreactSearch bulk actions", () => {
     expect(checkbox("Name 1")).not.toBeChecked();
   });
 
+  it("waits for the latest select-all and drops a voided one's failure", async () => {
+    const answers: { resolve: (ids: number[]) => void; reject: (error: Error) => void }[] = [];
+    serve({
+      handlers: {
+        "SearchDisplay.run": (params) => {
+          if (params.return === "row_count") return Object.assign([], { count: 3 });
+          if (params.return === "id")
+            return new Promise<number[]>((resolve, reject) => {
+              answers.push({ resolve, reject });
+            });
+          return [row(1), row(2)];
+        },
+      },
+    });
+    renderWithQuery(
+      <AfreactSearch search="S" display="D" settings={{ ...settings, limit: 2, pager: {} }} />,
+    );
+    await screen.findByText("Name 1");
+    const menu = async (item: string) => {
+      await userEvent.click(
+        screen.getByRole("button", { name: "Select All rows or this pages rows" }),
+      );
+      await userEvent.click(screen.getByRole("menuitem", { name: item, hidden: true }));
+    };
+    await menu("All");
+    await menu("None");
+    await menu("All");
+    answers[0]?.reject(apiError("Timed out"));
+    await waitFor(() => {
+      expect(answers).toHaveLength(2);
+    });
+    expect(checkbox("Name 1")).toBeDisabled();
+    expect(screen.queryByRole("alert")).toBeNull();
+    answers[1]?.resolve([1, 2, 3]);
+    await waitFor(() => {
+      expect(selectAll()).toHaveAttribute("aria-checked", "true");
+    });
+    expect(checkbox("Name 1")).toBeEnabled();
+  });
+
   it("selects the rows between two with Shift", async () => {
     serve({ rows: [row(1), row(2), row(3), row(4)] });
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
