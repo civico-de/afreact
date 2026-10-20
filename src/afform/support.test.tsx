@@ -102,7 +102,7 @@ describe("noteKind", () => {
     }
     for (const note of [
       "<crm-search-display-map>",
-      "<img>",
+      "<input>",
       'route condition (ng-if="!routeParams.event") around fields',
       "field x without metadata",
       "search range (Date)",
@@ -279,7 +279,7 @@ describe("layoutProblems", () => {
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
-  it("carries over the attributes CKEditor 4's table and link dialogs and a label write", async () => {
+  it("carries over the attributes CKEditor 4's dialogs and a label write", async () => {
     const cell = (tag: string, attributes: Record<string, string>): LayoutNode => ({
       "#tag": tag,
       ...attributes,
@@ -308,6 +308,7 @@ describe("layoutProblems", () => {
       { "#tag": "ol", start: "4", "#children": [cell("li", { value: "7" })] },
       cell("q", { cite: "https://example.org/" }),
       cell("del", { datetime: "2026-01-01" }),
+      { "#tag": "img", src: "/logo.png", alt: "Logo", style: "width:20px" },
     ];
     expect(layoutProblems(html)).toEqual([]);
     mockApi({
@@ -345,6 +346,9 @@ describe("layoutProblems", () => {
     expect(screen.getByText("li")).toHaveAttribute("value", "7");
     expect(screen.getByText("q")).toHaveAttribute("cite", "https://example.org/");
     expect(screen.getByText("del")).toHaveAttribute("datetime", "2026-01-01");
+    const image = screen.getByRole("img", { name: "Logo" });
+    expect(image).toHaveAttribute("src", "/logo.png");
+    expect(image).toHaveStyle({ width: "20px" });
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 

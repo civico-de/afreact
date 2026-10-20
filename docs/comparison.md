@@ -217,14 +217,13 @@ What core does not support either:
 Not in React yet:
 
 - HTML elements outside the renderer's plain HTML (`HTML_TAGS` in
-  `src/afform/support.ts`), such as `<img>` or `<input>`. The list holds the
+  `src/afform/support.ts`), such as `<input>` or `<iframe>`. The list holds the
   elements core's layouts use around their fields and text, those
   FormBuilder's text element offers (`<legend>`) and those the rich content's
-  editor writes (CKEditor 4 with its default toolbar, formats and styles), its
-  images excepted
+  editor writes (CKEditor 4 with its default toolbar, formats and styles)
 - attributes on a plain element beyond the HTML ones it carries over
   (`PASSTHROUGH` and `RENAMED` in `src/afform/support.ts`, which hold what
-  CKEditor's table and link dialogs write) and those the renderer reads: another
+  CKEditor's table, link and image dialogs write) and those the renderer reads: another
   extension's directive, such as oauth-client's `oauth-util-import`, would act
   on them
 - an `ng-if` on a route parameter around fields, entities, blocks, joins or

@@ -134,7 +134,7 @@ function useForm(): FormState {
 }
 
 /** Tags React refuses children for, even an empty list. */
-const VOID_TAGS = new Set(["br", "hr"]);
+const VOID_TAGS = new Set(["br", "hr", "img"]);
 
 export function Nodes({ nodes }: { nodes: LayoutNode[] }): ReactNode {
   return nodes.map((node, index) => <Node key={index} node={node} />);

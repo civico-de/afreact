@@ -77,6 +77,7 @@ const HTML_TAGS = new Set([
   "ins",
   "cite",
   "q",
+  "img",
 ]);
 /** Directive attributes the renderer interprets itself; attributes it neither reads nor carries are reported. */
 const HANDLED = new Set([
@@ -144,7 +145,7 @@ const SEARCH_ATTRIBUTES = new Set([
 const PASSTHROUGH = new Set(
   (
     "id href title role target type style lang dir name rel scope headers abbr span border " +
-    "summary align width height start value cite"
+    "summary align width height start value cite src alt"
   ).split(" "),
 );
 /** HTML attributes React names differently. */
