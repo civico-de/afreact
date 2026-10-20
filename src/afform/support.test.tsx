@@ -232,6 +232,46 @@ describe("layoutProblems", () => {
     expect(layoutProblems(supported)).toEqual([]);
   });
 
+  it("renders the HTML FormBuilder's text element and its rich content write", async () => {
+    // afGuiText offers <legend>; rich content is CKEditor 4's default toolbar, formats and styles.
+    const text = (tag: string): LayoutNode => ({ "#tag": tag, "#children": [{ "#text": tag }] });
+    const inline = "s sub sup big tt kbd samp var del ins cite q".split(" ");
+    const html: LayoutNode[] = [
+      { "#tag": "fieldset", "#children": [text("legend"), text("p")] },
+      { "#tag": "pre", "#children": [text("code")] },
+      {
+        "#tag": "table",
+        "#children": [
+          text("caption"),
+          { "#tag": "tbody", "#children": [{ "#tag": "tr", "#children": [text("td")] }] },
+        ],
+      },
+      text("blockquote"),
+      text("address"),
+      { "#tag": "p", "#children": inline.map(text) },
+    ];
+    expect(layoutProblems(html)).toEqual([]);
+    mockApi({
+      "Afreact.getForm": () => [
+        {
+          name: "afformTest",
+          title: "Test",
+          type: "form",
+          layout: [{ "#tag": "af-form", ctrl: "afform", "#children": html }],
+          strings: [],
+        },
+      ],
+      "Afform.prefill": () => [],
+    });
+    renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />);
+    expect(await screen.findByRole("group", { name: "legend" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "caption" })).toBeInTheDocument();
+    expect(screen.getByText("code").parentElement?.tagName).toBe("PRE");
+    for (const tag of ["blockquote", "address", ...inline])
+      expect(screen.getByText(tag).tagName, tag).toBe(tag.toUpperCase());
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+
   it("reports a route ng-if around fields, entities, blocks, joins or repeats", () => {
     const around = (inner: LayoutNode): LayoutNode => ({
       "#tag": "div",

@@ -211,6 +211,12 @@ What core does not support either:
 
 Not in React yet:
 
+- HTML elements outside the renderer's plain HTML (`HTML_TAGS` in
+  `src/afform/support.ts`), such as `<img>` or `<input>`. The list holds the
+  elements core's layouts use around their fields and text, those
+  FormBuilder's text element offers (`<legend>`) and those the rich content's
+  editor writes (CKEditor 4 with its default toolbar, formats and styles), its
+  images excepted
 - an `ng-if` on a route parameter around fields, entities, blocks, joins or
   repeats: Angular sets up what it holds only while the condition holds, the
   renderer sets up a form's fields when the form loads, shown or not

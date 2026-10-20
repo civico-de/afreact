@@ -58,6 +58,25 @@ const HTML_TAGS = new Set([
   "tr",
   "th",
   "td",
+  // FormBuilder's text element (legend) and what CKEditor 4's default toolbar, formats and styles write.
+  "legend",
+  "pre",
+  "code",
+  "blockquote",
+  "address",
+  "caption",
+  "s",
+  "sub",
+  "sup",
+  "big",
+  "tt",
+  "kbd",
+  "samp",
+  "var",
+  "del",
+  "ins",
+  "cite",
+  "q",
 ]);
 /** Attributes the renderer interprets itself; other ng-*, af-* and crm-* attributes are reported. */
 const HANDLED = new Set([
