@@ -368,10 +368,13 @@ offers "Email" twice under one name, and both rules test the first block (read
 from the code, not run). Fixed on `master` (6.21) in
 [civicrm-core#37004](https://github.com/civicrm/civicrm-core/pull/37004) and
 [civicrm-core#37577](https://github.com/civicrm/civicrm-core/pull/37577), which
-number the blocks over all of the entity's fieldsets and label them "Email 1",
-"Email 2". React numbers and labels them so on every version. Both renderers
-number a block within its own fieldset, so a rule on a block in a second
-fieldset of the entity points past it (read from the code, not run).
+number the blocks over all of the entity's fieldsets, as the server does, and
+label them "Email 1", "Email 2". React numbers and labels them so on every
+version. The Angular runtime numbers the blocks per fieldset, so a block in a
+second fieldset of the entity shares record 0 with the first fieldset's block
+(measured on 6.19.1, see "Join blocks are numbered in link order"), and a rule
+on "Email 2" tests record 1, which no block shows or fills. React's runtime
+numbers over the entity, as the server and the 6.21 builder do.
 `deviation:condition-join-block-index`
 
 **`IS EMPTY` reads an emptied list as filled and "No" as empty.** A
@@ -394,10 +397,11 @@ name, "Add" or "Remove item n". `deviation:repeat-button-names`
 **Join blocks are numbered in link order.** afJoin takes its record index
 from a counter in afFieldset each time it links (`afJoin.directive.js`,
 `afFieldset.directive.js` `getJoinOffset`). The server pairs record n with
-block n of that join in the layout: the block's `data`, such as its location
-type (`FormDataModel::parseFields`, `preprocessSubmittedValues`), and its
-prefilled record (`loadJoins` sorts location blocks by type). The two disagree
-whenever blocks link out of layout order or more than once:
+block n of that join among all of the entity's fieldsets in layout order: the
+block's `data`, such as its location type (`FormDataModel::parseFields` merges
+it per entity, `preprocessSubmittedValues`), and its prefilled record
+(`loadJoins` sorts location blocks by type). The two disagree whenever blocks
+link out of layout order, more than once, or in more than one fieldset:
 - A block hidden by `af-if` at load links later, so the next block takes its
   index. With Home hidden and Work shown, the Work field shows the Home email,
   saves over the Home record, and a new email is saved as Home.
@@ -409,12 +413,23 @@ whenever blocks link out of layout order or more than once:
   submitting fail until 6.2 (dev/core#5801, fixed on the server by dropping
   the nulls). A later item's prefilled email still shows empty, and an email
   typed there is added beside the old one instead of updating it.
+- Each fieldset has its own counter, so the blocks of a second fieldset of the
+  entity start again at record 0 (unchanged on `master` as of 2026-10-20).
+  Measured on 6.19.1 with the contact's Home block in one fieldset and its
+  Work block in a second: both fields show and edit one value; a new contact
+  gets one email, saved as Home with the value typed last; a contact with a
+  Home and a Work email shows the Home email in both blocks, and an address
+  typed into the Work block overwrites the Home record while the Work record
+  stays as it was.
 
 Read from the source of `master` as of 2026-10-03; `joins.spec.ts` pins the
-first case in the browser. The React renderer numbers blocks by their
-position in the layout, shown or not, and sends `null` for a block without a
-record, as core's own prefill does for a missing location type; the server
-drops the nulls and keeps the positions. `deviation:join-blocks-layout-order`
+first and the last case in the browser. The React renderer numbers blocks by
+their position among the entity's blocks over all its fieldsets, shown or not,
+as the server and the 6.21 builder do. Each item of a repeated fieldset is a
+record of its own with that list of blocks, so all items use the same numbers.
+React sends `null` for a block without a record, as core's own prefill does for
+a missing location type; the server drops the nulls and keeps the positions.
+`deviation:join-blocks-layout-order`
 
 **The primary radio of a repeat has no name.** In a repeated join, afField
 gives `is_primary` a single option with an empty label

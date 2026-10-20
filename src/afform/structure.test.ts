@@ -27,7 +27,7 @@ const email = (): ElementNode => ({
 });
 
 describe("joinOffsets", () => {
-  it("counts non-repeating joins per fieldset", () => {
+  it("counts non-repeating joins per entity", () => {
     const first = email();
     const second = email();
     const other = email();
@@ -42,6 +42,29 @@ describe("joinOffsets", () => {
       offsets.get(other),
       offsets.get(repeating),
     ]).toEqual([0, 1, 0, undefined]);
+  });
+
+  // deviation:join-blocks-layout-order
+  it("counts on in a second fieldset of the same entity", () => {
+    const home = email();
+    const work = email();
+    const offsets = joinOffsets([
+      { "#tag": "fieldset", "af-fieldset": "Individual1", "#children": [home] },
+      { "#tag": "fieldset", "af-fieldset": "Individual1", "#children": [work] },
+    ]);
+    expect([offsets.get(home), offsets.get(work)]).toEqual([0, 1]);
+  });
+
+  it("keeps another entity's fieldset out of the count", () => {
+    const home = email();
+    const other = email();
+    const work = email();
+    const offsets = joinOffsets([
+      { "#tag": "fieldset", "af-fieldset": "Individual1", "#children": [home] },
+      { "#tag": "fieldset", "af-fieldset": "Individual2", "#children": [other] },
+      { "#tag": "fieldset", "af-fieldset": "Individual1", "#children": [work] },
+    ]);
+    expect([offsets.get(home), offsets.get(other), offsets.get(work)]).toEqual([0, 0, 1]);
   });
 });
 

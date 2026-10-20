@@ -180,6 +180,57 @@ describe("join blocks of one entity behind af-if", () => {
   });
 });
 
+describe("join blocks in two fieldsets of one entity", () => {
+  const split: LayoutNode[] = [
+    {
+      "#tag": "af-form",
+      ctrl: "afform",
+      "#children": [
+        { "#tag": "af-entity", type: "Contact", name: "Individual1" },
+        { "#tag": "div", "af-fieldset": "Individual1", "#children": [emailBlock("Home", 1)] },
+        { "#tag": "div", "af-fieldset": "Individual1", "#children": [emailBlock("Work", 2)] },
+        submit,
+      ],
+    },
+  ];
+
+  // deviation:join-blocks-layout-order
+  it("writes each block to its own record of the entity", async () => {
+    const calls = renderForm(split);
+    await userEvent.type(await screen.findByRole("textbox", { name: "Home" }), "h@example.org");
+    await userEvent.type(box("Work"), "w@example.org");
+    expect(box("Home")).toHaveValue("h@example.org");
+    expect(await submitted(calls)).toEqual(
+      contact({}, [{ email: "h@example.org" }, { email: "w@example.org" }]),
+    );
+  });
+
+  it("shows each prefilled record in its own block", async () => {
+    renderForm(
+      split,
+      [
+        {
+          name: "Individual1",
+          values: [
+            {
+              fields: { id: 5 },
+              joins: {
+                Email: [
+                  { id: 11, email: "h@example.org", location_type_id: 1 },
+                  { id: 12, email: "w@example.org", location_type_id: 2 },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      "?Individual1=5",
+    );
+    expect(await screen.findByRole("textbox", { name: "Work" })).toHaveValue("w@example.org");
+    expect(box("Home")).toHaveValue("h@example.org");
+  });
+});
+
 describe("join blocks in a repeated fieldset", () => {
   const repeated = form({ "af-repeat": "Add", min: "1" }, [
     field("first_name"),

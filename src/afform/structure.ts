@@ -15,28 +15,27 @@ import type { ElementNode, FieldDefn, FormData, LayoutNode, Scope } from "./type
 import { isElement, isFieldDefn } from "./types";
 
 /**
- * Offset of each non-repeating af-join among its fieldset's joins of the same entity, counted over
- * the layout, shown or not: the server pairs record n with block n's `data` and prefilled record.
+ * Offset of each non-repeating af-join among that join's blocks in all fieldsets of its entity, shown
+ * or not: the server pairs record n with block n's `data` and prefilled record, per entity.
  * deviation:join-blocks-layout-order
  */
 export function joinOffsets(layout: LayoutNode[]): WeakMap<ElementNode, number> {
   const offsets = new WeakMap<ElementNode, number>();
-  const walk = (nodes: LayoutNode[], counters: Map<string, number>) => {
+  const counters = new Map<string, number>();
+  const walk = (nodes: LayoutNode[], entity: string) => {
     for (const node of nodes.filter(isElement)) {
-      if (typeof node["af-fieldset"] === "string") {
-        walk(node["#children"] ?? [], new Map());
-        continue;
-      }
+      const fieldset = node["af-fieldset"];
       const join = node["af-join"];
       if (typeof join === "string" && node["af-repeat"] === undefined) {
-        const offset = counters.get(join) ?? 0;
+        const key = JSON.stringify([entity, join]);
+        const offset = counters.get(key) ?? 0;
         offsets.set(node, offset);
-        counters.set(join, offset + 1);
+        counters.set(key, offset + 1);
       }
-      walk(node["#children"] ?? [], counters);
+      walk(node["#children"] ?? [], typeof fieldset === "string" ? fieldset : entity);
     }
   };
-  walk(layout, new Map());
+  walk(layout, "");
   return offsets;
 }
 
