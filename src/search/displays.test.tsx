@@ -66,6 +66,45 @@ function heldReload() {
 const runs = (calls: { call: string; params: Record<string, unknown> }[]) =>
   calls.filter(({ call }) => call === "SearchDisplay.run").map(({ params }) => params.return);
 
+describe("a popup form's success", () => {
+  it("reloads the rows of every filter set, not only the current one", async () => {
+    let deleted = false;
+    const calls = mockApi({
+      "SearchDisplay.run": (params) => {
+        if (params.return === "row_count") return Object.assign([], { count: deleted ? 1 : 2 });
+        return deleted ? [row(2)] : [row(1), row(2)];
+      },
+    });
+    const view = (filters: Record<string, unknown>) => (
+      <AfreactSearch
+        search="S"
+        display="D"
+        type="list"
+        settings={{ columns, pager: {} }}
+        filters={filters}
+      />
+    );
+    const { rerender } = renderWithQuery(view({}));
+    expect(await screen.findByText("Item 1")).toBeInTheDocument();
+    rerender(view({ label: "Item 1" }));
+    await waitFor(() => {
+      expect(calls.filter(({ params }) => params.return === "page:1")).toHaveLength(2);
+    });
+    const shown = await screen.findByText("Item 2");
+    deleted = true;
+    shown.dispatchEvent(new Event("crmPopupFormSuccess", { bubbles: true }));
+    await waitFor(() => {
+      expect(screen.queryByText("Item 1")).not.toBeInTheDocument();
+    });
+    rerender(view({}));
+    await waitFor(() => {
+      expect(calls.filter(({ params }) => params.return === "page:1")).toHaveLength(4);
+    });
+    expect(await screen.findByText("Item 2")).toBeInTheDocument();
+    expect(screen.queryByText("Item 1")).not.toBeInTheDocument();
+  });
+});
+
 describe("list display", () => {
   it("renders crmSearchDisplayList's items, labels and field classes", async () => {
     show("list", { classes: ["my-list"], symbol: "square" }, () => [row(1, {}, "bg-info")]);
