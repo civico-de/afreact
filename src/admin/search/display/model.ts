@@ -56,7 +56,7 @@ export interface AdminColumn {
   rewrite?: string;
   empty_value?: string;
   show_linebreaks?: boolean;
-  image?: { alt?: string; width?: number; height?: number };
+  image?: { alt?: string; width?: number | null; height?: number | null };
   format?: unknown;
   icons?: IconItem[];
   colors?: { field: string }[];

@@ -169,6 +169,25 @@ describe("ColumnTypeFields", () => {
     });
   });
 
+  describe("an image's size, as core's number input with min 1 takes it", () => {
+    it("saves an emptied width as null", async () => {
+      renderColumn({ type: "image", key: "display_name", image: { alt: "", width: 100 } });
+      await userEvent.clear(screen.getByRole("spinbutton", { name: "Width" }));
+      expect(saved?.image).toEqual({ alt: "", width: null });
+    });
+
+    it("leaves out a height below 1, keeping it on show", async () => {
+      renderColumn({ type: "image", key: "display_name", image: { alt: "", height: 40 } });
+      const height = screen.getByRole("spinbutton", { name: "Height" });
+      await userEvent.clear(height);
+      await userEvent.type(height, "0");
+      expect(saved?.image).toEqual({ alt: "" });
+      expect(height).toHaveValue(0);
+      await userEvent.type(height, "8");
+      expect(saved?.image).toEqual({ alt: "", height: 8 });
+    });
+  });
+
   // deviation:include-path-kept
   it("keeps a template path that is not yet valid, which core's validators drop", async () => {
     renderColumn({ type: "include", path: "" });

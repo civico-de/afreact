@@ -512,14 +512,49 @@ function HtmlColumn(props: ColumnEditing) {
   );
 }
 
+/**
+ * An image's width or height as core's `type="number" min="1"` ngModel takes it: emptied is null,
+ * a value below 1 is left out and stays on show.
+ */
+function SizeInput({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: number | null | undefined;
+  onChange: (value: number | null | undefined) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <input
+      id={id}
+      type="number"
+      min={1}
+      className="form-control crm-flex-1"
+      placeholder="Auto"
+      value={draft ?? value ?? ""}
+      onChange={(event) => {
+        const { value: text, valueAsNumber, validity } = event.target;
+        setDraft(text);
+        if (text === "" && !validity.badInput) onChange(null);
+        else onChange(valueAsNumber >= 1 ? valueAsNumber : undefined);
+      }}
+      onBlur={() => {
+        setDraft(null);
+      }}
+    />
+  );
+}
+
 function ImageColumn(props: ColumnEditing) {
   const { ctx, col, editCol } = props;
   const id = useId();
   const image = col.image ?? {};
-  const setSize = (key: "width" | "height", value: number) => {
+  const setSize = (key: "width" | "height", value: number | null | undefined) => {
     editCol((c) => {
       c.image = { ...c.image };
-      if (Number.isNaN(value)) delete c.image[key];
+      if (value === undefined) delete c.image[key];
       else c.image[key] = value;
     });
   };
@@ -537,27 +572,19 @@ function ImageColumn(props: ColumnEditing) {
         />
         <div className="crm-search-admin-flex-row">
           <label htmlFor={`${id}-w`}>{ts("Width")}</label>
-          <input
+          <SizeInput
             id={`${id}-w`}
-            type="number"
-            min={1}
-            className="form-control crm-flex-1"
-            placeholder="Auto"
-            value={image.width ?? ""}
-            onChange={(event) => {
-              setSize("width", event.target.valueAsNumber);
+            value={image.width}
+            onChange={(value) => {
+              setSize("width", value);
             }}
           />
           <label htmlFor={`${id}-h`}>{ts("Height")}</label>
-          <input
+          <SizeInput
             id={`${id}-h`}
-            type="number"
-            min={1}
-            className="form-control crm-flex-1"
-            placeholder="Auto"
-            value={image.height ?? ""}
-            onChange={(event) => {
-              setSize("height", event.target.valueAsNumber);
+            value={image.height}
+            onChange={(value) => {
+              setSize("height", value);
             }}
           />
           <TokenText
