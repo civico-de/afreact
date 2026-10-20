@@ -407,8 +407,9 @@ as answers. `deviation:condition-is-empty-values`
 offers `IS NULL` and `IS NOT NULL` (`afGuiCondition.component.js`), and the
 server checks them as `is_null()` (`ArrayQueryActionTrait::compareValues()`),
 but `compareConditions()` in `afForm.component.js` has no case for them, so
-the clause counts as true and an element shown on "No Value" stays visible
-after the field is filled (read from the code, not run). The React renderer
+`checkConditions()` lets the clause decide nothing: true within an AND, false
+within an OR. An element shown on "No Value" stays visible after the field is
+filled (read from the code, not run). The React renderer
 tests for an unset value, as the server does. `deviation:condition-is-null`
 
 **A LIKE pattern with an asterisk breaks the rule.** `compareConditions()`
