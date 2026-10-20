@@ -303,6 +303,21 @@ describe("in-place editing", () => {
     });
   });
 
+  // deviation:edited-row-deselected
+  it("takes a selected row the save left out of the result off the selection", async () => {
+    setup({ value_key: "job_title" }, "Pilot", {
+      inlineEdit: () => [],
+      settings: { actions: true },
+      handlers: { "SearchDisplay.getSearchTasks": () => [] },
+    });
+    await userEvent.click(await screen.findByRole("checkbox", { name: "Select Ada" }));
+    await open();
+    await userEvent.type(field(), "s{Enter}");
+    await waitFor(() => {
+      expect(screen.getByRole("checkbox", { name: "Select Ada" })).not.toBeChecked();
+    });
+  });
+
   // deviation:next-page-prefetched
   it("loads a page fetched ahead afresh once a save changed the page on show", async () => {
     const { runs } = setup({ value_key: "job_title" }, "Pilot", {

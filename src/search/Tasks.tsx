@@ -542,6 +542,11 @@ export function useTasks(options: TasksOptions) {
   return {
     /** For the header count and the pager. */
     selected: count,
+    /** A row an edit took out of the result leaves the selection. deviation:edited-row-deselected */
+    deselect: (key: Key) => {
+      if (selection.keys.includes(key))
+        select({ keys: selection.keys.filter((other) => other !== key), all: false });
+    },
     header,
     menu,
     rowSelect,

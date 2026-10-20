@@ -825,6 +825,12 @@ so:
   "None" meanwhile ends with every row selected (read from the code, not run).
   React drops the ids once the selection changed, a task ran or the filters
   changed. `deviation:select-all-latest-choice`
+- A row an inline edit takes out of the result stays selected:
+  `onPostRun()` deselects an edited row that left the results, but
+  `searchDisplayEditableTrait` reloads through `getResultsPronto()` without
+  passing the row, so that branch never runs and the next task includes the
+  record (read from the code, not run). React deselects the row once the save
+  answers without it. `deviation:edited-row-deselected`
 - A failed `getSearchTasks` leaves an empty actions menu with no message
   (`getMetadata`). React shows the error. `deviation:bulk-task-list-error`
 - A redirect task's query is replaced by its data expression (`doTask`:

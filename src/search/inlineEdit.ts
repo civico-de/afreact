@@ -1,7 +1,7 @@
 import { hashKey, useQueryClient, type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import { api4, errorMessage } from "../api/civi";
-import type { Column, EditableInfo, Row, RunPage } from "./types";
+import type { Column, EditableInfo, Row, RowKey, RunPage } from "./types";
 
 /**
  * In-place editing of table cells (searchDisplayEditableTrait, crmSearchDisplayEditable): the
@@ -192,7 +192,8 @@ interface UseInlineEditOptions {
   /** SearchDisplay.run's parameters for the shown page, without `return`. */
   params: Record<string, unknown>;
   /** Reloads the display and the others of its form, as a popup form's success does. */
-  reloadAll: () => void;
+  /** Every display of the form reloads; `gone` names an edited row the result lost. */
+  reloadAll: (gone?: RowKey) => void;
 }
 
 export function useInlineEdit({
@@ -265,8 +266,8 @@ export function useInlineEdit({
           void client.invalidateQueries({ queryKey: tallyKey });
           setFocus(target);
         } else {
-          // The row no longer matches the filters.
-          reloadAll();
+          // Without a row the edit took it out of the result; else the page changed meanwhile.
+          reloadAll(fresh ? undefined : row.key);
         }
       },
       (error: unknown) => {

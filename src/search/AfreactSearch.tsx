@@ -355,7 +355,8 @@ function ResultDisplay({
     countKey,
     params: { ...params, ...columnParams, sort: activeSort, limit },
     // refreshAfterEditing(): a row that left the result reloads every display of the form.
-    reloadAll: () => {
+    reloadAll: (gone) => {
+      if (gone !== undefined) tasks.deselect(gone);
       if (root) window.CRM.$(root).trigger("crmPopupFormSuccess");
     },
   });
