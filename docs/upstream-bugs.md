@@ -1088,6 +1088,13 @@ in italics. `deviation:editable-placeholder-contrast`
 
 ## SearchKit builder
 
+**An invalid query timeout is dropped without a word.** The timeout is a
+`type="number" min="0"` ngModel input, so a negative number sets the model to
+undefined and the save keeps the stored timeout without a word (read from the
+code, not run). The column is `int unsigned`. React marks a timeout that is
+negative or not whole invalid and refuses to save until it is fixed.
+`deviation:search-timeout-invalid-blocks-save`
+
 **A new autocomplete display searches by description.** When it sets up a
 new autocomplete display, core adds `description` to the entity's
 `search_fields` array in the admin metadata instead of to a copy, so the

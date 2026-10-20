@@ -99,6 +99,16 @@ describe("saving", () => {
     expect(validate(saved(), false)).toEqual([]);
   });
 
+  // deviation:search-timeout-invalid-blocks-save
+  it("refuses a query timeout the unsigned whole-number column cannot hold", () => {
+    expect(validate(saved({ timeout: -5 }), false)).toEqual([
+      { message: "Query Timeout must be a whole number of seconds, 0 or more.", tab: "settings" },
+    ]);
+    expect(validate(saved({ timeout: 1.5 }), false)).toHaveLength(1);
+    expect(validate(saved({ timeout: 0 }), false)).toEqual([]);
+    expect(validate(saved({ timeout: null }), false)).toEqual([]);
+  });
+
   it("deletes groups, displays and tags that are gone", () => {
     const calls = savePayload(
       saved({ displays: [{ id: 3, label: "T", type: "table", trashed: true }] }),

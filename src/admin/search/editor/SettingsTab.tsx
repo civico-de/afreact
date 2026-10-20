@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { EntityTags } from "../../widgets/EntityTags";
 import { useCoreHas } from "../../version";
-import { SAVED_SEARCH_FIELDS, type EditorSearch } from "../editor";
+import { SAVED_SEARCH_FIELDS, validTimeout, type EditorSearch } from "../editor";
 
 interface SettingsTabProps {
   search: EditorSearch;
@@ -41,7 +41,7 @@ export function SettingsTab({
         />
       </div>
       {hasTimeout && (
-        <div className="form-group">
+        <div className={`form-group${validTimeout(search.timeout) ? "" : " has-error"}`}>
           <label htmlFor={`${id}-timeout`}>{ts("Query Timeout (seconds)")}</label>
           <input
             id={`${id}-timeout`}
@@ -50,6 +50,7 @@ export function SettingsTab({
             className="form-control six"
             placeholder={ts("Site default")}
             value={search.timeout ?? ""}
+            aria-invalid={!validTimeout(search.timeout) || undefined}
             onChange={(event) => {
               onChange({ timeout: event.target.value === "" ? null : Number(event.target.value) });
             }}

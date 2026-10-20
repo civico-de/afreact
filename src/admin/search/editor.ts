@@ -198,12 +198,21 @@ export interface EditorError {
   tab?: string;
 }
 
+export const validTimeout = (timeout: unknown) =>
+  timeout === null || timeout === undefined || (Number.isInteger(timeout) && Number(timeout) >= 0);
+
 export function validate(search: EditorSearch, groupExists: boolean): EditorError[] {
   const required = (label: string) => ts("%1 is a required field.", { 1: label });
   const errors: EditorError[] = [];
   if (!search.label) errors.push({ message: required(ts("Search Label")) });
   if (groupExists && !search.groups[0]?.title)
     errors.push({ message: required(ts("Group Title")), tab: "group" });
+  // The column is int unsigned. deviation:search-timeout-invalid-blocks-save
+  if (!validTimeout(search.timeout))
+    errors.push({
+      message: ts("Query Timeout must be a whole number of seconds, 0 or more."),
+      tab: "settings",
+    });
   search.displays.forEach((display, index) => {
     if (!display.trashed && !display.label)
       errors.push({ message: required(ts("Display Label")), tab: `display_${String(index)}` });

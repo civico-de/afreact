@@ -35,14 +35,19 @@ function Harness() {
 }
 
 describe("SettingsTab timeout", () => {
-  it.each(["-5", "1.5", "12"])("keeps %s typed after clearing", async (text) => {
-    renderWithQuery(<Harness />);
-    const input = screen.getByRole("spinbutton", { name: "Query Timeout (seconds)" });
-    await userEvent.clear(input);
-    await userEvent.type(input, text);
-    expect(input).toHaveValue(Number(text));
-    expect(latest?.timeout).toBe(Number(text));
-  });
+  it.each(["-5", "1.5", "12"])(
+    "keeps %s typed after clearing and marks it if invalid",
+    async (text) => {
+      renderWithQuery(<Harness />);
+      const input = screen.getByRole("spinbutton", { name: "Query Timeout (seconds)" });
+      await userEvent.clear(input);
+      await userEvent.type(input, text);
+      expect(input).toHaveValue(Number(text));
+      expect(latest?.timeout).toBe(Number(text));
+      // deviation:search-timeout-invalid-blocks-save
+      expect(input.getAttribute("aria-invalid")).toBe(text === "12" ? null : "true");
+    },
+  );
 
   it("is not offered on a core without SavedSearch.timeout", () => {
     renderWithQuery(
