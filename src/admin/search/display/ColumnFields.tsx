@@ -1122,6 +1122,7 @@ function SubsearchColumn(props: ColumnEditing) {
     });
   };
   const chooseSearch = async (name: string | null) => {
+    // deviation:subsearch-cleared-drops-filters
     editCol((c) => {
       c.subsearch = { ...sub, search: name ?? undefined, display: null, filters: [] };
       if (!name) delete c.subsearch.search;
@@ -1452,6 +1453,20 @@ function SavedSearchPicker({
           }}
         />
       </Suspense>
+      {/* select2's allowClear: core's input is not required, so its choice can be cleared. */}
+      {value && (
+        <button
+          type="button"
+          className="btn btn-xs crm-hover-button"
+          aria-label={ts("Clear")}
+          title={ts("Clear")}
+          onClick={() => {
+            onChange(null);
+          }}
+        >
+          <i className="crm-i fa-times" role="img" aria-hidden="true" />
+        </button>
+      )}
     </>
   );
 }

@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { renderWithQuery } from "../../../test/render";
+import { mockApi, renderWithQuery } from "../../../test/render";
 import { metadata as meta } from "../../../test/searchMetadata";
 import { changeFilterField, ColumnTypeFields, filterMode } from "./ColumnFields";
 import type { AdminColumn, DisplayContext } from "./model";
@@ -185,6 +185,49 @@ describe("ColumnTypeFields", () => {
       expect(height).toHaveValue(0);
       await userEvent.type(height, "8");
       expect(saved?.image).toEqual({ alt: "", height: 8 });
+    });
+  });
+
+  describe("a subsearch column", () => {
+    const members = {
+      label: "Members",
+      api_entity: "Contact",
+      api_params: { version: 4, select: ["id", "display_name"] },
+    };
+    const column = (search: string): AdminColumn => ({
+      type: "subsearch",
+      label: "Members",
+      rewrite: "Members",
+      subsearch: {
+        search,
+        display: "Members_table",
+        filters: [{ subsearch_field: "id", parent_field: "id" }],
+        subsearch_mode: "dropdown",
+      },
+    });
+
+    beforeEach(() => {
+      window.CRM.vars = {
+        ...window.CRM.vars,
+        afreactAdmin: { searchDisplay: { viewableDisplayTypes: { table: "Table" } } },
+      };
+    });
+
+    afterEach(() => {
+      window.CRM.vars = { ...window.CRM.vars, afreactAdmin: {} };
+    });
+
+    // deviation:subsearch-cleared-drops-filters
+    it("lets its saved search be cleared, dropping the display and filters with it", async () => {
+      mockApi({
+        "SavedSearch.get": () => [members],
+        "SearchDisplay.get": () => [{ name: "Members_table", label: "Members table" }],
+      });
+      renderColumn(column("Members"));
+      await screen.findByRole("columnheader", { name: "Filter Subsearch Display" });
+      await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+      expect(saved?.subsearch).toEqual({ display: null, filters: [], subsearch_mode: "dropdown" });
+      expect(screen.queryByRole("columnheader", { name: "Filter Subsearch Display" })).toBeNull();
     });
   });
 
