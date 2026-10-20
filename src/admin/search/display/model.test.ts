@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { metadata as meta } from "../../../test/searchMetadata";
 import { draftOf, initialized } from "./DisplayEditor";
+import { fieldToColumn } from "../expr";
 import {
+  colorFieldOf,
   dateFormatChoice,
   addCol,
   addCssRule,
@@ -504,4 +506,18 @@ it("labels a column by the item its key aliases, not a field of the same name", 
   const swapped = { ...ctx, search: { ...ctx.search, api_params: { version: 4, select } } };
   expect(getFieldLabel(swapped, "birth_date")).toBe("Display Name");
   expect(getFieldLabel(swapped, "dob")).toBe("Birth Date");
+});
+
+// deviation:column-alias-color
+describe("colours of an aliased column", () => {
+  const aliased = {
+    ...ctx,
+    search: { api_entity: "Contact", api_params: { version: 4, select: ["gender_id:label AS g"] } },
+  };
+  it("come from its field's colour", () => {
+    expect(colorFieldOf(aliased, { type: "field", key: "g" })).toBe("gender_id:color");
+    expect(fieldToColumn(meta, "gender_id AS g", {}, aliased.search).colors).toEqual([
+      { field: "gender_id:color" },
+    ]);
+  });
 });

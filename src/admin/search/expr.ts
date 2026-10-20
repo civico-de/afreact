@@ -284,9 +284,11 @@ export function getColorField(
   fieldExpr: string,
   search: SearchInfo,
 ): string | null {
-  const field = getField(meta, fieldExpr, search);
+  // An alias names the column, not the field it colours. deviation:column-alias-color
+  const [expr = fieldExpr] = fieldExpr.split(" AS ");
+  const field = getField(meta, expr, search);
   if (!field) return null;
-  const pathPart = fieldExpr.split(":")[0] ?? "";
+  const pathPart = expr.split(":")[0] ?? "";
   const lastDot = pathPart.lastIndexOf(".");
   const prefix = lastDot >= 0 ? pathPart.slice(0, lastDot + 1) : "";
   const fieldName = lastDot >= 0 ? pathPart.slice(lastDot + 1) : pathPart;

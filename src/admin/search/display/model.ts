@@ -236,8 +236,9 @@ export function columnField(ctx: FieldContext, key: string): SchemaField | undef
   return info && !info.fn ? info.args[0]?.field : undefined;
 }
 
-/** A condition's field, through a column's alias first. deviation:rule-condition-alias-field */
-export function conditionFieldOf(ctx: FieldContext, name: string): SchemaField | undefined {
+/** The field a column key or field name names, through the column's alias first. */
+// deviation:rule-condition-alias-field
+export function keyField(ctx: FieldContext, name: string): SchemaField | undefined {
   return columnField(ctx, name) ?? getField(ctx.meta, name, ctx.search);
 }
 
@@ -840,7 +841,10 @@ export const showMoreCssRules = (item: { cssRules?: unknown[][] }) =>
   !item.cssRules?.length || !!item.cssRules.at(-1)?.[1];
 
 export function colorFieldOf(ctx: DisplayContext, col: AdminColumn): string | null {
-  return col.key && getFieldFor(ctx, col.key) ? getColorField(ctx.meta, col.key, ctx.search) : null;
+  if (!col.key) return null;
+  // deviation:column-alias-color
+  const expr = getExprFromSelect(ctx.search, col.key) ?? col.key;
+  return keyField(ctx, col.key) ? getColorField(ctx.meta, expr, ctx.search) : null;
 }
 
 export function toggleColor(col: AdminColumn, colorField: string): void {

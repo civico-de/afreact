@@ -13,7 +13,7 @@ import { SearchCondition } from "../SearchCondition";
 import { SearchInput } from "../SearchInput";
 import { CssRules, LinkGroup, LinkSelect, TokenText } from "./common";
 import {
-  conditionFieldOf,
+  keyField,
   canBeEditable,
   canBeImage,
   colLabel,
@@ -958,7 +958,7 @@ function IconCondition({
 }) {
   const id = useId();
   const name = typeof clause[0] === "string" ? clause[0] : "";
-  const field = name ? conditionFieldOf(ctx, name) : undefined;
+  const field = name ? keyField(ctx, name) : undefined;
   const options = useFieldOptions(field?.entity ?? ctx.search.api_entity);
   return (
     <>
@@ -994,7 +994,7 @@ function IconCondition({
 /** searchAdminColors */
 function ColorsConfig({ ctx, col, editCol }: ColumnEditing) {
   const colorField = colorFieldOf(ctx, col);
-  const field = col.key ? getField(ctx.meta, col.key, ctx.search) : undefined;
+  const field = col.key ? keyField(ctx, col.key) : undefined;
   if (!colorField || !field) return null;
   return (
     <div className="form-inline">

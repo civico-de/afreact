@@ -1112,6 +1112,12 @@ field name (`searchAdminCssRules`, `searchAdminIcons`, `crmSearchConditions`
 no field and offer a plain text input instead of the options. afreact resolves
 the alias through the search's select first. `deviation:rule-condition-alias-field`
 
+**An aliased column cannot be coloured.** The colour option looks up the
+column's key as a field (`searchAdminColors` `getField`, `getColorField`), so
+`gender_id:label AS g` offers no "Use Gender color", and a new column for
+`gender_id AS g` gets no colours either. afreact takes the field from the column's select
+expression. `deviation:column-alias-color`
+
 **A column's format can list a column twice.** The format select of a column
 offers every suffix (`crmSearchAdminFields.html`), also one another column
 already selects, so `gender_id` switched to Label beside `gender_id:label` puts

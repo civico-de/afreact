@@ -9,7 +9,7 @@ import { getAllFields, getSelectFields } from "../expr";
 import { useFieldOptions } from "../meta";
 import { SearchCondition } from "../SearchCondition";
 import {
-  conditionFieldOf,
+  keyField,
   addCssRule,
   changeLimit,
   changeLinkItem,
@@ -672,7 +672,7 @@ function RuleCondition({
 }) {
   const id = useId();
   const name = typeof clause[at] === "string" ? clause[at] : "";
-  const field = name ? conditionFieldOf(ctx, name) : undefined;
+  const field = name ? keyField(ctx, name) : undefined;
   const options = useFieldOptions(field?.entity ?? ctx.search.api_entity);
   const conditionField: ConditionField | undefined = field && {
     ...field,
