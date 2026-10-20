@@ -1360,6 +1360,14 @@ input invalid. `deviation:include-path-kept`
 
 ## FormBuilder
 
+**A default of No or 0 is not saved.** The field menu keeps a setting only
+where it differs from the field's metadata and one of the two is truthy
+(`afGuiField.component.js` `getSet`). A default of `false` or `0` against no
+metadata default is dropped, so picking "No" for a yes/no default or typing 0
+saves no default, while afField would set either (`'afform_default' in
+ctrl.defn`). The menu also reads a default as set only when truthy. afreact
+keeps a default of `false` or `0`. `deviation:field-falsy-setting-kept`
+
 **A tab's count offers its charts.** The tab menu's "Count" select lists every
 search display in the tab (`getSearchDisplays()` in `afGuiTabset.component.js`),
 charts included, but a chart never sets the count: chart_kit's element writes

@@ -51,6 +51,26 @@ describe("getSet()", () => {
     expect(setValue(field(), "input_attrs.placeholder", "", false).local).toEqual({});
   });
 
+  // deviation:field-falsy-setting-kept
+  it("keeps a default of false or 0 and a minimum of 0, but drops an unticked flag", () => {
+    expect(setValue(field(), "afform_default", false, true).local).toEqual({
+      afform_default: false,
+    });
+    expect(setValue(field(), "afform_default", 0, true).local).toEqual({ afform_default: 0 });
+    expect(setValue(field(), "input_attrs.min", 0, false).local).toEqual({
+      input_attrs: { min: 0 },
+    });
+    expect(setValue(field(), "required", false, false).local).toEqual({});
+  });
+
+  // deviation:date-time-by-type
+  it("keeps a timestamp's time switched off and drops it switched back on", () => {
+    const stamp = field({ base: base({ data_type: "Timestamp", input_type: "Date" }) });
+    const off = setValue(stamp, "input_attrs.time", false, false);
+    expect(off.local).toEqual({ input_attrs: { time: false } });
+    expect(setValue(off, "input_attrs.time", true, false).local).toEqual({});
+  });
+
   it("removes objects a removed value leaves empty", () => {
     const state = setValue(field(), "input_attrs.placeholder", "Pick", false);
     expect(state.local).toEqual({ input_attrs: { placeholder: "Pick" } });

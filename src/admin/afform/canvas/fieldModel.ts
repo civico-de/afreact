@@ -1,3 +1,4 @@
+import { showsTime } from "../../../afform/fields/dateTime";
 import { plainLiteral } from "../fields";
 import { encodeLiteral, isLiteralObject, parseAttribute, type Literal } from "../literal";
 import { getField, type EditorMeta, type GuiField } from "../meta";
@@ -96,11 +97,20 @@ export const withLocal = (
   local: setPath(state.local, path, value),
 });
 
+/** A value that reads as no setting; a default of false or a 0 is a setting. deviation:field-falsy-setting-kept */
+const unset = (prop: string, value: unknown) =>
+  value === undefined ||
+  value === null ||
+  value === "" ||
+  (value === false && prop !== "afform_default");
+
 /** The bare setter of getSet(): a value is kept only where it differs from the metadata's. */
 function withProp(state: FieldState, prop: string, value: Literal | undefined): FieldState {
   const path = prop.split(".");
-  const base = drill(state.base, path);
-  const keep = value !== undefined && value !== base && !(!value && !base);
+  const stored = drill(state.base, path);
+  // A timestamp without a time setting shows the time. deviation:date-time-by-type
+  const base = prop === "input_attrs.time" ? showsTime(stored, state.base.data_type) : stored;
+  const keep = value !== undefined && value !== base && !(unset(prop, value) && unset(prop, base));
   return withLocal(state, path, keep ? value : undefined);
 }
 
