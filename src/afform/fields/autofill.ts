@@ -35,16 +35,19 @@ function joinRecord(item: PrefillItem, scope: Scope): Values | undefined {
 export type Filled = Record<string, Record<string, { before?: EntityItem; after: EntityItem }>>;
 
 export interface Selection {
-  /** Writes the selection at `place`, the selecting field's place as it stands by then. */
-  apply: (data: FormData, at: Scope) => FormData;
-  /** What the selection filled into other entities, e.g. through relationship autofill. */
-  filled: Filled;
+  /**
+   * Writes the selection at `place`, the selecting field's place as it stands by then, after
+   * resetting `previous`, what the last selection filled as it stands by then.
+   */
+  apply: (data: FormData, place: Scope, previous: Filled) => FormData;
+  /** What it filled into other entities; none leaves what the last selection filled. */
+  filled?: Filled;
 }
 
 /**
  * afForm's loadData() for one record: the record the autofill field selects fills its entity
  * or join record, and the entities Afform.prefill loads with it; clearing it resets the entity
- * to its preset data, or empties the join record. `previous` is what the last selection filled.
+ * to its preset data, or empties the join record.
  */
 export async function loadSelected(
   formName: string,
@@ -52,14 +55,13 @@ export async function loadSelected(
   field: string,
   id: unknown,
   entities: Record<string, EntityDeclaration>,
-  previous: Filled = {},
 ): Promise<Selection> {
   const { entity, index, join } = scope;
   const joinIndex = scope.joinIndex ?? 0;
   const empty = id === null || id === undefined || id === "" || (Array.isArray(id) && !id.length);
   if (empty)
     return {
-      apply: (data, place) =>
+      apply: (data, place, previous) =>
         replaceRecord(
           unfill(data, previous, entities),
           place,
@@ -85,7 +87,6 @@ export async function loadSelected(
     return {
       apply: (data, place) =>
         replaceRecord(data, place, { ...currentRecord(data, place), ...record }, false),
-      filled: previous,
     };
   }
   const loaded = firstPrefilled(item);
@@ -93,7 +94,7 @@ export async function loadSelected(
   const others = result.filter((candidate) => candidate.name !== entity);
   const filled: Filled = {};
   return {
-    apply: (current, place) => {
+    apply: (current, place, previous) => {
       const reset = unfill(current, previous, entities);
       const data = applyPrefill(reset, others, entities);
       for (const other of others)

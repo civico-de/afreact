@@ -740,6 +740,130 @@ describe("EntityRef", () => {
     });
   });
 
+  // deviation:autofill-clear-resets-related
+  it("resets what the last selection filled as it stands once the next answer lands", async () => {
+    let answer: (items: unknown) => void = () => undefined;
+    const layout: LayoutNode[] = [
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1", actions: "{update: true}" },
+          { "#tag": "af-entity", type: "Contact", name: "Individual2", actions: "{update: true}" },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "#children": [
+              entityRef("id", { label: "Existing", input_attrs: { autofill: "update" } }),
+            ],
+          },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual2",
+            "af-repeat": "Add child",
+            "#children": [
+              {
+                "#tag": "af-field",
+                name: "first_name",
+                defn: {
+                  name: "first_name",
+                  label: "Child",
+                  input_type: "Text",
+                  data_type: "String",
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ];
+    const child = (id: number, name: string) => ({ fields: { id, first_name: name } });
+    renderForm(layout, {
+      "Contact.autocomplete": () => rows([ADA, BOB]),
+      "Afform.prefill": ({ fillMode, args }) => {
+        if (fillMode !== "entity") return [];
+        if (JSON.stringify(args).includes('"id":2'))
+          return new Promise((resolve) => {
+            answer = resolve;
+          });
+        return [
+          { name: "Individual1", values: [{ fields: { id: 1 } }] },
+          { name: "Individual2", values: [child(5, "Sam"), child(6, "Kim"), child(7, "Lee")] },
+        ];
+      },
+    });
+    const input = await screen.findByRole("combobox", { name: "Existing" });
+    await userEvent.type(input, "a");
+    await userEvent.click(await screen.findByRole("option", { name: "Ada" }));
+    await waitFor(() => {
+      expect(screen.getAllByRole("textbox", { name: "Child" })).toHaveLength(3);
+    });
+    await userEvent.clear(input);
+    await userEvent.type(input, "b");
+    await userEvent.click(await screen.findByRole("option", { name: "Bob" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Remove item 1/ }));
+    act(() => {
+      answer([{ name: "Individual1", values: [{ fields: { id: 2 } }] }]);
+    });
+    await waitFor(() => {
+      expect(screen.getAllByRole("textbox", { name: "Child" })).toHaveLength(1);
+    });
+    expect(screen.getByRole("textbox", { name: "Child" })).toHaveValue("");
+  });
+
+  it("loads a pending selection of a removed item once Undo brings the item back", async () => {
+    let answer: (items: unknown) => void = () => undefined;
+    const layout: LayoutNode[] = [
+      {
+        "#tag": "af-form",
+        ctrl: "afform",
+        "#children": [
+          { "#tag": "af-entity", type: "Contact", name: "Individual1", actions: "{update: true}" },
+          {
+            "#tag": "div",
+            "af-fieldset": "Individual1",
+            "af-repeat": "Add person",
+            "#children": [
+              entityRef("id", { label: "Existing", input_attrs: { autofill: "update" } }),
+              {
+                "#tag": "af-field",
+                name: "first_name",
+                defn: {
+                  name: "first_name",
+                  label: "First",
+                  input_type: "Text",
+                  data_type: "String",
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ];
+    renderForm(layout, {
+      "Contact.autocomplete": () => rows([ADA]),
+      "Afform.prefill": ({ fillMode }) =>
+        fillMode === "entity"
+          ? new Promise((resolve) => {
+              answer = resolve;
+            })
+          : [],
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Add person" }));
+    const second = screen.getAllByRole("combobox", { name: "Existing" })[1];
+    if (!second) throw new Error("no second item");
+    await userEvent.type(second, "a");
+    await userEvent.click(await screen.findByRole("option", { name: "Ada" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Remove item 2/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    act(() => {
+      answer([{ name: "Individual1", values: { 1: { fields: { id: 1, first_name: "Ada" } } } }]);
+    });
+    await waitFor(() => {
+      expect(screen.getAllByRole("textbox", { name: "First" })[1]).toHaveValue("Ada");
+    });
+  });
+
   // deviation:autofill-follows-moved-item
   it("fills the item a selection was made in after an earlier item was removed", async () => {
     let answer: (items: unknown) => void = () => undefined;
