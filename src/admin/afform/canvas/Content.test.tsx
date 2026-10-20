@@ -8,6 +8,7 @@ import { META } from "../testMeta";
 import { isElement, type ShallowElement } from "../tree";
 import type { ElementProps } from "./common";
 import { ButtonElement, MarkupElement, TextElement } from "./Content";
+import { FakeRichText } from "../../../test/richText";
 
 /** CRM.afGuiEditor.styles, as AfformAdminMeta gives them. */
 const meta: EditorMeta = {
@@ -82,26 +83,6 @@ function Canvas({
     </CoreVersion>
   );
 }
-
-/** Core's civi-rich-text-input, holding its value as the site's editor would. */
-class FakeRichText extends HTMLElement {
-  value = "";
-  input = document.createElement("textarea");
-  openEditor() {
-    this.setAttribute("editing", "");
-  }
-  closeEditor() {
-    this.removeAttribute("editing");
-  }
-  saveAndCloseEditor() {
-    this.closeEditor();
-  }
-  getTokens() {
-    return { results: [] };
-  }
-}
-if (!customElements.get("civi-rich-text-input"))
-  customElements.define("civi-rich-text-input", FakeRichText);
 
 const openMenu = async () => {
   await userEvent.click(screen.getByRole("button", { name: "Configure" }));

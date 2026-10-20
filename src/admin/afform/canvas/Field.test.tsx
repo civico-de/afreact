@@ -9,6 +9,7 @@ import { META } from "../testMeta";
 import { isElement, type ShallowElement } from "../tree";
 import type { ContainerScope } from "./dropRules";
 import { FieldElement } from "./Field";
+import { FakeRichText } from "../../../test/richText";
 
 const contribution = META.gui.entities.Contribution;
 if (!contribution) throw new Error("The test metadata has no Contribution entity.");
@@ -108,26 +109,6 @@ function Canvas({
     </CoreVersion>
   );
 }
-
-/** Core's civi-rich-text-input, holding its value as the site's editor would. */
-class FakeRichText extends HTMLElement {
-  value = "";
-  input = document.createElement("textarea");
-  openEditor() {
-    this.setAttribute("editing", "");
-  }
-  closeEditor() {
-    this.removeAttribute("editing");
-  }
-  saveAndCloseEditor() {
-    this.closeEditor();
-  }
-  getTokens() {
-    return { results: [] };
-  }
-}
-if (!customElements.get("civi-rich-text-input"))
-  customElements.define("civi-rich-text-input", FakeRichText);
 
 const savedDefn = () => {
   const defn = latest?.defn;
