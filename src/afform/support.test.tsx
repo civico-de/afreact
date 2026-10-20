@@ -279,6 +279,85 @@ describe("layoutProblems", () => {
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
+  it("carries over the attributes CKEditor 4's table and link dialogs and a label write", async () => {
+    const cell = (tag: string, attributes: Record<string, string>): LayoutNode => ({
+      "#tag": tag,
+      ...attributes,
+      "#children": [{ "#text": tag }],
+    });
+    const html: LayoutNode[] = [
+      {
+        "#tag": "table",
+        border: "1",
+        cellpadding: "2",
+        cellspacing: "3",
+        summary: "Prices",
+        align: "center",
+        "#children": [
+          {
+            "#tag": "tbody",
+            "#children": [
+              { "#tag": "tr", "#children": [cell("th", { scope: "col", abbr: "P" })] },
+              { "#tag": "tr", "#children": [cell("td", { colspan: "2", rowspan: "3" })] },
+            ],
+          },
+        ],
+      },
+      cell("label", { for: "nick" }),
+      cell("a", { href: "#top", name: "top", rel: "nofollow", accesskey: "t", tabindex: "0" }),
+      { "#tag": "ol", start: "4", "#children": [cell("li", { value: "7" })] },
+      cell("q", { cite: "https://example.org/" }),
+      cell("del", { datetime: "2026-01-01" }),
+    ];
+    expect(layoutProblems(html)).toEqual([]);
+    mockApi({
+      "Afreact.getForm": () => [
+        {
+          name: "afformTest",
+          title: "Test",
+          type: "form",
+          layout: [{ "#tag": "af-form", ctrl: "afform", "#children": html }],
+          strings: [],
+        },
+      ],
+      "Afform.prefill": () => [],
+    });
+    renderWithQuery(<AfreactForm name="afformTest" location={{ search: "", hash: "" }} />);
+    const table = await screen.findByRole("table");
+    for (const [name, value] of Object.entries({
+      border: "1",
+      cellpadding: "2",
+      cellspacing: "3",
+      summary: "Prices",
+      align: "center",
+    }))
+      expect(table).toHaveAttribute(name, value);
+    expect(screen.getByText("th")).toHaveAttribute("scope", "col");
+    expect(screen.getByText("th")).toHaveAttribute("abbr", "P");
+    expect(screen.getByText("td")).toHaveAttribute("colspan", "2");
+    expect(screen.getByText("td")).toHaveAttribute("rowspan", "3");
+    expect(screen.getByText("label")).toHaveAttribute("for", "nick");
+    const link = screen.getByText("a");
+    for (const [name, value] of Object.entries({ name: "top", rel: "nofollow", accesskey: "t" }))
+      expect(link).toHaveAttribute(name, value);
+    expect(link).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("list")).toHaveAttribute("start", "4");
+    expect(screen.getByText("li")).toHaveAttribute("value", "7");
+    expect(screen.getByText("q")).toHaveAttribute("cite", "https://example.org/");
+    expect(screen.getByText("del")).toHaveAttribute("datetime", "2026-01-01");
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+
+  it("reports the attributes another extension's directive reads on an element", async () => {
+    // oauth-client's forms load providers this way.
+    const imported = form([
+      { "#tag": "div", "oauth-util-import": "CRM.oauthUtil.providers", to: "theProviders" },
+    ]);
+    const report = layoutProblems(imported);
+    expect(report).toEqual(["oauth-util-import, to"]);
+    expect(await shownFormNotes(imported)).toEqual(report);
+  });
+
   it("reports a route ng-if around fields, entities, blocks, joins or repeats", () => {
     const around = (inner: LayoutNode): LayoutNode => ({
       "#tag": "div",

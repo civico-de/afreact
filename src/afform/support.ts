@@ -78,7 +78,7 @@ const HTML_TAGS = new Set([
   "cite",
   "q",
 ]);
-/** Attributes the renderer interprets itself; other ng-*, af-* and crm-* attributes are reported. */
+/** Directive attributes the renderer interprets itself; attributes it neither reads nor carries are reported. */
 const HANDLED = new Set([
   "af-if",
   "api-entities",
@@ -140,7 +140,32 @@ const SEARCH_ATTRIBUTES = new Set([
   "search",
   "display",
 ]);
-const PASSTHROUGH = new Set("id href title role target type style lang dir".split(" "));
+/** HTML attributes an element carries over under their own name, e.g. from CKEditor's dialogs. */
+const PASSTHROUGH = new Set(
+  (
+    "id href title role target type style lang dir name rel scope headers abbr span border " +
+    "summary align width height start value cite"
+  ).split(" "),
+);
+/** HTML attributes React names differently. */
+const RENAMED: Record<string, string> = {
+  class: "className",
+  "ng-href": "href",
+  for: "htmlFor",
+  colspan: "colSpan",
+  rowspan: "rowSpan",
+  cellpadding: "cellPadding",
+  cellspacing: "cellSpacing",
+  datetime: "dateTime",
+  accesskey: "accessKey",
+  tabindex: "tabIndex",
+};
+
+function carried(attr: string): boolean {
+  return attr in RENAMED || attr === "open" || PASSTHROUGH.has(attr) || /^(aria|data)-/.test(attr);
+}
+/** What the renderer reads from an element besides HTML; other attributes are reported. */
+const OWN = new Set(["#tag", "#children", "store-values", "field-data"]);
 
 export type NodeKind =
   | "conditional"
@@ -270,13 +295,13 @@ function isResetButton(node: ElementNode): boolean {
   return node.type === "reset" && String(node.class).split(/\s+/).includes("af-button");
 }
 
-/** An element's unknown tag or unknown directive attributes, as its note names them. */
+/** An element's unknown tag or the attributes it neither handles nor carries, as its note names them. */
 export function unsupportedElement(node: ElementNode): string | null {
   const tag = node["#tag"];
   if (!HTML_TAGS.has(tag)) return `<${tag}>`;
   const unknown = Object.keys(node).flatMap((attr) => {
     if (attr === "ng-if") return ngIfNotes(node);
-    return /^(ng|af|crm)-/.test(attr) && !HANDLED.has(attr) ? [attr] : [];
+    return HANDLED.has(attr) || OWN.has(attr) || carried(attr) ? [] : [attr];
   });
   if (node["ng-click"] !== undefined) unknown.push(`ng-click=${JSON.stringify(node["ng-click"])}`);
   // afFieldset's bindings: React remembers values in a search fieldset only, and field-data is a
@@ -293,11 +318,11 @@ export function unsupportedElement(node: ElementNode): string | null {
 /** The attributes an HTML element carries over, by React prop name; values may hold {{ }}. */
 export function elementAttributes(node: ElementNode): [string, unknown][] {
   return Object.entries(node).flatMap(([attr, value]): [string, unknown][] => {
-    if (attr === "class") return [["className", value]];
-    if (attr === "ng-href") return [["href", value]];
+    const renamed = RENAMED[attr];
+    if (renamed !== undefined) return [[renamed, value]];
     // A boolean attribute: present, even as open="", means open.
     if (attr === "open") return [["open", true]];
-    return PASSTHROUGH.has(attr) || /^(aria|data)-/.test(attr) ? [[attr, value]] : [];
+    return carried(attr) ? [[attr, value]] : [];
   });
 }
 
@@ -367,9 +392,7 @@ const BLOCK_ATTRIBUTES = new Set(["#tag", "#children", "af-if", "af-title", "cla
 
 /** Attributes on a block element the renderer neither handles nor carries over. */
 export function unknownBlockAttributes(node: ElementNode): string | null {
-  const unknown = Object.keys(node).filter(
-    (attr) => !BLOCK_ATTRIBUTES.has(attr) && !PASSTHROUGH.has(attr) && !/^(aria|data)-/.test(attr),
-  );
+  const unknown = Object.keys(node).filter((attr) => !BLOCK_ATTRIBUTES.has(attr) && !carried(attr));
   return unknown.length ? `${unknown.join(", ")} on <${node["#tag"]}>` : null;
 }
 
