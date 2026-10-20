@@ -3,7 +3,8 @@
  * option through SearchDisplay.inlineEdit, as core's row does, which on 6.18.1 also logs a
  * TypeError per input (upstream-bugs.md, "The Add row of editableRow.create throws").
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const LOAD = { timeout: 30_000 };

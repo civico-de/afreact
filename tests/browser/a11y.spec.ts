@@ -4,7 +4,8 @@
  * report, a core page) has with the same colours and font, i.e. the theme's. Findings are
  * reported without element content.
  */
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, type Page, type TestInfo } from "@playwright/test";
+import { test } from "./coverage";
 import { isReady } from "../../src/compare/metrics";
 import { axeFindings, coreBuilders, ownFindings, setReactForms } from "./harness";
 

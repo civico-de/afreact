@@ -3,7 +3,8 @@
  * on both renderers: each saves the same record, or sends SearchDisplay.run the same filters.
  * Location stays out: the proximity filter needs a geocoding provider.
  */
-import { expect, test, type Page, type Request } from "@playwright/test";
+import { expect, type Page, type Request } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, isRecord, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

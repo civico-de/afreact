@@ -2,7 +2,8 @@
  * The mailing task on the contacts demo: each renderer makes a mailing for its own pair of
  * contacts, and the mailing, its hidden group and the group's members must come out alike.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

@@ -2,7 +2,8 @@
  * FormBuilder's listing in React against core's: the same rows per tab, the placement column
  * and the choices of the "New" menus.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, axeFindings, coreBuilders } from "./harness";
 
 coreBuilders();

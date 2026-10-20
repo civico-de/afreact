@@ -2,7 +2,8 @@
  * The demo members page: a filtered table with a conditional rewrite and muted rows, and a count
  * table below the fieldset. Rows are compared without the members' names.
  */
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, type Renderer } from "./harness";
 
 const LOAD = { timeout: 30_000 };

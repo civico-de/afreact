@@ -3,7 +3,8 @@
  * af-if (which drops the values it hid and restores the default on re-show), af-required,
  * af-disabled and a token default.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const render = (renderer: Renderer, suffix = "") =>

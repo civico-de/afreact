@@ -6,7 +6,8 @@
  * names and paths only. SWEEP_FORMS=name1,name2 sweeps only those forms.
  */
 import { stripVTControlCharacters } from "node:util";
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, type Page, type Route } from "@playwright/test";
+import { test } from "./coverage";
 import { formRoundTrip } from "../../src/admin/afform/roundTrip";
 import { api, isRecord } from "./harness";
 

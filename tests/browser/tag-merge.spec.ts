@@ -2,7 +2,8 @@
  * The merge tags task on a tag search: each renderer merges its own pair of tags into the
  * second, renamed, and the kept tag and its taggings must come out alike. Core master only.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, quietApi, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

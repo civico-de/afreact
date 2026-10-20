@@ -5,7 +5,8 @@
  * others are reported. Nothing is submitted. SWEEP_FORMS=name1,name2 sweeps only those forms.
  * The result goes to test-results/sweep.json and sweep.md and is attached to the report.
  */
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, type Page, type TestInfo } from "@playwright/test";
+import { test } from "./coverage";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { entityDeclarations } from "../../src/afform/model";

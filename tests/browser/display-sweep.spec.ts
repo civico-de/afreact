@@ -3,7 +3,8 @@
  * display tab visited, sends the same save: what each display editor's start-up normalizes
  * included; and React names no setting as unknown. Every write is caught and dropped.
  */
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, type Page, type Route } from "@playwright/test";
+import { test } from "./coverage";
 import { diffPaths } from "../../src/admin/search/roundTrip";
 import { api, coreBuilders } from "./harness";
 

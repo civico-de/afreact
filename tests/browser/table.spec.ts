@@ -3,7 +3,8 @@
  * row menus, collapsible rows and the reload after a popup form. The demo fixtures use every
  * column type the React table draws; the core forms are those it renders without a note.
  */
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import type { Renderer } from "./harness";
 
 const render = (name: string, renderer: Renderer) =>

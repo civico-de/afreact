@@ -3,7 +3,8 @@
  * assertions are shared, only the way a widget is operated differs (Angular
  * uses select2 and the jQuery datepicker, React native inputs).
  */
-import { expect, test, type Page, type Request } from "@playwright/test";
+import { expect, type Page, type Request } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, driver, PAGES, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

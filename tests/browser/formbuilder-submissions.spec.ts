@@ -2,7 +2,8 @@
  * FormBuilder's submissions page in React against core's: title, columns and rows of the
  * default display core builds for the form.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, coreBuilders, debugOn, debugPanel } from "./harness";
 
 coreBuilders();

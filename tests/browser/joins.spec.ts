@@ -4,7 +4,8 @@
  * and per fieldset, React by layout position over the contact's fieldsets (upstream-bugs.md,
  * "Join blocks are numbered in link order").
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, quietApi, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

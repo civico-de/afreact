@@ -2,7 +2,8 @@
  * The saved search picker (af-search-param-sets) on both renderers: the same choices, buttons
  * and set details, and saving and deleting a set write the same records.
  */
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expect, type Browser, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, axeFindings, ownFindings, quietApi, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

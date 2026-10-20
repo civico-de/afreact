@@ -3,7 +3,8 @@
  * returning visitor meets it; bun run video puts the two side by side. Debug is off as in
  * production and restored afterwards.
  */
-import { expect, test, type Locator, type Response } from "@playwright/test";
+import { expect, type Locator, type Response } from "@playwright/test";
+import { test } from "./coverage";
 import {
   api,
   API_PAGE,

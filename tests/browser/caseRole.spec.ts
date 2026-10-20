@@ -2,7 +2,8 @@
  * The assign role task on a case search: each renderer gives its own pair of cases the same
  * role, replacing the holder one case has already, and the relationships must come out alike.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, AUTH, quietApi, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

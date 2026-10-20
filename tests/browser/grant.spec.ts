@@ -2,7 +2,8 @@
  * The add grant task on the contacts demo: each renderer adds grants for its own pair of
  * contacts, with the first contact's grant skipped, and the Grant rows must come out alike.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

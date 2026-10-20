@@ -5,7 +5,8 @@
  * tabs and the warning's text only. SWEEP_FORMS=name1,name2 sweeps only those forms.
  */
 import { stripVTControlCharacters } from "node:util";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api } from "./harness";
 
 const FLAWED = "A value is missing or invalid";

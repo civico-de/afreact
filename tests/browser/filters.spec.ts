@@ -3,7 +3,8 @@
  * field defaults, the URL, stored values or a saved filter set, with one page request and no
  * rows the filters exclude; changed filters search once typing pauses and survive a reload.
  */
-import { expect, test, type Browser, type Page, type Request } from "@playwright/test";
+import { expect, type Browser, type Page, type Request } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, isRecord, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

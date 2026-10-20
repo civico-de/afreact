@@ -4,7 +4,8 @@
  * for "Individual" and so offers none here (upstream-bugs.md, "The tag dialog offers no tags on a
  * contact-type search").
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH } from "./harness";
 
 const RUN = Date.now().toString(36);

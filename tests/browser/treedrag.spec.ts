@@ -2,7 +2,8 @@
  * Drag in a tree display: the navigation entries of navtree.spec, moved among siblings and under
  * another parent on both renderers, compared by what the API stores afterwards.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, keysListened, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

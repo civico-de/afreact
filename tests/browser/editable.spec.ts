@@ -4,7 +4,8 @@
  * must store the same values, and the picker must hide and show the same columns. Each renderer
  * edits its own contact, found by last name.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

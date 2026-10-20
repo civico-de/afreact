@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { loadParams, SAVED_SEARCH_FIELDS } from "../../src/admin/search/editor";
 import { coreHas } from "../../src/admin/version";
 import { searchRoundTrip } from "../../src/admin/search/roundTrip";

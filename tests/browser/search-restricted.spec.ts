@@ -2,7 +2,8 @@
  * The SearchKit builder and display page for users without admin rights: one who may manage
  * only their own searches, and one who may only view. React offers and refuses what core does.
  */
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expect, type Browser, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, coreBuilders } from "./harness";
 
 coreBuilders();

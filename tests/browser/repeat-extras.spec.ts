@@ -2,7 +2,8 @@
  * An extra field in a repeated fieldset on both renderers: React keeps a value per item and
  * submits it with the item, as core does from 6.21; older cores share one form-level value.
  */
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expect, type Browser, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { coreHas } from "../../src/admin/version";
 import { api, API_PAGE, AUTH, isRecord, quietApi, type Renderer } from "./harness";
 

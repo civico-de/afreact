@@ -2,7 +2,8 @@
  * Core's contribution batch form (batch_entry): each renderer starts a batch with a target total,
  * enters two contributions and imports them, and the contributions must come out alike.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, AUTH, quietApi, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

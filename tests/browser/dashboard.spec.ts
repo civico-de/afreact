@@ -3,13 +3,8 @@
  * the others with Angular, side by side. The test adds both demo dashlets to the admin's
  * dashboard and puts the admin's dashboard rows back afterwards.
  */
-import {
-  expect as baseExpect,
-  test,
-  type Browser,
-  type Locator,
-  type Page,
-} from "@playwright/test";
+import { expect as baseExpect, type Browser, type Locator, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { AUTH, quietApi, setReactForms } from "./harness";
 
 // Switching the renderer clears the Angular cache, so the first dashboard load assembles it cold.

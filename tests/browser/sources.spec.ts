@@ -3,7 +3,8 @@
  * renders to the same DOM whether the layout comes from Afreact.getForm, from
  * the page, or from the compiled Angular module file.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { isReady } from "../../src/compare/metrics";
 import { axeFindings } from "./harness";
 

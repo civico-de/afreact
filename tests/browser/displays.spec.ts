@@ -2,7 +2,8 @@
  * SearchKit list, grid and tree displays on both renderers: the same items, columns, labels and
  * classes, the same pager, grid tracks and list markers, and the tree's branches opening alike.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import type { Renderer } from "./harness";
 
 const render = (name: string, renderer: Renderer) =>

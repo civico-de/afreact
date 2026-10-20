@@ -3,7 +3,8 @@
  * elements pair up by selector. Each pair must match in position, size and the styles below;
  * differences that follow from design choices are listed in BY_DESIGN with their reason.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { isReady } from "../../src/compare/metrics";
 import { api } from "./harness";
 

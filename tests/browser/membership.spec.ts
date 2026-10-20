@@ -2,7 +2,8 @@
  * The large demo form: each renderer signs up a member with an employer, a reduced fee, a
  * note and the newsletter, and the records both leave behind must be alike.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, driver, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

@@ -2,7 +2,8 @@
  * What follows a submission, with the same steps on both renderers: the confirmation message
  * with a token, the redirect with tokens, and a form closed for submissions.
  */
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expect, type Browser, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { AUTH, quietApi, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

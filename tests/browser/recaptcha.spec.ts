@@ -3,7 +3,8 @@
  * leaving for Google: the same widget, the same refusal without a response, the same values sent
  * plus formprotection's key.
  */
-import { expect, test, type Browser, type Page, type Route } from "@playwright/test";
+import { expect, type Browser, type Page, type Route } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, isRecord, quietApi, type Renderer } from "./harness";
 
 const FORM = "afformAfreactRecaptchaProbe";

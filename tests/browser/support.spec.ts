@@ -2,7 +2,8 @@
  * The support report must say exactly what the React renderer shows as "Not supported" on a
  * form, since both come from the same walk; and it must check every form but blocks.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, axeFindings, setReactForms } from "./harness";
 
 // Forms without af-if, so every flagged part renders whatever the data, and none placed only

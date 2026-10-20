@@ -3,7 +3,8 @@
  * editable cell of the row, the control column's Save button stores all of them in one go and
  * Escape drops the row's changes. Each renderer edits its own contact, found by last name.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

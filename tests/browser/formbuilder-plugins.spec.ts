@@ -2,7 +2,8 @@
  * The FormBuilder editor's plugin contract with the afreactisland fixture's elements: an
  * element's settings, an input type on the canvas, a behavior and an entity's options.
  */
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./coverage";
 import { api, coreBuilders, quietApi } from "./harness";
 
 coreBuilders();

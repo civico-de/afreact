@@ -2,7 +2,8 @@
  * The render page's placement picker: a placed form opens with the user's own contact, a contact
  * chosen in the picker's autocomplete reaches the form, and a cleared pick shows it without one.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { AUTH, axeFindings, ownFindings, quietApi } from "./harness";
 
 const RUN = Date.now().toString(36);

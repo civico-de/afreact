@@ -7,7 +7,8 @@
  * Numbers go to stdout and the report; the assertions only guard the harness.
  */
 import { writeFileSync } from "node:fs";
-import { expect, test, type BrowserContext } from "@playwright/test";
+import { expect, type BrowserContext } from "@playwright/test";
+import { test } from "./coverage";
 import { median, resourceMetrics, type PageMetrics } from "../../src/compare/metrics";
 import { AUTH, readyAt, setDebug } from "./harness";
 

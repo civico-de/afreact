@@ -2,7 +2,8 @@
  * A pie chart (chart_kit) of contacts per type: both renderers hand core's chart element the
  * same display and filters, so it must draw the same title, legend and slices.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { AUTH, isRecord, quietApi, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

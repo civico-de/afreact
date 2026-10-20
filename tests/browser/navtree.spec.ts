@@ -3,7 +3,8 @@
  * a child each. Both renderers store the same weight when a parent is dragged past its sibling;
  * React moves the sub-row along and refuses a drop under another parent (upstream-bugs.md).
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, keysListened, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

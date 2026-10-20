@@ -2,7 +2,8 @@
  * Drag to reorder: options of a group the test creates, moved by keyboard (React only; core's
  * table has no keyboard path) and by pointer on both renderers, checked in the stored weights.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, keysListened, type Renderer } from "./harness";
 
 const GROUP = "afreact_demo_order";

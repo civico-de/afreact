@@ -4,7 +4,8 @@
  * and an extra field, a text area's character count, a required checkbox list, a container's
  * style, the primary flag in repeated join records, and the extra field in the submission.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, isRecord, type Renderer } from "./harness";
 
 const RUN = Date.now().toString(36);

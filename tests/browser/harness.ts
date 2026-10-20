@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Browser, type Locator, type Page } from "@playwright/test";
+import { expect, type Browser, type Locator, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { asRows } from "../../src/api/civi";
 import { isReady } from "../../src/compare/metrics";
 

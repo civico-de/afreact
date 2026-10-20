@@ -4,7 +4,8 @@
  * time and the faster page waits; a slot is its scene's longest run plus a few seconds to look.
  * The groups, options and contact it works on are its own.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, API_PAGE, AUTH, label, pause, setDebug, type Renderer } from "./harness";
 
 const LABELS: Record<Renderer, string> = {

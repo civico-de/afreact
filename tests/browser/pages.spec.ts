@@ -4,7 +4,8 @@
  * Measured as in production (debug off); the previous debug setting is restored afterwards.
  * Numbers go to stdout, the report and test-results/pages.md; the assertions guard the harness.
  */
-import { expect, test, type BrowserContext } from "@playwright/test";
+import { expect, type BrowserContext } from "@playwright/test";
+import { test } from "./coverage";
 import { mkdir, writeFile } from "node:fs/promises";
 import { median } from "../../src/compare/metrics";
 import { AUTH, setDebug, type Renderer } from "./harness";

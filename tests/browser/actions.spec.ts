@@ -3,7 +3,8 @@
  * then delete two, and compare the table and the records afterwards. The demo display lists
  * groups the test creates.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { text } from "node:stream/consumers";
 import { api, API_PAGE, AUTH, type Renderer } from "./harness";
 

@@ -3,7 +3,8 @@
  * the builders and forms React renders opens a panel with the classic builder or Angular one link
  * away, and what the page runs: Angular islands, other extensions' modules and elements, SQL.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { axeFindings, coreBuilders, debugOn, debugPanel, ownFindings } from "./harness";
 
 coreBuilders();

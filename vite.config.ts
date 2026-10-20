@@ -66,6 +66,8 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    // Maps for the browser-test coverage only; the shipped bundle references none.
+    sourcemap: process.env.AFREACT_SOURCEMAP ? "hidden" : false,
     rolldownOptions: {
       // Builder code loads only on builder pages.
       input: { afreact: "src/main.tsx", "afreact-admin": "src/admin/main.tsx" },

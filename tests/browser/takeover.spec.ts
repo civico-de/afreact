@@ -4,13 +4,8 @@
  * management tab. The same
  * steps run with the form left to Angular and handed to React, and must observe the same.
  */
-import {
-  expect as baseExpect,
-  test,
-  type Browser,
-  type Locator,
-  type Page,
-} from "@playwright/test";
+import { expect as baseExpect, type Browser, type Locator, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import { api, AUTH, quietApi, setReactForms, type Renderer } from "./harness";
 
 // Switching the renderer rebuilds the menu, and the first pages after it fill cold caches.

@@ -4,7 +4,8 @@
  * fixture's options bring their own Angular templates, which React runs as islands: card fields,
  * a wallet button that takes over the submit, and a widget mounted after the submit.
  */
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
+import { test } from "./coverage";
 import type { Renderer } from "./harness";
 
 const LOAD = { timeout: 30_000 };
