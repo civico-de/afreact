@@ -17,6 +17,22 @@ restore the stack's value afterwards. A run cut short leaves it off; the
 profile's value comes back with
 `cv api4 Setting.set +v 'afreact_builders=["search_kit","afform"]'`.
 
+## Coverage of the browser tests
+
+`E2E_COVERAGE=1` records each page's V8 coverage of the bundle
+(`tests/browser/coverage.ts`); `coverage-report.ts` maps it onto `src/` through
+the source maps of a build with `AFREACT_SOURCEMAP=1` and prints statements,
+branches and functions per area. After a Vitest run with
+`--coverage.reporter=json` it adds the lines either suite runs. The stack must
+serve the bundle built in this checkout.
+
+```sh
+AFREACT_SOURCEMAP=1 bun run build
+CIVICRM_BASE_URL=http://localhost:8080 E2E_COVERAGE=1 bun run test:e2e
+bun run coverage --coverage.reporter=json   # optional
+bun tests/browser/coverage-report.ts        # writes coverage/e2e/coverage-final.json
+```
+
 ## Browser specs
 
 | Spec | Checks |
