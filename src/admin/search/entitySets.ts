@@ -182,7 +182,10 @@ export function withEntitySetFields(
   const fields: SchemaField[] = first[3].select.flatMap((expr, row) => {
     if (expr === null) return [];
     const info = parseExpr(meta, expr, infoOf(first));
-    const base = info.args.find((arg) => arg.type === "field")?.field;
+    // A function with a result type of its own, such as COUNT, is no longer its field.
+    // deviation:union-function-column-type
+    const typed = info.fn?.data_type;
+    const base = typed ? undefined : info.args.find((arg) => arg.type === "field")?.field;
     const name = info.alias.split(":")[0] ?? info.alias;
     const labels = sets.flatMap((set) => {
       const setExpr = set[3].select[row];
@@ -192,11 +195,11 @@ export function withEntitySetFields(
       {
         ...(base
           ? structuredClone(base)
-          : { type: "Field", data_type: info.data_type ?? "String" }),
+          : { type: "Field", data_type: typed ?? info.data_type ?? "String" }),
         name,
         fieldName: name,
         label: [...new Set(labels.filter(Boolean))].join(" / "),
-        data_type: base?.data_type ?? info.data_type ?? "String",
+        data_type: typed ?? base?.data_type ?? info.data_type ?? "String",
       },
     ];
   });

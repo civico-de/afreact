@@ -86,6 +86,29 @@ describe("entity sets", () => {
     ]);
   });
 
+  // deviation:union-function-column-type
+  it("types a function column by the function's result, not by its field", () => {
+    const params: ApiParams = {
+      version: 4,
+      select: ["n", "birth_date"],
+      sets: [
+        [
+          "UNION ALL",
+          "Contact",
+          "get",
+          { select: ["COUNT(birth_date) AS n", "birth_date"], groupBy: ["id"] },
+        ],
+      ],
+    };
+    const fields = withEntitySetFields(meta, params).schema.find(
+      (e) => e.name === "EntitySet",
+    )?.fields;
+    expect(fields?.map((f) => [f.name, f.data_type])).toEqual([
+      ["n", "Integer"],
+      ["birth_date", "Date"],
+    ]);
+  });
+
   // deviation:union-join-keeps-rows
   it("keeps a set's rows in place when its joins add or remove columns", () => {
     expect(

@@ -1198,6 +1198,13 @@ shifts that set's remaining columns into the wrong rows. afreact keeps each
 set's columns in their rows: a join adds no columns there, and a removed
 column leaves an empty cell. `deviation:union-join-keeps-rows`
 
+**A combined search's function column takes its field's type.** The fields of
+an entity set search copy the first set's field behind each column
+(`crmSearchAdmin.component.js` `updateEntitySetFields`), also for a function
+with a result type of its own: `COUNT(birth_date) AS n` becomes a Date field,
+so a condition on `n` offers a date input. afreact types such a column by the
+function's result. `deviation:union-function-column-type`
+
 **An empty default on a number column becomes 0.** When the data entry
 editor renders a column's default value, `crm-search-input` converts it to
 the field's data type with `Number()`, so an empty default of an Integer or
