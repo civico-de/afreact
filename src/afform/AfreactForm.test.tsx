@@ -1095,9 +1095,9 @@ describe("redirectUrl", () => {
 
 describe("formExpressions", () => {
   it("translates with the form's strings first and never returns an inherited property", () => {
-    const { translate } = formExpressions({ Save: "Speichern" });
+    const { translate } = formExpressions({ Save: "Speichern" }, {});
     expect(translate("Save")).toBe("Speichern");
     expect(translate("constructor")).toBe("constructor");
-    expect(formExpressions([]).translate("toString")).toBe("toString");
+    expect(formExpressions([], {}).translate("toString")).toBe("toString");
   });
 });

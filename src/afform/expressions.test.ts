@@ -6,6 +6,7 @@ const context: ExpressionContext = {
     const search = new URLSearchParams(Object.entries(query).map(([k, v]) => [k, String(v)]));
     return search.size ? `/${path}?${search.toString()}` : `/${path}`;
   },
+  routeParams: { event: "12" },
 };
 
 describe("literal", () => {
@@ -41,11 +42,20 @@ describe("evaluateExpression", () => {
     expect(evaluateExpression(plural.replace("count: 2", "count: 1"), context)).toBe("1 item");
   });
 
+  it("reads route parameters, empty where the route has none", () => {
+    expect(evaluateExpression(" routeParams.event ", context)).toBe("12");
+    expect(evaluateExpression("routeParams.missing", context)).toBe("");
+    expect(evaluateExpression("routeParams.toString", context)).toBe("");
+  });
+
   it("leaves every other expression unsupported", () => {
     expect(evaluateExpression("total", context)).toBeNull();
     expect(evaluateExpression("ts('%1 found', {1: n})", context)).toBeNull();
     expect(evaluateExpression("crmUrl('a', {x: y})", context)).toBeNull();
     expect(evaluateExpression("crmUrl(path)", context)).toBeNull();
+    expect(evaluateExpression(":: routeParams.event", context)).toBeNull();
+    expect(evaluateExpression("routeParams.event | uppercase", context)).toBeNull();
+    expect(evaluateExpression("routeParams['event']", context)).toBeNull();
   });
 });
 

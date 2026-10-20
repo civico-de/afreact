@@ -86,6 +86,8 @@ function queryParams(query: string): Record<string, string> {
 
 /** afCore's routeParams: the hash parameters ("#?Individual1=5"), not the page's query string. */
 export function routeParams(location: { hash: string }): Record<string, string> {
+  // deviation:route-params-as-text
+  // As afCore reads a popup's: a key without value is "", a repeated key keeps its last value.
   return queryParams(location.hash.replace(/^#\/?\??/, ""));
 }
 

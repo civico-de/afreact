@@ -1,7 +1,8 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { mockApi, renderWithQuery } from "../test/render";
+import { memoryStore } from "../url/hash";
 import { AfreactForm } from "./AfreactForm";
 import type { FieldDefn, LayoutNode } from "./types";
 
@@ -900,5 +901,74 @@ describe("values from the route", () => {
     expect(nick).toHaveValue("Stored");
     await userEvent.type(box("first_name"), "m");
     expect(nick).toHaveValue("Dear Adam");
+  });
+});
+
+describe("route parameters in the layout", () => {
+  /** The form with the route in a store of its own, which a test changes as the hash would. */
+  function renderRouted(children: LayoutNode[], route: string) {
+    mockApi({
+      "Afreact.getForm": () => [
+        { name: "afformTest", title: "Test", type: "form", layout: form(children), strings: [] },
+      ],
+      "Afform.prefill": () => [],
+    });
+    const store = memoryStore(`#${route}`);
+    const location = { search: "", hash: `#${route}` };
+    renderWithQuery(<AfreactForm name="afformTest" location={location} />, store);
+    return (next: string) => {
+      act(() => {
+        store.write(new URLSearchParams(next));
+      });
+    };
+  }
+
+  it("shows them as text in text and attributes, and follows the route as afCore rebinds it", async () => {
+    const go = renderRouted(
+      [
+        {
+          "#tag": "p",
+          title: "Event {{ routeParams.event }}",
+          "#children": [{ "#text": "Feedback for event {{routeParams.event}}" }],
+        },
+        {
+          "#tag": "a",
+          href: "{{ routeParams.next }}",
+          "#children": [{ "#text": "Next" }],
+        },
+      ],
+      "?event=<b>12</b>&next=javascript:alert(1)",
+    );
+    const text = await screen.findByText("Feedback for event <b>12</b>");
+    expect(text).toHaveAttribute("title", "Event <b>12</b>");
+    expect(text.querySelector("b")).toBeNull();
+    // React blocks a script URL as Angular's $$sanitizeUri does.
+    expect(screen.getByRole("link", { name: "Next" }).getAttribute("href")).not.toContain(
+      "alert(1)",
+    );
+    go("event=13");
+    expect(await screen.findByText("Feedback for event 13")).toHaveAttribute("title", "Event 13");
+    go("");
+    expect(await screen.findByText("Feedback for event")).toHaveAttribute("title", "Event ");
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+
+  // deviation:route-params-as-text
+  it("reads a key without value as empty and a repeated key by its last value", async () => {
+    renderRouted(
+      [{ "#tag": "p", "#children": [{ "#text": "[{{ routeParams.a }}|{{ routeParams.b }}]" }] }],
+      "?a&b=1&b=2",
+    );
+    expect(await screen.findByText("[|2]")).toBeInTheDocument();
+  });
+
+  it("leaves a one-time route parameter unsupported, as it would freeze at its first value", async () => {
+    renderRouted(
+      [{ "#tag": "p", "#children": [{ "#text": "{{:: routeParams.event }}" }] }],
+      "?event=12",
+    );
+    expect(await screen.findByRole("note")).toHaveTextContent(
+      "Angular expression {{:: routeParams.event }}",
+    );
   });
 });

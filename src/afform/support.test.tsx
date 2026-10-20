@@ -213,6 +213,11 @@ describe("layoutProblems", () => {
       { "#comment": " note " },
       { "#text": "{{:: ts('Hello') }}" },
       {
+        "#tag": "p",
+        title: "{{ routeParams.event }}",
+        "#children": [{ "#text": "{{ routeParams.event }}" }],
+      },
+      {
         "#tag": "div",
         "ng-if": "afform.showSubmitButton",
         "#children": [{ "#tag": "button", "ng-click": "afform.submit()" }],

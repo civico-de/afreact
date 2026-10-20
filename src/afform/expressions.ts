@@ -1,18 +1,22 @@
 /**
  * The Angular expressions Afform layouts put into text and attributes: `ts('…', {…})` and
- * `crmUrl('…', {…})` with literal arguments, optionally one-time (`::`). Anything else is
- * reported as unsupported.
+ * `crmUrl('…', {…})` with literal arguments, optionally one-time (`::`), and afCore's
+ * `routeParams.name`. Anything else is reported as unsupported.
  */
 
 export interface ExpressionContext {
   translate: (text: string) => string;
   url: (path: string, query?: Record<string, string | number>) => string;
+  /** afCore's routeParams as the route stands now. */
+  routeParams: Record<string, string>;
 }
 
 const LITERAL = String.raw`'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"`;
 const CALL = new RegExp(
   String.raw`^(?:::)?\s*(ts|crmUrl)\(\s*(${LITERAL})\s*(?:,\s*(\{[^}]*\})\s*)?\)$`,
 );
+/** One-time `::` is left out: its value would freeze at the first route that has the key. */
+const ROUTE_PARAM = /^routeParams\.([A-Za-z_$][\w$]*)$/;
 const PAIR = new RegExp(
   String.raw`^\s*(?:([A-Za-z_$][\w$]*|\d+)|(${LITERAL}))\s*:\s*(${LITERAL}|-?\d+(?:\.\d+)?)\s*$`,
 );
@@ -51,8 +55,21 @@ function substitute(text: string, params: Record<string, string | number>): stri
   return result.replaceAll("%-crmescaped-", "%");
 }
 
+/** The parameter a `routeParams.name` expression reads; null for any other expression. */
+export function routeParamName(expression: string): string | null {
+  return ROUTE_PARAM.exec(expression.trim())?.[1] ?? null;
+}
+
+/** A route parameter's value, undefined where the route lacks it. */
+export function routeParam(params: Record<string, string>, name: string): string | undefined {
+  return Object.hasOwn(params, name) ? params[name] : undefined;
+}
+
 /** One expression between {{ }}; null when it is not one of the supported calls. */
 export function evaluateExpression(expression: string, context: ExpressionContext): string | null {
+  const param = routeParamName(expression);
+  // $interpolate shows undefined as "".
+  if (param !== null) return routeParam(context.routeParams, param) ?? "";
   const match = CALL.exec(expression.trim());
   if (!match) return null;
   const [, name, argument = "''", query] = match;

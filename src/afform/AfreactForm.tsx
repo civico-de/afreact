@@ -159,12 +159,19 @@ async function loadForm(
   return { form, search: location.search, args, params, ...unfilled(form, params) };
 }
 
-/** ts() looks up the form's own translations first, then CiviCRM's page-wide strings; crmUrl() is CRM.url. */
-export function formExpressions(strings: FormDefinition["strings"]): ExpressionContext {
+/**
+ * ts() looks up the form's own translations first, then CiviCRM's page-wide strings; crmUrl() is
+ * CRM.url; routeParams are the route's parameters.
+ */
+export function formExpressions(
+  strings: FormDefinition["strings"],
+  params: Record<string, string>,
+): ExpressionContext {
   const own = new Map(Array.isArray(strings) ? [] : Object.entries(strings));
   return {
     translate: (text) => own.get(text) ?? ts(text),
     url: (path, query) => window.CRM.url(path, query),
+    routeParams: params,
   };
 }
 
@@ -613,7 +620,8 @@ function LoadedForm(props: LoadedFormProps) {
   // A redirect keeps the form busy until the browser leaves the page.
   const busy = save.isPending || !!saved?.redirect;
   const root = useRef<HTMLFormElement>(null);
-  const expressions = useMemo(() => formExpressions(form.strings), [form]);
+  // afCore's watch on $location.search() binds routeParams anew whenever the route changes.
+  const expressions = useMemo(() => formExpressions(form.strings, route), [form, route]);
   const displays = useMemo(() => countDisplays(form.layout), [form]);
   const [itemKeys] = useState(() => new Map<string, number[]>());
   const [autofilled] = useState(() => new Map<string, Filled>());

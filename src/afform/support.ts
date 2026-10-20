@@ -349,7 +349,7 @@ export function searchDisplayCheck(
   return { notes, filters: parsed.filters, settings };
 }
 
-const CHECK_ONLY = { translate: () => "", url: () => "" };
+const CHECK_ONLY = { translate: () => "", url: () => "", routeParams: {} };
 
 function expressionProblems(values: unknown[]): string[] {
   return values.flatMap((value) => {

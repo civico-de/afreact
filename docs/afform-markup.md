@@ -62,7 +62,9 @@ A `js` attribute holds a JavaScript object literal, not JSON:
 
 Text nodes carry Angular expressions in `{{ }}`. Core's layouts use
 `{{:: ts('…', {…}) }}` and `{{ ts('…') }}`; a few extension forms read
-variables their own controllers set (`{{options.client.id}}`).
+variables their own controllers set (`{{options.client.id}}`). Every form's
+scope also holds afCore's `routeParams`, the route's parameters, so a layout
+can show `{{ routeParams.event }}`.
 
 ## Three layout formats
 
@@ -112,9 +114,10 @@ By default its server converts it with a subclass of `CRM_Afform_ArrayHtml`
 into the `deep` format, translating `ts('…')` in `js` attributes, which
 core's decoding turns into null. Its `bundle` source parses the compiled
 module in the browser instead, with core's attribute types exported by
-`Civi/Afreact/AttributeSchema.php`. The renderer renders the vocabulary above and
-evaluates `ts()` and `crmUrl()` with literal arguments; any other expression,
-directive or attribute renders a "Not supported by the React renderer" note.
+`Civi/Afreact/AttributeSchema.php`. The renderer renders the vocabulary above,
+evaluates `ts()` and `crmUrl()` with literal arguments and reads
+`routeParams.name`; any other expression, directive or attribute renders a
+"Not supported by the React renderer" note.
 The full list and the reasons are in
 [comparison.md](comparison.md#not-implemented-in-the-react-renderer); the
 support report lists them per form.
