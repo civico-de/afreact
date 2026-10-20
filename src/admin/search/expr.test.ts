@@ -170,6 +170,16 @@ describe("grouping", () => {
       "display_name",
     ]);
   });
+
+  // deviation:smart-group-aggregate-refused
+  it("takes the lowest contact ID for a smart group's first column", () => {
+    const params = { select: ["id", "display_name"], groupBy: ["gender_id"] };
+    expect(reconcileAggregateColumns(meta, { ...search(params), groups: [{}] })).toEqual([
+      "MIN(id) AS MIN_id",
+      "GROUP_CONCAT(DISTINCT display_name) AS GROUP_CONCAT_display_name",
+    ]);
+    expect(reconcileAggregateColumns(meta, search(params))[0]).toBe("COUNT(id) AS COUNT_id");
+  });
 });
 
 describe("field lists", () => {

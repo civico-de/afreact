@@ -25,6 +25,8 @@ export interface ApiParams {
 export interface SearchInfo {
   api_entity: string;
   api_params: ApiParams;
+  /** The smart groups a saved search defines. */
+  groups?: readonly unknown[];
   form_values?: { join?: Record<string, string>; [key: string]: unknown };
 }
 
@@ -373,12 +375,16 @@ export function mustAggregate(meta: SearchAdminMetadata, col: string, search: Se
 
 /** reconcileAggregateColumns: aggregate what grouping requires, unwrap what it no longer does. */
 export function reconcileAggregateColumns(meta: SearchAdminMetadata, search: SearchInfo): string[] {
-  return search.api_params.select.map((col) => {
+  return search.api_params.select.map((col, pos) => {
     const info = parseExpr(meta, col, search);
     const fieldExpr = String(info.args.find((arg) => arg.type === "field")?.value ?? "");
     if (mustAggregate(meta, col, search)) {
       if (info.fn?.category === "aggregate") return col;
-      const fn = getDefaultAggregateFn(meta, info, search) ?? "GROUP_CONCAT";
+      // A smart group's members are the first column's contact IDs. deviation:smart-group-aggregate-refused
+      const fn =
+        pos === 0 && search.groups?.length
+          ? "MIN"
+          : (getDefaultAggregateFn(meta, info, search) ?? "GROUP_CONCAT");
       const flag = fn === "GROUP_CONCAT" ? "DISTINCT " : "";
       return `${fn}(${flag}${fieldExpr}) AS ${fn}_${fieldExpr.replace(/[.:]/g, "_")}`;
     }

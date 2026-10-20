@@ -200,6 +200,8 @@ export interface EditorError {
 }
 
 const INT_UNSIGNED_MAX = 4294967295;
+/** The aggregates core marks preservesEntityReference: their result is one of the IDs. */
+const KEEPS_ID = ["MIN", "MAX", "GROUP_FIRST", "GROUP_NTH"];
 
 export const validTimeout = (timeout: unknown) =>
   timeout === null ||
@@ -218,7 +220,7 @@ export function validate(
     errors.push({ message: required(ts("Group Title")), tab: "group" });
   // Core reads the members from the first column. deviation:smart-group-aggregate-refused
   const lead = groupExists ? parseExpr(meta, search.api_params.select[0] ?? "", search).fn : null;
-  if (lead?.category === "aggregate" && !["MIN", "MAX"].includes(lead.name))
+  if (lead?.category === "aggregate" && !KEEPS_ID.includes(lead.name))
     errors.push({
       message: ts("A smart group's first column must hold contact IDs, not a %1.", {
         1: lead.title,
