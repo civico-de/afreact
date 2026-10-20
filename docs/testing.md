@@ -43,9 +43,10 @@ some specs failing under coverage, so they are a lower bound:
 | `src/afform/` | 78.6 % | 65.2 % | 98.4 % | 99.2 % |
 | `src/admin/afform/` | 79.1 % | 66.8 % | 76.4 % | 89.3 % |
 
-Open: with `resetOnNavigation: false` a page's coverage grows with every load
-of the bundle, so the long sweeps (`sweep`, `display-sweep`, `palette-sweep`)
-crash the tab or overflow `stopJSCoverage` and fail under coverage.
+A page's coverage is saved and restarted before each `goto` and `reload`, so
+the long sweeps `sweep` and `palette-sweep` pass under coverage. Open:
+`display-sweep` crashes the tab under coverage when it opens a display tab in
+core's builder; the cause is not found yet.
 
 ## Browser specs
 
