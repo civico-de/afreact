@@ -434,11 +434,11 @@ export function PaletteAdd({
 }
 
 /**
- * Core's debounceMode: typing is kept locally and committed after two idle seconds or on blur;
- * otherwise the input shows the value, so undo and redo reach it.
+ * Core's debounceMode: typing is kept locally and committed, trimmed as ngModel does, after two
+ * idle seconds or on blur; otherwise the input shows the value, so undo and redo reach it.
  */
 export function useDebounced(value: string, commit: (value: string) => void) {
-  const [draft, setDraft] = useState<{ text: string; pending: boolean } | null>(null);
+  const [draft, setDraft] = useState<{ text: string; pending: boolean; at?: string } | null>(null);
   const timer = useRef<number | undefined>(undefined);
   const pending = useRef<string | null>(null);
   const latest = useRef(commit);
@@ -449,18 +449,20 @@ export function useDebounced(value: string, commit: (value: string) => void) {
   useEffect(
     () => () => {
       window.clearTimeout(timer.current);
-      if (pending.current !== null) latest.current(pending.current);
+      if (pending.current !== null) latest.current(pending.current.trim());
     },
     [],
   );
   const flush = (text: string) => {
     window.clearTimeout(timer.current);
     pending.current = null;
-    setDraft(null);
-    latest.current(text);
+    const trimmed = text.trim();
+    // The typed spaces stay on show while the value is the one they made.
+    setDraft(trimmed === text ? null : { text, pending: false, at: trimmed });
+    latest.current(trimmed);
   };
   return {
-    value: draft?.text ?? value,
+    value: draft && (draft.at === undefined || draft.at === value) ? draft.text : value,
     onChange: (text: string) => {
       setDraft({ text, pending: true });
       pending.current = text;

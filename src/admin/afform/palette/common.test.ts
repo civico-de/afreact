@@ -96,6 +96,37 @@ describe("useDebounced", () => {
     expect(commit).not.toHaveBeenCalled();
   });
 
+  it("commits the typing trimmed and shows its spaces until the value changes", () => {
+    const { commit, result, rerender } = setup();
+    act(() => {
+      result.current.onChange(" my title ");
+    });
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(commit).toHaveBeenCalledExactlyOnceWith("my title");
+    rerender({ value: "my title" });
+    expect(result.current.value).toBe(" my title ");
+    rerender({ value: "a" });
+    expect(result.current.value).toBe("a");
+    act(() => {
+      result.current.onChange(" b ");
+    });
+    act(() => {
+      result.current.onBlur();
+    });
+    expect(commit).toHaveBeenLastCalledWith("b");
+  });
+
+  it("commits pending typing trimmed on unmount", () => {
+    const { commit, result, unmount } = setup();
+    act(() => {
+      result.current.onChange("kept ");
+    });
+    unmount();
+    expect(commit).toHaveBeenCalledExactlyOnceWith("kept");
+  });
+
   it("commits through the latest callback", () => {
     const first = vi.fn<(value: string) => void>();
     const second = vi.fn<(value: string) => void>();
