@@ -250,6 +250,15 @@ export function keyOptionKey(ctx: FieldContext, name: string): string {
   return suffix ? suffix.slice(1) : "id";
 }
 
+/** The field a condition on column `key` tests: a label column by its machine name. */
+// deviation:rule-condition-label-by-name
+export function ruleField(ctx: FieldContext, key: string): string {
+  const expr = ctx.search.api_params.select.find((item) => item.split(" AS ")[1] === key) ?? key;
+  const info = parseExpr(ctx.meta, expr, ctx.search);
+  const arg = info.args[0];
+  return !info.fn && arg?.suffix === ":label" ? `${arg.path ?? ""}:name` : key;
+}
+
 /** Labels of the columns whose default their number input refuses. deviation:batch-default-invalid-blocks-save */
 export function invalidDefaults(ctx: FieldContext, settings: unknown): string[] {
   if (!isAdminSettings(settings)) return [];
@@ -833,7 +842,7 @@ export function addCssRule(
   defaultField?: string,
 ): void {
   const clause: unknown[] = [style];
-  if (defaultField && keyField(ctx, defaultField)) clause.push(defaultField, "=");
+  if (defaultField && keyField(ctx, defaultField)) clause.push(ruleField(ctx, defaultField), "=");
   item.cssRules = [...(item.cssRules ?? []), clause];
 }
 

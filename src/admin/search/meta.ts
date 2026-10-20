@@ -217,8 +217,11 @@ export interface FieldOption {
   name?: string;
   label: string;
   description?: string | null;
+  abbr?: string | null;
   color?: string | null;
   icon?: string | null;
+  grouping?: string | null;
+  url?: string | null;
 }
 
 /** loadFieldOptions: the option lists of an entity's fields that have a `:name` suffix. */
@@ -230,7 +233,17 @@ export function useFieldOptions(entity: string | undefined) {
         entity ?? "",
         "getFields",
         {
-          loadOptions: ["id", "name", "label", "description", "color", "icon"],
+          loadOptions: [
+            "id",
+            "name",
+            "label",
+            "description",
+            "abbr",
+            "color",
+            "icon",
+            "grouping",
+            "url",
+          ],
           where: [
             ["options", "!=", false],
             ["suffixes", "CONTAINS", "name"],

@@ -1130,6 +1130,21 @@ expressions the field list offers, but a raw column such as `gender_id` holds
 the ID, so a rule on "Female" is never met. afreact stores the option by what
 the compared column returns: its ID, name or label. `deviation:rule-condition-option-key`
 
+**A style condition on a label column compares the admin's label.** A new
+style rule starts on its column's key (`ctrl.default` in
+`searchAdminCssRules.component.js`), and an aliased column (`gender_id:label AS g`)
+keeps its alias in the field list, so the condition compares the row's label
+with the option's name: it holds only where both read the same, and a rule
+keyed on the label would break with the viewer's language or a renamed option.
+afreact tests such a condition on the field's `:name`, which the server adds to
+the query itself (`getCssRulesSelect`). `deviation:rule-condition-label-by-name`
+
+**Options keyed by abbreviation, grouping or URL have no value.** SearchKit
+loads an option's id, name, label, description, colour and icon, so a
+condition or filter on `state_province_id:abbr` offers options without the
+abbreviation it compares. afreact also loads `abbr`, `grouping` and `url`, and
+leaves out an option that lacks the compared attribute. `deviation:option-key-attribute`
+
 **A column's format can list a column twice.** The format select of a column
 offers every suffix (`crmSearchAdminFields.html`), also one another column
 already selects, so `gender_id` switched to Label beside `gender_id:label` puts

@@ -17,6 +17,7 @@ import {
   chosenLink,
   cssStyles,
   newLinkItem,
+  ruleField,
   showMoreCssRules,
   taskEnabled,
   toggleActions,
@@ -642,7 +643,7 @@ export function TokenText({
 function conditionFields(ctx: DisplayContext, all: boolean): PickerOption[] {
   const select = getSelectFields(ctx.meta, ctx.search).map((field) => ({
     ...field,
-    id: String(field.id).replace(":label", ":name"),
+    id: ruleField(ctx, String(field.id)),
     group: ts("Columns"),
   }));
   return all

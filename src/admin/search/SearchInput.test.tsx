@@ -58,3 +58,29 @@ describe("SearchInput relative date", () => {
     expect(offset).toHaveDisplayValue("5");
   });
 });
+
+describe("SearchInput options", () => {
+  // deviation:option-key-attribute
+  it("keys options by the attribute the field compares, offering only those that have it", async () => {
+    let stored: unknown;
+    renderWithQuery(
+      <SearchInput
+        id="state"
+        field={{ name: "state_province_id", data_type: "Integer", options: true }}
+        op="="
+        optionKey="abbr"
+        options={[
+          { id: 5, name: "California", label: "California", abbr: "CA" },
+          { id: 6, name: "Nowhere", label: "Nowhere", abbr: null },
+        ]}
+        value={null}
+        onChange={(value) => {
+          stored = value;
+        }}
+      />,
+    );
+    expect(screen.queryByRole("option", { name: "Nowhere" })).toBeNull();
+    await userEvent.selectOptions(screen.getByRole("combobox"), "California");
+    expect(stored).toBe("CA");
+  });
+});

@@ -197,11 +197,15 @@ export function OptionSelect({
   multiple,
   required,
 }: SearchInputProps & { multiple: boolean; required: boolean }) {
-  const list = Array.isArray(field.options) ? field.options.filter(isOption) : options;
-  if (!list) return <select id={id} disabled aria-busy className="form-control loading" />;
+  const all = Array.isArray(field.options) ? field.options.filter(isOption) : options;
+  if (!all) return <select id={id} disabled aria-busy className="form-control loading" />;
+  const attribute = (option: FieldOption): unknown =>
+    Object.entries(option).find(([name]) => name === optionKey)?.[1];
+  // An option without the keyed attribute has no value the field could hold.
+  // deviation:option-key-attribute
+  const list = all.filter((option) => (attribute(option) ?? null) !== null);
   const keyOf = (option: FieldOption): string | number => {
-    const key: unknown =
-      Object.entries(option).find(([name]) => name === optionKey)?.[1] ?? option.id;
+    const key = attribute(option);
     return typeof key === "number" ? key : String(key);
   };
   const byText = (raw: string) => list.map(keyOf).find((key) => String(key) === raw);

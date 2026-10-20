@@ -27,6 +27,7 @@ import {
   onChangeLink,
   setDateFormat,
   setIconClass,
+  ruleField,
   setIconField,
   setSuffix,
   suffixOf,
@@ -763,7 +764,7 @@ export function IconsConfig({
   const ruleFields: PickerOption[] = [
     ...getSelectFields(ctx.meta, ctx.search).map((f) => ({
       ...f,
-      id: String(f.id).replace(":label", ":name"),
+      id: ruleField(ctx, String(f.id)),
     })),
     ...getAllFields(ctx.meta, ctx.search, ":name", ["Field", "Custom", "Extra", "Pseudo"]),
   ];

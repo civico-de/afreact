@@ -5,6 +5,7 @@ import { fieldToColumn } from "../expr";
 import {
   colorFieldOf,
   keyOptionKey,
+  ruleField,
   dateFormatChoice,
   addCol,
   addCssRule,
@@ -531,7 +532,26 @@ it("starts a style rule of an aliased column with a condition on it", () => {
     search: { api_entity: "Contact", api_params: { version: 4, select: ["gender_id:label AS g"] } },
   };
   addCssRule(aliased, item, "bg-danger", "g");
-  expect(item.cssRules).toEqual([["bg-danger", "g", "="]]);
+  expect(item.cssRules).toEqual([["bg-danger", "gender_id:name", "="]]);
+});
+
+// deviation:rule-condition-label-by-name
+it("tests a label column's condition by the option's machine name", () => {
+  const search = {
+    api_entity: "Contact",
+    api_params: {
+      version: 4,
+      select: ["gender_id:label AS g", "gender_id AS r", "gender_id:label", "COUNT(id) AS n"],
+    },
+  };
+  const at = { ...ctx, search };
+  expect(["g", "r", "gender_id:label", "n", "id"].map((key) => ruleField(at, key))).toEqual([
+    "gender_id:name",
+    "r",
+    "gender_id:name",
+    "n",
+    "id",
+  ]);
 });
 
 // deviation:rule-condition-option-key
