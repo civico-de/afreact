@@ -1,5 +1,6 @@
 import type { AdminVars } from "../admin/vars";
 import type { AfreactVars } from "../afform/source";
+import type { CrmAngular } from "../angular/island";
 import type { Entities } from "./entities.gen";
 
 export type ApiResult<R> = R[] & {
@@ -65,6 +66,8 @@ declare global {
         /** Runs of other characters become `char`, cut to `len` (js/Common.js). */
         munge: (name: string, char?: string, len?: number) => string;
       };
+      /** Set by core's AngularLoader on every full page; an island adds its modules to it. */
+      angular?: CrmAngular;
       /** Page variables from Civi::resources()->addVars(), by extension. */
       vars?: { afreact?: AfreactVars; afreactAdmin?: AdminVars };
       /** localStorage under a "CRM" prefix, with an in-memory fallback (js/Common.js). */

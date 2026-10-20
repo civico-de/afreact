@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { errorMessage } from "../api/civi";
+import { addStylesheet, loadScript } from "../api/scripts";
 import type { DisplaySettings } from "./types";
 
 const TAG = "civi-search-display-chart-kit";
@@ -127,30 +128,10 @@ export async function loadChartKit(): Promise<true> {
   // deviation:chart-kit-missing-alert
   if (!assets) throw new Error(chartKitMissing());
   if ("error" in assets) throw new Error(assets.error);
-  for (const href of assets.styles) {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = href;
-    document.head.append(link);
-  }
+  for (const href of assets.styles) addStylesheet(href);
   // Fetched together, run in the bundle's order: each file builds on those before it.
   await Promise.all(assets.scripts.map(loadScript));
   // A script that throws while running still fires its load event.
   if (!customElements.get(TAG)) throw new Error(ts("chart_kit did not define its chart element."));
   return true;
-}
-
-function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = false;
-    script.addEventListener("load", () => {
-      resolve();
-    });
-    script.addEventListener("error", () => {
-      reject(new Error(ts("Could not load %1.", { 1: src })));
-    });
-    document.head.append(script);
-  });
 }

@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { angularOf, asError, call, destroyIsland, islandModule } from "../../../angular/island";
 import { useDebugFacts } from "../../../debug/debug";
-import { angularOf, call, foreignModules } from "../../foreign";
+import { foreignModules } from "../../foreign";
 import type { EditorDisplay } from "../editor";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -46,27 +47,6 @@ export function hasIslandEditor(type: string): boolean {
   if (angularOf() === undefined || foreignModules().length === 0) return false;
   directives ??= islandDirectives();
   return directives.has(directiveName(editorTag(type)));
-}
-
-/**
- * The island's own module: the builder modules bring ngRoute and $location, which would rewrite
- * the page's hash and run the builder's routes; their $browser sees a fixed URL without one.
- */
-function islandModule(ng: unknown): string {
-  // A dotted name no extension module takes, as redefining a module replaces it.
-  const name = "afreact.islandHost";
-  const url = window.location.href.replace(/#.*$/, "");
-  const decorate = (browser: Record<string, unknown>) =>
-    Object.assign(browser, {
-      url: (next?: string) => (next === undefined ? url : browser),
-      state: () => null,
-      onUrlChange: () => browser,
-    });
-  call(call(ng, "module", name, foreignModules()), "config", [
-    "$provide",
-    (provide: unknown) => call(provide, "decorator", "$browser", ["$delegate", decorate]),
-  ]);
-  return name;
 }
 
 interface AngularIslandProps {
@@ -139,7 +119,7 @@ export function AngularIsland(props: AngularIslandProps) {
     let disposed = false;
     let rootScope: unknown = null;
     const fail = (error: unknown) => {
-      if (!disposed) setState(error instanceof Error ? error : new Error(String(error)));
+      if (!disposed) setState(asError(error));
     };
     try {
       const element = call(ng, "element", root);
@@ -166,7 +146,9 @@ export function AngularIsland(props: AngularIslandProps) {
         "$crmSearchAdminController",
         {},
       );
-      const injector = call(ng, "bootstrap", root, [islandModule(ng)]);
+      // A dotted name no extension module takes, as redefining a module replaces it.
+      const module = islandModule(ng, "afreact.islandHost", foreignModules());
+      const injector = call(ng, "bootstrap", root, [module]);
       if (call(injector, "has", `${directiveName(editorTag(type))}Directive`) !== true)
         throw new Error(`No Angular editor for the ${type} display type.`);
       rootScope = call(injector, "get", "$rootScope");
@@ -226,9 +208,7 @@ export function AngularIsland(props: AngularIslandProps) {
       setShown(null);
       setPreviewScope(null);
       setState("loading");
-      if (rootScope) call(rootScope, "$destroy");
-      // jqLite's remove() runs the elements' $destroy handlers, which take down popups and widgets.
-      call(call(ng, "element", root), "remove");
+      destroyIsland(ng, rootScope, root);
     };
   }, [type, columns]);
 

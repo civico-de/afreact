@@ -1,19 +1,8 @@
+import { angularOf, call } from "../angular/island";
 import { adminVars } from "./vars";
-
-/** Calls `method` on an untyped Angular object, failing loudly when it is missing. */
-export function call(target: unknown, method: string, ...args: unknown[]): unknown {
-  const fn: unknown =
-    typeof target === "object" || typeof target === "function"
-      ? Reflect.get(Object(target), method)
-      : undefined;
-  if (typeof fn !== "function") throw new TypeError(`Angular has no ${method}().`);
-  return Reflect.apply(fn, target, args);
-}
 
 /** Other extensions' modules for core's classic builder, which the page loaded. */
 export const foreignModules = () => adminVars().foreignModules ?? [];
-
-export const angularOf = (): unknown => Reflect.get(window, "angular");
 
 /**
  * The foreign modules that decorate services or run config or run blocks, which reach into
