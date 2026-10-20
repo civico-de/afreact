@@ -139,7 +139,6 @@ export function canRemoveArg(state: FnState, index: number): boolean {
   return !param || !!param.optional;
 }
 
-/** writeExpr: the expression text, with `:label` and an alias for a column. */
 /** A string argument as SqlString reads it back; a backslash left odd before a quote is doubled. */
 // deviation:function-string-escapes
 function quote(value: string): string {
@@ -151,6 +150,7 @@ function quote(value: string): string {
   return `"${escaped}"`;
 }
 
+/** writeExpr: the expression text, with `:label` and an alias for a column. */
 export function writeExpr(state: FnState, mode: FnMode): string {
   const fnName = state.fn?.name ?? "";
   if (!fnName) return String(state.args[state.fieldIndex]?.value ?? "");
