@@ -64,6 +64,31 @@ longer on both renderers alike. The two forms come out within
 CKEditor. The tour video shows larger and noisier numbers than these because
 it records while loading and runs each page once.
 
+## Checkout templates
+
+The last test of `tests/browser/compare.spec.ts` opens the afreactcheckout
+fixture's donation form with React in a fresh context, waits until the page is
+idle and chooses the option with a card template; it lists what the choice
+fetches and the time until the template's first input shows. Measured
+2026-10-20 on the civikitchen dev stack (CiviCRM 6.19.1, localhost, headless
+Chromium, debug off), medians of 5 cold rounds:
+
+| File | Encoded | Decoded |
+|---|---|---|
+| `CheckoutIsland` chunk | 2.3 kB | 4.9 kB |
+| `island` chunk (shared with the builders) | 0.8 kB | 1.5 kB |
+| `angular-modules.js` of afCore, afCheckout, the options' modules and what they require (13 modules) | 27.8 kB | 107.1 kB |
+| their `angular-modules.json` (partials and strings) | 9.8 kB | 9.8 kB |
+| `json-formatter.min.css` | 0.8 kB | 3.3 kB |
+| total | 41.5 kB | 126.6 kB |
+
+The choice shows the template after 338 ms. AngularJS itself is on the page
+already, so none of it is fetched, and so is `crmUI.css` as the theme serves
+it; the stack serves the module file without compression. Before any choice the page carries `afreact.afCheckout.islands`
+(1.9 kB of JSON in the page) and 2.8 kB more of the renderer's element chunk
+(1.0 kB gzip); a page whose options have no template carries neither the
+variable nor any request.
+
 ## Reading the numbers
 
 - **Ready time.** Most of React's lead is SearchKit's 600 ms debounce: every

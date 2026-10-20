@@ -120,6 +120,39 @@ A component it cannot compile is left as written; `bun run build` logs each
 one with the reason (a `finally` clause, a `throw` inside `try`, a ref passed
 as a prop), and the build fails only on a fatal diagnostic.
 
+## Checkout templates
+
+A checkout option can bring an Angular partial of its own, which React runs
+unchanged as an Angular island, as the builders run another extension's
+display editor ([ADR 0009](adr/0009-checkout-templates-as-islands.md); the
+contract is in [reference.md](reference.md#checkout-templates)). Nothing of
+it loads until a templated option is chosen:
+
+- Core puts AngularJS with `crmResource` on every full page
+  (`CRM_Core_Resources::addCoreResources`), so an island never loads AngularJS
+  itself, only the modules it boots.
+- `Civi\Afreact\Checkout` puts into `afreact.afCheckout.islands` what core's
+  AngularLoader would add for afCore, afCheckout and the options' modules,
+  resolved by `Civi\Afreact\AngularAssets` with core's Angular manager: the asset builder's
+  `angular-modules.js`, the modules' CSS as the active theme serves it (as
+  `addStyleFile()` does, so Riverlea's own `crmUI.css`), their settings, and
+  `CRM.angular` with their `angular-modules.json`. Their permissions go to the
+  page.
+- The island adds only the stylesheets the page does not have yet.
+- The first choice of a templated option loads the island's chunk, merges
+  the settings into `CRM` as core's settings snippet does, adds the modules to
+  `CRM.angular` and loads the script, once per page. `crmResource` fetches
+  `CRM.angular.bundleUrl` as its injector starts, so the island names its
+  bundle for the length of `angular.bootstrap()` and then puts the page's
+  back.
+- The island boots a module of its own over those modules and, as the
+  builders' islands do, shows them a fixed URL, so a module that brings
+  ngRoute cannot rewrite the page's hash.
+- A loaded bundle defines its modules again, also those the page already has
+  (`crmResource`); injectors already running keep the ones they started with.
+
+[load-metrics.md](load-metrics.md#checkout-templates) has the measured cost.
+
 ## Dashlets
 
 Core's dashboard (`CRM_Contact_Page_DashBoard`) is the Angular module
@@ -199,7 +232,7 @@ builder or form, what the page runs (`src/debug/`):
 | Section | Content |
 |---|---|
 | Builder | route, other extensions' Angular modules, those that change the builder, changed builder templates, builder panels, the Angular islands and other extensions' elements mounted, the search displays with their SQL; a link to the same screen in the classic builder |
-| Form | layout source, placement arguments, the parts React cannot show, the search displays with their SQL; a link to the same form under Angular on the render page |
+| Form | layout source, placement arguments, the parts React cannot show, the Angular islands its checkout templates run, the search displays with their SQL; a link to the same form under Angular on the render page |
 
 Parts add their facts while mounted (`useDebugFacts`), so the panel lists
 what the page shows now. In debug mode each display run asks for core's

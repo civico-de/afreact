@@ -112,6 +112,80 @@ form without a finding into the setting. Below the forms, the builder
 sections list what the React builders would hand to the classic ones. How
 the checks work: [architecture.md](architecture.md#support-report).
 
+## Checkout templates
+
+A checkout option can bring an Angular partial of its own (`template` in
+`getAfformSettings()`, from the module `getAfformModule()` names), such as a
+card form or a wallet button. React runs it unchanged as an Angular island in
+the checkout block (`src/afform/fields/CheckoutIsland.tsx`, booting and
+teardown shared with the builders in `src/angular/island.ts`). How it loads
+and what it costs: [architecture.md](architecture.md#checkout-templates).
+
+- **DOM.** The block holds a host `<div>`, the island's root `<div>` inside it
+  (jqLite data `$afCheckoutBlockController` and `$afFormController`, where
+  `require: '^^afCheckoutBlock'` and `'^^afForm'` find them), and in that a
+  `<div ng-include="template">` whose scope has `$ctrl` (the block's
+  controller), `ts` (`CRM.ts('civi_contribute')`) and `template`, as
+  afCheckoutBlock's own template gives the partial.
+- **The block's controller.** Every member reads React's state when called:
+
+  | Member | Returns |
+  |---|---|
+  | `checkout_params` | the details, one object for the island's life: the template writes into it, and React's own fields of the option write into it in place |
+  | `afForm` | the form's controller below, which afCheckoutBlock requires into itself |
+  | `getContributionValue(key)` | the value the submit saves: the af-entity's `data` where it has the key, else the contribution's field on the form; `null` while empty (afCheckoutBlock reads the field first, see [upstream bugs](upstream-bugs.md#checkout)) |
+  | `getCheckoutOptionKey()` | `getContributionValue('checkout_option')` |
+  | `getCheckoutOption()` | the option's settings, `{}` without an option |
+  | `getCheckoutOptionLabel()`, `…Description()`, `…Template()`, `…Fields()` | that setting, or `null` |
+  | `getCheckoutIsTestMode()` | the checkout's test mode |
+  | `exportParamValues()` | hands the details to the form at once, so an `afForm.submit()` right after sends them; nothing without an option |
+
+  A deep watch hands every other change of `checkout_params` to the form
+  after the digest that made it. The stand-in has no `afFieldset` and none of
+  the helpers core's own field templates use (the expiry patterns, the billing
+  state lookups): React renders an option's `fields` itself.
+- **The form's controller.** `submit()` runs the submit button's path: React's
+  check of every control (with the error summary and the browser's pointer)
+  and `Afform.submit`; it does nothing while the submit button is disabled
+  (loading, saving, a closed form, a running draft save, a checkout template
+  still loading or failed), so a second call
+  while the first submit runs sends nothing. `ngForm.$valid` and
+  `ngForm.$invalid` tell whether a submit would go through now, without
+  showing errors: `$valid` is false while that check fails or the button is
+  disabled, where afForm's overlay would block a template's own button.
+  An `ngModel` directive of the island's own module gives each control's
+  Angular validity to the browser (`setCustomValidity`), so `ng-pattern` and
+  other Angular validators hold the submit as they hold afForm's.
+- **Loading and locking.** In core the partial ships in the form's bundle; here
+  its modules load once the option is chosen, and until the island is up the
+  submit button stays disabled with "Loading <option>…" in the form's status
+  line. When they fail to load, the block shows the error and the status line
+  says the form cannot be submitted until another option is chosen. The island
+  sits in a borderless `<fieldset>` that is disabled whenever React's own
+  checkout fields are (saving, a closed form, `af-disabled`), so the
+  template's controls take no input and skip the browser's checks.
+- **Form events and markup.** `crmFormSuccess` (with `afform`, `data` and
+  `submissionResponse`) and `crmFormError` (the same and `error`, with the
+  failing submit's response, none when `Afform.submit` failed) are
+  triggered on `af-form` and bubble to its ancestors and the document, where
+  the popup, EntityRef, search links and tasks listen. The form's submit
+  `<button>` carries `ng-click="afform.submit()"`, which nothing compiles, so
+  a template finds it by that attribute (a wallet hides it while shown).
+  `CRM.$.fn.block` is on every page (core's jQuery BlockUI). A submit that
+  answers with neither redirect nor message keeps the form with a "Saved"
+  status, as afForm does.
+- **Lifecycle.** A change of React's state digests the island again
+  (`$applyAsync`). A change of option, or the block leaving the page,
+  destroys the island's scopes and removes its DOM before React removes the
+  form, so a template's `$onDestroy` still finds `af-form`; the next option
+  boots a fresh island with empty details.
+- **Failure.** A script, module or template that does not load leaves an
+  alert in the block, "<option> could not load: <reason>"; the next choice
+  of a templated option tries again. A page whose variable lists no Angular
+  assets says so for the option.
+- **Debug mode.** The form's section lists each island under "Angular
+  islands" as `<template> (<module>)`.
+
 ## The builders in React
 
 React rebuilds core's SearchKit admin (listing, search editor, display
@@ -175,12 +249,13 @@ are a membership sign-up and a members page built from core parts only.
 |---|---|
 | `Civi/Api4/Afreact.php`, `Civi/Api4/Action/Afreact/` | `Afreact.getForm` and `Afreact.getTaskSettings` |
 | `Civi/Afreact/LayoutCompiler.php`, `Afforms.php` | Afform partial → layout array, blocks inlined; shared cache and typed records |
-| `Civi/Afreact/Assets.php`, `AttributeSchema.php` | bundle loading, the `civi.afreact.assets` event, the layouts handed to the page |
+| `Civi/Afreact/Assets.php`, `AttributeSchema.php`, `Checkout.php`, `AngularAssets.php` | bundle loading, the `civi.afreact.assets` event, the layouts handed to the page, the checkout settings and islands |
 | `Civi/Afreact/Takeover.php`, `FormPage.php`, `Placements.php`, `PlacedSnippets.php`, `Dashlets.php` | the `afreact_forms` takeover per placement |
 | `Civi/Afreact/AdminPage.php`, `Builders.php`, `BuilderRoutes.php`, `BuilderPanels.php`, `BuilderReport.php` | builder pages, takeover, plugin panels, report findings |
 | `Civi/Afreact/RenderPage.php`, `SupportPage.php`, `Chrome.php`, `xml/Menu/afreact.xml` | render and support routes and their shared chrome |
 | `settings/`, `templates/afreact/` | the two settings; page and inline templates |
 | `src/afform/` | form renderer (layout, fields, form model, conditions, expressions, layout sources, support checks) |
+| `src/angular/` | Angular islands: core's Angular assets loaded on demand, an island's module, boot and teardown |
 | `src/search/` | SearchKit display renderer: columns, row menus, toolbar, totals, editing, tasks, pager, filters and URL keys |
 | `src/url/` | the URL hash as state for all elements of a page |
 | `src/admin/` | the React builders (`search/`, `afform/`) |

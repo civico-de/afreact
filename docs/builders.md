@@ -128,7 +128,9 @@ rest of the page React. Both sides edit the same display object, so a change
 on either side, and undo, shows on the other at once. Such an island costs
 the page about 1.9 MB of extra scripts, measured below, and works only for
 display type editors: other builder plugins expect the whole Angular builder
-around them, so React detects them, names them and does not save.
+around them, so React detects them, names them and does not save. The form
+renderer runs a checkout option's template the same way
+([architecture.md](architecture.md#checkout-templates)).
 
 ### How an island runs
 
