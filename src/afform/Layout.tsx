@@ -534,7 +534,9 @@ export interface AutofillRun {
 declare module "react" {
   namespace JSX {
     interface IntrinsicElements {
-      "af-field": DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & { name?: string };
+      "af-field": import("react").DetailedHTMLProps<import("react").HTMLAttributes<HTMLElement>, HTMLElement> & {
+        name?: string;
+      };
     }
   }
 }
