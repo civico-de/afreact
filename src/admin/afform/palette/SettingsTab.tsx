@@ -720,12 +720,17 @@ function Tags() {
           size="sm"
           entityTable="Afform"
           tagIds={ids}
-          onChange={(next) => {
-            const picked = all
-              .filter((tag) => next.includes(tag.id))
-              .map((tag) => tag.name)
-              .sort();
-            editor.change((afform) => ({ ...afform, tags: picked }));
+          onChange={(_, tag) => {
+            // A stored name without a tag record stays; a tag made just now is not in `all` yet.
+            editor.change((afform) => {
+              const stored = list(afform.tags);
+              return {
+                ...afform,
+                tags: stored.includes(tag.name)
+                  ? stored.filter((name) => name !== tag.name)
+                  : [...stored, tag.name].sort(),
+              };
+            });
           }}
         />
       </div>

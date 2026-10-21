@@ -301,6 +301,20 @@ describe("initialiseData", () => {
     });
   });
 
+  it("leaves a search filter's default to its fieldset, out of the submitted data", () => {
+    const layout: ElementNode[] = [
+      {
+        "#tag": "div",
+        "af-fieldset": "",
+        "#children": [
+          field("first_name", { afform_default: "Ada" }),
+          field("age", { input_type: "Range", data_type: "Integer" }),
+        ],
+      },
+    ];
+    expect(initialiseData(layout, emptyData(["Individual1"]))).toEqual(emptyData(["Individual1"]));
+  });
+
   it("writes a non-repeating join at its offset", () => {
     const layout: ElementNode[] = [
       {

@@ -46,13 +46,19 @@ export function QuantityInput({
   describedBy,
 }: QuantityInputProps) {
   // What the box shows while `n` is null: an empty box or text that is no whole number.
-  const [draft, setDraft] = useState({ text: "", invalid: false });
+  const [draft, setDraft] = useState({ text: "", invalid: false, n: null as number | null });
   const texts: Record<QuantityOp, string> = {
     ">=": operatorText[">="] ?? ts("at least"),
     "<=": operatorText["<="] ?? ts("at most"),
     "=": operatorText["="] ?? ts("exactly"),
   };
-  const shown = value.n === null ? draft : { text: String(value.n), invalid: false };
+  // A draft that held a number no longer applies once the caller empties `n`.
+  const shown =
+    value.n !== null
+      ? { text: String(value.n), invalid: false }
+      : draft.n === null
+        ? draft
+        : { text: "", invalid: false };
   return (
     <span className="afreact-quantity">
       <Select
@@ -85,7 +91,7 @@ export function QuantityInput({
           // A number box holds "" for text it cannot read, such as a lone "-".
           const bad = event.target.validity.badInput || (text !== "" && !WHOLE.test(text));
           const n = text !== "" && !bad ? Number(text) : null;
-          setDraft({ text, invalid: bad });
+          setDraft({ text, invalid: bad, n });
           onChange({ ...value, n }, { invalid: bad });
         }}
       />

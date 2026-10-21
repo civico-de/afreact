@@ -151,12 +151,15 @@ export function initialiseNodes(
       const fieldset = node["af-fieldset"];
       const join = node["af-join"];
       const repeats = node["af-repeat"] !== undefined;
-      if (typeof fieldset === "string") {
+      // A search fieldset keeps its filters in its own state and reads the route itself.
+      // deviation:route-search-set-skips-entities
+      if (fieldset === "") walk(node["#children"] ?? [], scope);
+      else if (typeof fieldset === "string") {
         const base = { entity: fieldset, index: 0 };
         // afRepeat pads on init only: a route change leaves removed items removed.
         if (!previous && repeats) next = ensureRepeatItems(next, base, repeatMinimum(node));
         // afFieldset creates its entity's item on init, so an untouched entity still submits.
-        else if (!previous && fieldset) next = ensureRepeatItems(next, base, 1);
+        else if (!previous) next = ensureRepeatItems(next, base, 1);
         const count = repeats ? repeatCount(next, base) : 1;
         const slot = repeats && { slot: true };
         for (let index = 0; index < count; index++)
@@ -180,9 +183,7 @@ export function initialiseNodes(
         if (!place) continue;
         const { scope: at, name } = place;
         const defn = isFieldDefn(node.defn) ? node.defn : undefined;
-        // A search fieldset (no entity) reads the route itself.
-        // deviation:route-search-set-skips-entities
-        const given = at.entity ? routeValue(params, at, name) : undefined;
+        const given = routeValue(params, at, name);
         if (previous) {
           // deviation:route-change-sets-changed-fields
           if (defn && given !== undefined && given !== routeValue(previous, at, name))

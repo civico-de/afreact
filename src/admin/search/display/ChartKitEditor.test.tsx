@@ -33,8 +33,12 @@ function renderEditor(display: EditorDisplay) {
       typeInfo={typeInfo}
       searchDisplayPath="/civicrm/search"
       classic="/civicrm/admin/search"
-      onChange={onChange}
-      onAdopt={onAdopt}
+      onChange={(update) => {
+        onChange(update(display));
+      }}
+      onAdopt={(update) => {
+        onAdopt(update(display));
+      }}
     />,
   );
   return { onChange, onAdopt };
@@ -60,6 +64,11 @@ beforeEach(() => {
 });
 
 describe("chart display editor", () => {
+  it("offers the preview of a chart with configured axes", async () => {
+    renderEditor(line);
+    expect(await screen.findByRole("button", { name: "Preview" })).toBeEnabled();
+  });
+
   it("starts a new chart without a type, as core's $onInit", async () => {
     const { onAdopt } = renderEditor({ label: "New", type: "chart-kit" });
     await waitFor(() => {

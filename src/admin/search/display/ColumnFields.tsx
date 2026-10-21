@@ -860,6 +860,8 @@ export function IconsConfig({
               aria-label={ts("Remove icon")}
               title={ts("Remove icon")}
               onClick={() => {
+                if (picking !== null && picking >= index)
+                  setPicking(picking === index ? null : picking - 1);
                 onChange(list.filter((_, i) => i !== index));
               }}
             >

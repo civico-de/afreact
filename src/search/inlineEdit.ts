@@ -148,6 +148,8 @@ interface SavingTarget {
 
 const same = (a: CellTarget | null, b: CellTarget) =>
   !!a && a.rowKey === b.rowKey && a.colIndex === b.colIndex;
+// Grouped rows have no key that would tell them apart or name a record. deviation:keyless-rows
+const sameRow = (a: Row["key"] | undefined, b: Row["key"]) => b !== undefined && a === b;
 
 /** editValues: the values under edit by column key, with what they started from. */
 interface RowValues {
@@ -351,11 +353,11 @@ export function useInlineEdit({
       setNewRow(null);
     },
     saveNew,
-    isEditing: (target) => (full ? open?.rowKey === target.rowKey : same(open, target)),
+    isEditing: (target) => (full ? sameRow(open?.rowKey, target.rowKey) : same(open, target)),
     isSaving: (target) =>
       saving.some(
         (other) =>
-          other.rowKey === target.rowKey &&
+          sameRow(other.rowKey, target.rowKey) &&
           (other.colIndex === null || other.colIndex === target.colIndex),
       ),
     takeFocus: (target) => {
@@ -366,7 +368,7 @@ export function useInlineEdit({
     // One editor at a time, as startEditing(); the values start from the row's own, without
     // the columns whose editor the table lacks.
     start: (row, colIndex) => {
-      if (!page || open || creating) return;
+      if (!page || open || creating || row.key === undefined) return;
       const initial: Record<string, unknown> = {};
       for (const [index, cell] of row.columns.entries()) {
         const key = columns[index]?.key;

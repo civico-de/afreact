@@ -1,5 +1,5 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { api4, errorMessage } from "../../api/civi";
 import {
   itemText,
@@ -533,9 +533,13 @@ function LocationInput(props: SearchInputProps) {
   const location: LocationValue = isLocation(value) ? value : { distance_unit: unit };
   const [address, setAddress] = useState(location.address ?? "");
   const [error, setError] = useState<string | null>(null);
+  // The answer lands on the value as it is by then, and only while the address is still the same.
+  const current = useRef({ location, onChange });
+  useEffect(() => {
+    current.current = { location, onChange };
+  });
   async function lookup(next: string) {
-    const cleared = { ...location, address: next, geo_code_1: null, geo_code_2: null };
-    onChange(cleared);
+    onChange({ ...location, address: next, geo_code_1: null, geo_code_2: null });
     setError(null);
     if (!next) return;
     try {
@@ -544,10 +548,15 @@ function LocationInput(props: SearchInputProps) {
         "getCoordinates",
         { address: next },
       );
-      if (found)
-        onChange({ ...cleared, geo_code_1: found.geo_code_1, geo_code_2: found.geo_code_2 });
+      const now = current.current;
+      if (found && now.location.address === next)
+        now.onChange({
+          ...now.location,
+          geo_code_1: found.geo_code_1,
+          geo_code_2: found.geo_code_2,
+        });
     } catch (failure) {
-      setError(errorMessage(failure));
+      if (current.current.location.address === next) setError(errorMessage(failure));
     }
   }
   return (

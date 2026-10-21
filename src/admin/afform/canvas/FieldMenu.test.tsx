@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { EditorContext } from "../context";
 import type { FieldApi } from "./Field";
-import { DefaultItems, EntityRefItems, FieldMenu, MinMaxItem } from "./FieldMenu";
+import { combinedName, DefaultItems, EntityRefItems, FieldMenu, MinMaxItem } from "./FieldMenu";
 import { mockApi, renderWithQuery } from "../../../test/render";
 import { getValue, withLocal } from "./fieldModel";
 import { fieldApi } from "./testField";
@@ -181,5 +181,31 @@ describe("FieldMenu", () => {
     fireEvent.change(classes, { target: { value: " big-input " } });
     fireEvent.blur(classes);
     expect(api.set).toHaveBeenLastCalledWith("input_style", "big-input");
+  });
+});
+
+// deviation:multi-field-keeps-suffix
+describe("combinedName", () => {
+  it("keeps the first field's suffix when fields are added or the others dropped", () => {
+    expect(combinedName("status_id:name", ["source"])).toBe("status_id:name,source");
+    expect(combinedName("status_id:name,source", [])).toBe("status_id:name");
+  });
+});
+
+describe("Combine multiple fields", () => {
+  it("keeps the first field as written when it is switched off", async () => {
+    const api = fieldApi(
+      { name: "status_id", input_type: "Select", data_type: "Integer", input_attrs: {} },
+      {},
+    );
+    api.ops.node = { "#tag": "af-field", name: "status_id:name,source" };
+    renderWithQuery(
+      <EditorContext value={api.editor}>
+        <FieldMenu api={api} close={() => undefined} />
+      </EditorContext>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Combine multiple fields" }));
+    const change = vi.mocked(api.ops.edit).mock.lastCall?.[0];
+    expect(change?.(api.ops.node)).toMatchObject({ name: "status_id:name" });
   });
 });

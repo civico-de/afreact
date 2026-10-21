@@ -1,7 +1,7 @@
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderWithQuery } from "../../test/render";
 import { SearchInput } from "./SearchInput";
 
@@ -137,5 +137,76 @@ describe("SearchInput stored values", () => {
     expect(stray[0]).toHaveProperty("selected", true);
     await userEvent.selectOptions(screen.getByRole("listbox"), "Weiblich");
     expect(values).toEqual([[7, 1]]);
+  });
+});
+
+describe("SearchInput location", () => {
+  function Location() {
+    const [value, setValue] = useState<unknown>({ distance: "5", distance_unit: "km" });
+    latest = value;
+    return (
+      <SearchInput
+        id="near"
+        field={{ name: "proximity", data_type: "String", input_type: "Location" }}
+        op="="
+        value={value}
+        onChange={setValue}
+      />
+    );
+  }
+
+  it("keeps a distance changed while the address is looked up", async () => {
+    let answer: (rows: unknown[]) => void = () => undefined;
+    vi.mocked(window.CRM.api4).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    renderWithQuery(<Location />);
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("textbox", { name: "Address" }), "Berlin");
+    await user.tab();
+    const distance = screen.getByRole("spinbutton", { name: "Distance" });
+    await user.clear(distance);
+    await user.type(distance, "20");
+    await act(async () => {
+      answer([{ geo_code_1: 52.5, geo_code_2: 13.4 }]);
+      await Promise.resolve();
+    });
+    expect(latest).toEqual({
+      distance: "20",
+      distance_unit: "km",
+      address: "Berlin",
+      geo_code_1: 52.5,
+      geo_code_2: 13.4,
+    });
+  });
+
+  it("drops coordinates of an address that changed meanwhile", async () => {
+    const answers: ((rows: unknown[]) => void)[] = [];
+    vi.mocked(window.CRM.api4).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          answers.push(resolve);
+        }),
+    );
+    renderWithQuery(<Location />);
+    const user = userEvent.setup();
+    const address = screen.getByRole("textbox", { name: "Address" });
+    await user.type(address, "Berlin");
+    await user.tab();
+    await user.clear(address);
+    await user.type(address, "Hamburg");
+    await user.tab();
+    await act(async () => {
+      answers[1]?.([{ geo_code_1: 53.5, geo_code_2: 10 }]);
+      await Promise.resolve();
+    });
+    await act(async () => {
+      answers[0]?.([{ geo_code_1: 52.5, geo_code_2: 13.4 }]);
+      await Promise.resolve();
+    });
+    expect(latest).toMatchObject({ address: "Hamburg", geo_code_1: 53.5, geo_code_2: 10 });
   });
 });

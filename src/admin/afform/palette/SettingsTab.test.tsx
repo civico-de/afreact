@@ -283,3 +283,27 @@ describe("SettingsTab", () => {
     expect(screen.getByRole("combobox", { name: /^Language/ })).toBeInTheDocument();
   });
 });
+
+describe("SettingsTab tags", () => {
+  it("adds a tag created here and keeps a stored name that has no tag record", async () => {
+    mockApi({
+      "Navigation.get": () => [],
+      "Tag.get": () => [{ id: 1, name: "Old", label: "Old", color: null, is_selectable: true }],
+      "Tag.create": () => [
+        { id: 2, name: "Fresh", label: "Fresh", color: null, is_selectable: true },
+      ],
+    });
+    renderWithQuery(
+      <Harness initial={{ type: "form", title: "Probe", layout: [], tags: ["Hand_written"] }} />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Tags" }));
+    await user.type(screen.getByRole("searchbox", { name: "Add tag..." }), "Fresh");
+    await user.click(screen.getByRole("button", { name: "Create Tag: Fresh" }));
+    expect(latest?.tags).toEqual(["Fresh", "Hand_written"]);
+    await user.click(await screen.findByRole("checkbox", { name: /Old/ }));
+    expect(latest?.tags).toEqual(["Fresh", "Hand_written", "Old"]);
+    await user.click(screen.getByRole("checkbox", { name: /Fresh/ }));
+    expect(latest?.tags).toEqual(["Hand_written", "Old"]);
+  });
+});

@@ -3,7 +3,7 @@ import { useEffect, useId, useState } from "react";
 import { api4 } from "../../../api/civi";
 import { AfreactSearch } from "../../../search/AfreactSearch";
 import { isDisplaySettings } from "../../../search/types";
-import type { EditorDisplay } from "../editor";
+import { DISPLAY_KEY, type EditorDisplay } from "../editor";
 import { ModelText } from "../../widgets/ModelText";
 import type { SearchInfo } from "../expr";
 import { useSearchTasks } from "./common";
@@ -110,7 +110,28 @@ export function initialized(ctx: DisplayContext, display: EditorDisplay): Editor
   if (!init || !draft) return display;
   const next = structuredClone(draft);
   init(ctx, next);
-  return JSON.stringify(next) === JSON.stringify(draft) ? display : next;
+  return JSON.stringify(next) === JSON.stringify(draft) ? display : keyed(display, next);
+}
+
+/** `next` with the unsaved display's identity, which structuredClone leaves out. */
+function keyed(display: EditorDisplay, next: EditorDisplay): EditorDisplay {
+  const key = display[DISPLAY_KEY];
+  return key === undefined ? next : { ...next, [DISPLAY_KEY]: key };
+}
+
+/** `change` applied to a copy of the display's settings; columns a type edits itself stay. */
+function edited(display: EditorDisplay, change: (draft: Draft) => void): EditorDisplay {
+  const own = ownColumns(display.type);
+  const draft = draftOf(own ? withoutColumns(display) : display);
+  if (!draft) return display;
+  const copy = structuredClone(draft);
+  change(copy);
+  return keyed(
+    display,
+    own && display.settings && "columns" in display.settings
+      ? { ...copy, settings: { ...copy.settings, columns: display.settings.columns } }
+      : copy,
+  );
 }
 
 interface DisplayEditorProps {
@@ -121,8 +142,9 @@ interface DisplayEditorProps {
   searchDisplayPath: string;
   /** The classic builder's address, without hash. */
   classic: string;
-  onChange: (display: EditorDisplay) => void;
-  onAdopt: (display: EditorDisplay) => void;
+  /** Each change applies to the display as it is by then, so one made after a request keeps earlier ones. */
+  onChange: (update: (display: EditorDisplay) => EditorDisplay) => void;
+  onAdopt: (update: (display: EditorDisplay) => EditorDisplay) => void;
 }
 
 /** crmSearchAdminDisplay: the shared header, the type's settings and the live preview. */
@@ -133,7 +155,7 @@ export function DisplayEditor(props: DisplayEditorProps) {
   const draft = draftOf(own ? withoutColumns(display) : display);
   const next = initialized(ctx, display);
   useEffect(() => {
-    if (next !== display) onAdopt(next);
+    if (next !== display) onAdopt(() => next);
   }, [next, display, onAdopt]);
   const tasks = useSearchTasks(search.api_entity);
   if (!draft)
@@ -142,22 +164,14 @@ export function DisplayEditor(props: DisplayEditorProps) {
         {ts("The settings of this display are not an object, so they cannot be edited.")}
       </p>
     );
-  const restore = (d: Draft): EditorDisplay =>
-    own && display.settings && "columns" in display.settings
-      ? { ...d, settings: { ...d.settings, columns: display.settings.columns } }
-      : d;
   const edit = (change: (draft: Draft) => void) => {
-    const copy = structuredClone(draft);
-    change(copy);
-    onChange(restore(copy));
+    onChange((current) => edited(current, change));
   };
   const superAdmin = window.CRM.checkPerm("all CiviCRM permissions and ACLs");
   const viewable = !!display.id && !!typeInfo && typeInfo.grouping !== "non-viewable";
   const rowLinks = [...buildLinks(ctx, true), ...taskLinks(tasks.data ?? [])];
   const adopt = (change: (draft: Draft) => void) => {
-    const copy = structuredClone(draft);
-    change(copy);
-    onAdopt(restore(copy));
+    onAdopt((current) => edited(current, change));
   };
   const editing = { ctx, draft, edit };
   const ownHeader = ["autocomplete", "entity", "batch"].includes(display.type);
@@ -280,10 +294,10 @@ export function DisplayEditor(props: DisplayEditorProps) {
           ctx={ctx}
           display={display}
           onSettings={(settings) => {
-            onChange({ ...display, settings });
+            onChange((current) => ({ ...current, settings }));
           }}
           onAdoptSettings={(settings) => {
-            onAdopt({ ...display, settings });
+            onAdopt((current) => ({ ...current, settings }));
           }}
         />
       )}
@@ -291,7 +305,7 @@ export function DisplayEditor(props: DisplayEditorProps) {
       <Preview
         search={search}
         draft={next === display ? draft : null}
-        display={next === display ? restore(draft) : null}
+        display={next === display ? { ...display, settings: display.settings ?? {} } : null}
         icon={typeInfo?.icon}
       />
     </>

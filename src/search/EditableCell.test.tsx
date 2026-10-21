@@ -664,6 +664,28 @@ describe("in-place editors", () => {
     expect(edits()[0]?.values).toEqual({ fee_level: ["Late"] });
   });
 
+  it("keeps the text typed into a list when Save is clicked", async () => {
+    const { edits } = setup({ value_key: "fee_level", serialize: true }, ["Early"], {
+      shown: "Early",
+    });
+    await open();
+    await userEvent.keyboard("Late");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(edits()[0]?.values).toEqual({ fee_level: ["Early", "Late"] });
+  });
+
+  // deviation:inplace-save-on-leave
+  it("saves the text typed into a list when the focus leaves the editor", async () => {
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    const { edits } = setup({ value_key: "fee_level", serialize: true }, ["Early"], {
+      shown: "Early",
+    });
+    await open();
+    await userEvent.keyboard("Late");
+    await userEvent.click(document.body);
+    expect(edits()[0]?.values).toEqual({ fee_level: ["Early", "Late"] });
+  });
+
   it("edits a list of numbers, turning away what is no number", async () => {
     const { edits } = setup({ value_key: "n", data_type: "Integer", serialize: true }, [1], {
       shown: "1",

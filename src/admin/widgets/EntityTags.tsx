@@ -17,7 +17,8 @@ interface EntityTagsProps {
   /** Omitted for an unsaved record: changes go to onChange only, the caller saves them. */
   entityId?: number;
   tagIds: number[];
-  onChange: (tagIds: number[]) => void;
+  /** `tag` is the one switched on or off. */
+  onChange: (tagIds: number[], tag: TagRecord) => void;
   /** Without it the tags only show as badges. */
   editable?: boolean;
   /** The button size core gives the widget there: `sm` on settings, `xs` in listings. */
@@ -85,7 +86,7 @@ export function EntityTags({
     const has = tagIds.includes(tag.id);
     const next = has ? tagIds.filter((t) => t !== tag.id) : [...tagIds, tag.id];
     if (entityId === undefined) {
-      onChange(next);
+      onChange(next, tag);
       return;
     }
     const status = window.CRM.status({});
@@ -103,7 +104,7 @@ export function EntityTags({
           values: { entity_id: entityId, tag_id: tag.id, entity_table: entityTable },
         });
       status.resolve();
-      onChange(next);
+      onChange(next, tag);
     } catch (error) {
       status.reject();
       crmAlert(errorMessage(error), ts("Error"), "error");

@@ -235,6 +235,28 @@ async function persist(search: EditorSearch, groupExists: boolean, target: Event
   };
 }
 
+/** The displays a save deletes: the trashed ones as sent, not one restored since. */
+export const deletedBy = (sent: EditorSearch): Set<EditorDisplay> =>
+  new Set(sent.displays.filter((d) => d.trashed));
+
+/**
+ * The tab once a save removed `deleted` from `displays`: a display's tab moves up by those before
+ * it, and one whose display is gone falls back to `fallback`.
+ */
+// deviation:display-tab-follows-save
+export function tabAfterSave(
+  tab: string,
+  displays: EditorDisplay[],
+  deleted: Set<EditorDisplay>,
+  fallback: string,
+): string {
+  if (!tab.startsWith("display_")) return tab;
+  const index = Number(tab.slice(8));
+  const open = displays[index];
+  if (!open || deleted.has(open)) return fallback;
+  return `display_${String(index - displays.slice(0, index).filter((d) => deleted.has(d)).length)}`;
+}
+
 /**
  * What the server assigned, put into `state`: sent displays become the saved ones, deleted ones go,
  * and displays or a group added or edited since the save started stay as they are.
@@ -252,7 +274,7 @@ export function mergeSaved(
 ): EditorSearch {
   const kept = sent.displays.filter((d) => !d.trashed);
   const savedAs = new Map(kept.map((d, i) => [d, result.displays[i] ?? d]));
-  const deleted = new Set(sent.displays.filter((d) => d.trashed));
+  const deleted = deletedBy(sent);
   const sentFirst = sent.groups[0];
   return {
     ...state,
@@ -609,7 +631,9 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
         if (result.reloadMetadata) refreshMetadata().catch(report);
         for (const refresh of result.refreshes) refresh.catch(report);
         const merge = (state: EditorSearch) => mergeSaved(state, sent, sentGroup, result);
+        const shown = latestSearch.current.displays;
         dispatch({ type: "savedFrom", sent, merge });
+        setTab((current) => tabAfterSave(current, shown, deletedBy(sent), tabs[0]?.key ?? "for"));
         setSavedGroup(sentGroup);
         setSaving(false);
         if (!sent.id) setGoto(result.id);
@@ -1038,21 +1062,21 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                       typeInfo={typeOf(search.displays[displayIndex].type)}
                       searchDisplayPath={displayPath}
                       classic={classic}
-                      onChange={(display) => {
+                      onChange={(update) => {
                         change((state) => ({
                           ...state,
                           displays: state.displays.map((d, i) =>
-                            i === displayIndex ? display : d,
+                            i === displayIndex ? update(d) : d,
                           ),
                         }));
                       }}
-                      onAdopt={(display) => {
+                      onAdopt={(update) => {
                         dispatch({
                           type: "adopt",
                           update: (state) => ({
                             ...state,
                             displays: state.displays.map((d, i) =>
-                              i === displayIndex ? display : d,
+                              i === displayIndex ? update(d) : d,
                             ),
                           }),
                         });

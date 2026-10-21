@@ -64,7 +64,13 @@ const values = (firstName: string) => ({
 
 function renderForm(
   handlers: Record<string, (params: Record<string, unknown>) => unknown>,
-  { autosave = false, pageTitle = false, store = memoryStore("") } = {},
+  {
+    autosave = false,
+    pageTitle = false,
+    store = memoryStore(""),
+    location = { search: "?Individual1=5", hash: "" },
+    formLayout = layout,
+  } = {},
 ) {
   const calls = mockApi({
     "Afreact.getForm": () => [
@@ -74,7 +80,7 @@ function renderForm(
         type: "form",
         autosave_draft: autosave,
         meta,
-        layout,
+        layout: formLayout,
         strings: [],
       },
     ],
@@ -83,11 +89,7 @@ function renderForm(
     ...handlers,
   });
   renderWithQuery(
-    <AfreactForm
-      name="afformTest"
-      location={{ search: "?Individual1=5", hash: "" }}
-      pageTitle={pageTitle}
-    />,
+    <AfreactForm name="afformTest" location={location} pageTitle={pageTitle} />,
     store,
   );
   return calls;
@@ -292,6 +294,18 @@ describe("the reset button", () => {
     await waitFor(async () => expect(await firstName()).toHaveValue("Ada"));
     expect(called(calls, "Afform.prefill")).toHaveLength(2);
     expect(called(calls, "Afform.submit")).toEqual([]);
+  });
+
+  it("resets in place after the address hash changed, without loading the form again", async () => {
+    const location = { search: "?Individual1=5", hash: "" };
+    const calls = renderForm({}, { location });
+    await userEvent.clear(await firstName());
+    await userEvent.type(await firstName(), "Bea");
+    location.hash = "#?page=p2";
+    await userEvent.click(screen.getByRole("button", { name: "Reset" }));
+    await waitFor(async () => expect(await firstName()).toHaveValue("Ada"));
+    expect(called(calls, "Afreact.getForm")).toHaveLength(1);
+    expect(called(calls, "Afform.prefill")).toHaveLength(2);
   });
 
   // deviation:reset-reloads-form
@@ -517,6 +531,40 @@ describe("drafts", () => {
     });
     expect(await screen.findByRole("button", { name: "Draft Saved" })).toBeInTheDocument();
     expect(save).toBeEnabled();
+  });
+
+  // deviation:draft-pristine-label
+  it("count a default calculated from the loaded record as part of the untouched form", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    window.CRM.config = { cid: 7 };
+    const greeting = {
+      "#tag": "af-field",
+      name: "nick_name",
+      defn: {
+        name: "nick_name",
+        label: "Nick Name",
+        input_type: "Text",
+        data_type: "String",
+        afform_default: "Dear [Individual1.0.first_name]",
+      },
+    };
+    const withGreeting = structuredClone(layout);
+    const [root] = withGreeting;
+    const fieldset = root && "#children" in root ? root["#children"]?.[1] : undefined;
+    if (fieldset && "#children" in fieldset) fieldset["#children"]?.push(greeting);
+    const calls = renderForm(
+      { "Afform.submitDraft": () => [{}] },
+      { autosave: true, formLayout: withGreeting },
+    );
+    const nick = await screen.findByRole("textbox", { name: "Nick Name" });
+    await waitFor(() => {
+      expect(nick).toHaveValue("Dear Ada");
+    });
+    expect(screen.getByRole("button", { name: "Save Draft" })).toBeDisabled();
+    act(() => {
+      vi.advanceTimersByTime(20_000);
+    });
+    expect(called(calls, "Afform.submitDraft")).toEqual([]);
   });
 
   it("save themselves ten seconds after a change for a known user", async () => {

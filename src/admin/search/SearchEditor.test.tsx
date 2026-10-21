@@ -5,7 +5,7 @@ import { listParam, mockApi, recordParam, renderWithQuery } from "../../test/ren
 import { metadata } from "../../test/searchMetadata";
 import { splitHash } from "../../url/hash";
 import { newDisplay, removeDisplay, type EditorSearch } from "./editor";
-import { mergeSaved, SearchEditor, structuralRisk } from "./SearchEditor";
+import { mergeSaved, SearchEditor, structuralRisk, tabAfterSave } from "./SearchEditor";
 
 const stored = {
   id: 5,
@@ -296,6 +296,34 @@ describe("text trimmed as ngModel trims it", () => {
   });
 });
 
+// deviation:display-tab-follows-save
+it("stays on the open display when a save removes a deleted display before it", async () => {
+  window.location.hash = "#/edit/5";
+  const odd = (id: number, label: string) => ({
+    id,
+    name: label,
+    label,
+    type: "odd",
+    settings: {},
+  });
+  mockApi({
+    "SavedSearch.get": () => [{ ...stored, displays: [odd(9, "First"), odd(10, "Second")] }],
+    "Afform.get": () => [],
+    "Group.delete": () => [],
+    "SavedSearch.save": (params) => [
+      { ...recordParam(listParam(params.records)[0]), displays: [odd(10, "Second")] },
+    ],
+  });
+  renderWithQuery(<SearchEditor mode="edit" id={5} />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Second" }));
+  await user.click(screen.getByRole("button", { name: "Delete First" }));
+  expect(screen.getByRole("textbox", { name: "Display Label" })).toHaveValue("Second");
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(await screen.findByRole("button", { name: "Saved" })).toBeDisabled();
+  expect(screen.getByRole("textbox", { name: "Display Label" })).toHaveValue("Second");
+});
+
 it("offers to save a clone before anything in it changed", async () => {
   window.location.hash = "#/clone/5";
   mockApi({ "SavedSearch.get": () => [stored] });
@@ -404,5 +432,25 @@ describe("mergeSaved", () => {
     expect(structuredClone(merged.displays)).toEqual([
       { label: "T2 edited", type: "table", id: 12, name: "T2_n" },
     ]);
+  });
+});
+
+describe("tabAfterSave", () => {
+  const [a, b, c, d] = ["A", "B", "C", "D"].map((label) => ({ label, type: "table" }));
+  const trashedA = { ...a!, trashed: true };
+  const trashedC = { ...c!, trashed: true };
+  const deleted = new Set([trashedA, trashedC]);
+  const shown = [trashedA, b!, trashedC, d!];
+  it("moves a display's tab up by the deleted displays before it", () => {
+    expect(tabAfterSave("display_1", shown, deleted, "for")).toBe("display_0");
+    expect(tabAfterSave("display_3", shown, deleted, "for")).toBe("display_1");
+  });
+  it("leaves other tabs and falls back when the open display itself is gone", () => {
+    expect(tabAfterSave("where", shown, deleted, "for")).toBe("where");
+    expect(tabAfterSave("display_2", shown, deleted, "for")).toBe("for");
+  });
+  it("counts a display restored during the save as kept", () => {
+    expect(tabAfterSave("display_1", [a!, b!], deleted, "for")).toBe("display_1");
+    expect(tabAfterSave("display_0", [a!, b!], deleted, "for")).toBe("display_0");
   });
 });

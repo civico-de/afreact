@@ -51,6 +51,7 @@ values without HTML escaping (`AbstractProcessor::replaceTokens`), and
 runs on the page that shows the confirmation. Tokens inside the form itself
 (`af-token`) are set as text and not affected. Reproduced on civikitchen with
 afform 6.18.1 on both paths:
+
 - the submitter sees their own markup run (self-XSS);
 - on a form with "Verify submission before processing", a reviewer who
   processes the stored submission (`#?sid=`) gets the confirmation message
@@ -115,7 +116,10 @@ unchanged data, marks a pristine draft as saved (`setupDraftWatcher`,
 `afForm.component.js` on 6.18; read from the code, not run). Every save-draft
 button therefore reads "Draft Saved", disabled, as soon as the form has
 loaded. The React renderer keeps the button's own text, disabled, until the
-form holds a change no draft has saved. `deviation:draft-pristine-label`
+form holds a change no draft has saved. Only the user's changes count: what the
+form fills in by itself before that, such as a default calculated from the
+loaded record, stays part of the untouched form, which autosave does not store.
+`deviation:draft-pristine-label`
 
 **A submit can cross a running draft save.** afForm lets Submit run while
 `submitDraft` or a draft's upload is in flight, so the late draft answer can
@@ -454,6 +458,7 @@ block's `data`, such as its location type (`FormDataModel::parseFields` merges
 it per entity, `preprocessSubmittedValues`), and its prefilled record
 (`loadJoins` sorts location blocks by type). The two disagree whenever blocks
 link out of layout order, more than once, or in more than one fieldset:
+
 - A block hidden by `af-if` at load links later, so the next block takes its
   index. With Home hidden and Work shown, the Work field shows the Home email,
   saves over the Home record, and a new email is saved as Home.
@@ -724,14 +729,18 @@ refuses such a display with `acl_bypass` to everyone without "all CiviCRM
 permissions and ACLs". Present on 6.19 and on `master` as of 2026-10-12.
 React names the form for every display on it. `deviation:display-outside-fieldset-form`
 
-**Grouped rows are selectable and draggable.** `SearchDisplay.run` gives
-the rows of a grouped search no `key`, but the display editor offers bulk
-actions, drag sorting and the tree for such searches as well. Read from the
+**Grouped rows are selectable, draggable and editable.** `SearchDisplay.run`
+gives the rows of a grouped search no `key`, but the display editor offers
+bulk actions, drag sorting, inline editing and the tree for such searches as
+well. Read from the
 source, not run: `searchDisplayTasksTrait` selects by `row.key`, so ticking
 one row ticks them all and a task gets no ids; a drop sends
-`draggableWeight` with no `rowKey` (`updateDraggableWeights()`). React shows
-neither checkboxes nor drag handles on rows without a key, and a task link
-in such a row notes that it has no record. `deviation:keyless-rows`
+`draggableWeight` with no `rowKey` (`updateDraggableWeights()`); full-row
+editing opens every keyless row at once, as `editing = row.key` matches
+them all, and a save without `rowKey` comes back as a new row
+(`refreshAfterEditing()`). React shows neither checkboxes, drag handles nor
+in-place editors on rows without a key, and a task link in such a row notes
+that it has no record. `deviation:keyless-rows`
 
 **"Column undefined" in the column picker.** `getColumnToggleLabel()` numbers
 a column without label or key with `col.index`, which nothing sets
@@ -743,25 +752,26 @@ does not match it in React. `deviation:column-picker-position-label`
 **List, grid and tree displays.** Read from the source of `master` as of
 2026-10-05 (`ext/search_kit/ang/crmSearchDisplayTree/`,
 `crmSearchDisplay/traits/searchDisplayBaseTrait.service.js`), not run:
-- *The tree drops rows whose parent is filtered out.* `sortTree()` keeps at the
+
+- _The tree drops rows whose parent is filtered out._ `sortTree()` keeps at the
   top level only rows without a parent value, so a row whose parent is not in
   the results (another page, a filter) is not shown at all. React shows it at
   the top level. `deviation:tree-orphans-top-level`
-- *Every reload closes the tree again.* `sortTree()` sets `collapsed` from
+- _Every reload closes the tree again._ `sortTree()` sets `collapsed` from
   `collapsible: closed` on each run, so a popup form's save or a new filter
   closes the branches the user opened. React keeps them open. `deviation:tree-branches-stay-open`
-- *The tree's toggle has no name or state.* The button holds an icon and the
+- _The tree's toggle has no name or state._ The button holds an icon and the
   child count, which the theme hides while the branch is open, and no
   `aria-expanded` (`crmSearchDisplayTreeLeaf.html`). React names it
   "%1 sub-items" and sets `aria-expanded` on every button with children. `deviation:tree-toggle-name-state`
-- *Focus is lost on a reload.* All three types replace their items with
+- _Focus is lost on a reload._ All three types replace their items with
   loading placeholders, so a focused link or editor in an item is removed and
   focus falls to the page. React returns it to the same control in the same
   row once the rows are back. `deviation:display-focus-across-reload`
-- *A section header for 0 reads "(none)".* The header templates show
+- _A section header for 0 reads "(none)"._ The header templates show
   `row.groupHeader || ts('(none)')` (`crmSearchDisplayListHeader.html`, its grid
   twin). React shows the value and keeps "(none)" for empty ones. `deviation:section-header-zero`
-- *A multi-valued field starts a section on every row.* `groupRows()` compares
+- _A multi-valued field starts a section on every row._ `groupRows()` compares
   values with `!==`, and each row's list is a separate array. React compares
   them by content. `deviation:section-lists-by-content`
 
@@ -769,29 +779,30 @@ does not match it in React. `deviation:column-picker-position-label`
 
 **In-place editing.** Read from the source of `master` as of 2026-10-05
 (`ext/search_kit/ang/crmSearchDisplay/`); 6.18 behaves the same.
-- *A failed save leaves a placeholder.* `saveEditing()` closes the editor and
+
+- _A failed save leaves a placeholder._ `saveEditing()` closes the editor and
   marks the cell as loading before the request, and handles only success
   (`traits/searchDisplayEditableTrait.service.js:52-72`). After an error the
   cell stays a loading placeholder until the next search, and the typed value
   is lost; the error shows only as a status notice (`crmStatus`). React opens the editor
   again with the typed value and the error, marked `aria-invalid`, and
   announces "Not saved" in a live region. `deviation:inline-edit-failed-save-reopens`
-- *Enter anywhere on the page saves.* The editor listens for keys on the
+- _Enter anywhere on the page saves._ The editor listens for keys on the
   document (`crmSearchDisplayEditable.component.js:47-55`): Enter in a filter
   field or another form saves the open edit, Escape anywhere cancels it. React
   listens on the editor only. `deviation:inline-edit-keys-on-editor`
-- *An emptied required field fails with "Inline edit failed."* Enter calls
+- _An emptied required field fails with "Inline edit failed."_ Enter calls
   `save()` without the form's validation. The server skips an empty value for
   a field that cannot be emptied and, with nothing left to do, throws
   (`Civi/Api4/Action/SearchDisplay/InlineEdit.php:89-91, 119-121`), which
   then ends in the placeholder above. React marks the input `required` and
   checks it before sending. `deviation:inline-edit-required-checked`
-- *Unchanged lists are saved.* `save()` compares with `!==` (line 73), and the
+- _Unchanged lists are saved._ `save()` compares with `!==` (line 73), and the
   value and its starting copy are separate arrays, so a multi-select saves
   even when nothing changed. React compares by value. `deviation:inline-edit-compare-by-value`
-- *Totals stay stale.* `refreshAfterEditing()` replaces the row only, so the
+- _Totals stay stale._ `refreshAfterEditing()` replaces the row only, so the
   totals row keeps the old sums and counts. React asks for the totals again. `deviation:inline-edit-refreshes-totals`
-- *Editing needs a mouse.* An editable value is a `<span>` with `ng-click`,
+- _Editing needs a mouse._ An editable value is a `<span>` with `ng-click`,
   without role or tab stop (`colType/editable.html:10-15`). React makes it a
   button in the tab order with an "Edit <column>" name, opens it with Enter,
   Space or F2, and returns focus to it when the editor closes. `deviation:inline-edit-keyboard-button`
@@ -838,6 +849,7 @@ drag-to-reorder browser spec. The React renderer shows the returned weights. `de
 **Bulk actions.** Read from the source of `master` as of 2026-10-05
 (`ext/search_kit/ang/crmSearchTasks/`), not run. Where React differs it says
 so:
+
 - A batch that fails after earlier batches were applied leaves the table and
   the selection as they were (`crmSearchTaskApiBatch.ctrl.js` `onError`
   cancels the dialog), so the rows show stale values. React reloads the table
@@ -1177,6 +1189,14 @@ in italics. `deviation:editable-placeholder-contrast`
 
 ## SearchKit builder
 
+**Saving a deletion moves the open tab to another display.** Display tabs are
+named by position (`display_<index>`), and a save replaces the displays with
+those the server kept, without the deleted ones
+(`crmSearchAdmin.component.js` `save`). With a display before the open one
+deleted, the same tab name then points at the next display, or at none, which
+leaves an empty panel (read from the code, not run). afreact moves the open
+tab up by the deleted displays before it. `deviation:display-tab-follows-save`
+
 **An invalid query timeout is dropped without a word.** The timeout is a
 `type="number" min="0"` ngModel input, so a negative number sets the model to
 undefined and the save keeps the stored timeout without a word (read from the
@@ -1436,6 +1456,13 @@ input invalid. `deviation:include-path-kept`
 
 ## FormBuilder
 
+**Switching off "Combine multiple fields" drops the field's suffix.** The
+toggle sets the filter's name to `getFieldName()`, which cuts a suffix such as
+`:name` (`afGuiField.component.js` `toggleMultiFieldFilter`), so
+`status_id:name,source` becomes `status_id` and the filter matches by ID
+instead of by name (read from the code, not run). afreact keeps the first field
+as written. `deviation:multi-field-keeps-suffix`
+
 **A default of No or 0 is not saved.** The field menu keeps a setting only
 where it differs from the field's metadata and one of the two is truthy
 (`afGuiField.component.js` `getSet`). A default of `false` or `0` against no
@@ -1481,8 +1508,7 @@ number. React marks such a limit invalid and refuses to save until it is fixed.
 **Typing a field's maximum below its minimum's first digit loses it.** A number
 field's minimum and maximum (and a multi-select's option count) are clamped on
 each keystroke (`onChangeMin`/`onChangeMax` in `afGuiField.component.js`), so
-with a minimum of 10, typing a maximum of 20 turns the "2" into 10 and ends at
-100. React keeps what is typed and brings a bound past the other back to it
+with a minimum of 10, typing a maximum of 20 turns the "2" into 10 and ends at 100. React keeps what is typed and brings a bound past the other back to it
 once the input is left. `deviation:field-bounds-on-blur`
 
 **A negative relative date offset cannot be typed.** While the offset input

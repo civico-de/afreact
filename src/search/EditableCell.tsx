@@ -57,7 +57,8 @@ export function EditableCell(props: EditableCellProps) {
   const { edit, row, column, colIndex, settings, children } = props;
   const key = column?.key;
   const info = edit && key && row.columns[colIndex]?.edit ? edit.editable[key] : undefined;
-  if (!edit || !key || !info) return children;
+  // deviation:keyless-rows
+  if (!edit || !key || !info || row.key === undefined) return children;
   const editor = editorFor(info);
   if ("unsupported" in editor) return children;
   const label = column.label ?? `[${key}]`;
@@ -564,9 +565,10 @@ function Select({
   nullable,
   common,
   onChange,
-  options = Array.isArray(info.options) ? info.options : [],
+  options: given,
   autoFocus,
 }: InputProps & { options?: EditOption[]; autoFocus?: boolean }) {
+  const options = given ?? (Array.isArray(info.options) ? info.options : []);
   // Option IDs keep their type (2, not "2"), as the API sent them.
   const byId = (raw: string) => options.find((option) => String(option.id) === raw)?.id;
   const choices = options.map((option) => (

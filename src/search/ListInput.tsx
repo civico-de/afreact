@@ -35,17 +35,25 @@ export function ListInput({
 }: Pick<InputProps, "value" | "common" | "onChange"> & { kind: ListKind }) {
   const [text, setText] = useState("");
   const input = useRef<HTMLInputElement>(null);
-  const list = items(value);
-  const add = (entry: string | number | null) => {
-    if (entry === null || (kind === "date" && list.includes(entry))) return false;
-    onChange([...list, entry]);
-    setText("");
-    return true;
+  // Parseable typed text already counts as the value's last entry, so every way of saving keeps it.
+  const pending = kind === "date" ? null : parse(kind, text);
+  const all = items(value);
+  const list = pending !== null && all.at(-1) === pending ? all.slice(0, -1) : all;
+  const emit = (entries: (string | number)[], typed: string) => {
+    const next = kind === "date" ? null : parse(kind, typed);
+    setText(typed);
+    onChange(next === null ? entries : [...entries, next]);
+  };
+  const addDate = (entry: string | number | null) => {
+    if (entry !== null && !list.includes(entry)) onChange([...list, entry]);
   };
   const removeAt = (index: number) => (event: KeyboardEvent | MouseEvent) => {
     if ("key" in event && event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
-    onChange(list.filter((_, at) => at !== index));
+    emit(
+      list.filter((_, at) => at !== index),
+      text,
+    );
     input.current?.focus();
   };
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -53,7 +61,7 @@ export function ListInput({
       // Enter with text adds it and stays with the input; without text it reaches the editor.
       if (text.trim() === "" && event.key === "Enter") return;
       event.preventDefault();
-      add(parse(kind, text));
+      if (pending !== null) setText("");
     } else if (event.key === "Backspace" && text === "" && list.length) {
       onChange(list.slice(0, -1));
     }
@@ -87,12 +95,12 @@ export function ListInput({
             required={common.required && list.length === 0}
             value={text}
             onChange={(event) => {
-              if (kind === "date") add(parse(kind, event.target.value));
-              else setText(event.target.value);
+              if (kind === "date") addDate(parse(kind, event.target.value));
+              else emit(list, event.target.value);
             }}
             onKeyDown={onKeyDown}
             onBlur={() => {
-              if (kind !== "date") add(parse(kind, text));
+              if (pending !== null) setText("");
             }}
           />
         </li>

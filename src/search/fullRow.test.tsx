@@ -214,3 +214,33 @@ describe("full-row editing", () => {
     expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
   });
 });
+
+// deviation:keyless-rows
+describe("rows without a key", () => {
+  it.each([true, false])("open no editor, with full-row editing %s", async (full) => {
+    const grouped = (job: string): Row => ({
+      columns: [{ val: "Ada" }, { val: job, edit: true }],
+      data: { job_title: job },
+    });
+    mockApi({
+      "SearchDisplay.run": () =>
+        Object.assign([grouped("Pilot"), grouped("Captain")], {
+          editable: { job_title: editInfo({ value_key: "job_title" }) },
+        }),
+    });
+    const settings: DisplaySettings = {
+      columns: [
+        { type: "field", key: "sort_name", label: "Name" },
+        { type: "field", key: "job_title", label: "Title" },
+      ],
+      limit: 10,
+      pager: false,
+      editableRow: { full },
+    };
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);
+    await screen.findByText("Captain");
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Edit / })).not.toBeInTheDocument();
+    expect(document.querySelectorAll("td.crm-search-field-editing")).toHaveLength(0);
+  });
+});

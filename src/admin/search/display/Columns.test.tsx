@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { metadata as meta } from "../../../test/searchMetadata";
 import { IconsConfig } from "./ColumnFields";
 import { Columns } from "./Columns";
-import type { DisplayContext, Draft } from "./model";
+import type { DisplayContext, Draft, IconItem } from "./model";
 
 const ctx: DisplayContext = {
   meta,
@@ -123,5 +123,20 @@ describe("icons", () => {
     );
     await user.selectOptions(screen.getByRole("combobox", { name: "Source of Icon 1" }), "");
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("keeps the icon being picked when an icon before it is removed", async () => {
+    const user = userEvent.setup();
+    const field = { field: "contact_type:icon", side: "left" };
+    function IconsHarness() {
+      const [icons, setIcons] = useState<IconItem[]>([field, field, field]);
+      return <IconsConfig ctx={ctx} icons={icons} onChange={setIcons} />;
+    }
+    render(<IconsHarness />);
+    await user.selectOptions(screen.getByRole("combobox", { name: "Source of Icon 2" }), "");
+    expect(screen.getByRole("button", { name: "Icon 2: None" })).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "Remove icon" })[0]!);
+    expect(screen.getByRole("button", { name: "Icon 1: None" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Icon 2: None" })).not.toBeInTheDocument();
   });
 });

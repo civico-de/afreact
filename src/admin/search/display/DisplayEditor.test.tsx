@@ -1,11 +1,11 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { listParam, mockApi, renderWithQuery } from "../../../test/render";
 import { metadata } from "../../../test/searchMetadata";
-import type { EditorDisplay } from "../editor";
-import { DisplayEditor } from "./DisplayEditor";
+import { DISPLAY_KEY, newDisplay, type EditorDisplay } from "../editor";
+import { DisplayEditor, initialized } from "./DisplayEditor";
 
 const search = {
   name: "S",
@@ -353,3 +353,56 @@ it.each([
     expect(latest?.settings?.cssRules).toEqual([["bg-danger", "g", "=", stored]]);
   },
 );
+
+it("keeps a subsearch's chosen saved search and fills it in once its details arrive", async () => {
+  window.CRM.vars = {
+    ...window.CRM.vars,
+    afreactAdmin: { searchDisplay: { viewableDisplayTypes: { table: "Table" } } },
+  };
+  mockApi({
+    "SearchDisplay.getSearchTasks": () => [],
+    "SearchDisplay.run": () => Object.assign([], { count: 0, countFetched: 0 }),
+    "SavedSearch.autocomplete": () => [{ id: "Members", label: "Members" }],
+    "SavedSearch.get": () => [
+      { label: "Members", api_entity: "Contact", api_params: { version: 4, select: ["id"] } },
+    ],
+    "SearchDisplay.get": () => [{ name: "Members_table", label: "Members table" }],
+  });
+  renderWithQuery(
+    <Harness
+      initial={{
+        id: 1,
+        name: "L",
+        label: "L",
+        type: "list",
+        settings: {
+          columns: [{ type: "subsearch", subsearch: { filters: [], subsearch_mode: "dropdown" } }],
+        },
+      }}
+    />,
+  );
+  await userEvent.click(await screen.findByRole("combobox", { name: "Saved Search" }));
+  await userEvent.click(await screen.findByRole("option", { name: "Members" }));
+  await vi.waitFor(() => {
+    expect(firstColumn()).toMatchObject({
+      label: "Members",
+      subsearch: {
+        search: "Members",
+        display: "Members_table",
+        filters: [{ subsearch_field: "id", parent_field: "id" }],
+      },
+    });
+  });
+  window.CRM.vars = { ...window.CRM.vars, afreactAdmin: {} };
+});
+
+it("keeps a new display's identity through its first setup and every edit", async () => {
+  const fresh = newDisplay({ label: "New", type: "table", settings: {} });
+  const set = initialized(ctx, fresh);
+  expect(set).not.toBe(fresh);
+  expect(set[DISPLAY_KEY]).toBe(fresh[DISPLAY_KEY]);
+  renderWithQuery(<Harness initial={fresh} />);
+  await retype(/^Name/, "Renamed");
+  expect(latest?.label).toBe("Renamed");
+  expect(latest?.[DISPLAY_KEY]).toBe(fresh[DISPLAY_KEY]);
+});

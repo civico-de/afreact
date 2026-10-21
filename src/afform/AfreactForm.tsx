@@ -353,7 +353,8 @@ export function AfreactForm({
   options,
   pageTitle = false,
 }: AfreactFormProps) {
-  const { search, hash } = location;
+  // The address the form loaded with; LoadedForm follows later hash changes itself.
+  const [{ search, hash }] = useState(() => ({ search: location.search, hash: location.hash }));
   const client = useQueryClient();
   const queryKey = ["Afreact", "form", name, source, search, hash, options];
   const loaded = useQuery({
@@ -562,6 +563,14 @@ function LoadedForm(props: LoadedFormProps) {
   });
   const snapshot = useMemo(() => JSON.stringify([data, fileChanges]), [data, fileChanges]);
   const [draftSaved, setDraftSaved] = useState(() => JSON.stringify([initial, 0]));
+  // deviation:draft-pristine-label
+  // Until the user changes something, what the form fills in by itself is part of the untouched form.
+  const [touched, setTouched] = useState(false);
+  const touch = () => {
+    if (touched) return;
+    setTouched(true);
+    setDraftSaved(snapshot);
+  };
   /** The form as a draft failed to save it; autosave waits for a further change. */
   const [draftFailed, setDraftFailed] = useState<string | null>(null);
   const draft = useMutation({
@@ -633,6 +642,7 @@ function LoadedForm(props: LoadedFormProps) {
       retry: retry?.retry ?? null,
       changed: () => {
         setFileChanges((count) => count + 1);
+        setTouched(true);
       },
     }),
     [uploads, restoredFiles, retry],
@@ -650,7 +660,7 @@ function LoadedForm(props: LoadedFormProps) {
   const conditional = useConditionalChanges(host, data, ts);
   const [labels, setLabels] = useState<string[]>([]);
   // deviation:draft-pristine-label
-  const changed = snapshot !== draftSaved;
+  const changed = touched && snapshot !== draftSaved;
   const draftStatus: DraftStatus = draft.isPending
     ? "saving"
     : changed
@@ -681,6 +691,7 @@ function LoadedForm(props: LoadedFormProps) {
     data,
     update: setData,
     edit: (change) => {
+      touch();
       setData(change);
       setEdits((count) => count + 1);
     },

@@ -168,6 +168,21 @@ test.each(["1.5", "-1"])("a quantity of %s is reported invalid and kept as typed
   expect(box).not.toHaveAttribute("aria-invalid");
 });
 
+test("a quantity the caller empties shows an empty box, not the number last typed", async () => {
+  const props = {
+    id: "n",
+    operatorLabel: "How many",
+    numberLabel: "Number of records",
+    onChange: vi.fn<(value: Quantity) => void>(),
+  };
+  const { rerender } = render(<QuantityInput {...props} value={{ op: ">=", n: null }} />);
+  const box = screen.getByRole("spinbutton", { name: "Number of records" });
+  await userEvent.type(box, "5");
+  rerender(<QuantityInput {...props} value={{ op: ">=", n: 5 }} />);
+  rerender(<QuantityInput {...props} value={{ op: ">=", n: null }} />);
+  expect(box).toHaveValue(null);
+});
+
 test("an invalid quantity marks both inputs and points at the error", () => {
   render(<QuantityHarness initial={{ op: "<=", n: null }} invalid hiddenLabel />);
   for (const input of [

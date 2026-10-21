@@ -446,6 +446,12 @@ export function DefaultItems({ api }: { api: FieldApi }) {
   );
 }
 
+/** A filter on its first field as written, suffix such as `:name` included, and `others`. */
+// deviation:multi-field-keeps-suffix
+export function combinedName(name: string | undefined, others: string[]): string {
+  return [(name ?? "").split(",")[0] ?? "", ...others].join(",");
+}
+
 function SearchItems({ api }: { api: FieldApi }) {
   const operatorId = useId();
   const defaultId = useId();
@@ -498,7 +504,8 @@ function SearchItems({ api }: { api: FieldApi }) {
         title={ts("Filter search results based on multiple fields")}
         onClick={() => {
           setCombining(!multiField);
-          if (multiField) ops.edit((node) => ({ ...node, name: state.fieldName }));
+          if (multiField)
+            ops.edit((node) => ({ ...node, name: combinedName(textAttribute(node, "name"), []) }));
         }}
       >
         {ts("Combine multiple fields")}
@@ -517,8 +524,9 @@ function SearchItems({ api }: { api: FieldApi }) {
               value={others}
               onChange={(pick) => {
                 ops.edit((node) => {
-                  const current = (textAttribute(node, "name") ?? "").split(",").slice(1);
-                  return { ...node, name: [state.fieldName, ...pick(current)].join(",") };
+                  const given = textAttribute(node, "name");
+                  const current = (given ?? "").split(",").slice(1);
+                  return { ...node, name: combinedName(given, pick(current).map(String)) };
                 });
               }}
             />
