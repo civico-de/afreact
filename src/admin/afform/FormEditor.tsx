@@ -406,14 +406,6 @@ function Editor({
     setSaveAsked((count) => count + 1);
   };
 
-  const doSave = useEffectEvent(async () => {
-    try {
-      await saveChecked();
-    } finally {
-      busy.current = false;
-    }
-  });
-
   // Runs after the panels got the form as it is sent.
   const saveChecked = async () => {
     const target = root.current ?? document;
@@ -465,6 +457,11 @@ function Editor({
         setSaving(false);
       });
   };
+  const doSave = useEffectEvent(() =>
+    saveChecked().finally(() => {
+      busy.current = false;
+    }),
+  );
   useEffect(() => {
     if (saveAsked) void doSave();
   }, [saveAsked]);

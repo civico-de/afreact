@@ -142,13 +142,14 @@ export function SortableRow({ rowKey, children }: { rowKey: RowKey; children: Re
 export function DragHandle({ label, tree = false }: { label: string; tree?: boolean }) {
   const sortable = useContext(SortableHandle);
   if (!sortable) throw new Error("DragHandle must be placed inside a SortableRow or TreeItem.");
+  const { setActivatorNodeRef, attributes, listeners } = sortable;
   return (
     <span
-      ref={sortable.setActivatorNodeRef}
+      ref={setActivatorNodeRef}
       className={tree ? "crm-draggable crm-inline-block" : "crm-draggable"}
       title={ts("Drag to reposition")}
-      {...sortable.attributes}
-      {...sortable.listeners}
+      {...attributes}
+      {...listeners}
       aria-label={label}
     >
       <i className={tree ? "crm-i fa-arrows" : "crm-i fa-arrows-v"} role="img" aria-hidden="true" />

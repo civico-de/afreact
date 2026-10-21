@@ -240,21 +240,7 @@ export function useFollowButton(
     const anchor = button.current;
     const following = open && list && anchor ? window : null;
     const place = () => {
-      if (!list || !anchor) return;
-      const box = anchor.getBoundingClientRect();
-      const height = document.documentElement.clientHeight;
-      // deviation:actions-menu-in-viewport
-      // A long menu scrolls within the viewport; one that fits better above its button goes there.
-      const below = height - box.bottom - 8;
-      const above = box.top - 8;
-      const flip = list.scrollHeight > below && above > below;
-      list.style.top = flip ? "auto" : `${String(box.bottom)}px`;
-      list.style.bottom = flip ? `${String(height - box.top)}px` : "auto";
-      list.style.maxHeight = `${String(Math.max(flip ? above : below, 0))}px`;
-      list.style.left = alignRight ? "auto" : `${String(box.left)}px`;
-      list.style.right = alignRight
-        ? `${String(document.documentElement.clientWidth - box.right)}px`
-        : "auto";
+      if (list && anchor) placeMenu(list, anchor, alignRight);
     };
     if (following) place();
     following?.addEventListener("scroll", place, true);
@@ -264,4 +250,21 @@ export function useFollowButton(
       following?.removeEventListener("resize", place);
     };
   }, [open, alignRight, menu, button]);
+}
+
+function placeMenu(list: HTMLElement, anchor: HTMLElement, alignRight: boolean) {
+  const box = anchor.getBoundingClientRect();
+  const height = document.documentElement.clientHeight;
+  // deviation:actions-menu-in-viewport
+  // A long menu scrolls within the viewport; one that fits better above its button goes there.
+  const below = height - box.bottom - 8;
+  const above = box.top - 8;
+  const flip = list.scrollHeight > below && above > below;
+  list.style.top = flip ? "auto" : `${String(box.bottom)}px`;
+  list.style.bottom = flip ? `${String(height - box.top)}px` : "auto";
+  list.style.maxHeight = `${String(Math.max(flip ? above : below, 0))}px`;
+  list.style.left = alignRight ? "auto" : `${String(box.left)}px`;
+  list.style.right = alignRight
+    ? `${String(document.documentElement.clientWidth - box.right)}px`
+    : "auto";
 }

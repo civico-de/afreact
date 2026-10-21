@@ -261,6 +261,12 @@ function PageNav({ node, names, selected, select, panelIds, submit }: PageNavPro
   );
 }
 
+/** Each child's place among the tabs, undefined for a child that is no tab. */
+function tabPositions(node: ElementNode, children: LayoutNode[]): (number | undefined)[] {
+  let position = 0;
+  return children.map((child) => (isTabOf(node, child) ? position++ : undefined));
+}
+
 /** af-tabset or a crm-ui-tab-set element, by the tag of `node`. */
 export function Tabset({ node, formName, expressions, nodes, element, submit }: TabsetProps) {
   const ui = node["#tag"] !== "af-tabset";
@@ -331,10 +337,11 @@ export function Tabset({ node, formName, expressions, nodes, element, submit }: 
     );
   });
 
-  let position = 0;
-  const panels = (node["#children"] ?? []).map((child, key) => {
-    if (!isTabOf(node, child)) return <Fragment key={key}>{nodes([child])}</Fragment>;
-    const index = position++;
+  const children = node["#children"] ?? [];
+  const positions = tabPositions(node, children);
+  const panels = children.map((child, key) => {
+    const index = positions[key];
+    if (index === undefined) return <Fragment key={key}>{nodes([child])}</Fragment>;
     const tab = tabs[index];
     if (!tab) return null;
     const panel = (

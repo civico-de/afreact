@@ -8,7 +8,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { api4, errorMessage } from "../api/civi";
+import { type ApiResult, api4, errorMessage } from "../api/civi";
 import { cellText } from "./cellText";
 import { crmAlert } from "../html";
 import { fetchDownload, saveBlob } from "./download";
@@ -192,17 +192,20 @@ export function useTasks(options: TasksOptions) {
     const run = { gone: new Set<Key>() };
     pendingAll.current = run;
     lastAll.current = run;
-    try {
-      const ids = new Set(await api4<Key>("SearchDisplay", "run", { ...runParams, return: "id" }));
-      const keys = [...ids].filter((key) => !run.gone.has(key));
-      // deviation:select-all-latest-choice
-      if (pendingAll.current === run) select({ keys, all: keys.length === ids.size });
-    } catch (error) {
-      // deviation:bulk-select-all-error
-      if (pendingAll.current === run) setFailure(error);
-    } finally {
-      if (lastAll.current === run) setLoadingAll(false);
-    }
+    await api4<Key>("SearchDisplay", "run", { ...runParams, return: "id" })
+      .then((found) => {
+        const ids = new Set(found);
+        const keys = [...ids].filter((key) => !run.gone.has(key));
+        // deviation:select-all-latest-choice
+        if (pendingAll.current === run) select({ keys, all: keys.length === ids.size });
+      })
+      .catch((error: unknown) => {
+        // deviation:bulk-select-all-error
+        if (pendingAll.current === run) setFailure(error);
+      })
+      .finally(() => {
+        if (lastAll.current === run) setLoadingAll(false);
+      });
   };
   const toggleAll = () => {
     if (selection.keys.length) select(NO_SELECTION);
@@ -317,25 +320,10 @@ export function useTasks(options: TasksOptions) {
   };
 
   const state = selectionState(selection);
-  const selectAllMenu = [
-    ...(rowCount !== null && rowCount > pageKeys.length
-      ? [{ link: { text: ts("All") }, run: () => void selectAllPages() }]
-      : []),
-    {
-      link: {
-        text: rowCount !== null && rowCount > pageKeys.length ? ts("This Page") : ts("All"),
-      },
-      run: () => {
-        select(selectPage(pageKeys, rowCount));
-      },
-    },
-    {
-      link: { text: ts("None") },
-      run: () => {
-        select(NO_SELECTION);
-      },
-    },
-  ];
+  const allPages = rowCount !== null && rowCount > pageKeys.length;
+  const allLink = { text: ts("All") };
+  const pageLink = { text: allPages ? ts("This Page") : ts("All") };
+  const noneLink = { text: ts("None") };
 
   /** crmSearchDisplayTaskHeader.html: select all or none, and the menu for all, page or none. */
   const header: ReactNode = actions && (
@@ -343,10 +331,14 @@ export function useTasks(options: TasksOptions) {
       buttonClass="btn btn-secondary-outline dropdown-toggle"
       label=""
       srLabel={ts("Select All rows or this pages rows")}
-      links={selectAllMenu.map((item) => item.link)}
+      links={allPages ? [allLink, pageLink, noneLink] : [pageLink, noneLink]}
       alignRight={false}
       disabled={loading || !page?.rows.length}
-      onLinkClick={(link) => selectAllMenu.find((item) => item.link === link)?.run()}
+      onLinkClick={(link) => {
+        if (link === allLink) void selectAllPages();
+        else if (link === pageLink) select(selectPage(pageKeys, rowCount));
+        else select(NO_SELECTION);
+      }}
       prefix={
         <button
           type="button"
@@ -617,6 +609,15 @@ export function rowName(row: Row): string {
   return text.trim() || String(row.key);
 }
 
+/** A batch's fetched count; failed items or a missing count fail the run. */
+function countFetched(result: ApiResult<unknown>, call: string): number {
+  // deviation:bulk-item-errors-fail
+  if (result.is_blocking_error)
+    throw new Error([...new Set(result.errors?.map((error) => error.message))].join(" "));
+  if (result.countFetched === undefined) throw new Error(`${call} answered without countFetched.`);
+  return result.countFetched;
+}
+
 interface TaskDialogProps {
   running: Running & { apiBatch: ApiBatch };
   entity: TaskList["entityInfo"];
@@ -679,12 +680,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
           : batchCall(apiBatch, entity, ids.slice(range.first, range.last));
         ran = true;
         const result = await api4(callEntity, action, params);
-        // deviation:bulk-item-errors-fail
-        if (result.is_blocking_error)
-          throw new Error([...new Set(result.errors?.map((error) => error.message))].join(" "));
-        if (result.countFetched === undefined)
-          throw new Error(`${callEntity}.${action} answered without countFetched.`);
-        fetched += result.countFetched;
+        fetched += countFetched(result, `${callEntity}.${action}`);
         matched += result.countMatched ?? result.count ?? 0;
         rows.push(...result.filter(isRecord));
       }

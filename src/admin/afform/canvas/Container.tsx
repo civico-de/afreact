@@ -154,11 +154,11 @@ function CanvasElement({
   const editor = useEditor();
   const render = useRenderElement();
   const label = elementLabel(editor, scope, node, type);
-  const item = useCanvasItem(path, node, scope, label, shown);
-  const classes = [item.dropClass, item.dragClass].filter(Boolean);
+  const { setNode, handle, dropClass, dragClass } = useCanvasItem(path, node, scope, label, shown);
+  const classes = [dropClass, dragClass].filter(Boolean);
   return (
-    <div ref={item.ref} className={classes.join(" ") || undefined}>
-      {render(type, { path, node, scope, handle: item.handle, label })}
+    <div ref={setNode} className={classes.join(" ") || undefined}>
+      {render(type, { path, node, scope, handle, label })}
     </div>
   );
 }
@@ -179,13 +179,13 @@ export function CanvasBody({
   const editor = useEditor();
   const types = nodes.map((child) => (isElement(child) ? nodeType(child, editor.meta) : null));
   const shown = types.flatMap((type, index) => (type ? [index] : []));
-  const body = useCanvasBody(scope, nodes.length, shown);
+  const { setNode, dropClass } = useCanvasBody(scope, nodes.length, shown);
   useEffect(() => {
-    onDropClass?.(body.dropClass);
-  }, [onDropClass, body.dropClass]);
+    onDropClass?.(dropClass);
+  }, [onDropClass, dropClass]);
   return (
     <ScopeContext value={scope}>
-      <div ref={body.ref} ui-sortable="" className={`af-gui-layout ${layout}`}>
+      <div ref={setNode} ui-sortable="" className={`af-gui-layout ${layout}`}>
         {nodes.map((child, index) => {
           const type = types[index];
           // Core's wrapper stays for what the canvas does not show, such as af-entity.

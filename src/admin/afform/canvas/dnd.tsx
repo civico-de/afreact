@@ -379,7 +379,7 @@ export function useCanvasItem(
   const drop = useDroppable({ id, data: target });
   const state = useContext(DropContext);
   return {
-    ref: (element: HTMLElement | null) => {
+    setNode: (element: HTMLElement | null) => {
       drag.setNodeRef(element);
       drop.setNodeRef(element);
     },
@@ -409,7 +409,7 @@ export function useCanvasBody(scope: ContainerScope, count: number, shown: numbe
   });
   const state = useContext(DropContext);
   return {
-    ref: drop.setNodeRef,
+    setNode: drop.setNodeRef,
     dropClass:
       state.mark === id
         ? state.how === "refused"
@@ -432,7 +432,7 @@ export function usePaletteItem(
     attributes: { roleDescription: ts("draggable element") },
   });
   return {
-    ref: drag.setNodeRef,
+    setNode: drag.setNodeRef,
     props: { ...drag.attributes, ...drag.listeners },
     dragging: drag.isDragging,
   };

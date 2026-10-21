@@ -81,13 +81,13 @@ function useWrite() {
   const run = async (write: () => Promise<void>) => {
     setPending(true);
     setError(null);
-    try {
-      await write();
-    } catch (failure) {
-      setError(failure);
-    } finally {
-      setPending(false);
-    }
+    await write()
+      .catch((failure: unknown) => {
+        setError(failure);
+      })
+      .finally(() => {
+        setPending(false);
+      });
   };
   return { pending, error, run };
 }

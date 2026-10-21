@@ -263,8 +263,8 @@ function ListingTab({ tab }: { tab: SearchTab }) {
   const rowCount = listing.data?.countMatched ?? 0;
 
   const loadForms = () => {
-    if (!afformEnabled) return;
-    formsLoad.current ??= loadEmbeddingForms().then(
+    if (!afformEnabled || formsLoad.current) return;
+    formsLoad.current = loadEmbeddingForms().then(
       (loaded) => {
         setForms(loaded);
         return loaded;

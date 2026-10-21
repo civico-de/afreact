@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { type RefObject, useEffect, useEffectEvent, useRef, useState } from "react";
 import { angularOf, asError, call, destroyIsland, islandModule } from "../../../angular/island";
 import { useDebugFacts } from "../../../debug/debug";
 import { foreignModules } from "../../foreign";
@@ -67,6 +67,39 @@ interface AngularIslandProps {
  * Another extension's Angular display editor, booted on its own element with stand-ins for the
  * controllers it requires; rebuilt when the search's columns change, as it reads them once.
  */
+interface LiveHeader {
+  name: string | undefined;
+  viewable: boolean;
+  path: string;
+}
+
+/** The parent controller core's editors require; its getters follow the header through saves. */
+function displayController(typeInfo: unknown, live: RefObject<LiveHeader>) {
+  return {
+    displayType: typeInfo,
+    savedSearch: {
+      get name() {
+        return live.current.name;
+      },
+    },
+    isSuperAdmin: window.CRM.checkPerm("all CiviCRM permissions and ACLs"),
+    aclBypassHelp: ts(
+      'Only users with "all CiviCRM permissions and ACLs" can disable permission checks.',
+    ),
+    crmSearchAdmin: {
+      displayIsViewable: () => live.current.viewable,
+      get searchDisplayPath() {
+        return live.current.path;
+      },
+    },
+  };
+}
+
+function requireEditor(injector: unknown, type: string) {
+  if (call(injector, "has", `${directiveName(editorTag(type))}Directive`) !== true)
+    throw new Error(`No Angular editor for the ${type} display type.`);
+}
+
 export function AngularIsland(props: AngularIslandProps) {
   const { type, display, search, onChange } = props;
   useDebugFacts({ [ts("Angular islands")]: [editorTag(type)] });
@@ -102,7 +135,7 @@ export function AngularIsland(props: AngularIslandProps) {
     typeInfo: props.typeInfo,
   }));
   // What core's display header reads on every digest, which a save changes.
-  const live = useRef({
+  const live = useRef<LiveHeader>({
     name: search.name,
     viewable: props.viewable,
     path: props.searchDisplayPath,
@@ -124,24 +157,12 @@ export function AngularIsland(props: AngularIslandProps) {
     try {
       const element = call(ng, "element", root);
       call(
-        call(element, "data", "$crmSearchAdminDisplayController", {
-          displayType: start.typeInfo,
-          savedSearch: {
-            get name() {
-              return live.current.name;
-            },
-          },
-          isSuperAdmin: window.CRM.checkPerm("all CiviCRM permissions and ACLs"),
-          aclBypassHelp: ts(
-            'Only users with "all CiviCRM permissions and ACLs" can disable permission checks.',
-          ),
-          crmSearchAdmin: {
-            displayIsViewable: () => live.current.viewable,
-            get searchDisplayPath() {
-              return live.current.path;
-            },
-          },
-        }),
+        call(
+          element,
+          "data",
+          "$crmSearchAdminDisplayController",
+          displayController(start.typeInfo, live),
+        ),
         "data",
         "$crmSearchAdminController",
         {},
@@ -149,8 +170,7 @@ export function AngularIsland(props: AngularIslandProps) {
       // A dotted name no extension module takes, as redefining a module replaces it.
       const module = islandModule(ng, "afreact.islandHost", foreignModules());
       const injector = call(ng, "bootstrap", root, [module]);
-      if (call(injector, "has", `${directiveName(editorTag(type))}Directive`) !== true)
-        throw new Error(`No Angular editor for the ${type} display type.`);
+      requireEditor(injector, type);
       rootScope = call(injector, "get", "$rootScope");
       const link = () => {
         const child = call(rootScope, "$new");

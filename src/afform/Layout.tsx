@@ -531,6 +531,19 @@ export interface AutofillRun {
   landed?: () => void;
 }
 
+declare module "react" {
+  namespace JSX {
+    interface IntrinsicElements {
+      "af-field": DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & { name?: string };
+    }
+  }
+}
+
+/** Points removed pending selections back at the places their item returns to. */
+function returnRuns(runs: Removal["runs"]) {
+  for (const [, run, place] of runs) run.scope = place;
+}
+
 /** af-repeat in afRepeat.html's markup: one copy of the children per item, with add/copy/remove inside the min/max bounds. */
 function Repeat({ node, scope, itemScope, count }: RepeatProps) {
   const form = useForm();
@@ -633,7 +646,7 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
             for (const [owner, filled] of removal.autofilled) form.autofilled.set(owner, filled);
             // The item's own pending selections come back with it, and land if answered meanwhile.
             const back = removal.runs.filter(([owner]) => !form.autofillRuns.has(owner));
-            for (const [, run, place] of removal.runs) run.scope = place;
+            returnRuns(removal.runs);
             for (const [owner, run] of back) form.autofillRuns.set(owner, run);
             restoreKeys(removal.keys);
             setRestored({ key: removal.key });
@@ -863,44 +876,43 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
     form.entities[scope.entity]?.actions[autofill] === false;
   const primary = name === "is_primary" && scope.repeated;
   const primaryNote = primary ? templateNote(defn) : null;
-  return createElement(
-    "af-field",
-    {
-      ref: element,
+  return (
+    <af-field
+      ref={element}
       // An extra field's element has no name attribute, as in the form's own markup.
-      name: node.name ? name : undefined,
-      className:
-        `${primary ? "af-field-type-radio" : fieldClasses(defn)} ${typeof node.class === "string" ? node.class : ""}`.trim(),
-    },
-    unknown.length > 0 && <Unsupported what={fieldAttributesNote(unknown, name)} />,
-    primaryNote !== null && <Unsupported what={primaryNote} />,
-    primary ? (
-      primaryNote === null && (
-        <PrimaryField
-          label={typeof defn.label === "string" && defn.label !== "" ? defn.label : ts("Primary")}
-          group={`${form.formName}-${scope.entity}-${scope.index}-${scope.join ?? ""}`}
-          checked={value === true}
-          disabled={form.disabled || fieldDisabled}
-          onSelect={() => {
-            form.edit((data) => setPrimary(data, scope));
-          }}
-          onClear={() => {
-            form.edit((data) => ensurePrimary(setValue(data, scope, name, null), scope));
-          }}
-        />
-      )
-    ) : (
-      <FieldEnvContext.Provider value={fieldEnv(form, scope, name, autofill, itemPath)}>
-        <Field
-          defn={defn}
-          value={value}
-          disabled={form.disabled || readonly || fieldDisabled}
-          onChange={(next) => {
-            form.edit((data) => setValue(data, scope, name, next));
-          }}
-        />
-      </FieldEnvContext.Provider>
-    ),
+      name={node.name ? name : undefined}
+      className={`${primary ? "af-field-type-radio" : fieldClasses(defn)} ${typeof node.class === "string" ? node.class : ""}`.trim()}
+    >
+      {unknown.length > 0 && <Unsupported what={fieldAttributesNote(unknown, name)} />}
+      {primaryNote !== null && <Unsupported what={primaryNote} />}
+      {primary ? (
+        primaryNote === null && (
+          <PrimaryField
+            label={typeof defn.label === "string" && defn.label !== "" ? defn.label : ts("Primary")}
+            group={`${form.formName}-${scope.entity}-${scope.index}-${scope.join ?? ""}`}
+            checked={value === true}
+            disabled={form.disabled || fieldDisabled}
+            onSelect={() => {
+              form.edit((data) => setPrimary(data, scope));
+            }}
+            onClear={() => {
+              form.edit((data) => ensurePrimary(setValue(data, scope, name, null), scope));
+            }}
+          />
+        )
+      ) : (
+        <FieldEnvContext.Provider value={fieldEnv(form, scope, name, autofill, itemPath)}>
+          <Field
+            defn={defn}
+            value={value}
+            disabled={form.disabled || readonly || fieldDisabled}
+            onChange={(next) => {
+              form.edit((data) => setValue(data, scope, name, next));
+            }}
+          />
+        </FieldEnvContext.Provider>
+      )}
+    </af-field>
   );
 }
 

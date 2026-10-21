@@ -21,6 +21,12 @@ interface CreatedGroup {
   mailing: { id: number };
 }
 
+function createdGroup(groups: CreatedGroup[]): CreatedGroup {
+  const [group] = groups;
+  if (!group) throw new Error("Group.create returned no group.");
+  return group;
+}
+
 /**
  * crmSearchTaskMailing.html: the mailing's name and type, with how many of the selected contacts
  * can receive it; creating makes the hidden group and the mailing here, the contacts join in the
@@ -64,10 +70,9 @@ export function MailingDialog({ task, ids, onCreated, onCancel }: MailingDialogP
     setError(null);
     title.current?.focus();
     try {
-      const [group] = await api4<CreatedGroup>(
-        ...mailingGroupCall({ name, template_type: chosenType }),
+      const group = createdGroup(
+        await api4<CreatedGroup>(...mailingGroupCall({ name, template_type: chosenType })),
       );
-      if (!group) throw new Error("Group.create returned no group.");
       onCreated(group.id, group.mailing.id);
     } catch (cause) {
       // deviation:mailing-group-failure-stays

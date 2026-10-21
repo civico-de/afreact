@@ -13,6 +13,12 @@ interface DropdownProps {
   children: (close: () => void) => ReactNode;
 }
 
+/** Closes the popover and puts the focus back on its button, found by id outside render. */
+function closeMenu(id: string) {
+  document.getElementById(id)?.hidePopover();
+  document.getElementById(`${id}-button`)?.focus();
+}
+
 /**
  * A Bootstrap dropdown holding controls, as a disclosure: a native popover (light dismiss, top
  * layer) that Escape closes with focus back on its button.
@@ -44,14 +50,14 @@ export function Dropdown({
   }, []);
 
   const close = () => {
-    list.current?.hidePopover();
-    button.current?.focus();
+    closeMenu(id);
   };
 
   return (
     <div className={open ? `${groupClass} open` : groupClass}>
       <button
         ref={button}
+        id={`${id}-button`}
         type="button"
         className={buttonClass}
         title={title}

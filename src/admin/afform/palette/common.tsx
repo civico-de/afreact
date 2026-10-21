@@ -35,7 +35,7 @@ function PaletteEntry({
   disabled: boolean;
 }) {
   const target = item.entity === undefined ? entity : item.entity;
-  const drag = usePaletteItem(
+  const { setNode, props, dragging } = usePaletteItem(
     `${target ?? ""}:${item.key}`,
     { kind: "new", node: item.node, entity: target, label: item.title },
     disabled,
@@ -44,9 +44,9 @@ function PaletteEntry({
   return (
     <div className={disabled ? "disabled" : undefined}>
       <div
-        ref={drag.ref}
-        className={`af-gui-palette-item afreact-palette-tile${drag.dragging ? " afreact-dragging" : ""}`}
-        {...drag.props}
+        ref={setNode}
+        className={`af-gui-palette-item afreact-palette-tile${dragging ? " afreact-dragging" : ""}`}
+        {...props}
         aria-disabled={disabled || undefined}
         aria-labelledby={`${id}-title`}
         aria-describedby={`${id}-about`}
