@@ -1,5 +1,12 @@
 # CLAUDE.md — afreact
 
+## Tests per change
+
+The full browser suite takes over 20 minutes. Per change run `tsc`, vitest,
+lint and only the Playwright specs the change touches (`docs/testing.md` maps
+specs to behaviour). The full suite and a full `ck ci` with coverage run only
+before a larger milestone, in the background.
+
 ## Core bugs are not replicated
 
 The React renderer matches core's Angular runtime in behaviour, except where
