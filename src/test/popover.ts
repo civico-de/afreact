@@ -18,6 +18,10 @@ function setOpen(element: HTMLElement, next: boolean) {
   if (open.has(element) === next) return;
   if (next) open.add(element);
   else open.delete(element);
+  // jsdom's UA sheet hides every [popover], as :popover-open never matches there; an inline
+  // display outranks it, so an open popover renders and its controls take focus.
+  if (next) element.style.setProperty("display", "block");
+  else element.style.removeProperty("display");
   element.dispatchEvent(
     new TestToggleEvent("toggle", {
       oldState: next ? "closed" : "open",

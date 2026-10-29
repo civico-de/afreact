@@ -80,7 +80,8 @@ describe("dialog focus on close", () => {
   it("focuses the menu's button when the opener left with its menu", async () => {
     const user = userEvent.setup();
     render(<Harness inMenu />);
-    await user.click(screen.getByRole("button", { name: "Open", hidden: true }));
+    await user.click(screen.getByRole("button", { name: "Menu" }));
+    await user.click(screen.getByRole("button", { name: "Open" }));
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.getByRole("button", { name: "Menu" })).toHaveFocus();
   });
