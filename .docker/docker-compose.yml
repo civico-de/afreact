@@ -91,9 +91,10 @@ services:
     ports:
       - "${CK_MAILDEV_PORT:-1080}:1080"
       - "${CK_SMTP_PORT:-1025}:1025"
-    # The image's own check asks localhost, which resolves to ::1; maildev listens on IPv4 only.
+    # The probe is pinned to IPv4 (MailDev 2.1.0 does not listen on IPv6) and
+    # bypasses any proxy Docker passes in, which would answer 127.0.0.1 itself.
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:1080/healthz"]
+      test: ["CMD", "wget", "-Y", "off", "-q", "-O", "/dev/null", "http://127.0.0.1:1080/healthz"]
       interval: 10s
       timeout: 1s
 
