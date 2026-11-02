@@ -84,9 +84,11 @@ docker compose -f .docker/docker-compose.yml exec -u www-data \
   -w /var/www/html/ext/afreact app ck ci
 ```
 
-CI runs the same gates plus the unit and browser tests, on the floor release
-and the current one (`.github/workflows/ci.yml`); a weekly compat run covers
-every supported minor, the next release branch and core's master.
+CI runs the same gates plus the unit tests on every push, on the floor release
+and the current one (`.github/workflows/ci.yml`). The browser suite runs daily
+on both, skipping a commit it already tested, and on demand
+(`.github/workflows/browser.yml`); a weekly compat run covers every supported
+minor, the next release branch and core's master.
 
 ### Browser and video tests
 

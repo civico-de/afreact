@@ -420,9 +420,11 @@ before core ships it.
 - **Test runs.** civikitchen publishes the newest patch of each minor it
   builds as `:standalone-<minor>`, rebuilt daily, and keeps each patch
   release it built under a frozen tag of its own (`:standalone-6.19.0`).
-  Every push runs the unit, PHPUnit and browser suites, the parity tests
-  included, on the newest release (`:standalone`) and, as a `matrix_images`
-  leg, on the floor itself (`:standalone-6.19.0`). A weekly run, and the
+  Every push runs the unit and PHPUnit suites on the newest release
+  (`:standalone`) and, as a `matrix_images` leg, on the floor itself
+  (`:standalone-6.19.0`). The browser suite, the parity tests included, runs
+  on both once a day for a main commit it has not tested yet, and by hand.
+  A weekly run, and the
   same run started by hand on the commit a release is tagged from, adds a
   leg for every supported minor at its newest patch, for the release before
   each patch boundary a version check names, so that both sides of the
@@ -433,7 +435,7 @@ before core ships it.
   branch it ships from, which can differ from master. A backport can reach
   a patch release within days (6.18.1 carried a FormBuilder fix that had
   landed on master the day before); the minor's image moves to the new patch
-  within a day, and the next push or weekly run tests it.
+  within a day, and the next push, daily or weekly run tests it.
 - **Earlier patches** of a minor run only where a version check splits the
   minor. In the patch releases of 6.9 to 6.18, 14 commits reached the
   builder paths, between none and four per minor; core-watch lists each one

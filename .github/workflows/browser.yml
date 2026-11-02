@@ -1,0 +1,50 @@
+# Daily and on demand: the browser suite on main, on the default image and the
+# info.xml floor. A scheduled run skips a commit that already finished a run.
+name: Browser
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changed:
+    runs-on: ${{ vars.CK_RUNS_ON || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          run=true
+          if [ "$EVENT" = schedule ]; then
+            finished=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/browser.yml/runs?head_sha=$GITHUB_SHA&status=completed" \
+              --jq '[.workflow_runs[] | select(.conclusion == "success" or .conclusion == "failure")] | length')
+            if [ "$finished" != 0 ]; then
+              run=false
+              echo "::notice::$GITHUB_SHA already finished a browser run; skipping."
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+  browser:
+    needs: changed
+    if: ${{ needs.changed.outputs.run == 'true' }}
+    uses: civico-de/civikitchen/.github/workflows/extension-ci.yml@v1
+    with:
+      bun: true
+      js_tests: true
+      playwright: true
+      matrix_playwright: true
+      # The arm64 runners take about 40 minutes per leg; the x64 ones four times that.
+      runs_on: civico-ci-arm64
+      matrix_images: ghcr.io/civico-de/civikitchen:standalone-6.19.0
