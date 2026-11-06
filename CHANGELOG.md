@@ -20,6 +20,8 @@ All notable changes to this extension are documented in this file. The format fo
   images and HTML from the rich content editor are drawn in layouts.
 - Tokens of joined records are filled and offered in the editor on CiviCRM 6.21 and later.
 - A per-viewer debug mode shows the links to core's screens.
+- `civi.afreact.assets` dispatches `Civi\Afreact\AssetsEvent`, which documents its `builder`,
+  `panels` and `replaces` properties for listeners and static analysis.
 
 ### Changed
 

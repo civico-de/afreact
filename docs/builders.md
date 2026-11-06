@@ -207,13 +207,13 @@ core's newer pieces: chart_kit's `civi-search-display-chart-kit` on the
 `CiviSearchDisplay` base, afform's `af-markup` and `af-token`.
 
 Wherever afreact loads its bundle, it dispatches `civi.afreact.assets` (a
-`GenericHookEvent` whose `builder` is `search_kit` or `afform` on a builder
-page and empty elsewhere). A plugin adds its scripts and styles with
-`Civi::resources()`, and on a builder page its panels by element name. A
-renderer loads heavy libraries itself when it first connects, as React loads
-chart_kit's d3 only when a chart draws. React looks an element up with
-`customElements.get()`; where none is defined, the fallback above applies,
-and at runtime the form stays unsupported as today.
+`Civi\Afreact\AssetsEvent`, a `GenericHookEvent` whose `builder` is
+`search_kit` or `afform` on a builder page and empty elsewhere). A plugin
+adds its scripts and styles with `Civi::resources()`, and on a builder page
+its panels by element name. A renderer loads heavy libraries itself when it
+first connects, as React loads chart_kit's d3 only when a chart draws. React
+looks an element up with `customElements.get()`; where none is defined, the
+fallback above applies, and at runtime the form stays unsupported as today.
 
 | Extension point | Core's Angular hook | Custom element | Receives | Sends |
 |---|---|---|---|---|

@@ -8,7 +8,6 @@ use Civi\Api4\Afform;
 use Civi\Api4\Afreact;
 use Civi\API\Exception\UnauthorizedException;
 use Civi\Core\AssetBuilder;
-use Civi\Core\Event\GenericHookEvent;
 use CRM_Afreact_ExtensionUtil as E;
 
 /**
@@ -66,7 +65,7 @@ final class Assets {
       \Civi::$statics[$dispatched] = TRUE;
       $panels = [];
       $replaces = [];
-      \Civi::dispatcher()->dispatch('civi.afreact.assets', GenericHookEvent::create([
+      \Civi::dispatcher()->dispatch(AssetsEvent::NAME, AssetsEvent::create([
         'builder' => $builder,
         'panels' => &$panels,
         'replaces' => &$replaces,

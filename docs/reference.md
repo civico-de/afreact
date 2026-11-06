@@ -212,7 +212,7 @@ Other extensions add builder panels and declare what they replace in the
 adds a working panel):
 
 ```php
-\Civi::dispatcher()->addListener('civi.afreact.assets', function ($event) {
+\Civi::dispatcher()->addListener('civi.afreact.assets', function (\Civi\Afreact\AssetsEvent $event) {
   if ($event->builder === 'search_kit') {   // or 'afform'
     $event->panels[] = 'my-panel';           // custom element, gets `record`
     $event->replaces[] = 'myBuilderModule';  // or a ChangeSet name
@@ -252,7 +252,7 @@ bundle, and `civicrm/afreact/kit-host` loads that page as a snippet.
 |---|---|
 | `Civi/Api4/Afreact.php`, `Civi/Api4/Action/Afreact/` | `Afreact.getForm` and `Afreact.getTaskSettings` |
 | `Civi/Afreact/LayoutCompiler.php`, `Afforms.php` | Afform partial → layout array, blocks inlined; shared cache and typed records |
-| `Civi/Afreact/Assets.php`, `AttributeSchema.php`, `Checkout.php`, `AngularAssets.php` | bundle loading, the `civi.afreact.assets` event, the layouts handed to the page, the checkout settings and islands |
+| `Civi/Afreact/Assets.php`, `AssetsEvent.php`, `AttributeSchema.php`, `Checkout.php`, `AngularAssets.php` | bundle loading, the `civi.afreact.assets` event, the layouts handed to the page, the checkout settings and islands |
 | `Civi/Afreact/Takeover.php`, `FormPage.php`, `Placements.php`, `PlacedSnippets.php`, `Dashlets.php` | the `afreact_forms` takeover per placement |
 | `Civi/Afreact/AdminPage.php`, `Builders.php`, `BuilderRoutes.php`, `BuilderPanels.php`, `BuilderReport.php` | builder pages, takeover, plugin panels, report findings |
 | `Civi/Afreact/RenderPage.php`, `SupportPage.php`, `Chrome.php`, `xml/Menu/afreact.xml` | render and support routes and their shared chrome |

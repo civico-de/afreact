@@ -127,7 +127,8 @@ class BuildersHeadlessTest extends TestCase implements HeadlessInterface {
   public function testBuilderPageDispatchesTheAssetsEvent(): void {
     unset(\Civi::$statics[Assets::class . '::dispatched:search_kit']);
     $seen = [];
-    $listener = static function ($e) use (&$seen): void {
+    $listener = static function (object $e) use (&$seen): void {
+      self::assertInstanceOf(AssetsEvent::class, $e);
       $seen[] = $e->builder;
     };
     \Civi::dispatcher()->addListener('civi.afreact.assets', $listener);

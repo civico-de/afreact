@@ -11,7 +11,7 @@ function afreactisland_civicrm_config(): void {
     return;
   }
   \Civi::$statics[__FUNCTION__] = TRUE;
-  \Civi::dispatcher()->addListener('civi.afreact.assets', static function ($event): void {
+  \Civi::dispatcher()->addListener('civi.afreact.assets', static function (\Civi\Afreact\AssetsEvent $event): void {
     if ($event->builder === 'search_kit') {
       $event->panels[] = 'afreact-island-panel';
       \Civi::resources()->addScriptFile('afreactisland', 'js/panel.js');
