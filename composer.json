@@ -1,6 +1,5 @@
 {
     "name": "civico/afreact",
-    "description": "React renderer for FormBuilder (Afform) forms and SearchKit tables, beside core's Angular runtime.",
     "type": "civicrm-ext",
     "license": "proprietary",
     "require": {
