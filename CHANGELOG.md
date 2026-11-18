@@ -6,6 +6,8 @@ All notable changes to this extension are documented in this file. The format fo
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-18
+
 ### Added
 
 - React editors for SearchKit and FormBuilder, with the SearchKit listing (segments, tags,
@@ -48,5 +50,6 @@ All notable changes to this extension are documented in this file. The format fo
   the renderer cannot draw in it, and a form notes any part it cannot draw instead of dropping it.
 - Markup and classes follow core's Angular templates, so the CiviCRM theme styles both alike.
 
-[Unreleased]: https://github.com/civico-de/afreact/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/civico-de/afreact/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/civico-de/afreact/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/civico-de/afreact/releases/tag/v0.1.0
