@@ -38,9 +38,7 @@ dashlets stays Angular (see below).
   fieldset writes its own prefixed key, even where a second fieldset read it
   too. A form in a popup reads the dialog's own `urlHash`, as `afCore` does,
   and keeps its changes in memory. React reads the URL differently from core
-  in three places: `_s` fills the fields the URL leaves out from the saved
-  set, where core up to 6.19.1 loads the set and then resets the fields to
-  their defaults (upstream-bugs.md); an empty value (`is_active=`) means no
+  in two places: an empty value (`is_active=`) means no
   filter, where core reads an empty Yes/No as No; and a value with another
   operator than the field's, or a range, is written as JSON
   (`type={"NOT IN":["1"]}`), which only React reads.
@@ -78,7 +76,7 @@ in core's order:
 | field defaults | `defn.afform_default` | from the layout, synchronous |
 | URL | `#?name=value` via `$location.search()`; in a popup, the dialog's `urlHash` | `URLSearchParams` on `location.hash`, synchronous |
 | stored filters (`store-values`) | `CRM.cache` key `afform:<form><fieldset>` | the same key, synchronous |
-| saved filter set (`#?_s=<id>`) | `SearchParamSet.get`, then a form reset that applies the set's values, which 6.19.1 and older drop again | the display query waits for that request, so one search runs; fields the URL leaves out take the set's values |
+| saved filter set (`#?_s=<id>`) | `SearchParamSet.get`, then a form reset that applies the set's values | the display query waits for that request, so one search runs; fields the URL leaves out take the set's values |
 
 `tests/browser/filters.spec.ts` pins each source against Angular: one search
 request, with the final filters, and no flash of unfiltered rows; stored

@@ -94,8 +94,7 @@ export interface FieldsetState {
 
 /**
  * A number range such as "5-10", "-5-10" or "5-": a leading minus is a sign, an empty or invalid
- * bound is left out. Core splits on every "-" and makes an empty bound 0.
- * deviation:number-range-bounds
+ * bound is left out.
  */
 function numberRange(text: string): Record<string, number> {
   const separator = text.indexOf("-", 1);
@@ -241,7 +240,6 @@ export function applyRoute(
     if (text !== null) {
       next = assignValue(next, field, fromUrl(text, field.defn), context);
     } else if (params.get("_s")) {
-      // deviation:saved-filter-set-kept
       next = assignValue(next, field, paramSet?.filters?.[field.name] ?? null, context);
       // afFieldset resets the form once the set is known, so a missing one leaves the defaults.
       if (paramSet?.missing) next = initializeValue(next, field, undefined, context);

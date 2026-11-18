@@ -144,10 +144,12 @@ test.describe("saved search picker", () => {
         .selectOption({ label: `${PREFIX} A` });
       await expect(page).toHaveURL(/#\?_s=\d+$/);
       await expect(picker(page).getByRole("button", { name: "Clear saved search" })).toBeVisible();
+      await expect(page.locator('.afreact-render af-field[name="title"] input')).toHaveValue(
+        "Alpha",
+      );
     }
-    // Core up to 6.19.1 then resets the fields to their defaults (upstream-bugs.md); React
-    // keeps the set's.
-    await expect(page.locator('.afreact-render af-field[name="title"] input')).toHaveValue("Alpha");
+    // Core offers "Save changes" for the unchanged set, its columns `null` against `{}`
+    // (upstream-bugs.md); React does not. deviation:param-set-unchanged-compare
     await expect(picker(page).getByRole("button", { name: "Save changes" })).toHaveCount(0);
     await page.locator('.afreact-render af-field[name="title"] input').fill("Alphabet");
     await expect(picker(page).getByRole("button", { name: "Save changes" })).toBeVisible();

@@ -611,7 +611,6 @@ export function rowName(row: Row): string {
 
 /** A batch's fetched count; failed items or a missing count fail the run. */
 function countFetched(result: ApiResult<unknown>, call: string): number {
-  // deviation:bulk-item-errors-fail
   if (result.is_blocking_error)
     throw new Error([...new Set(result.errors?.map((error) => error.message))].join(" "));
   if (result.countFetched === undefined) throw new Error(`${call} answered without countFetched.`);

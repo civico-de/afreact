@@ -134,7 +134,6 @@ describe("assignValue", () => {
     expect(assignValue(empty, dateOnly, "now", { now }).values).toEqual({ created: "2026-01-30" });
   });
 
-  // deviation:number-range-bounds
   it("reads a range as its bounds", () => {
     const count = field("count", {
       input_type: "Number",

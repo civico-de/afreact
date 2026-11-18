@@ -98,7 +98,6 @@ export function SearchRange({ id, labelId, defn, value, onChange, disabled }: Se
       </span>
     ));
   }
-  // deviation:date-range-bound-type
   if (defn.input_type === "Date") {
     return pair((bound) => (
       <DateBound

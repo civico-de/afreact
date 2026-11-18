@@ -151,7 +151,6 @@ describe("search ranges", () => {
     },
   );
 
-  // deviation:date-range-bound-type
   it("shows both bounds of a date field without time as date inputs", async () => {
     const { lastRun } = renderSearch([
       field("birth_date", {

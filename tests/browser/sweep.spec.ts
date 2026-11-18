@@ -263,9 +263,6 @@ function observe(scope: string): Observed {
     .filter((display) => !display.parentElement?.closest(".crm-search-display"))
     .map((display): Display => {
       const table = display.querySelector(":scope > table");
-      // Core up to 6.19 puts a space before the comma of linked lists (upstream-bugs.md,
-      // "A space before the comma in linked lists"); React writes the fixed markup.
-      const cell = (el: Element) => text(el).replace(/\s+,/g, ",");
       if (!table) {
         // List, grid and tree items are rows, their columns cells. Angular's tree items carry no
         // id (comparison.md, "Tree items"), so items are compared by position.
@@ -282,7 +279,7 @@ function observe(scope: string): Observed {
           rows: [...items].map((item) => ({
             id: null,
             cells: [...item.querySelectorAll(":scope > div[class*='crm-search-col-type-']")].map(
-              cell,
+              text,
             ),
           })),
         };
@@ -291,7 +288,7 @@ function observe(scope: string): Observed {
         headers: [...table.querySelectorAll(":scope > thead > tr:first-child > th")].map(text),
         rows: [...table.querySelectorAll(":scope > tbody > tr")].map((tr) => ({
           id: tr.getAttribute("data-entity-id"),
-          cells: [...tr.querySelectorAll(":scope > td")].map(cell),
+          cells: [...tr.querySelectorAll(":scope > td")].map(text),
         })),
       };
     });

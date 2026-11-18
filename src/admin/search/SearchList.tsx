@@ -133,73 +133,83 @@ export function SearchList() {
     },
   ];
   return (
-    <div id="bootstrap-theme" className="crm-search">
+    <div id="bootstrap-theme" className="crm-search crm-search-listing">
       <h1>{ts("SearchKit")}</h1>
-      <div className="crm-search-nav-tabs">
-        <ul role="tablist" className="nav nav-tabs">
-          {all.map((t) => (
-            <TabButton
-              key={t.name}
-              tab={t}
-              active={t.name === tab}
-              onSelect={() => void setTab(t.name === "custom" ? null : t.name)}
-              onKeyDown={onTabKey}
+      <div className="panel panel-default">
+        <div className="panel-heading">
+          {tab === "segment" ? (
+            <Menu
+              buttonClass="btn btn-primary dropdown-toggle"
+              srLabel={ts("Select Base Entity for new data segment")}
+              alignRight
+              groupClass="btn-group pull-right"
+              label=""
+              prefix={
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setSegmentDialog({});
+                  }}
+                >
+                  <i className="crm-i fa-plus" role="img" aria-hidden="true" /> {ts("New Segment")}
+                </button>
+              }
+              links={createLinks.map((link) => ({
+                ...link,
+                url: undefined,
+                task: link.task ?? "",
+              }))}
+              onLinkClick={(link, event) => {
+                event.preventDefault();
+                setSegmentDialog(link.task ? { entity: link.task } : {});
+              }}
             />
-          ))}
-        </ul>
+          ) : (
+            <Menu
+              buttonClass="btn btn-primary dropdown-toggle"
+              srLabel={ts("Add New Search with entity")}
+              alignRight
+              groupClass="btn-group pull-right"
+              label=""
+              prefix={
+                <a
+                  className="btn btn-primary"
+                  href={`#/create/Contact?is_template=${String(template)}`}
+                >
+                  <i className="crm-i fa-plus" role="img" aria-hidden="true" />{" "}
+                  {tab === "template" ? ts("New Template") : ts("New Search")}
+                </a>
+              }
+              links={createLinks}
+            />
+          )}
+          <ul role="tablist" className="nav nav-tabs">
+            {all.map((t) => (
+              <TabButton
+                key={t.name}
+                tab={t}
+                active={t.name === tab}
+                onSelect={() => void setTab(t.name === "custom" ? null : t.name)}
+                onKeyDown={onTabKey}
+              />
+            ))}
+          </ul>
+        </div>
         {tab === "segment" ? (
-          <Menu
-            buttonClass="btn btn-primary dropdown-toggle"
-            srLabel={ts("Select Base Entity for new data segment")}
-            alignRight
-            label=""
-            prefix={
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => {
-                  setSegmentDialog({});
-                }}
-              >
-                <i className="crm-i fa-plus" role="img" aria-hidden="true" /> {ts("New Segment")}
-              </button>
-            }
-            links={createLinks.map((link) => ({ ...link, url: undefined, task: link.task ?? "" }))}
-            onLinkClick={(link, event) => {
-              event.preventDefault();
-              setSegmentDialog(link.task ? { entity: link.task } : {});
-            }}
-          />
+          <div
+            role="tabpanel"
+            id="afreact-search-panel-segment"
+            aria-labelledby="afreact-search-tab-segment"
+          >
+            <div className="panel-body">
+              <SegmentList dialog={segmentDialog} onDialog={setSegmentDialog} />
+            </div>
+          </div>
         ) : (
-          <Menu
-            buttonClass="btn btn-primary dropdown-toggle"
-            srLabel={ts("Add New Search with entity")}
-            alignRight
-            label=""
-            prefix={
-              <a
-                className="btn btn-primary"
-                href={`#/create/Contact?is_template=${String(template)}`}
-              >
-                <i className="crm-i fa-plus" role="img" aria-hidden="true" />{" "}
-                {tab === "template" ? ts("New Template") : ts("New Search")}
-              </a>
-            }
-            links={createLinks}
-          />
+          <ListingTab key={tab} tab={tab} />
         )}
       </div>
-      {tab === "segment" ? (
-        <div
-          role="tabpanel"
-          id="afreact-search-panel-segment"
-          aria-labelledby="afreact-search-tab-segment"
-        >
-          <SegmentList dialog={segmentDialog} onDialog={setSegmentDialog} />
-        </div>
-      ) : (
-        <ListingTab key={tab} tab={tab} />
-      )}
     </div>
   );
 }
@@ -455,156 +465,158 @@ function ListingTab({ tab }: { tab: SearchTab }) {
       id={`afreact-search-panel-${tab}`}
       aria-labelledby={`afreact-search-tab-${tab}`}
     >
-      <div className="form-inline afreact-search-filters">
-        <input
-          className="form-control"
-          type="search"
-          aria-label={ts("Filter by label")}
-          placeholder={ts("Filter by label...")}
-          value={filters.label}
-          onChange={(event) => {
-            update({ label: event.target.value });
-          }}
-        />
-        {tab === "custom" && (
+      <div className="panel-body">
+        <div className="form-inline clearfix afreact-search-filters">
           <input
             className="form-control"
             type="search"
-            aria-label={ts("Filter by author")}
-            placeholder={ts("Filter by author...")}
-            value={filters.author}
+            aria-label={ts("Filter by label")}
+            placeholder={ts("Filter by label...")}
+            value={filters.label}
             onChange={(event) => {
-              update({ author: event.target.value });
+              update({ label: event.target.value });
             }}
           />
-        )}
-        {tab !== "custom" && (
-          <span>
-            <label htmlFor={`${id}-package`} className="sr-only">
-              {ts("Filter by package")}
-            </label>
-            <Picker
-              id={`${id}-package`}
-              externalLabel
-              label={ts("Filter by package")}
-              placeholder={ts("Filter by package...")}
-              options={moduleOptions}
-              value={filters.modules}
-              onChange={(pick) => {
-                setFilters((f) => ({ ...f, modules: pick(f.modules).map(String) }));
-                setPage(1);
+          {tab === "custom" && (
+            <input
+              className="form-control"
+              type="search"
+              aria-label={ts("Filter by author")}
+              placeholder={ts("Filter by author...")}
+              value={filters.author}
+              onChange={(event) => {
+                update({ author: event.target.value });
               }}
             />
-          </span>
-        )}
-        <span>
-          <label htmlFor={`${id}-entity`} className="sr-only">
-            {ts("Filter by entity")}
-          </label>
-          <Picker
-            id={`${id}-entity`}
-            externalLabel
-            label={ts("Filter by entity")}
-            placeholder={ts("Filter by entity...")}
-            options={entityOptions}
-            value={filters.entities}
-            onChange={(pick) => {
-              setFilters((f) => ({ ...f, entities: pick(f.entities).map(String) }));
-              setPage(1);
-            }}
-          />
-        </span>
-        {tagOptions.length > 0 && (
-          <span>
-            <label htmlFor={`${id}-tags`} className="sr-only">
-              {ts("Filter by tags")}
-            </label>
-            <Picker
-              id={`${id}-tags`}
-              externalLabel
-              label={ts("Filter by tags")}
-              placeholder={ts("Filter by tags...")}
-              options={tagOptions}
-              value={filters.tags}
-              onChange={(pick) => {
-                setFilters((f) => ({ ...f, tags: pick(f.tags).map(Number) }));
-                setPage(1);
-              }}
-            />
-          </span>
-        )}
-        {tab === "custom" && (
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm pull-right"
-            onClick={() => {
-              setImporting(true);
-            }}
-          >
-            <i className="crm-i fa-upload" role="img" aria-hidden="true" /> {ts("Import")}
-          </button>
-        )}
-      </div>
-      <table className="table table-striped crm-search-admin-search-listing">
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <SortHeader
-                key={column.key}
-                column={column}
-                sort={sort}
-                onSort={(next) => {
-                  setSort(next);
+          )}
+          {tab !== "custom" && (
+            <span>
+              <label htmlFor={`${id}-package`} className="sr-only">
+                {ts("Filter by package")}
+              </label>
+              <Picker
+                id={`${id}-package`}
+                externalLabel
+                label={ts("Filter by package")}
+                placeholder={ts("Filter by package...")}
+                options={moduleOptions}
+                value={filters.modules}
+                onChange={(pick) => {
+                  setFilters((f) => ({ ...f, modules: pick(f.modules).map(String) }));
                   setPage(1);
                 }}
               />
-            ))}
-          </tr>
-        </thead>
-        <tbody aria-busy={listing.isFetching}>
-          {listing.error ? (
-            <tr>
-              <td colSpan={columns.length} className="crm-error" role="alert">
-                {errorMessage(listing.error)}
-              </td>
-            </tr>
-          ) : listing.data && !rows.length ? (
-            <tr>
-              <td colSpan={columns.length}>{noResults}</td>
-            </tr>
-          ) : !listing.data ? (
-            <tr>
-              <td colSpan={columns.length} role="status">
-                {ts("Loading…")}
-              </td>
-            </tr>
-          ) : (
-            rows.map((row) => {
-              const access = rowAccess(row, perms);
-              return (
-                <tr key={row.id}>
-                  {columns.map((column) => (
-                    <td key={column.key} className={column.className}>
-                      {column.render(row, access)}
-                    </td>
-                  ))}
-                </tr>
-              );
-            })
+            </span>
           )}
-        </tbody>
-      </table>
-      <Pager
-        settings={{ show_count: true, expose_limit: true }}
-        rowCount={rowCount}
-        page={page}
-        limit={limit}
-        onPage={setPage}
-        onLimit={(next) => {
-          setLimit(next);
-          setPage(1);
-        }}
-      />
+          <span>
+            <label htmlFor={`${id}-entity`} className="sr-only">
+              {ts("Filter by entity")}
+            </label>
+            <Picker
+              id={`${id}-entity`}
+              externalLabel
+              label={ts("Filter by entity")}
+              placeholder={ts("Filter by entity...")}
+              options={entityOptions}
+              value={filters.entities}
+              onChange={(pick) => {
+                setFilters((f) => ({ ...f, entities: pick(f.entities).map(String) }));
+                setPage(1);
+              }}
+            />
+          </span>
+          {tagOptions.length > 0 && (
+            <span>
+              <label htmlFor={`${id}-tags`} className="sr-only">
+                {ts("Filter by tags")}
+              </label>
+              <Picker
+                id={`${id}-tags`}
+                externalLabel
+                label={ts("Filter by tags")}
+                placeholder={ts("Filter by tags...")}
+                options={tagOptions}
+                value={filters.tags}
+                onChange={(pick) => {
+                  setFilters((f) => ({ ...f, tags: pick(f.tags).map(Number) }));
+                  setPage(1);
+                }}
+              />
+            </span>
+          )}
+          {tab === "custom" && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm pull-right"
+              onClick={() => {
+                setImporting(true);
+              }}
+            >
+              <i className="crm-i fa-upload" role="img" aria-hidden="true" /> {ts("Import")}
+            </button>
+          )}
+        </div>
+        <table className="table table-striped crm-search-admin-search-listing">
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <SortHeader
+                  key={column.key}
+                  column={column}
+                  sort={sort}
+                  onSort={(next) => {
+                    setSort(next);
+                    setPage(1);
+                  }}
+                />
+              ))}
+            </tr>
+          </thead>
+          <tbody aria-busy={listing.isFetching}>
+            {listing.error ? (
+              <tr>
+                <td colSpan={columns.length} className="crm-error" role="alert">
+                  {errorMessage(listing.error)}
+                </td>
+              </tr>
+            ) : listing.data && !rows.length ? (
+              <tr>
+                <td colSpan={columns.length}>{noResults}</td>
+              </tr>
+            ) : !listing.data ? (
+              <tr>
+                <td colSpan={columns.length} role="status">
+                  {ts("Loading…")}
+                </td>
+              </tr>
+            ) : (
+              rows.map((row) => {
+                const access = rowAccess(row, perms);
+                return (
+                  <tr key={row.id}>
+                    {columns.map((column) => (
+                      <td key={column.key} className={column.className}>
+                        {column.render(row, access)}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+        <Pager
+          settings={{ show_count: true, expose_limit: true }}
+          rowCount={rowCount}
+          page={page}
+          limit={limit}
+          onPage={setPage}
+          onLimit={(next) => {
+            setLimit(next);
+            setPage(1);
+          }}
+        />
+      </div>
       {pending && (
         <DeleteDialog
           row={pending}

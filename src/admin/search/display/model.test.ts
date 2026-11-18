@@ -338,8 +338,7 @@ describe("autocomplete and DB entity init", () => {
     expect(createSqlName(long)).toMatch(/^a{42}[0-9a-f]{16}$/);
   });
 
-  // deviation:db-entity-pascal-case
-  it("pascal-cases names as core's master does, folding accents", () => {
+  it("pascal-cases names as core does, folding accents", () => {
     expect(pascalCase("my members")).toBe("MyMembers");
     expect(pascalCase("contribution_recur")).toBe("ContributionRecur");
     expect(pascalCase("LKvt Übersicht")).toBe("LkVtUbersicht");

@@ -207,17 +207,6 @@ outside the nearest repeat item, join or fieldset, the placeholder reads
 "Choose undefined first" (read from the code on `master` as of 2026-10-03).
 The React renderer uses the control field's name instead. `deviation:chain-select-control-name`
 
-**Number ranges from the URL or a default.** afField converts the value of an
-Integer or Float range field to a number before splitting it, so `5-10` becomes
-`NaN` and the search runs with `>= null`. It then splits on every `-` and turns
-an empty bound into 0: `5` searches `>= 5 AND <= 0`, and on a Money field
-`-5-10` searches `>= 0 AND <= 5`. Reproduced in the browser on 6.18.1; fixed on
-`master` (6.20) in
-[`d116180483`](https://github.com/civicrm/civicrm-core/commit/d116180483)
-([civicrm-core#37198](https://github.com/civicrm/civicrm-core/pull/37198)). The
-React renderer splits at the first `-` after a leading sign and leaves an empty
-bound out: `-5-10` is −5 to 10, `5-` and `5` are `>= 5`. `deviation:number-range-bounds`
-
 **A date range's inputs have no label.** In a search range, `fields/Date.html`
 gives the two datepickers the ids `<field>1` and `<field>2`, while afField's
 label points at `<field>`, so neither input is labelled; the high input of the
@@ -250,16 +239,6 @@ field reads "First Name \* must be at least 3 characters." (`master`, 6.20,
 added in [`d777c0f29b`](https://github.com/civicrm/civicrm-core/commit/d777c0f29b)).
 The React renderer leaves the marker out. `deviation:minlength-message-without-marker`
 
-**A saved filter set is dropped after loading.** With `#?_s=<id>` afFieldset
-loads the `SearchParamSet`, then resets the fields to their defaults, so the
-set's values never reach the search (6.19.1). Fixed for 6.19.2 and in 6.20
-after 6.20.beta1 by
-[`a800e1c1f4`](https://github.com/civicrm/civicrm-core/commit/a800e1c1f4)
-([civicrm-core#37200](https://github.com/civicrm/civicrm-core/pull/37200),
-backported in [civicrm-core#37436](https://github.com/civicrm/civicrm-core/pull/37436)):
-the reset fills each field from the URL, else from the set. The React renderer
-does so on every version. `deviation:saved-filter-set-kept`
-
 **A saved filter set that fails to load is passed over without a word.**
 afFieldset loads the set the URL names (`#?_s=<id>`) with no rejection
 handler, so a failed load shows no message and never resets the form: the
@@ -281,7 +260,8 @@ not run). The React renderer shows each error, the update's in its dialog. `devi
 current ones as JSON strings, but the server returns a set saved without
 column choices with `columns` as `[]` or `null`, never the `{}` the current
 values hold, and keys may come back in another order; so "Save changes" shows
-as soon as such a set is picked (read from the code, not run). The React
+as soon as such a set is picked (measured on 6.20.0: `null` for a set created
+without columns, `[]` for one saved with `{}`). The React
 renderer compares the values with sorted keys and an empty list equal to an
 empty object. `deviation:param-set-unchanged-compare`
 
@@ -357,16 +337,6 @@ not run). The React renderer stores `null`. `deviation:boolean-select-cleared-nu
 `af-disabled`, a saving form and a read-only autofill field leave URL inputs
 editable (read from the code, not run). The React renderer disables them like
 every other input. `deviation:url-input-disabled`
-
-**A date range shows a time input on each bound.** `afField.component.js`
-fills `inputAttrs` for a `search_range` date in a `$timeout`, but
-`fields/Date.html` binds each bound's `crm-ui-datepicker=":: $ctrl.inputAttrs[n]"`
-once, when it links, before that timeout; the datepicker starts from empty
-options and shows date and time even for a field whose `input_attrs` say
-`time: false`, and the bounds' placeholders are lost (seen on the demo's birth
-date range; fixed on `master` by civicrm-core#37112 of 2026-09-28, which sets
-`inputAttrs` before the template links). The React renderer renders the bounds
-from the field's own attributes: a date input for a date field. `deviation:date-range-bound-type`
 
 **A date-only column without a time setting asks for a time.** The datepicker
 shows a time input unless `input_attrs.time` is `false` (`crm.datepicker.js`),
@@ -591,11 +561,10 @@ renderer leaves the wrapper without a role. `deviation:tabset-wrapper-no-role`
 
 **A link inside each tab.** jQuery UI makes each `<li>` of `crmUi/tabset.html`
 the tab (`role="tab"`) and leaves the `<a href>` in it focusable by click
-(`tabindex="-1"`); 6.18's `afTabset.html` writes `role="tab"` on the `<li>` with
-a link inside too. Every tab therefore holds a nested interactive element (axe
-`nested-interactive`, measured on 6.18.1 for both tab sets). The React renderer
-makes the link the tab, inside an item with `role="presentation"` that keeps
-jQuery UI's classes, as `afTabset.html` does on `master`
+(`tabindex="-1"`), so every tab holds a nested interactive element (axe
+`nested-interactive`, measured on 6.18.1). The React renderer makes the link
+the tab, inside an item with `role="presentation"` that keeps jQuery UI's
+classes, as `afTabset.html` does from 6.20
 ([`f7156dc5f0`](https://github.com/civicrm/civicrm-core/commit/f7156dc5f0)). `deviation:tab-link-is-tab`
 
 **A required field in a hidden tab blocks submit silently.** afTab hides its
@@ -690,27 +659,6 @@ or Enter, as in a field's link. `deviation:image-task-link`
 the only row of the last page was deleted: the display shows "no results"
 while the count says otherwise, and the pager marks no page as current.
 React moves to the last page once the count is in. `deviation:page-past-end-clamped`
-
-**The row count of the first search survives a filter typed right after
-it.** `runSearch()` in `searchDisplayBaseTrait` asks for the count in a
-second request once the rows are in. A filter change meanwhile nulls
-`rowCount` and schedules the next run 600 ms later; the count of the first
-run then lands in between, its guard (`requestId < _runCount`) sees no newer
-run yet, and the next run keeps the stale count because `rowCount` is set.
-A table filtered from 30 rows to 4 shows "30 results" and three pages for
-the four rows until the next filter change. The guard came with dev/core#5965
-(6.6) for the same symptom and covers only a count that lands after the
-next run has started. Present on 6.18; fixed on `master` (6.20) in
-[civicrm-core#37253](https://github.com/civicrm/civicrm-core/pull/37253).
-React asks for the count with the rows, keyed by the same filters, so a count
-never outlives its filters; the tour video shows both. `deviation:row-count-keyed-filters`
-
-**A space before the comma in linked lists.** SearchKit's `colType/link.html`
-leaves whitespace between each linked value and its comma, so a multi-valued
-link column reads "German , French". Fixed on `master` (6.20) in
-[`6cbc2bab82`](https://github.com/civicrm/civicrm-core/commit/6cbc2bab82). The
-React renderer writes the fixed markup; on 6.19 and older the Angular table
-still shows the space. `deviation:link-list-comma-space`
 
 **Search labels stay in the page title.** A search display adds the labels of
 its filters to the title of a search page (`searchDisplayBaseTrait`, afCore's
@@ -856,11 +804,6 @@ so:
   and clears the selection whenever a batch was sent. `deviation:bulk-failed-batch-reloads`
 - The error alert shows the task's `errorMsg` in place of the server's
   message whenever the task has one. React shows both. `deviation:bulk-error-both-messages`
-- A batch whose items failed reports success up to 6.19.1: a batch action
-  records each failed item in the answer's `errors` instead of failing the
-  call, and `crmSearchBatchRunner` counts the batch as done. Fixed in 6.20
-  and 6.19.2 in [civicrm-core#37450](https://github.com/civicrm/civicrm-core/pull/37450).
-  React fails the run with the items' messages on every version. `deviation:bulk-item-errors-fail`
 - Selecting all pages has no error handler
   (`searchDisplayTasksTrait.service.js` `selectAllPages`): the checkboxes stay
   disabled with no message. React shows the error and enables them again. `deviation:bulk-select-all-error`
@@ -1309,11 +1252,6 @@ default search fields of that display and of every later one on the page
 include `description`, even for entities without such a field. afreact
 searches by `id` and the entity's own search fields. `deviation:autocomplete-search-fields`
 
-**DB entity names lose their word breaks.** Before 6.20 the DB entity editor
-derives the API name with `_.capitalize(_.camelCase())`, which lowercases all
-but the first letter ("my members" becomes `Mymembers`). afreact derives it as
-core's later `CRM.utils.pascalCase()` does (`MyMembers`). `deviation:db-entity-pascal-case`
-
 **Changing a subsearch filter removes it.** The subsearch column editor
 should remove a filter when its field is cleared, but `onChangeFilter()` tests
 `filter.field` while filters store `subsearch_field`, so every change of the
@@ -1342,11 +1280,11 @@ failure, so entities the import added may stay missing with no message.
 afreact closes the dialog as imported and reports the failed reload in an
 alert. `deviation:import-reload-failure-shown`
 
-**Listing accessibility.** Core's saved-search listing nests the count badge
-links inside the tab links (`nested-interactive`), labels its filter inputs
-only by `title` (`label-title-only`), and leaves the actions column header
-empty (`empty-table-header`). afreact renders tabs as a `tablist` with arrow
-keys, visible filter labels and a named actions header. `deviation:search-listing-a11y`
+**Listing accessibility.** Core's saved-search listing labels its filter
+inputs only by `title` (`label-title-only`), leaves the actions column header
+empty (`empty-table-header`) and moves between its tabs only by Tab. afreact
+gives its tabs arrow keys, and the listing visible filter labels and a named
+actions header. `deviation:search-listing-a11y`
 
 **Segment items reorder only by mouse.** The segment editor sorts items by
 drag and drop with no keyboard path. afreact adds move-up and move-down
@@ -1355,8 +1293,12 @@ buttons per item. `deviation:segment-item-move-buttons`
 **Removing a column leaves its sort and having behind.** The editor's
 `onChangeSelect()` should drop a removed column from `orderBy` and `having`,
 but the watcher calls it without the old and new select, so nothing is pruned
-and the next run sorts or filters by a column that no longer exists. afreact
-prunes both when a column goes. `deviation:removed-column-prunes-sort`
+and the next run sorts or filters by a column that no longer exists (from
+6.11, c3fe92afb3). afreact prunes both when a column goes. Fixed on `master`
+in [civicrm-core#38021](https://github.com/civicrm/civicrm-core/pull/38021)
+and on the 6.20 branch in
+[#38026](https://github.com/civicrm/civicrm-core/pull/38026), in no release
+yet (2026-11-18). `deviation:removed-column-prunes-sort`
 
 **Removing a join leaves aggregates and groupings on it.** `removeJoinStuff()`
 drops only select entries that start with `alias.`, so a column such as
@@ -1597,10 +1539,10 @@ from the listing so shows "Save" instead of "Saved", with Undo enabled and the
 browser's warning on leaving the page, though the user changed nothing (6.19,
 seen on `afformQuickAddIndividual`). React shows "Saved" until the first edit. `deviation:opened-form-saved`
 
-**Editor tabs hold controls inside the tab.** The palette marks each `<li>` as
-the tab and puts the active entity's label editor (`crm-ui-editable`) inside
-its link; the tab set puts each tab's gear button inside the tab's link (axe
-`aria-tab-name` on 6.19; a tab's content is presentational, so the nested
+**Editor tabs hold controls inside the tab.** The palette puts the active
+entity's label editor (`crm-ui-editable`) inside its tab link; the tab set puts
+each tab's gear button inside the tab's link (axe `aria-tab-name` on 6.19, the
+same markup on 6.20; a tab's content is presentational, so the nested
 control is lost to assistive technology). React renders each tab as a link
 with `role="tab"`, edits the entity's label in the head of its panel and keeps
 the tab set's gear menu, for the active tab, at the end of the tab bar. `deviation:editor-tab-controls-outside`

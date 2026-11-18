@@ -986,7 +986,6 @@ const DEBURRED: Record<string, string> = {
 };
 
 /** CRM.utils.pascalCase: 'my members' or 'my_members' => 'MyMembers'. */
-// deviation:db-entity-pascal-case
 export function pascalCase(text: string): string {
   const words =
     text

@@ -106,7 +106,6 @@ function FieldValue({ cell }: CellProps) {
   );
 }
 
-// deviation:link-list-comma-space
 /** colType/link.html: each value links on its own, comma-separated. */
 function FieldLinks({ cell, links, onLinkClick }: CellProps & { links: Link[] }) {
   const left = cell.icons?.left ?? [];

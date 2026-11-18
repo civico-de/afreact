@@ -43,7 +43,7 @@ async function sentSave(page: Page, renderer: keyof typeof pages, id: number, di
   for (let index = 0; index < displays; index++) {
     await (
       renderer === "angular"
-        ? page.locator('li[role="tab"][ng-repeat^="display in"] > a').nth(index)
+        ? page.locator('li[ng-repeat^="display in"] > a[role="tab"]').nth(index)
         : page.locator(`button[id$="-tab-display_${String(index)}"]`)
     ).click();
     await page.waitForLoadState("networkidle");

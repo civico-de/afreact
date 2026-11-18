@@ -6,7 +6,6 @@
 import { expect, type Page } from "@playwright/test";
 import { test } from "./coverage";
 import { isReady } from "../../src/compare/metrics";
-import { api } from "./harness";
 
 const PAGES = { react: "/civicrm/afreact/demo", angular: "/civicrm/afreact/angular" };
 const TOLERANCE_PX = 2;
@@ -52,28 +51,15 @@ const BY_DESIGN: Record<string, { skip: string[]; reason: string }> = {
     reason: "the native date field shows its format and calendar icon, wider than the datepicker's",
   },
   "clear 1": { skip: ["x"], reason: "the date's clear link follows the wider date field" },
-  // Core's date range links its datepickers before afField fills their options, so Angular adds
-  // a time input to each bound of a date-only range (see docs/upstream-bugs.md).
-  "control 12": { skip: ["presence"], reason: "Angular's time input on the range's lower bound" },
-  "control 13": { skip: ["presence"], reason: "Angular's time input on the range's upper bound" },
   "date 3": {
     skip: ["x", "width"],
     reason:
-      "the range's upper bound follows Angular's time input or stands on React's second slot, and is the wider native date field",
+      "the range's upper bound stands on React's second slot and is the wider native date field",
   },
-  "clear 3": { skip: ["x"], reason: "the lower bound's clear link follows Angular's time input" },
+  "clear 3": { skip: ["x"], reason: "the lower bound's clear link follows the wider date field" },
   "clear 4": {
     skip: ["x"],
-    reason:
-      "the upper bound's clear link follows Angular's time input or stands on React's second slot",
-  },
-};
-
-/** Up to 6.19 the theme warns on an untouched required select; from 6.20 only on a changed one, as React does. */
-const BEFORE_6_20: typeof BY_DESIGN = {
-  "control 5": {
-    skip: ["border-top-color"],
-    reason: "the untouched required select has no warning border in React",
+    reason: "the upper bound's clear link stands on React's second slot",
   },
 };
 
@@ -182,19 +168,12 @@ test("the React page looks like the Angular page", async ({ page }, testInfo) =>
   await testInfo.attach("angular.png", { body: await shot(page), contentType: "image/png" });
 
   const used = new Set<string>();
-  // Core's own extensions carry core's version.
-  const [afform] = await api<{ version: string }>(page, "Extension", "get", {
-    select: ["version"],
-    where: [["key", "=", "org.civicrm.afform"]],
-  });
-  const [major = 0, minor = 0] = afform!.version.split(".").map(Number);
-  const byDesign = major === 6 && minor < 20 ? { ...BY_DESIGN, ...BEFORE_6_20 } : BY_DESIGN;
-  const found = differences(measured.react, measured.angular, byDesign, used);
+  const found = differences(measured.react, measured.angular, BY_DESIGN, used);
   await testInfo.attach("differences.txt", { body: found.join("\n"), contentType: "text/plain" });
   expect(measured.react.length).toBeGreaterThan(30);
   expect(found, "React vs Angular (React first)").toEqual([]);
   // An exception that excuses nothing would hide the next regression of that part.
-  expect(Object.keys(byDesign).filter((entry) => !used.has(entry))).toEqual([]);
+  expect(Object.keys(BY_DESIGN).filter((entry) => !used.has(entry))).toEqual([]);
 });
 
 /** Contact rows stay out of the report. */

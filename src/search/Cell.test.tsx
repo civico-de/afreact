@@ -49,7 +49,6 @@ describe("field columns", () => {
     expect(cell({ type: "field" }, { val: { a: 1 } }).container).toHaveTextContent('{"a":1}');
   });
 
-  // deviation:link-list-comma-space
   it("links each value with its own target, title and icons", () => {
     const { container } = cell(
       { type: "field", key: "name" },

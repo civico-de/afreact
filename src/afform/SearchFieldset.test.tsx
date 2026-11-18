@@ -173,7 +173,6 @@ describe("SearchFieldset", () => {
     expect(runs()).toEqual([{ is_active: true }]);
   });
 
-  // deviation:saved-filter-set-kept
   it("waits for a saved filter set, then searches once with it", async () => {
     const { calls, runs } = renderSearch("#?_s=4&is_active=1", searchForm(), {
       "SearchParamSet.get": () => [{ filters: { title: { CONTAINS: "Set" }, is_active: false } }],

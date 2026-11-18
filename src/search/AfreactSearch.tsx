@@ -232,7 +232,6 @@ function ResultDisplay({
     };
   }, [onColumns, displayKey, picked]);
   // The count and totals ignore sort, page and page size, so they are asked once per set of filters.
-  // deviation:row-count-keyed-filters
   const countKey = ["SearchDisplay", "count", params];
   const pageKey = (number: number, columns = columnParams) => [
     "SearchDisplay",

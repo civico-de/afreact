@@ -781,7 +781,6 @@ describe("AfreactSearch bulk actions", () => {
     });
   });
 
-  // deviation:bulk-item-errors-fail
   it("fails a batch whose answer records failed items, naming each message once", async () => {
     const failed = (message: string) => ({ level: "error", message, title: "", code: 0 });
     serve({

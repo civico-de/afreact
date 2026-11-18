@@ -174,7 +174,7 @@ test.describe("SearchKit table display editor", () => {
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(`/civicrm/admin/search#/edit/${String(id)}`);
     await page
-      .getByRole("link", { name: /DB Entity 1/ })
+      .getByRole("tab", { name: /DB Entity 1/ })
       .first()
       .click();
     await expect(page.getByText("API Name")).toBeVisible();
@@ -252,7 +252,7 @@ test.describe("SearchKit table display editor", () => {
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(`/civicrm/admin/search#/edit/${String(id)}`);
     await page
-      .getByRole("link", { name: /Data Entry 1/ })
+      .getByRole("tab", { name: /Data Entry 1/ })
       .first()
       .click();
     await expect(page.getByText("Show Totals in Footer")).toBeAttached();
@@ -317,7 +317,7 @@ test.describe("SearchKit table display editor", () => {
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(`/civicrm/admin/search#/edit/${String(id)}`);
     await page
-      .getByRole("link", { name: /Chart 1/ })
+      .getByRole("tab", { name: /Chart 1/ })
       .first()
       .click();
     await expect(page.getByText("Max segments to show")).toBeAttached();

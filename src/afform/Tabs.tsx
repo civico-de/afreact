@@ -305,7 +305,7 @@ export function Tabset({ node, formName, expressions, nodes, element, submit }: 
     const icon = tab.icon && <i className={`crm-i ${tab.icon}`} role="img" aria-hidden="true" />;
     const count = badge(tab);
     // deviation:tab-link-is-tab
-    // The link is the tab, as in afTabset.html (6.20); jQuery UI's role on the item would nest it.
+    // The link is the tab, as in afTabset.html; jQuery UI's role on the item would nest it.
     return ui ? (
       <li
         key={index}

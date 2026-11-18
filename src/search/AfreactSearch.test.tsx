@@ -383,7 +383,6 @@ describe("AfreactSearch", () => {
     ]);
   });
 
-  // deviation:row-count-keyed-filters
   it("never shows the count of earlier filters, also when it lands after they changed", async () => {
     let answerLate = (_count: number) => {};
     const calls = mockApi({
