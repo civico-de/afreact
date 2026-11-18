@@ -22,7 +22,8 @@ summary screen is a QuickForm `<form>`, so `CaseSummaryBlockPlacement` wraps
 the Afform in a `div` instead of a form. The Save button has no `type`
 (`ng-click="afform.submit()"`), which makes it a submit button of the case
 form: a click, or Enter in a field, runs `Afform.submit` and submits the case
-form as well (`master` as of 2026-10-05; read from the code, not run). The
+form as well (run on 6.20.0: a click posts the case form to
+`civicrm/contact/view/case`). The
 React renderer keeps its own `<form>` inside the case form: controls submit
 that form, and its submit event stops there. `deviation:case-summary-own-form`
 

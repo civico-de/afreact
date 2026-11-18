@@ -217,3 +217,32 @@ test("a listed form is rendered by React wherever core places it, as Angular ren
   // Page, summary (tab and block), popup, case view, event tab.
   expect(react.hosts).toEqual([1, 2, 1, 1, 1]);
 });
+
+// deviation:case-summary-own-form
+test("saving the case summary block submits the form only, not the case form around it", async ({
+  page,
+}) => {
+  await renderWith(page, "react");
+  await page.goto(`/civicrm/contact/view/case?reset=1&action=view&cid=${contactId}&id=${caseId}`);
+  const block = placed(page, "react").first();
+  await expect(input(block, "first_name")).toHaveValue("Placed");
+  // A submit of the case form starts in the same event as the click or Enter, before the API answers.
+  for (const send of [
+    () => block.getByRole("button", { name: "Save" }).click(),
+    () => input(block, "last_name").press("Enter"),
+  ]) {
+    const first = Promise.race([
+      page
+        .waitForResponse((response) => response.url().includes("Afform/submit"))
+        .then((response) => (response.ok() ? "saved" : `failed ${response.status()}`)),
+      page
+        .waitForRequest(
+          (request) => request.method() === "POST" && !request.url().includes("/ajax/"),
+        )
+        .then((request) => `case form posted to ${request.url()}`),
+    ]);
+    await send();
+    expect(await first).toBe("saved");
+  }
+  expect(page.url()).toContain(`id=${caseId}`);
+});
