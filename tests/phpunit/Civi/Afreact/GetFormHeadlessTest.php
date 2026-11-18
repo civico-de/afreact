@@ -208,7 +208,7 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
     }
     $repeat = array_values(array_filter(
       $this->findTag($form['layout'], 'div'),
-      fn (array $node): bool => isset($node['af-repeat']),
+      static fn (array $node): bool => isset($node['af-repeat']),
     ));
     $this->assertSame('E-Mail hinzufügen', $repeat[0]['af-repeat'] ?? NULL);
     $this->assertSame('Kontakt gespeichert.', $form['meta']['confirmation_message']);
@@ -231,8 +231,8 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
         ['civicrm', 'org.example.probe'],
         array_keys(\Civi::service('afform_scanner')->findFilePaths()['afformQuickAddIndividual']),
       );
-      $this->assertNull(Afforms::domain('afformQuickAddIndividual'));
-      $this->assertSame(['afreactdemo', NULL], Afforms::domain('afformAfreactDemoContact'));
+      $this->assertNull(FormStrings::domain('afformQuickAddIndividual'));
+      $this->assertSame(['afreactdemo', NULL], FormStrings::domain('afformAfreactDemoContact'));
     }
     finally {
       \Civi::dispatcher()->removeListener('civi.afform.searchPaths', $listener);
