@@ -163,11 +163,6 @@ React renderer shows the field's name for a removed field and "Yes" or "No".
 **The saved search choice has no label.** The React renderer names it "Saved
 searches". `deviation:param-sets-select-label` (S66)
 
-**Field labels and help texts are set as unfiltered HTML.** A hardening gap, not
-reported. The React renderer keeps the HTML but only plain elements and
-attributes, and React blocks `javascript:` URLs.
-`deviation:field-markup-filtered`
-
 **Month dates in a format other than `yy-mm`.** The React renderer stores
 `2001-03-01` for every format without a day. `deviation:month-date-any-format`
 (S67)
