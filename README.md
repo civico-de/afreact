@@ -1,4 +1,4 @@
-![afreact: FormBuilder forms, SearchKit displays and both editors drawn with React, on the same data and permissions](handbook/images/cover.png)
+![afreact: FormBuilder forms, SearchKit displays and both editors drawn with React, on the same data and permissions](docs/handbook/images/cover.png)
 
 # afreact
 
@@ -37,7 +37,7 @@ naming it. A setting the React editors cannot edit is saved back unchanged.
 ## Documentation
 
 The user manual is at <https://civico-de.github.io/afreact/>; its source is in
-`handbook/`, and CiviCRM shows it under Support › Handbook when the handbook
+`docs/handbook/`, and CiviCRM shows it under Support › Handbook when the handbook
 extension is installed. The documents below are for developers.
 
 | Document                                                   | Content                                                                                                                                   |

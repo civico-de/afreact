@@ -6,6 +6,10 @@ All notable changes to this extension are documented in this file. The format fo
 
 ## [Unreleased]
 
+### Changed
+
+- The manual lives in `docs/handbook/`. CiviCRM shows it with handbook 0.5.0 or newer.
+
 ## [0.2.0] - 2026-11-18
 
 ### Added
