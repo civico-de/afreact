@@ -61,8 +61,9 @@ The redirect URL is built by the same function without URL encoding, so a
 submitted `&`, `=` or `#` adds query parameters or cuts the URL short. The
 contribution checkout passes the same unescaped message to its landing page,
 which sets it as `innerHTML` (read from the code, not run). The missing
-escaping is present on upstream `master` as of 2026-10-05; to go to the
-CiviCRM security team rather than the public tracker.
+escaping is present on upstream `master` as of 2026-11-18; reported
+privately as security/core#230, with a patch merged for the next security
+release.
 
 afreact escapes the submitted values site-wide, whichever
 renderer shows it: a `civi.api.respond` listener on `Afform.submit` rebuilds
@@ -105,8 +106,9 @@ label into the edit menu with `htmlspecialchars()`, which leaves `{{ }}`
 alone, and Angular then compiles the partial. A form titled `Probe {{7*6}}`
 shows "Edit Probe 42 in FormBuilder" (run on 6.19). Labels come from users
 with "manage own" permissions, while the menu is shown to administrators, so
-this lets one user's text run as an expression in another user's session.
-React renders the titles as text. `deviation:admin-menu-title-text`
+this lets one user's text run as an expression in another user's session
+(reported privately as security/core#249). React renders the titles as
+text. `deviation:admin-menu-title-text`
 
 ## Drafts and submission
 
@@ -637,7 +639,9 @@ enabled. `deviation:checkout-submit-once`
 tag merge task passes the kept tag's label into it as is
 (`crmSearchTaskTagMerge.ctrl.js`), as do its and the API batch's error
 messages, which can quote a submitted value; a tag named `<img src=x onerror=…>`
-runs its script in the success notification. afreact escapes the text and title
+runs its script in the success notification (reported privately as
+security/core#248, with a patch merged for the next security release).
+afreact escapes the text and title
 of every notification it raises; where a screen has no notification container,
 `CRM.alert()` opens a dialog that shows text, and gets it unescaped.
 `deviation:alert-text-escaped`
