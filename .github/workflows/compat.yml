@@ -1,4 +1,4 @@
-# Weekly, and by hand on the commit a release is tagged from: every supported minor at its
+# Weekly, and by hand on the commit a release is tagged from: the latest release at its
 # newest patch, the next release branch and core's master, the browser suite on each.
 name: Compat
 
@@ -20,9 +20,8 @@ jobs:
       matrix_playwright: true
       # The browser legs need the arm64 runners' speed to finish in the job limit.
       runs_on: civico-ci-arm64
-      # Supported minors at their newest patch; each must be on civikitchen's
-      # CK_STANDALONE_EXTRA_MINORS once its successor ships.
+      # The latest release (the floor in info.xml) at its newest patch.
       matrix_images: >-
-        ghcr.io/civico-de/civikitchen:standalone-6.19,
+        ghcr.io/civico-de/civikitchen:standalone-6.20,
         ghcr.io/civico-de/civikitchen:standalone-beta,
         ghcr.io/civico-de/civikitchen:standalone-master

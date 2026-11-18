@@ -171,21 +171,25 @@ export type ListRun = {
 };
 
 export type ListSettings = {
+  classes?: never[];
   columns: ({
     break?: boolean;
     cssRules?: ((boolean | string)[])[];
     forceLabel?: boolean;
     key: string;
     label: string;
-    type: "field";
+    rewrite?: string;
+    type: "field" | "html";
   })[];
   limit: number;
-  pager: {
+  noResultsText?: string;
+  pager?: {
     show_count: boolean;
   };
-  placeholder: number;
+  placeholder?: number;
+  section_group_by?: string;
   sort: string[][];
-  style: string;
+  style?: string;
 };
 
 export type TableRun = {

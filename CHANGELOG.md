@@ -25,7 +25,7 @@ All notable changes to this extension are documented in this file. The format fo
 
 ### Changed
 
-- Requires CiviCRM 6.19 or later and PHP 8.2 or later.
+- Requires CiviCRM 6.20, the latest release, and PHP 8.2 or later; each release supports the latest CiviCRM release only.
 - React forms are laid out alike in every Riverlea stream, and tables keep their columns in place
   while the next page loads.
 

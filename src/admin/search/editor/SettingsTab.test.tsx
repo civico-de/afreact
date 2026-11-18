@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { renderWithQuery } from "../../../test/render";
-import { CoreVersion } from "../../version";
 import type { EditorSearch } from "../editor";
 import { SettingsTab } from "./SettingsTab";
 
@@ -48,16 +47,6 @@ describe("SettingsTab timeout", () => {
       expect(input.getAttribute("aria-invalid")).toBe(text === "12" ? null : "true");
     },
   );
-
-  it("is not offered on a core without SavedSearch.timeout", () => {
-    renderWithQuery(
-      <CoreVersion value="6.19.0">
-        <Harness />
-      </CoreVersion>,
-    );
-    expect(screen.getByLabelText("Description")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Query Timeout (seconds)")).not.toBeInTheDocument();
-  });
 });
 
 describe("SettingsTab description", () => {

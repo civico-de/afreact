@@ -7,7 +7,7 @@ import type { RunDebug } from "../../search/types";
 import { splitHash } from "../../url/hash";
 import { isDirty, useHistory } from "../history";
 import { LeaveGuardContext, navigate, useLeaveGuard } from "../route";
-import { CoreVersion, useCoreHas } from "../version";
+import { CoreVersion } from "../version";
 import {
   addDisplay,
   cloneDisplay,
@@ -324,8 +324,6 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
   const [changedBuilder] = useState(classicOnlyChanges);
   const setGuard = useContext(LeaveGuardContext);
   const settings = searchAdminSettings();
-  const entityIndex = useCoreHas({ "6.20": "6.20.alpha1" });
-  const customDateFormat = useCoreHas({ "6.20": "6.20.alpha1" });
   const afformEnabled = "org.civicrm.afform" in settings.modules;
   const afformAdmin =
     window.CRM.checkPerm("manage own afform") && "org.civicrm.afform_admin" in settings.modules;
@@ -1054,8 +1052,6 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                         meta,
                         search,
                         defaultPagerSize: settings.defaultPagerSize,
-                        entityIndex,
-                        customDateFormat,
                       }}
                       search={search}
                       display={search.displays[displayIndex]}

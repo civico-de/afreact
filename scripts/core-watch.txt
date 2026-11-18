@@ -4,8 +4,8 @@
 # Per branch, the civicrm-core commit reviewed up to, inclusive. Release branches start at
 # their .0 tag or where they left the reviewed master.
 reviewed master 0a2f3f4756ee0965ddddf1af064f3ad2307ce4c4
-reviewed 6.19 c118f1edd39c73744a06aa9eb243b643b1b47fe0
-reviewed 6.20 c17cc6d7dad88184f6cdf23274f4e78946cee67f
+reviewed 6.20 9c64e86ef22357ab2ec9d477acc957cabd722ae4
+reviewed 6.21 0a2f3f4756ee0965ddddf1af064f3ad2307ce4c4
 
 # Afform runtime: directives, field templates, core blocks, placements, prefill and submit
 ext/afform/core/afform.php

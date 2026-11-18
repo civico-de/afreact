@@ -65,7 +65,7 @@ export const SAVED_SEARCH_FIELDS: Record<string, Record<string, string>> = {
   form_values: {},
   is_template: {},
   expires_date: {},
-  timeout: { "6.20": "6.20.alpha1" },
+  timeout: {},
 };
 
 /** The SavedSearch.get core's edit and clone routes resolve, with groups and displays chained. */

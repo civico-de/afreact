@@ -57,8 +57,6 @@ const ctx: DisplayContext = {
   meta,
   search: { api_entity: "Contact", api_params: { version: 4, select: ["id", "display_name"] } },
   defaultPagerSize: 50,
-  entityIndex: true,
-  customDateFormat: true,
 };
 const table = (settings: Draft["settings"] = {}): Draft => ({
   label: "T",
@@ -308,12 +306,6 @@ describe("autocomplete and DB entity init", () => {
       expect.objectContaining({ key: "id", index: true, label: "Contact ID" }),
       expect.objectContaining({ key: "display_name", index: true }),
     ]);
-  });
-
-  it("leaves the index out on a core without it", () => {
-    const draft: Draft = { label: "L", type: "entity", settings: {} };
-    initEntity({ ...ctx, entityIndex: false }, draft);
-    expect(draft.settings.columns?.map((col) => "index" in col)).toEqual([false, false]);
   });
 
   it("forces the index on key columns and drops pseudo fields", () => {

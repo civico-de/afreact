@@ -386,29 +386,24 @@ the canvas follows these rules:
 
 ## Core versions
 
-The builders, like the runtime, support 6.19.0 and every release after it.
-Core ships a minor a month and patches in between, 45 releases of 6.x in the
-twelve months to 2026-10-10 (12 minors, 33 patches), and each site upgrades
-on its own schedule. Once released, the builders therefore run on several
-minors and patch levels at once, and a site keeps them through every core
-upgrade. An afreact release supports the core releases up to the newest
-minor its test runs covered, and a release covering the next minor comes out
-before core ships it.
+afreact supports only the latest CiviCRM release, currently 6.20, from its .0
+on. When core ships the next minor, the next afreact release moves to it:
+`info.xml` declares the new minor, the CI images move with it, and the
+version checks below the new floor go.
 
-- **Floor.** `info.xml` declares 6.19 for all of afreact. Core does not
-  check that floor when it installs an extension (`CRM_Extension_Manager`
-  refuses only the extensions on its own incompatibility list), so it states
-  what is supported and tested, and the pages carry no check of their own.
+- **Floor.** `info.xml` declares the latest minor for all of afreact. Core
+  does not check that floor when it installs an extension
+  (`CRM_Extension_Manager` refuses only the extensions on its own
+  incompatibility list), so it states what is supported and tested, and the
+  pages carry no check of their own.
 - **Differences come from the server.** The builders take entities, fields,
   functions, display types, elements and attribute types from the running
   core (the reads under "Server contracts", APIv4's actions and parameters,
-  `Civi\Afreact\AttributeSchema`), so what a newer core adds is absent on an
-  older one without a check. Where nothing the server returns tells whether
-  the running core has a behaviour, the page compares core's version, which
-  afreact hands it, with the first release on each branch that has it. One
-  comparison would not do: core ships a fix in patches of several minors,
-  and the fix for dev/core#6424 is in 6.12.4 and 6.13.1 but not in 6.13.0.
-  Each check names its upstream change and goes once the floor passes it.
+  `Civi\Afreact\AttributeSchema`). Where nothing the server returns tells
+  whether the running core has a behaviour of the next minor, the page
+  compares core's version, which afreact hands it, with the first release
+  that has it (`coreHas()`), so that one afreact release runs on the latest
+  release and on the next one.
 - **Newer than covered.** On a core release newer than the installed afreact
   release covers, the builders run as they are: a setting or element React
   does not know shows as a notice and is saved back unchanged (see
@@ -417,42 +412,19 @@ before core ships it.
   notice: the record then behaves as the newer core reads it, not as the
   React editor described it. The weekly runs on master and on the next
   release branch are there to meet such a change before its minor ships.
-- **Test runs.** civikitchen publishes the newest patch of each minor it
-  builds as `:standalone-<minor>`, rebuilt daily, and keeps each patch
-  release it built under a frozen tag of its own (`:standalone-6.19.0`).
-  Every push runs the unit and PHPUnit suites on the newest release
-  (`:standalone`) and, as a `matrix_images` leg, on the floor itself
-  (`:standalone-6.19.0`). The browser suite, the parity tests included, runs
-  on both once a day for a main commit it has not tested yet, and by hand.
-  A weekly run, and the
-  same run started by hand on the commit a release is tagged from, adds a
-  leg for every supported minor at its newest patch, for the release before
-  each patch boundary a version check names, so that both sides of the
-  check run, for the release branch of the next minor (`:standalone-beta`)
-  and for core's master (`:standalone-master`).
+- **Test runs.** Every push runs the unit and PHPUnit suites on civikitchen's
+  current image and, as a `matrix_images` leg, on the floor's .0
+  (`:standalone-6.20.0`). The browser suite, the parity tests included, runs
+  on both once a day for a main commit it has not tested yet, and by hand. A
+  weekly run, and the same run started by hand on the commit a release is
+  tagged from, covers the latest minor at its newest patch
+  (`:standalone-6.20`), the release branch of the next minor
+  (`:standalone-beta`) and core's master (`:standalone-master`).
 - **Lead time.** A change that reaches core through master meets the weekly
   run one to two months before its minor ships, and again on the release
   branch it ships from, which can differ from master. A backport can reach
-  a patch release within days (6.18.1 carried a FormBuilder fix that had
-  landed on master the day before); the minor's image moves to the new patch
+  a patch release within days; the minor's image moves to the new patch
   within a day, and the next push, daily or weekly run tests it.
-- **Earlier patches** of a minor run only where a version check splits the
-  minor. In the patch releases of 6.9 to 6.18, 14 commits reached the
-  builder paths, between none and four per minor; core-watch lists each one
-  (see "Upstream tracking").
-- **civikitchen** carries the runs. Its `matrix_playwright` input runs the
-  browser suite on every `matrix_images` leg, each leg on a stack and port
-  and in a concurrency group of its own, so that the legs run side by side
-  and neither two legs nor a push and the weekly run cancel each other. It
-  builds `:standalone-master` and `:standalone-beta` daily from core's git.
-  And once its successor ships, a minor's image follows its patches only
-  while the minor is on `CK_STANDALONE_EXTRA_MINORS`
-  (`toolbelt/versions.env`), so each supported minor goes on that list
-  before then; 6.19 is on it.
-
-The floor rises only by decision, announced with an afreact release, and
-the checks below it go then. Until then the weekly run grows by one minor a
-month.
 
 ## Upstream tracking
 
@@ -485,15 +457,13 @@ CRM/Utils/JS.php
 Civi/Angular/Coder.php
 ```
 
-core-watch also follows core's release branches from 6.19 on, each from its
-own reviewed commit, and core's release tags. All 14 commits that reached
-the builder paths in the patch releases of 6.9 to 6.18 are on master too,
-but 11 of them as backports under a hash of their own, so master alone does
-not show which patch releases carry a change. For each change the builders
-depend on, the review records the first tag on each branch that contains
-it, which is what a version check (see "Core versions") lists; a change
-still unreleased, such as `0b7e59e56c` on the 6.19 branch two days after
-6.19.0, gets its check once a tag contains it.
+core-watch also follows the release branch of the latest minor and of the
+next one, each from its own reviewed commit, and core's release tags. A
+backport reaches a release branch under a hash of its own, so master alone
+does not show which patch releases carry a change. For each change the
+builders depend on, the review records the first tag on each branch that
+contains it, which is what a version check (see "Core versions") lists; a
+change still unreleased gets its check once a tag contains it.
 
 A new display setting, element or behavior in core shows up as a notice in
 the React builder until React supports it, never as lost data (see "Round

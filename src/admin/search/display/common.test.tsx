@@ -10,8 +10,6 @@ const ctx: DisplayContext = {
   meta,
   search: { api_entity: "Contact", api_params: { version: 4, select: ["id", "display_name"] } },
   defaultPagerSize: 50,
-  entityIndex: true,
-  customDateFormat: true,
 };
 
 describe("LinkConditions", () => {

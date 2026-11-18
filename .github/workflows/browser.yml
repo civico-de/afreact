@@ -47,4 +47,4 @@ jobs:
       matrix_playwright: true
       # The arm64 runners take about 40 minutes per leg; the x64 ones four times that.
       runs_on: civico-ci-arm64
-      matrix_images: ghcr.io/civico-de/civikitchen:standalone-6.19.0
+      matrix_images: ghcr.io/civico-de/civikitchen:standalone-6.20.0

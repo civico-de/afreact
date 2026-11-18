@@ -1,9 +1,8 @@
 import { useId } from "react";
 import { EntityTags } from "../../widgets/EntityTags";
 import { ModelText } from "../../widgets/ModelText";
-import { useCoreHas } from "../../version";
 import { fromLocalDateTime, toLocalDateTime } from "../../../afform/fields/dateTime";
-import { SAVED_SEARCH_FIELDS, validTimeout, type EditorSearch } from "../editor";
+import { validTimeout, type EditorSearch } from "../editor";
 
 interface SettingsTabProps {
   search: EditorSearch;
@@ -19,8 +18,6 @@ export function SettingsTab({
   onChange,
   onToggleEntitySet,
 }: SettingsTabProps) {
-  // An older core drops a field it lacks on save, so it is not offered there.
-  const hasTimeout = useCoreHas(SAVED_SEARCH_FIELDS.timeout ?? {});
   const id = useId();
   return (
     <>
@@ -39,23 +36,21 @@ export function SettingsTab({
           }}
         />
       </div>
-      {hasTimeout && (
-        <div className={`form-group${validTimeout(search.timeout) ? "" : " has-error"}`}>
-          <label htmlFor={`${id}-timeout`}>{ts("Query Timeout (seconds)")}</label>
-          <input
-            id={`${id}-timeout`}
-            type="number"
-            min={0}
-            className="form-control six"
-            placeholder={ts("Site default")}
-            value={search.timeout ?? ""}
-            aria-invalid={!validTimeout(search.timeout) || undefined}
-            onChange={(event) => {
-              onChange({ timeout: event.target.value === "" ? null : Number(event.target.value) });
-            }}
-          />
-        </div>
-      )}
+      <div className={`form-group${validTimeout(search.timeout) ? "" : " has-error"}`}>
+        <label htmlFor={`${id}-timeout`}>{ts("Query Timeout (seconds)")}</label>
+        <input
+          id={`${id}-timeout`}
+          type="number"
+          min={0}
+          className="form-control six"
+          placeholder={ts("Site default")}
+          value={search.timeout ?? ""}
+          aria-invalid={!validTimeout(search.timeout) || undefined}
+          onChange={(event) => {
+            onChange({ timeout: event.target.value === "" ? null : Number(event.target.value) });
+          }}
+        />
+      </div>
       <div className="form-group">
         <label htmlFor={`${id}-expires`}>{ts("Search Expiry Date")}</label>
         <div className="input-group">

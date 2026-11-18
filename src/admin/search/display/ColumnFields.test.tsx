@@ -18,8 +18,6 @@ const ctx: DisplayContext = {
     api_params: { version: 4, select: ["id", "display_name", "birth_date", "gender_id:label"] },
   },
   defaultPagerSize: 50,
-  entityIndex: true,
-  customDateFormat: true,
 };
 
 let saved: AdminColumn | undefined;
@@ -240,8 +238,6 @@ describe("ColumnTypeFields", () => {
         },
       },
       defaultPagerSize: 50,
-      entityIndex: true,
-      customDateFormat: true,
     };
 
     it("turns into an HTML column without link, in-place edit and icons, and back", async () => {

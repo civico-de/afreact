@@ -156,10 +156,6 @@ export interface DisplayContext {
   meta: SearchAdminMetadata;
   search: SearchInfo;
   defaultPagerSize: number;
-  /** DB entity columns carry a search index (core 3ede57c349). */
-  entityIndex: boolean;
-  /** Date columns take a strftime format of their own (core a6f8934057). */
-  customDateFormat: boolean;
 }
 
 export const colTypes = (): Record<
@@ -1026,11 +1022,10 @@ export function initEntity(ctx: DisplayContext, draft: Draft): void {
   draft.acl_bypass = true;
   if (!draft.id && !draft._job) draft._job = defaultJob();
   if ((draft.name ?? "") === "") draft.name = pascalCase(draft.label);
-  initColumns(ctx, draft, ctx.entityIndex ? { label: true, index: true } : { label: true });
+  initColumns(ctx, draft, { label: true, index: true });
   draft.settings.columns = columnsOf(draft.settings).filter((col) =>
     isEntityColumnAllowed(ctx, col.key),
   );
-  if (!ctx.entityIndex) return;
   for (const col of draft.settings.columns)
     if (!("index" in col) || isFkColumn(ctx, col)) col.index = true;
 }

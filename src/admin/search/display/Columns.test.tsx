@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -11,8 +11,6 @@ const ctx: DisplayContext = {
   meta,
   search: { api_entity: "Contact", api_params: { version: 4, select: ["id", "display_name"] } },
   defaultPagerSize: 50,
-  entityIndex: true,
-  customDateFormat: true,
 };
 
 function Harness() {
@@ -94,16 +92,13 @@ describe("date format", () => {
       .map((option) => option.textContent);
   };
 
-  it("offers a format of its own only where core formats with it", async () => {
-    render(<DateColumn context={{ ...dated, customDateFormat: false }} />);
-    expect(await formats()).not.toContain("Other...");
-    cleanup();
+  it("offers a format of its own", async () => {
     render(<DateColumn context={dated} />);
     expect(await formats()).toContain("Other...");
   });
 
-  it("keeps a stored format of its own in view where core ignores it", async () => {
-    render(<DateColumn context={{ ...dated, customDateFormat: false }} format="%Y-%m" />);
+  it("shows a stored format of its own in its input", async () => {
+    render(<DateColumn context={dated} format="%Y-%m" />);
     expect(await formats()).toContain("Other...");
     expect(screen.getByRole("combobox", { name: "Format" })).toHaveValue("other");
     expect(screen.getByRole("textbox", { name: "Custom date format" })).toHaveValue("%Y-%m");

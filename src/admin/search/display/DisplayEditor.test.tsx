@@ -16,8 +16,6 @@ const ctx = {
   meta: metadata,
   search,
   defaultPagerSize: 50,
-  entityIndex: true,
-  customDateFormat: true,
 };
 const typeInfo = { label: "Table", description: "A table", icon: "fa-table" };
 

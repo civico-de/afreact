@@ -348,10 +348,7 @@ function FieldColumn(props: ColumnEditing & { dateFormats: Record<string, string
                 {label}
               </option>
             ))}
-            {/* A stored custom format stays visible on a core that ignores it. */}
-            {(ctx.customDateFormat || dateChoice === "other") && (
-              <option value="other">{ts("Other...")}</option>
-            )}
+            <option value="other">{ts("Other...")}</option>
           </select>
           {dateChoice === "other" && (
             <>

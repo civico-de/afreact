@@ -17,8 +17,6 @@ const ctx = {
   meta: metadata,
   search,
   defaultPagerSize: 50,
-  entityIndex: true,
-  customDateFormat: true,
 };
 const typeInfo = { label: "Chart", description: "A chart", icon: "fa-pie-chart" };
 

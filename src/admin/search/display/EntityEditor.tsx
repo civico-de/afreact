@@ -234,7 +234,7 @@ export function EntityEditor(props: Editing & { adopt: (change: (draft: Draft) =
         <Columns
           {...props}
           links={[]}
-          defaults={ctx.entityIndex ? { label: true, index: true } : { label: true }}
+          defaults={{ label: true, index: true }}
           withTypes={false}
           typeFields={false}
           isAllowed={(key) => isEntityColumnAllowed(ctx, key)}
@@ -265,7 +265,7 @@ export function EntityEditor(props: Editing & { adopt: (change: (draft: Draft) =
                   }}
                 />
               </div>
-              {tableMode && ctx.entityIndex && (
+              {tableMode && (
                 <div className="form-inline">
                   <label>
                     <input

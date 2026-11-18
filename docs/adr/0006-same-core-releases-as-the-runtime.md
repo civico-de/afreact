@@ -1,6 +1,7 @@
 # 6. Builders support the same core releases as the runtime
 
-Status: accepted
+Status: accepted; its version span superseded by
+[ADR 0011](0011-latest-core-release-only.md)
 
 ## Context
 
