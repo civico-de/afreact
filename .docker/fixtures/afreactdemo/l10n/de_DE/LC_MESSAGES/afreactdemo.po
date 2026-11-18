@@ -1,0 +1,14 @@
+# German strings of the afreactdemo fixture, for the test that forms are
+# translated in the domain of the extension that ships them.
+msgid ""
+msgstr ""
+"Language: de_DE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Add email"
+msgstr "E-Mail hinzufügen"
+
+msgid "Contact saved."
+msgstr "Kontakt gespeichert."

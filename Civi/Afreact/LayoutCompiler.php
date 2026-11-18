@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace Civi\Afreact;
 
+use Civi\Afform\StringVisitor;
 use Civi\Angular\ChangeSet;
 use Civi\Angular\Manager;
 
@@ -46,7 +47,7 @@ final class LayoutCompiler {
 
   private function html(string $module): string {
     $partials = ChangeSet::applyResourceFilters(
-      $this->angular->getChangeSets(),
+      $this->changeSets($module),
       'partials',
       $this->angular->getRawPartials($module),
     );
@@ -55,6 +56,30 @@ final class LayoutCompiler {
       throw new \CRM_Core_Exception("No layout for Afform module {$module}.");
     }
     return $html;
+  }
+
+  /**
+   * Core's change sets, with its markup translation swapped in place for one in the domain of
+   * the extension that ships the form. deviation:form-strings-extension-domain
+   *
+   * @return list<ChangeSet>
+   */
+  private function changeSets(string $module): array {
+    $domain = Afforms::domain($this->angular->getModule($module)['_afform'] ?? NULL);
+    $translate = ChangeSet::create('translate')->alterHtml(
+      ';\.aff\.html$;',
+      fn (\phpQueryObject $doc) => (new StringVisitor())->visit($doc, fn (string $text) => _ts($text, [
+        'domain' => $domain,
+      ])),
+    );
+    $sets = [];
+    foreach ($this->angular->getChangeSets() as $set) {
+      if (!$set instanceof ChangeSet) {
+        throw new \CRM_Core_Exception('Angular returned a change set that is not a ChangeSet.');
+      }
+      $sets[] = $set->getName() === 'translate' ? $translate : $set;
+    }
+    return $sets;
   }
 
   /**

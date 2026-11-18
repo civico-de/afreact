@@ -78,8 +78,28 @@ final class Afforms {
     if (!is_array($record)) {
       throw new \CRM_Core_Exception("The form {$name} does not exist.");
     }
-    (new StringVisitor())->visitMetadata($record, '_ts');
+    $domain = self::domain($name);
+    // deviation:form-strings-extension-domain
+    (new StringVisitor())->visitMetadata($record, fn (string $text) => _ts($text, ['domain' => $domain]));
     return $record;
+  }
+
+  /**
+   * The translation domains of a form's strings: the extension that ships it, then core's;
+   * NULL (core's only) for a form no extension ships.
+   *
+   * @return list<string|null>|null
+   */
+  public static function domain(mixed $name): ?array {
+    $scanner = \Civi::service('afform_scanner');
+    if (!$scanner instanceof \CRM_Afform_AfformScanner) {
+      throw new \CRM_Core_Exception('The afform_scanner service is not an AfformScanner.');
+    }
+    $paths = is_string($name) ? $scanner->findFilePaths()[$name] ?? [] : [];
+    // Sources in precedence order: the site's own copy (''), core's ang/afform ('civicrm'), extensions.
+    $shipped = array_values(array_diff(array_keys(is_array($paths) ? $paths : []), ['']));
+    $source = $shipped[0] ?? NULL;
+    return is_string($source) && $source !== 'civicrm' ? [$source, NULL] : NULL;
   }
 
   public static function field(mixed $afform, string $field): string {

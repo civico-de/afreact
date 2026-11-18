@@ -110,6 +110,16 @@ this lets one user's text run as an expression in another user's session
 (reported privately as security/core#249). React renders the titles as
 text. `deviation:admin-menu-title-text`
 
+**An extension's form texts are translated in core's catalog only.**
+`Civi\Afform\Translator` passes every string of an `.aff.html` to `_ts()`
+without a domain, and `afform_civicrm_buildAsset()` does so for the form's
+title and messages, so an extension that ships a form and its translations
+gets its schema's field labels translated and its help texts, headings,
+repeat captions and buttons not (6.20.0; fixed on `master` in
+[`08e161022f`](https://github.com/civicrm/civicrm-core/commit/08e161022f),
+in no release yet). The React renderer translates them in the domain of the
+extension that ships the form, then in core's, as that fix does. `deviation:form-strings-extension-domain`
+
 ## Drafts and submission
 
 **"Draft Saved" before any draft.** afForm starts its draft watcher after

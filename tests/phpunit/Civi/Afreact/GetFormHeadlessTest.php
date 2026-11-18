@@ -8,6 +8,8 @@ use Civi\Api4\Afform;
 use Civi\Api4\Afreact;
 use Civi\Api4\WordReplacement;
 use Civi\API\Exception\UnauthorizedException;
+use Civi\Core\Event\GenericHookEvent;
+use Civi\Core\Locale;
 use Civi\Test\CiviEnvBuilder;
 use Civi\Test\HeadlessInterface;
 use Civi\Test\TransactionalInterface;
@@ -174,6 +176,54 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
     $this->assertSame("It's me", $defn['input_attrs']['placeholder']);
     // A string literal stays as written.
     $this->assertSame('ts(x)', $defn['label']);
+  }
+
+  /**
+   * deviation:form-strings-extension-domain
+   */
+  public function testAFormsStringsAreTranslatedInItsExtensionsDomain(): void {
+    // A locale object skips negotiation, which needs core's language files for German.
+    \CRM_Core_I18n::singleton()->setLocale(new Locale(['nominal' => 'de_DE', 'ts' => 'de_DE']));
+    try {
+      $form = $this->form('afformAfreactDemoContact');
+    }
+    finally {
+      \CRM_Core_I18n::singleton()->setLocale('en_US');
+    }
+    $repeat = array_values(array_filter(
+      $this->findTag($form['layout'], 'div'),
+      fn (array $node): bool => isset($node['af-repeat']),
+    ));
+    $this->assertSame('E-Mail hinzufügen', $repeat[0]['af-repeat'] ?? NULL);
+    $this->assertSame('Kontakt gespeichert.', $form['meta']['confirmation_message']);
+  }
+
+  /**
+   * deviation:form-strings-extension-domain
+   */
+  public function testACoreFormKeepsCoresDomainWhenAnExtensionShipsTheSameName(): void {
+    $dir = sys_get_temp_dir() . '/afreact-domain-' . uniqid();
+    mkdir($dir);
+    file_put_contents("{$dir}/afformQuickAddIndividual.aff.html", '<div></div>');
+    $listener = static function (GenericHookEvent $event) use ($dir): void {
+      $event->paths[] = ['weight' => 0, 'path' => $dir, 'module' => 'org.example.probe'];
+    };
+    \Civi::dispatcher()->addListener('civi.afform.searchPaths', $listener);
+    try {
+      \Civi::service('afform_scanner')->clear();
+      $this->assertSame(
+        ['civicrm', 'org.example.probe'],
+        array_keys(\Civi::service('afform_scanner')->findFilePaths()['afformQuickAddIndividual']),
+      );
+      $this->assertNull(Afforms::domain('afformQuickAddIndividual'));
+      $this->assertSame(['afreactdemo', NULL], Afforms::domain('afformAfreactDemoContact'));
+    }
+    finally {
+      \Civi::dispatcher()->removeListener('civi.afform.searchPaths', $listener);
+      \Civi::service('afform_scanner')->clear();
+      unlink("{$dir}/afformQuickAddIndividual.aff.html");
+      rmdir($dir);
+    }
   }
 
   public function testFormPermissionDecidesAccess(): void {
