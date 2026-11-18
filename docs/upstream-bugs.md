@@ -167,6 +167,17 @@ runs on the server, so the React renderer shares this. A fix would be small:
 `getEntityIds(string $entityName)` with the trait's logic. Not reported
 upstream.
 
+**A failed save reports success.** `Submit::processGenericEntity()` wraps the
+entity's `save` and `saveJoins()` in one `try` and only logs a
+`CRM_Core_Exception` at debug level ("Silently ignoring exception on submit");
+from 6.20 a database error is rethrown, a validation error is not (6.20.0, read
+from the code). A record a `civi.api4.validate` listener rejects is then not
+stored, and a join that fails leaves the main record saved without it, while
+the response carries the redirect or message of a success. The submit runs on
+the server and its answer is the same either way, so the React renderer shows
+the same success. A `civi.afform.validate` listener that runs the checks first
+turns them into form errors.
+
 **A required extra field never passes.** `preprocessSubmittedValues()` walks
 the submitted `extra` like an entity's list of records, so the required check
 finds no value for any extra field, and a form with a required one fails every
