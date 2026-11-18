@@ -386,6 +386,19 @@ present. `deviation:operator-falsy-value-kept`
 
 ## Conditions
 
+**A rule inside an `af-repeat` row tests the first row.** The conditional
+rules dialog keys a join's fields with a fixed record index
+(`Individual1[0][joins][Email][0][email]`, `afGuiConditionalDialog.ctrl.js`;
+on `master` the index of the block, still fixed), and markup has no way to say
+"this row". A rule on a field inside a repeated join therefore tests row 1 in
+every row: with "show Location type when this row's email is
+show@example.org", row 2 shows it when row 1 holds that address and hides it
+when only row 2 does (run on 6.20.0). The server checks `af-if`, `af-required`
+and `af-disabled` with the same paths (`Submit::getValueFromEntity()`; read
+from the code, not run). The React renderer does the same, since a fix needs
+one meaning in the editor, both runtimes and the server. Reported in
+[dev/core#6113](https://lab.civicrm.org/dev/core/-/work_items/6113).
+
 **A rule on a second join block tests the first.** Up to 6.20 the conditional
 rules dialog keys each join's fields as `Individual1[0][joins][Email][0][email]`
 (`afGuiConditionalDialog.ctrl.js`), so with a Home and a Work email block it
