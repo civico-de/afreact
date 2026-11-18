@@ -510,7 +510,6 @@ function BehaviorSettings({ entity, behavior }: { entity: FormEntity; behavior: 
         }))}
         value={selected ? [selected] : []}
         single
-        // deviation:relationship-autofill-clearable
         clearable={relationship || !behavior.default_mode}
         onChange={([mode]) => {
           edit((node) => withAttribute(editor.meta.types, node, behavior.key, mode ?? null));

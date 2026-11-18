@@ -101,7 +101,6 @@ describe("EntityTab", () => {
     expect(offered).not.toContain("First Name");
   });
 
-  // deviation:relationship-autofill-clearable
   it("lets the relationship autofill be cleared, though it has a default mode", async () => {
     renderWithQuery(<Harness meta={AUTOFILL} initial={form(individual({ autofill: "user" }))} />);
     await userEvent.click(screen.getByRole("button", { name: "Options" }));

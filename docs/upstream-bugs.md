@@ -882,10 +882,6 @@ offset alone while the input holds no number and keeps the "-" on show.
 React always puts it first, then the others by label in the same code unit
 order. `deviation:content-block-first` (S63)
 
-**A search without a display label shows "null".** Refuted on 6.21.alpha1:
-`SearchDisplay.label` is required, so the joined label is never null. React
-shows the search's label alone. `deviation:search-display-label-null` (S141)
-
 **A failed load of the "New Search Form" choices spins forever.** React shows
 the error and loads again on the next opening.
 `deviation:search-choices-load-error` (S142)
@@ -959,10 +955,6 @@ title. `deviation:locale-setting-label` (S59)
 
 **Behaviors on a block's tab are not saved.** React shows behaviors only for
 entities on a form. `deviation:behaviors-only-on-forms` (S53)
-
-**The relationship autofill cannot be cleared.** Refuted on 6.21.alpha1:
-`crmSelect2()` offers clearing for every input not marked required. React lets
-the autofill be cleared. `deviation:relationship-autofill-clearable` (S150)
 
 **Placement entities without a filter show an empty row.** React renders rows
 only for entities with a filter. `deviation:placement-rows-with-filter` (S151)

@@ -126,10 +126,7 @@ async function searchLinks(): Promise<Link[]> {
     if (search["display.name"])
       links.push({
         url: `#create/search/${search.name}.${search["display.name"]}`,
-        // deviation:search-display-label-null
-        text: search["display.label"]
-          ? `${search.label}: ${search["display.label"]}`
-          : search.label,
+        text: `${search.label}: ${search["display.label"]}`,
         icon: search["display.type:icon"] ?? undefined,
       });
   }

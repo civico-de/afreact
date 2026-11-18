@@ -159,28 +159,6 @@ describe("AdminListMenu", () => {
     ]);
   });
 
-  // deviation:search-display-label-null
-  it("shows the search's label alone for a display without a label", async () => {
-    mockApi({
-      "SavedSearch.get": () => [
-        {
-          name: "A",
-          label: "Alpha",
-          "display.name": "T",
-          "display.label": null,
-          "display.type:icon": "fa-table",
-        },
-      ],
-    });
-    renderMenu("search");
-    await userEvent.click(screen.getByRole("button", { name: "New Search Form" }));
-    await screen.findByRole("searchbox", { name: "Filter", hidden: true });
-    expect(items()).toEqual([
-      ["Alpha: Search results table", "#create/search/A"],
-      ["Alpha", "#create/search/A.T"],
-    ]);
-  });
-
   // deviation:search-choices-load-error
   it("shows a failed load and tries again on the next opening", async () => {
     let fail = true;
