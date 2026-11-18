@@ -13,8 +13,11 @@ The React renderer matches core's Angular runtime in behaviour, except where
 that behaviour is a bug. When core is wrong (lost or overwritten values, wrong
 filters, unescaped output, crashes), React does the correct thing:
 
-- List the bug in `docs/upstream-bugs.md` under its area, with what React does
-  instead.
+- Write the bug up in civico's internal bug list, where it gets an ID, then
+  list it in `docs/upstream-bugs.md` under its area: title, upstream state
+  with public links, what React does instead, and the ID in parentheses at the
+  end. A security issue goes to the security team and is listed with its
+  security/core number only.
 - Tests assert the correct behaviour. Where a parity spec compares React with
   Angular, it states the deviation and why, rather than expecting the bug.
 - "For parity" is no reason to keep a known defect.
