@@ -16,7 +16,7 @@ return [
     'default' => [],
     'title' => E::ts('Forms rendered with React'),
     'description' => E::ts(
-      'On their pages, contact summary tabs and blocks, case summary blocks and dashboard dashlets these forms render with React. All other forms stay Angular.',
+      'On their pages, contact summary tabs and blocks, event management tabs, case summary blocks, the contact actions popup and dashboard dashlets these forms render with React. All other forms stay Angular.',
     ),
     'is_domain' => 1,
     'is_contact' => 0,

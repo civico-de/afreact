@@ -22,9 +22,12 @@ scenario:
     - smarty
     - taint
 policy:
-  license: Proprietary
-  npm_license: UNLICENSED
+  license: AGPL-3.0-or-later
+  npm_license: AGPL-3.0-or-later
   copyright: 'civico GmbH'
+  civicrm_floor_reasons:
+    - version: "6.20"
+      reason: "afreact supports the latest core release only (docs/adr/0011-latest-core-release-only.md)"
   # Dispatched by contactlayout, which afreact supports without requiring it.
   known_hooks:
     - contactSummaryBlocks

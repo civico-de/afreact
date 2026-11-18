@@ -1,14 +1,19 @@
 {
-    "name": "civico/afreact",
+    "name": "civico-de/afreact",
     "type": "civicrm-ext",
-    "license": "proprietary",
+    "license": "AGPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Johannes Filter",
+            "email": "johannes@civico.de"
+        }
+    ],
     "require": {
         "php": ">=8.2"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.6"
     },
-    "private": true,
     "config": {
         "platform": {
             "php": "8.2.0"

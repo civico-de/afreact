@@ -10,7 +10,7 @@ CiviCRM has two tools for building screens without programming. FormBuilder
 makes forms: a sign-up form, a contact edit form, a tab on the contact
 summary. SearchKit makes lists and tables: members, open donations, a report
 with totals. Both draw their screens with a browser technology called
-Angular, which is old and no longer developed.
+AngularJS, which is old and no longer developed.
 
 afreact draws the same forms and tables with React, a current technology. It
 does not change what is stored, who may see what, or how a form is built. A
@@ -88,15 +88,16 @@ Two administration pages control it. They have no menu entry yet; open them
 by their address on the site:
 
 1. **React renderer support** (civicrm/admin/afreact): lists every form and
-   says whether afreact can draw it. One button switches over every form it
-   can.
+   says whether afreact can draw it; blocks are checked inside the forms
+   that hold them. One button switches over every form it can and takes
+   back the ones it cannot.
 2. **React renderer settings** (civicrm/admin/setting/afreact): "Forms
    rendered with React" lists the forms afreact draws, "Builders opened with
    React" decides whether the React editors replace the original SearchKit
    and FormBuilder editors.
 
 A form taken off the list is drawn by the original again at once, in every
-place it appears: its own page, contact tabs, dashboard and popups. When the
+place it appears: its own page, contact and event tabs, case blocks, dashboard and popups. When the
 React editors are switched on, the originals stay reachable under the same
 address with "/classic" added.
 
@@ -105,15 +106,15 @@ address with "/classic" added.
 afreact is in alpha. It covers forms with blocks, repeated sections,
 conditions, drafts and payment; tables, lists, grids, trees, batch entry and
 charts with filters, in-place editing and bulk actions. It is tested
-automatically against both the oldest and the newest supported CiviCRM
-release, and every form on a test site is compared screen by screen with the
-original.
+automatically against the supported CiviCRM release, and every week against
+the next release branch and core's development branch. Every form on a test
+site is compared screen by screen with the original.
 
 ## Further reading
 
-| Document | For whom |
-|---|---|
-| [comparison.md](comparison.md), [comparison-builders.md](comparison-builders.md) | anyone checking a specific difference |
-| [upstream-bugs.md](upstream-bugs.md) | CiviCRM developers |
-| [reference.md](reference.md) | administrators and developers integrating afreact |
-| [architecture.md](architecture.md), [testing.md](testing.md) | developers working on afreact |
+| Document                                                                         | For whom                                          |
+| -------------------------------------------------------------------------------- | ------------------------------------------------- |
+| [comparison.md](comparison.md), [comparison-builders.md](comparison-builders.md) | anyone checking a specific difference             |
+| [upstream-bugs.md](upstream-bugs.md)                                             | CiviCRM developers                                |
+| [reference.md](reference.md)                                                     | administrators and developers integrating afreact |
+| [architecture.md](architecture.md), [testing.md](testing.md)                     | developers working on afreact                     |

@@ -31,22 +31,12 @@ rejects such a block with an error. `deviation:self-including-block-rejected`
 (S47)
 
 **Confirmation message is not escaped.** Reported privately as
-security/core#230; a patch is merged for the next security release.
-
-- the submitter sees their own markup run (self-XSS);
-- on a form with "Verify submission before processing", a reviewer who processes
-  the stored submission (`#?sid=`) gets the confirmation message with the
-  submitter's markup in their own session. afreact escapes the submitted values
-  site-wide, whichever renderer shows it: a `civi.api.respond` listener on
-  `Afform.submit` rebuilds core's message with each token value HTML-escaped and
-  the admin's markup kept (`Civi/Afreact/ConfirmationMessage.php`). Values that
-  hold HTML, such as a rich-text field, therefore show as text. A message
-  another listener set is left as it is. The contribution checkout sets its own;
-  afreact escapes it only where it equals core's (no `[token]`, no entity saved
-  after the contribution). The same listener rebuilds the redirect with each
-  token value URL-encoded, unless another listener set it, as the checkout does
-  with its payment URL. The checkout page is unchanged.
-  `deviation:confirmation-message-escaped`
+security/core#230; a patch is merged for the next security release. afreact
+escapes the submitted values in core's confirmation message and URL-encodes them
+in the redirect, whichever renderer shows the form
+(`Civi/Afreact/ConfirmationMessage.php`). A message or redirect another listener
+set, such as the checkout's, is left as it is.
+`deviation:confirmation-message-escaped`
 
 **An emptied field shows "null" in a token.** The React renderer shows nothing
 and leaves the default's text without it. `deviation:token-null-empty` (S26)

@@ -3,10 +3,10 @@
   <file>afreactcheckout</file>
   <name>afreact checkout fixture</name>
   <description>Checkout options whose Angular templates take card details, take over the submit button and mount a widget after submit, with a donation form using them, for afreact's browser tests; no network, no money.</description>
-  <license>Proprietary</license>
+  <license>AGPL-3.0-or-later</license>
   <maintainer>
     <author>civico GmbH</author>
-    <email>hi@jfilter.de</email>
+    <email>johannes@civico.de</email>
   </maintainer>
   <releaseDate>2026-10-19</releaseDate>
   <version>1.0</version>

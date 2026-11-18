@@ -3,18 +3,24 @@
   <file>afreact</file>
   <name>Afreact</name>
   <description>Renders FormBuilder (Afform) forms and SearchKit displays with React, reading the unchanged core definitions and APIs.</description>
-  <license>Proprietary</license>
+  <license>AGPL-3.0-or-later</license>
   <authors>
     <author>
-      <name>afreact contributors</name>
-      <email>hi@jfilter.de</email>
+      <name>Johannes Filter</name>
+      <email>johannes@civico.de</email>
       <role>Maintainer</role>
     </author>
   </authors>
+  <urls>
+    <url desc="Main Extension Page">https://github.com/civico-de/afreact</url>
+    <url desc="Documentation">https://civico-de.github.io/afreact/</url>
+    <url desc="Support">https://github.com/civico-de/afreact/issues</url>
+    <url desc="Licensing">http://www.gnu.org/licenses/agpl-3.0.html</url>
+  </urls>
   <releaseDate>2026-10-07</releaseDate>
   <version>0.1.0</version>
   <develStage>alpha</develStage>
-  <compatibility mode="semver">
+  <compatibility min="6.20" mode="semver">
     <comments>Semantic versioning. For example, compatibility with "6.1" implies compatibility with "6.2".</comments>
     <ver>6.20</ver>
   </compatibility>
@@ -29,7 +35,7 @@
     <comments>Listed versions. For example, specify both "4" and "5".</comments>
     <ver>5</ver>
   </smarty_compatibility>
-  <comments>Alpha. The README lists what the renderer covers.</comments>
+  <comments>Alpha. The handbook lists what the renderer covers.</comments>
   <requires>
     <ext>org.civicrm.afform</ext>
     <ext>org.civicrm.search_kit</ext>

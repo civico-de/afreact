@@ -3,10 +3,10 @@
   <file>afreactisland</file>
   <name>afreact island fixture</name>
   <description>A display type with only an Angular editor, a builder panel and FormBuilder plugins (element, input type, behavior, entity options), for afreact's browser tests.</description>
-  <license>Proprietary</license>
+  <license>AGPL-3.0-or-later</license>
   <maintainer>
     <author>civico GmbH</author>
-    <email>hi@jfilter.de</email>
+    <email>johannes@civico.de</email>
   </maintainer>
   <releaseDate>2026-10-11</releaseDate>
   <version>1.0</version>

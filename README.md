@@ -1,4 +1,8 @@
+![afreact: FormBuilder forms, SearchKit displays and both editors drawn with React, on the same data and permissions](handbook/images/cover.png)
+
 # afreact
+
+> **Status: alpha.** Settings and behaviour can still change between releases. Try it on a test site before you use it in production.
 
 Draws CiviCRM's FormBuilder forms and SearchKit tables with React instead of
 Angular, and rebuilds the two editors that make them. Forms, searches, stored
@@ -13,14 +17,16 @@ screens that were found while rebuilding them.
 **[overview.md](docs/overview.md) explains all of this without technical
 detail** and is the place to start.
 
-Status: alpha. The supported CiviCRM releases are pinned in `info.xml`.
+The supported CiviCRM releases are pinned in `info.xml`.
 
 ## Using it
 
 1. Install the extension. Nothing changes yet: every form stays Angular.
 2. Open the support report at `civicrm/admin/afreact`. It lists every form
-   and what afreact cannot draw in it; its button switches over every form
-   without such a finding.
+   except blocks, which it checks inside the forms that hold them, and what
+   afreact cannot draw in each. Its button sets the list to every form
+   without such a finding, so a listed form that has one goes back to
+   Angular.
 3. Fine-tune at `civicrm/admin/setting/afreact`: the forms drawn with React,
    and whether the React editors replace core's SearchKit and FormBuilder
    editors (core's stay reachable under `…/classic`).
@@ -30,21 +36,25 @@ naming it. A setting the React editors cannot edit is saved back unchanged.
 
 ## Documentation
 
-| Document | Content |
-|---|---|
-| [docs/overview.md](docs/overview.md) | what afreact is and changes for users, in plain words |
-| [docs/reference.md](docs/reference.md) | the elements, URL state, takeover per placement, builder plugins, pages and code layout |
-| [docs/architecture.md](docs/architecture.md) | boundary, state, the first search, libraries and chunks, dashlets, the support report, the debug mode |
-| [docs/comparison.md](docs/comparison.md) | the renderer's parity gaps, improvements, differences by design, what is not implemented and why |
-| [docs/comparison-builders.md](docs/comparison-builders.md) | the builders' differences from core's SearchKit admin and FormBuilder editor |
-| [docs/upstream-bugs.md](docs/upstream-bugs.md) | bugs in core found on the way, by area, and what React does instead |
-| [docs/searchkit-format.md](docs/searchkit-format.md) | the SearchKit records as a format: the query, field names and joins, display settings, columns, links, text templates, what a run returns |
-| [docs/afform-markup.md](docs/afform-markup.md) | the Afform markup as a language: vocabulary, attribute types, the three layout formats, what core could change for a second renderer |
-| [docs/load-metrics.md](docs/load-metrics.md) | measured load times of both renderers and the layout sources |
-| [docs/testing.md](docs/testing.md) | every browser spec, the sweeps, the demo videos |
-| [docs/kit.md](docs/kit.md) | the kit: React, TanStack Query and afreact's components for other extensions' modules, through `afreact/` in core's import map |
-| [docs/builders.md](docs/builders.md) | the React builders: server contracts, takeover and fallback, Angular islands, plugin contract, round trip, testing, core versions |
-| [docs/adr/](docs/adr/) | decision records: why afreact is built the way it is |
+The user manual is at <https://civico-de.github.io/afreact/>; its source is in
+`handbook/`, and CiviCRM shows it under Support › Handbook when the handbook
+extension is installed. The documents below are for developers.
+
+| Document                                                   | Content                                                                                                                                   |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| [docs/overview.md](docs/overview.md)                       | what afreact is and changes for users, in plain words                                                                                     |
+| [docs/reference.md](docs/reference.md)                     | the elements, URL state, takeover per placement, builder plugins, pages and code layout                                                   |
+| [docs/architecture.md](docs/architecture.md)               | boundary, state, the first search, libraries and chunks, dashlets, the support report, the debug mode                                     |
+| [docs/comparison.md](docs/comparison.md)                   | the renderer's parity gaps, improvements, differences by design, what is not implemented and why                                          |
+| [docs/comparison-builders.md](docs/comparison-builders.md) | the builders' differences from core's SearchKit admin and FormBuilder editor                                                              |
+| [docs/upstream-bugs.md](docs/upstream-bugs.md)             | bugs in core found on the way, by area, and what React does instead                                                                       |
+| [docs/searchkit-format.md](docs/searchkit-format.md)       | the SearchKit records as a format: the query, field names and joins, display settings, columns, links, text templates, what a run returns |
+| [docs/afform-markup.md](docs/afform-markup.md)             | the Afform markup as a language: vocabulary, attribute types, the three layout formats, what core could change for a second renderer      |
+| [docs/load-metrics.md](docs/load-metrics.md)               | measured load times of both renderers and the layout sources                                                                              |
+| [docs/testing.md](docs/testing.md)                         | every browser spec, the sweeps, the demo videos                                                                                           |
+| [docs/kit.md](docs/kit.md)                                 | the kit: React, TanStack Query and afreact's components for other extensions' modules, through `afreact/` in core's import map            |
+| [docs/builders.md](docs/builders.md)                       | the React builders: server contracts, takeover and fallback, Angular islands, plugin contract, round trip, testing, core versions         |
+| [docs/adr/](docs/adr/)                                     | decision records: why afreact is built the way it is                                                                                      |
 
 ## Development
 
@@ -100,6 +110,10 @@ CIVICRM_BASE_URL=http://localhost:8080 bun run video:tour   # needs ffmpeg
 [docs/testing.md](docs/testing.md) lists every spec, the sweeps, the
 measurement rounds and the demo videos.
 
-## Licence
+## License
 
-Proprietary, © civico GmbH. See [LICENSE.txt](LICENSE.txt).
+Licensed under AGPL-3.0-or-later, see [LICENSE.txt](LICENSE.txt). Copyright (C)
+2026 civico GmbH. Report bugs in the
+[issue tracker](https://github.com/civico-de/afreact/issues). Report security
+issues by email to security@civico.de, not in a public issue; see
+[SECURITY.md](SECURITY.md).
