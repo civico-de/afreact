@@ -137,8 +137,10 @@ test("the demo displays carry what the comparison relies on", async ({ page }) =
   const grid = await observe(page);
   expect(grid.container).toMatchObject({ tag: "div", tracks: 2 });
   expect(grid.items.map((entry) => entry.columns[0]?.text)).toEqual(["Mrs.", "Ms.", "Mr.", "Dr."]);
-  // A form page knows no display label, so the list has no name there.
-  await expect(display(page).getByRole("list").getByRole("listitem")).toHaveCount(4);
+  // deviation:form-display-named
+  await expect(
+    display(page).getByRole("list", { name: "Prefixes" }).getByRole("listitem"),
+  ).toHaveCount(4);
 });
 
 /** The tree's top items, then the same after opening Individual's sub-types. */

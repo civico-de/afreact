@@ -97,6 +97,13 @@ describe("AfreactSearch", () => {
     expect(table).toHaveClass("table table-striped", { exact: true });
   });
 
+  // deviation:form-display-named
+  it("names its table by the label given with the settings", async () => {
+    runs(5);
+    renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} label="Members" />);
+    expect(await screen.findByRole("table", { name: "Members" })).toBeInTheDocument();
+  });
+
   it("pages forward and back, answering known pages from the cache", async () => {
     const calls = runs(5);
     renderWithQuery(<AfreactSearch search="S" display="D" settings={settings} />);

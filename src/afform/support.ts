@@ -132,8 +132,8 @@ const FILTER_ATTRIBUTES = new Set([
   "af-if",
 ]);
 /**
- * Attributes of a search display element: the display's names and settings, and what Afform's
- * metadata injector adds for Angular's bindings (the same names again, the entity).
+ * Attributes of a search display element: the display's names, settings and label, and what
+ * Afform's metadata injector adds for Angular's bindings (the same names again, the entity).
  */
 const SEARCH_ATTRIBUTES = new Set([
   "#tag",
@@ -141,6 +141,7 @@ const SEARCH_ATTRIBUTES = new Set([
   "search-name",
   "display-name",
   "settings",
+  "display-label",
   "af-if",
   "filters",
   "total-count",

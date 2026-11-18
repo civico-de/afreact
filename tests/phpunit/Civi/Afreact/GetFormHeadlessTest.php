@@ -6,6 +6,7 @@ namespace Civi\Afreact;
 
 use Civi\Api4\Afform;
 use Civi\Api4\Afreact;
+use Civi\Api4\SearchDisplay;
 use Civi\Api4\WordReplacement;
 use Civi\API\Exception\UnauthorizedException;
 use Civi\Core\Event\GenericHookEvent;
@@ -117,6 +118,21 @@ class GetFormHeadlessTest extends TestCase implements HeadlessInterface, Transac
     $this->assertIsArray($display['settings']);
     $this->assertSame(10, $display['settings']['limit']);
     $this->assertSame('sort_name', $display['settings']['columns'][0]['key']);
+  }
+
+  /**
+   * deviation:form-display-named
+   */
+  public function testAnEmbeddedDisplayCarriesItsLabel(): void {
+    $display = $this->findTag($this->form('afsearchAfreactDemoContacts')['layout'], 'crm-search-display-table')[0];
+    $label = SearchDisplay::get(FALSE)
+      ->addSelect('label')
+      ->addWhere('name', '=', $display['display-name'])
+      ->addWhere('saved_search_id.name', '=', $display['search-name'])
+      ->execute()
+      ->single()['label'];
+    $this->assertNotSame('', $label);
+    $this->assertSame($label, $display['display-label']);
   }
 
   public function testStringsCarryTheTranslationsOfTheFormsTexts(): void {

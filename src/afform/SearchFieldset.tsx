@@ -473,6 +473,7 @@ export function FieldsetDisplay({ node, formName, onLabels }: FieldsetDisplayPro
         display={display}
         type={type}
         settings={check.settings}
+        label={typeof node["display-label"] === "string" ? node["display-label"] : undefined}
         savedColumns={savedColumnsOf(fieldset?.columns, `${search}.${display}`)}
         savedSet={fieldset?.setId ?? null}
         // The form also outside a fieldset, so its markup filters apply. deviation:display-outside-fieldset-form

@@ -245,5 +245,3 @@ debug output, as SearchKit's query tab does.
 - Except on the dashboard, pages that place a listed form still queue its
   Angular module through core's placement listeners; the directive is never
   rendered. Dropping the module needs an upstream way to say so.
-- A display placed in a form has no label of its own, so lists and table
-  captions have no name there, on either renderer.

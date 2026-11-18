@@ -7,6 +7,7 @@ namespace Civi\Afreact;
 use Civi\Afform\StringVisitor;
 use Civi\Angular\ChangeSet;
 use Civi\Angular\Manager;
+use Civi\Api4\SearchDisplay;
 
 /**
  * Turns an Afform module into its layout as the Angular runtime would see it.
@@ -83,6 +84,25 @@ final class LayoutCompiler {
   }
 
   /**
+   * The label of an embedded display, which names its table or list. deviation:form-display-named
+   */
+  private static function displayLabel(mixed $search, mixed $display): string {
+    if (!is_string($search) || $search === '') {
+      return '';
+    }
+    $found = is_string($display) && $display !== ''
+      ? SearchDisplay::get(FALSE)
+        ->addSelect('label')
+        ->addWhere('name', '=', $display)
+        ->addWhere('saved_search_id.name', '=', $search)
+        ->execute()
+        ->first()
+      : SearchDisplay::getDefault(FALSE)->setSavedSearch($search)->addSelect('label')->execute()->first();
+    $label = is_array($found) ? $found['label'] ?? NULL : NULL;
+    return is_string($label) ? $label : '';
+  }
+
+  /**
    * @param array<mixed> $nodes
    *   ArrayHtml nodes; elements are arrays with a `#tag`.
    * @param list<string> $trail
@@ -107,6 +127,7 @@ final class LayoutCompiler {
     // Afform injects display settings as a JS literal the client cannot parse.
     if (str_starts_with($tag, 'crm-search-display-') && isset($node['settings']) && is_string($node['settings'])) {
       $node['settings'] = \CRM_Utils_JS::decode($node['settings']);
+      $node['display-label'] = self::displayLabel($node['search-name'] ?? NULL, $node['display-name'] ?? NULL);
     }
     if (isset($this->blocks[$tag])) {
       $node['#children'] = $this->compile($this->blocks[$tag], $trail);

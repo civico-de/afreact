@@ -44,6 +44,8 @@ interface AfreactSearchProps {
   type?: string;
   /** Settings Afform already compiled into the layout; loaded via the API when absent. */
   settings?: DisplaySettings;
+  /** The display's label, given with the settings; it names the table or list. */
+  label?: string;
   /** Embedding Afform, so SearchDisplay.run applies the form's access rules as in Angular. */
   afform?: string;
   /** The form's filter values and the display's own `filters`, merged as getFilters() does. */
@@ -154,6 +156,7 @@ function ResultDisplay({
   display,
   type: givenType,
   settings: given,
+  label: givenLabel = "",
   afform,
   filters = NO_FILTERS,
   typed = filters,
@@ -384,7 +387,8 @@ function ResultDisplay({
   if (!givenType && loadedType !== undefined && !isDisplayType(loadedType))
     return <Unsupported what={`display type ${loadedType}`} />;
   if (!settings) return <p role="status">{ts("Loading…")}</p>;
-  const label = loaded.data?.label ?? "";
+  // deviation:form-display-named
+  const label = loaded.data?.label ?? givenLabel;
   // A failed run shows no rows and no count, as searchDisplayBaseTrait does; kept rows stay meanwhile.
   const result = (loading && !rows.isPlaceholderData) || rows.error ? undefined : rows.data;
   const setPage = (next: number) => void setUrl({ page: next === 1 ? null : next });
