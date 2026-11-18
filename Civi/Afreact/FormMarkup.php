@@ -14,7 +14,9 @@ use Civi\Angular\Manager;
  */
 final class FormMarkup {
 
-  public function __construct(private readonly Manager $angular) {}
+  public function __construct(
+    private readonly Manager $angular,
+  ) {}
 
   public function html(string $module): string {
     $partials = ChangeSet::applyResourceFilters(
