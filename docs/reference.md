@@ -3,7 +3,7 @@
 How afreact plugs into CiviCRM: the elements it renders, the state it keeps in
 the URL, how a form or builder is taken over, the pages it adds and where the
 code lives. For what afreact is and what it changes for users, see
-[overview.md](overview.md).
+the [user manual](handbook/index.md).
 
 ## How it works
 

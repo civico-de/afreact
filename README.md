@@ -14,8 +14,8 @@ What users get from it: screens that work with keyboards and screen readers,
 mistakes explained at the field, less work lost by accident, tables that stay
 visible while the next page loads, and none of the faults in CiviCRM's own
 screens that were found while rebuilding them.
-**[overview.md](docs/overview.md) explains all of this without technical
-detail** and is the place to start.
+**The [user manual](docs/handbook/index.md) explains all of this without
+technical detail** and is the place to start.
 
 The supported CiviCRM releases are pinned in `info.xml`.
 
@@ -42,7 +42,6 @@ extension is installed. The documents below are for developers.
 
 | Document                                                   | Content                                                                                                                                   |
 | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| [docs/overview.md](docs/overview.md)                       | what afreact is and changes for users, in plain words                                                                                     |
 | [docs/reference.md](docs/reference.md)                     | the elements, URL state, takeover per placement, builder plugins, pages and code layout                                                   |
 | [docs/architecture.md](docs/architecture.md)               | boundary, state, the first search, libraries and chunks, dashlets, the support report, the debug mode                                     |
 | [docs/comparison.md](docs/comparison.md)                   | the renderer's parity gaps, improvements, differences by design, what is not implemented and why                                          |

@@ -1,7 +1,7 @@
 # Architecture
 
 How the React renderer is built, where the Angular runtime's behaviour is
-kept and where it is not. [overview.md](overview.md) says what the extension
+kept and where it is not. The [user manual](handbook/index.md) says what the extension
 does, [reference.md](reference.md) where each part lives; [comparison.md](comparison.md) lists the differences and
 [load-metrics.md](load-metrics.md) the measured load times.
 
