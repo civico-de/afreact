@@ -42,7 +42,7 @@ Attributes on any element:
 | `af-repeat`, `af-repeat-default`, `min`, `max`, `af-copy` | repeatable groups |
 | `af-if` | show only when the condition list holds |
 | `af-required`, `af-disabled` (on `af-field`) | conditional required and disabled |
-| `afreact-if`, `afreact-required`, `afreact-disabled` | the same, in afreact's own syntax; only React reads them |
+| `afreact-if`, `afreact-required`, `afreact-disabled` | the same, in afreact's own syntax; the Angular renderer ignores them |
 | `af-title` | a heading for the container |
 
 Classes mark the editor's building blocks: `af-container`, `af-text`,
