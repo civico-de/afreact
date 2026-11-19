@@ -42,6 +42,7 @@ Attributes on any element:
 | `af-repeat`, `af-repeat-default`, `min`, `max`, `af-copy` | repeatable groups |
 | `af-if` | show only when the condition list holds |
 | `af-required`, `af-disabled` (on `af-field`) | conditional required and disabled |
+| `afreact-if`, `afreact-required`, `afreact-disabled` | the same, in afreact's own syntax; only React reads them |
 | `af-title` | a heading for the container |
 
 Classes mark the editor's building blocks: `af-container`, `af-text`,
@@ -59,6 +60,27 @@ A `js` attribute holds a JavaScript object literal, not JSON:
 `defn="{required: true, input_attrs: {placeholder: 'Name'}}"`. Conditions in
 `af-if` and the like are JSON in parentheses:
 `af-if="([[&quot;Role1[0][fields][name]&quot;,&quot;!=&quot;,&quot;\&quot;admin\&quot;&quot;]])"`.
+
+afreact's own attributes take the same list without parentheses, over tokens
+instead of data paths ([ADR 0012](adr/0012-own-condition-attributes.md)). A
+token is `[Entity.row.field]` or `[Entity.row.Join.row.field]`; `@` in place
+of a row is the repeat row the element sits in, and a token as the third item
+compares with that field. Values are plain JSON, not JSON text:
+
+```html
+<div af-join="Phone" af-repeat="Add">
+  <af-field name="phone_type_id" />
+  <af-field name="phone_ext"
+    afreact-required='[["[Individual1.0.Phone.@.phone_type_id]", "=", 2]]' />
+</div>
+```
+
+An element shows while its `af-if` and its `afreact-if` both hold. On submit,
+afreact reports a field its `afreact-required` requires and leaves empty, and
+does not save a field its `afreact-disabled` disables, as core does with
+`af-disabled`. Angular ignores the attributes: the support report lists a form
+that uses them, and a field core requires under an `afreact-if`, which core's
+submit demands even while hidden.
 
 Text nodes carry Angular expressions in `{{ }}`. Core's layouts use
 `{{:: ts('…', {…}) }}` and `{{ ts('…') }}`; a few extension forms read

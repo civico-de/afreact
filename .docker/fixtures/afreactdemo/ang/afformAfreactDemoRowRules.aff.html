@@ -1,0 +1,16 @@
+<af-form ctrl="afform">
+  <af-entity data="{contact_type: 'Individual', source: 'Afreact demo'}" type="Contact" name="Individual1" label="Individual 1" actions="{create: true, update: false}" security="RBAC" />
+  <fieldset af-fieldset="Individual1" class="af-container" af-title="Individual">
+    <af-field name="last_name" defn="{required: true}" />
+    <div af-join="Phone" af-repeat="Add" min="2" data="{location_type_id: 1}">
+      <af-field name="phone_type_id" />
+      <af-field name="phone" />
+      <af-field name="phone_ext" afreact-required="[[&quot;[Individual1.0.Phone.@.phone_type_id]&quot;, &quot;=&quot;, 1]]" />
+      <af-field name="is_billing" afreact-disabled="[[&quot;[Individual1.0.Phone.@.phone_type_id]&quot;, &quot;=&quot;, 2]]" />
+      <div afreact-if="[[&quot;[Individual1.0.Phone.@.phone_type_id]&quot;, &quot;=&quot;, 2]]">
+        <af-field name="mobile_provider_id" />
+      </div>
+    </div>
+  </fieldset>
+  <button class="af-button btn btn-primary" crm-icon="fa-check" ng-click="afform.submit()">{{:: ts('Save') }}</button>
+</af-form>

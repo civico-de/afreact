@@ -6,6 +6,13 @@ All notable changes to this extension are documented in this file. The format fo
 
 ## [Unreleased]
 
+### Added
+
+- `afreact-if`, `afreact-required` and `afreact-disabled`: conditions on a field of the element's
+  own repeat row, or comparing two fields, checked in the browser and on submit. The FormBuilder
+  editor offers "this row" and "Compare with a field" and writes them only where a rule needs
+  them.
+
 ### Changed
 
 - The manual lives in `docs/handbook/`. CiviCRM shows it with handbook 0.5.0 or newer.

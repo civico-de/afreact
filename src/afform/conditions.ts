@@ -113,7 +113,7 @@ function isEmpty(value: unknown): boolean {
 }
 
 /** undefined for an operator afForm does not know: the clause decides nothing. */
-function compare(left: unknown, op: string, right: unknown): boolean | undefined {
+export function compare(left: unknown, op: string, right: unknown): boolean | undefined {
   const yes = op !== "!=" && !op.includes("NOT ");
   switch (op) {
     case "=":

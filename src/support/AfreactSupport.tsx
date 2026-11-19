@@ -4,7 +4,7 @@ import { api4, errorMessage } from "../api/civi";
 import { debugAllowed } from "../debug/debug";
 import { DebugSwitch } from "../debug/DebugSwitch";
 import { loadDefinition } from "../afform/source";
-import { layoutProblems, noteKind, taskDisplays } from "../afform/support";
+import { layoutProblems, noteKind, rowConditionCautions, taskDisplays } from "../afform/support";
 import type { NoteKind } from "../afform/support";
 import type { LayoutNode } from "../afform/types";
 import { parseTaskList, unsupportedTaskNotes } from "../search/searchTasks";
@@ -100,7 +100,11 @@ export function AfreactSupport({ listed, settings }: AfreactSupportProps) {
       queryKey: ["afreact-support", row.name],
       queryFn: async () => {
         const { layout } = await loadDefinition(row.name, "api", client);
-        return [...layoutProblems(layout, checkedOptions(row)), ...(await taskProblems(layout))];
+        const problems = [
+          ...layoutProblems(layout, checkedOptions(row)),
+          ...(await taskProblems(layout)),
+        ];
+        return { problems, cautions: rowConditionCautions(layout) };
       },
     })),
   });
@@ -108,7 +112,7 @@ export function AfreactSupport({ listed, settings }: AfreactSupportProps) {
   const missing = forms.isSuccess ? current.filter((name) => !known.has(name)) : [];
   const done = checks.filter((check) => !check.isPending).length;
   const withNotes = (kind: NoteKind) =>
-    checks.filter((check) => check.data?.some((note) => noteKind(note) === kind)).length;
+    checks.filter((check) => check.data?.problems.some((note) => noteKind(note) === kind)).length;
   const gaps = withNotes("react");
   const angular = withNotes("angular");
   const nowhere = rows.filter((row) => shownAt(row).length === 0).length;
@@ -121,7 +125,7 @@ export function AfreactSupport({ listed, settings }: AfreactSupportProps) {
     ...rows
       .filter(
         (row, index) =>
-          checks[index]?.data?.length === 0 ||
+          checks[index]?.data?.problems.length === 0 ||
           (checks[index]?.isError && current.includes(row.name)),
       )
       .map((row) => row.name),
@@ -230,7 +234,7 @@ export function AfreactSupport({ listed, settings }: AfreactSupportProps) {
 }
 
 interface Check {
-  data?: string[];
+  data?: { problems: string[]; cautions: string[] };
   error: unknown;
   isError: boolean;
 }
@@ -272,9 +276,9 @@ function SupportRowView({
 
 function Problems({ check }: { check?: Check }) {
   if (check?.isError) return <span className="text-danger">{errorMessage(check.error)}</span>;
-  const problems = check?.data;
-  if (!problems) return <>{ts("Checking…")}</>;
-  if (!problems.length) return <>{ts("Nothing")}</>;
+  if (!check?.data) return <>{ts("Checking…")}</>;
+  const { problems, cautions } = check.data;
+  if (!problems.length && !cautions.length) return <>{ts("Nothing")}</>;
   const unique = [...new Set(problems)];
   const list = (kind: NoteKind, heading: string) => {
     const notes = unique.filter((note) => noteKind(note) === kind);
@@ -296,6 +300,16 @@ function Problems({ check }: { check?: Check }) {
       {list("react", ts("Not yet in React"))}
       {list("angular", ts("Uses Angular code, which only the Angular application runs"))}
       {list("placement", ts("Shown as meant only where placed, which gives it its arguments"))}
+      {cautions.length > 0 && (
+        <>
+          <p className="afreact-support-kind">{ts("Shown as meant only by React")}</p>
+          <ul className="afreact-support-problems">
+            {[...new Set(cautions)].map((caution) => (
+              <li key={caution}>{caution}</li>
+            ))}
+          </ul>
+        </>
+      )}
     </>
   );
 }

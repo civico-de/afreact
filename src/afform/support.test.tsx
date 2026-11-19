@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import { mockApi, renderWithQuery } from "../test/render";
 import { AfreactForm } from "./AfreactForm";
-import { layoutProblems, nodeKind, noteKind } from "./support";
+import { layoutProblems, nodeKind, noteKind, usesRowConditions } from "./support";
 import type { ElementNode, FieldDefn, LayoutNode } from "./types";
 
 const field = (
@@ -24,12 +24,24 @@ const layout: LayoutNode[] = [
     "#children": [
       { "#tag": "af-entity", type: "Contact", name: "Individual1" },
       { "#text": "Hello {{ person.name }}" },
-      { "#tag": "iframe", "#children": [{ "#tag": "p", "#children": [{ "#text": "inner" }] }] },
+      {
+        "#tag": "iframe",
+        "#children": [{ "#tag": "p", "#children": [{ "#text": "inner" }] }],
+      },
       { "#tag": "div", "ng-if": "show", "ng-click": "go()" },
-      { "#tag": "a", href: "#", title: "{{ link.title }}", "#children": [{ "#text": "a" }] },
+      {
+        "#tag": "a",
+        href: "#",
+        title: "{{ link.title }}",
+        "#children": [{ "#text": "a" }],
+      },
       field("nick_name"),
       { "#tag": "div", "af-join": "Email" },
-      { "#tag": "p", "af-if": "(not json", "#children": [{ "#tag": "marquee" }] },
+      {
+        "#tag": "p",
+        "af-if": "(not json",
+        "#children": [{ "#tag": "marquee" }],
+      },
       {
         "#tag": "fieldset",
         "af-fieldset": "Individual1",
@@ -37,7 +49,10 @@ const layout: LayoutNode[] = [
         "#children": [
           field("first_name", {}, { "ng-model": "x", "af-required": "(broken" }),
           field("state", { label: "State", input_type: "Signature" }),
-          field("middle_name", { label: "Middle", template: "~/myExt/fields/Text.html" }),
+          field("middle_name", {
+            label: "Middle",
+            template: "~/myExt/fields/Text.html",
+          }),
           { "#tag": "afblock-name-individual", options: "{a: 1}" },
           { "#tag": "div", "af-if": always, "#children": [field("last_name")] },
           {
@@ -52,14 +67,21 @@ const layout: LayoutNode[] = [
                 min: "1",
                 "#children": [
                   field("email", { input_type: "Email" }),
-                  field("is_primary", { input_type: "Radio", data_type: "Boolean" }),
+                  field("is_primary", {
+                    input_type: "Radio",
+                    data_type: "Boolean",
+                  }),
                 ],
               },
             ],
           },
         ],
       },
-      { "#tag": "button", "ng-click": "afform.submit()", "#children": [{ "#text": "Save" }] },
+      {
+        "#tag": "button",
+        "ng-click": "afform.submit()",
+        "#children": [{ "#text": "Save" }],
+      },
     ],
   },
 ];
@@ -155,7 +177,12 @@ describe("layoutProblems", () => {
   it("takes an extra field, named by its definition alone, as supported", () => {
     const extra: LayoutNode = {
       "#tag": "af-field",
-      defn: { name: "remark", label: "Remark", input_type: "Text", data_type: "String" },
+      defn: {
+        name: "remark",
+        label: "Remark",
+        input_type: "Text",
+        data_type: "String",
+      },
     };
     expect(layoutProblems([extra])).toEqual([]);
     expect(layoutProblems([{ "#tag": "af-field", defn: { label: "Remark" } }])).toEqual([
@@ -184,7 +211,11 @@ describe("layoutProblems", () => {
 
   it("flags draft and reset buttons only outside af-form, which handles them", async () => {
     const buttons: ElementNode[] = [
-      { "#tag": "button", "ng-click": "afform.submitDraft()", "#children": [{ "#text": "Draft" }] },
+      {
+        "#tag": "button",
+        "ng-click": "afform.submitDraft()",
+        "#children": [{ "#text": "Draft" }],
+      },
       {
         "#tag": "button",
         type: "reset",
@@ -202,7 +233,13 @@ describe("layoutProblems", () => {
     expect(layoutProblems(buttons)).toEqual(outside);
     mockApi({
       "Afreact.getForm": () => [
-        { name: "afsearchTest", title: "S", type: "search", layout: buttons, strings: [] },
+        {
+          name: "afsearchTest",
+          title: "S",
+          type: "search",
+          layout: buttons,
+          strings: [],
+        },
       ],
     });
     renderWithQuery(<AfreactForm name="afsearchTest" location={{ search: "", hash: "" }} />);
@@ -222,7 +259,10 @@ describe("layoutProblems", () => {
       },
       { "#comment": " note " },
       { "#text": "{{:: ts('Hello') }}" },
-      { "#tag": "a", "ng-href": "{{ crmUrl('civicrm/admin/component', 'reset=1') }}" },
+      {
+        "#tag": "a",
+        "ng-href": "{{ crmUrl('civicrm/admin/component', 'reset=1') }}",
+      },
       {
         "#tag": "p",
         title: "{{ routeParams.event }}",
@@ -241,7 +281,10 @@ describe("layoutProblems", () => {
 
   it("renders the HTML FormBuilder's text element and its rich content write", async () => {
     // afGuiText offers <legend>; rich content is CKEditor 4's default toolbar, formats and styles.
-    const text = (tag: string): LayoutNode => ({ "#tag": tag, "#children": [{ "#text": tag }] });
+    const text = (tag: string): LayoutNode => ({
+      "#tag": tag,
+      "#children": [{ "#text": tag }],
+    });
     const inline = "s sub sup big tt kbd samp var del ins cite q".split(" ");
     const html: LayoutNode[] = [
       { "#tag": "fieldset", "#children": [text("legend"), text("p")] },
@@ -250,7 +293,10 @@ describe("layoutProblems", () => {
         "#tag": "table",
         "#children": [
           text("caption"),
-          { "#tag": "tbody", "#children": [{ "#tag": "tr", "#children": [text("td")] }] },
+          {
+            "#tag": "tbody",
+            "#children": [{ "#tag": "tr", "#children": [text("td")] }],
+          },
         ],
       },
       text("blockquote"),
@@ -297,14 +343,26 @@ describe("layoutProblems", () => {
           {
             "#tag": "tbody",
             "#children": [
-              { "#tag": "tr", "#children": [cell("th", { scope: "col", abbr: "P" })] },
-              { "#tag": "tr", "#children": [cell("td", { colspan: "2", rowspan: "3" })] },
+              {
+                "#tag": "tr",
+                "#children": [cell("th", { scope: "col", abbr: "P" })],
+              },
+              {
+                "#tag": "tr",
+                "#children": [cell("td", { colspan: "2", rowspan: "3" })],
+              },
             ],
           },
         ],
       },
       cell("label", { for: "nick" }),
-      cell("a", { href: "#top", name: "top", rel: "nofollow", accesskey: "t", tabindex: "0" }),
+      cell("a", {
+        href: "#top",
+        name: "top",
+        rel: "nofollow",
+        accesskey: "t",
+        tabindex: "0",
+      }),
       { "#tag": "ol", start: "4", "#children": [cell("li", { value: "7" })] },
       cell("q", { cite: "https://example.org/" }),
       cell("del", { datetime: "2026-01-01" }),
@@ -339,7 +397,11 @@ describe("layoutProblems", () => {
     expect(screen.getByText("td")).toHaveAttribute("rowspan", "3");
     expect(screen.getByText("label")).toHaveAttribute("for", "nick");
     const link = screen.getByText("a");
-    for (const [name, value] of Object.entries({ name: "top", rel: "nofollow", accesskey: "t" }))
+    for (const [name, value] of Object.entries({
+      name: "top",
+      rel: "nofollow",
+      accesskey: "t",
+    }))
       expect(link).toHaveAttribute(name, value);
     expect(link).toHaveAttribute("tabindex", "0");
     expect(screen.getByRole("list")).toHaveAttribute("start", "4");
@@ -355,7 +417,11 @@ describe("layoutProblems", () => {
   it("reports the attributes another extension's directive reads on an element", async () => {
     // oauth-client's forms load providers this way.
     const imported = form([
-      { "#tag": "div", "oauth-util-import": "CRM.oauthUtil.providers", to: "theProviders" },
+      {
+        "#tag": "div",
+        "oauth-util-import": "CRM.oauthUtil.providers",
+        to: "theProviders",
+      },
     ]);
     const report = layoutProblems(imported);
     expect(report).toEqual(["oauth-util-import, to"]);
@@ -391,9 +457,19 @@ describe("layoutProblems", () => {
     });
     expect(
       layoutProblems([
-        display("crm-search-display-grid", { colno: "2", draggable: "weight", actions: true }),
-        display("crm-search-display-list", { style: "ol", section_group_by: "kind" }),
-        display("crm-search-display-tree", { parent_field: "parent_id", draggable: "weight" }),
+        display("crm-search-display-grid", {
+          colno: "2",
+          draggable: "weight",
+          actions: true,
+        }),
+        display("crm-search-display-list", {
+          style: "ol",
+          section_group_by: "kind",
+        }),
+        display("crm-search-display-tree", {
+          parent_field: "parent_id",
+          draggable: "weight",
+        }),
       ]),
     ).toEqual([]);
   });
@@ -449,7 +525,12 @@ describe("blocks", () => {
           {
             "#tag": "div",
             "af-join": "Email",
-            "#children": [{ "#tag": "afblock-contact-email", "#children": [field("email")] }],
+            "#children": [
+              {
+                "#tag": "afblock-contact-email",
+                "#children": [field("email")],
+              },
+            ],
           },
         ],
       },
@@ -512,7 +593,11 @@ function form(children: LayoutNode[]): LayoutNode[] {
       "#children": [
         { "#tag": "af-entity", type: "Contact", name: "Individual1" },
         ...children,
-        { "#tag": "button", "ng-click": "afform.submit()", "#children": [{ "#text": "Save" }] },
+        {
+          "#tag": "button",
+          "ng-click": "afform.submit()",
+          "#children": [{ "#text": "Save" }],
+        },
       ],
     },
   ];
@@ -521,7 +606,13 @@ function form(children: LayoutNode[]): LayoutNode[] {
 async function shownFormNotes(formLayout: LayoutNode[]) {
   mockApi({
     "Afreact.getForm": () => [
-      { name: "afformTest", title: "Test", type: "form", layout: formLayout, strings: [] },
+      {
+        name: "afformTest",
+        title: "Test",
+        type: "form",
+        layout: formLayout,
+        strings: [],
+      },
     ],
     "Afform.prefill": () => [],
   });
@@ -552,7 +643,11 @@ const searchForm = (children: LayoutNode[]): LayoutNode[] => [
 /** A search form the renderer fully supports, as core's own search forms store it. */
 const healthySearch = searchForm([
   field("title", { search_operator: "CONTAINS" }, { class: "wide", "af-if": always }),
-  field("created_date", { input_type: "Date", data_type: "Timestamp", search_range: true }),
+  field("created_date", {
+    input_type: "Date",
+    data_type: "Timestamp",
+    search_range: true,
+  }),
   field("modified_date", {
     input_type: "Select",
     data_type: "Timestamp",
@@ -563,14 +658,22 @@ const healthySearch = searchForm([
       { id: "this.month", label: "This month" },
     ],
   }),
-  field("children", { input_type: "Number", data_type: "Integer", search_range: true }),
+  field("children", {
+    input_type: "Number",
+    data_type: "Integer",
+    search_range: true,
+  }),
   display(
     {
       pager: { show_count: true, hide_single: true, expose_limit: true },
       actions_display_mode: "menu",
       nested: true,
       placeholder: 5,
-      addButton: { path: "civicrm/group/add", text: "Add Group", icon: "fa-plus" },
+      addButton: {
+        path: "civicrm/group/add",
+        text: "Add Group",
+        icon: "fa-plus",
+      },
     },
     { "af-if": always },
   ),
@@ -579,9 +682,17 @@ const healthySearch = searchForm([
 /** Something of every kind the renderer flags in a search form. */
 const gappySearch = searchForm([
   field("title", {}, { "ng-model": "x" }),
-  field("created_date", { label: "Created", input_type: "Radio", search_range: true }),
+  field("created_date", {
+    label: "Created",
+    input_type: "Radio",
+    search_range: true,
+  }),
   field("parent", { label: "Parent", input_type: "File" }),
-  field("image", { label: "Image", input_type: "File", template: "~/myExt/File.html" }),
+  field("image", {
+    label: "Image",
+    input_type: "File",
+    template: "~/myExt/File.html",
+  }),
   field("modified_date", {
     label: "Modified",
     input_type: "Date",
@@ -608,7 +719,13 @@ const gappySearch = searchForm([
 async function shownNotes(searchLayout: LayoutNode[], options?: Record<string, unknown>) {
   mockApi({
     "Afreact.getForm": () => [
-      { name: "afsearchTest", title: "Test", type: "search", layout: searchLayout, strings: [] },
+      {
+        name: "afsearchTest",
+        title: "Test",
+        type: "search",
+        layout: searchLayout,
+        strings: [],
+      },
     ],
     "SearchDisplay.run": () => [{ key: 1, columns: [{ val: "Row" }, { val: "Row" }] }],
   });
@@ -660,7 +777,10 @@ describe("search forms", () => {
     expect(layoutProblems(styled)).toEqual([]);
     expect(await shownNotes(styled)).toEqual([]);
     const container = screen.getByRole("textbox", { name: "title" }).closest("div.af-container");
-    expect(container).toHaveStyle({ backgroundColor: "rgb(1, 2, 3)", borderTopWidth: "2px" });
+    expect(container).toHaveStyle({
+      backgroundColor: "rgb(1, 2, 3)",
+      borderTopWidth: "2px",
+    });
     expect(container).toHaveStyle("--gap: 4px");
     expect(container).toHaveAttribute("lang", "de");
     expect(container).toHaveAttribute("data-kind", "box");
@@ -688,5 +808,55 @@ describe("search forms", () => {
     const placed = searchForm([display({}, { filters: "{contact_id: options.contact_id}" })]);
     expect(layoutProblems(placed, {})).toEqual([]);
     expect(layoutProblems(placed)).toEqual(["display filters from options outside a placement"]);
+  });
+});
+
+// ADR 0012
+describe("afreact's own conditions", () => {
+  const own = JSON.stringify([["[Individual1.0.Phone.@.phone_type_id]", "=", 2]]);
+  const repeat = (children: LayoutNode[]): LayoutNode[] => [
+    {
+      "#tag": "fieldset",
+      "af-fieldset": "Individual1",
+      "#children": [
+        {
+          "#tag": "div",
+          "af-join": "Phone",
+          "af-repeat": "Add",
+          "#children": children,
+        },
+      ],
+    },
+  ];
+
+  it("renders them in the row they refer to, and says the form needs React", () => {
+    const rows = repeat([
+      field("phone", {}, { "afreact-required": own, "afreact-disabled": own }),
+      { "#tag": "div", "afreact-if": own, "#children": [field("phone_ext")] },
+    ]);
+    expect(layoutProblems(rows)).toEqual([]);
+    expect(usesRowConditions(rows)).toBe(true);
+    expect(usesRowConditions(repeat([field("phone")]))).toBe(false);
+  });
+
+  it("notes one that does not parse or whose @ names a row the element is not in", () => {
+    const outside: LayoutNode = {
+      "#tag": "fieldset",
+      "af-fieldset": "Individual1",
+      "#children": [{ "#tag": "div", "afreact-if": own, "#children": [field("nick_name")] }],
+    };
+    expect(layoutProblems([outside])).toEqual([expect.stringContaining("afreact-if")]);
+    expect(layoutProblems(repeat([field("phone", {}, { "afreact-required": "[[1]]" })]))).toEqual([
+      expect.stringContaining("afreact-required"),
+    ]);
+  });
+
+  it("leaves them unread on a search filter, which has no row", () => {
+    const filters: LayoutNode = {
+      "#tag": "div",
+      "af-fieldset": "",
+      "#children": [field("phone", {}, { "afreact-required": own })],
+    };
+    expect(layoutProblems([filters])).toEqual([expect.stringContaining("afreact-required")]);
   });
 });

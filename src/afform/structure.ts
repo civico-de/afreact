@@ -1,5 +1,6 @@
 import { convertValue, isMultiple } from "../search/filters";
 import { asText, checkConditions, parseConditions } from "./conditions";
+import { checkRowConditions, parseRowConditions } from "./rowConditions";
 import { rangeValue } from "./fields/Range";
 import {
   ensurePrimary,
@@ -128,6 +129,15 @@ function conditionHolds(attribute: string, data: FormData): boolean {
   }
 }
 
+/** The same for afreact-if, read in the row the element is drawn in. */
+function rowConditionHolds(attribute: string, data: FormData, scope: Scope | null): boolean {
+  try {
+    return checkRowConditions(parseRowConditions(attribute), data, scope);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Prepares data the way the Angular directives do when they render: creates the item
  * of every fieldset, pads every af-repeat to its initial count, marks a primary record in
@@ -148,6 +158,9 @@ export function initialiseNodes(
     for (const node of children.filter(isElement)) {
       const condition = node["af-if"];
       if (typeof condition === "string" && !conditionHolds(condition, next)) continue;
+      const rowCondition = node["afreact-if"];
+      if (typeof rowCondition === "string" && !rowConditionHolds(rowCondition, next, scope))
+        continue;
       const fieldset = node["af-fieldset"];
       const join = node["af-join"];
       const repeats = node["af-repeat"] !== undefined;
@@ -166,7 +179,12 @@ export function initialiseNodes(
           walk(node["#children"] ?? [], { entity: fieldset, index, ...slot });
       } else if (typeof join === "string" && scope) {
         const slot = scope.slot && { slot: true };
-        const joinScope = { entity: scope.entity, index: scope.index, join, ...slot };
+        const joinScope = {
+          entity: scope.entity,
+          index: scope.index,
+          join,
+          ...slot,
+        };
         if (repeats) {
           const hasPrimary = findElements(node["#children"] ?? [], "af-field").some(
             (field) => field.name === "is_primary",
@@ -174,9 +192,16 @@ export function initialiseNodes(
           if (!previous) next = ensureRepeatItems(next, joinScope, repeatMinimum(node));
           if (!previous && hasPrimary) next = ensurePrimary(next, joinScope);
           for (let joinIndex = 0; joinIndex < repeatCount(next, joinScope); joinIndex++)
-            walk(node["#children"] ?? [], { ...joinScope, joinIndex, repeated: true });
+            walk(node["#children"] ?? [], {
+              ...joinScope,
+              joinIndex,
+              repeated: true,
+            });
         } else {
-          walk(node["#children"] ?? [], { ...joinScope, joinIndex: offsets.get(node) ?? 0 });
+          walk(node["#children"] ?? [], {
+            ...joinScope,
+            joinIndex: offsets.get(node) ?? 0,
+          });
         }
       } else if (node["#tag"] === "af-field") {
         const place = fieldPlace(node, scope);

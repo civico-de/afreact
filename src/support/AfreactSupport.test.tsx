@@ -137,6 +137,69 @@ describe("AfreactSupport", () => {
     expect(outcome).toHaveFocus();
   });
 
+  // ADR 0012
+  it("says which forms only React shows as meant, without keeping React from them", async () => {
+    const own = JSON.stringify([["[Individual1.0.Phone.@.phone_type_id]", "=", 2]]);
+    const field = (name: string, required: boolean) => ({
+      "#tag": "af-field",
+      name,
+      defn: {
+        name,
+        label: name,
+        input_type: "Text",
+        data_type: "String",
+        required,
+      },
+    });
+    const calls = mockApi({
+      "Afform.get": () => [forms[0]],
+      "Afreact.getForm": ({ name }) => [
+        {
+          name,
+          title: null,
+          type: "form",
+          layout: [
+            {
+              "#tag": "fieldset",
+              "af-fieldset": "Individual1",
+              "#children": [
+                {
+                  "#tag": "div",
+                  "af-join": "Phone",
+                  "af-repeat": "Add",
+                  "#children": [
+                    {
+                      "#tag": "div",
+                      "afreact-if": own,
+                      "#children": [field("phone", true)],
+                    },
+                    { ...field("phone_ext", false), "afreact-required": own },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      "Setting.set": () => [],
+    });
+    renderWithQuery(<AfreactSupport listed={[]} settings="/settings" />);
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "Render every supported form with React",
+      }),
+    );
+    expect(calls.find(({ call }) => call === "Setting.set")?.params).toEqual({
+      values: { afreact_forms: ["afformPlaced"] },
+    });
+    const placed = within(row("afformPlaced"));
+    expect(placed.getByText("Shown as meant only by React")).toBeInTheDocument();
+    expect(placed.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "Uses afreact-if, afreact-required or afreact-disabled, which only React reads",
+      "phone is required by core, also where afreact-if hides it",
+    ]);
+  });
+
   it("reports a failed save and keeps the listed state", async () => {
     const user = userEvent.setup();
     mockApi({
@@ -151,7 +214,9 @@ describe("AfreactSupport", () => {
     });
     renderWithQuery(<AfreactSupport listed={[]} settings="/settings" />);
     await user.click(
-      await screen.findByRole("button", { name: "Render every supported form with React" }),
+      await screen.findByRole("button", {
+        name: "Render every supported form with React",
+      }),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent("No write");
     expect(

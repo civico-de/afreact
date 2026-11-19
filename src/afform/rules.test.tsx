@@ -362,6 +362,103 @@ describe("live rules", () => {
     expect(box("nick_name")).toBeDisabled();
   });
 
+  // ADR 0012
+  it("reads afreact-if, afreact-required and afreact-disabled in the row each field sits in", async () => {
+    const own = (op: string, value: unknown) =>
+      JSON.stringify([["[Individual1.0.Phone.@.phone_type_id]", op, value]]);
+    const calls = renderForm(
+      form([
+        field("first_name"),
+        {
+          "#tag": "div",
+          "af-join": "Phone",
+          "af-repeat": "Add",
+          "af-repeat-default": "2",
+          "#children": [
+            field("phone_type_id", {
+              input_type: "Select",
+              data_type: "Integer",
+              options: [
+                { id: 1, label: "Home" },
+                { id: 2, label: "Work" },
+              ],
+            }),
+            field("phone", {}, { "afreact-required": own("=", 2) }),
+            {
+              "#tag": "af-field",
+              defn: {
+                name: "per_phone",
+                label: "per_phone",
+                input_type: "Text",
+                data_type: "String",
+              },
+              "afreact-required": own("=", 2),
+            },
+            {
+              "#tag": "div",
+              "afreact-if": own("=", 2),
+              "#children": [field("phone_ext")],
+            },
+            field(
+              "phone_numeric",
+              {},
+              {
+                "afreact-disabled": JSON.stringify([
+                  ["[Individual1.0.Phone.@.phone]", "=", "[Individual1.0.first_name]"],
+                ]),
+              },
+            ),
+          ],
+        },
+      ]),
+    );
+    await screen.findByRole("textbox", { name: "first_name" });
+    const types = screen.getAllByRole("combobox", { name: "phone_type_id" });
+    expect(screen.queryAllByRole("textbox", { name: "phone_ext" })).toHaveLength(0);
+    await userEvent.selectOptions(types[1]!, "Work");
+    const extensions = screen.getAllByRole("textbox", { name: "phone_ext" });
+    expect(extensions).toHaveLength(1);
+    const phones = screen.getAllByRole("textbox", { name: "phone" });
+    expect(phones[0]).not.toBeRequired();
+    expect(phones[1]).toBeRequired();
+    // An extra field keeps one value for the join's records, but reads the row it is drawn in.
+    const extras = screen.getAllByRole("textbox", { name: "per_phone" });
+    expect(extras[0]).not.toBeRequired();
+    expect(extras[1]).toBeRequired();
+    await userEvent.type(extensions[0]!, "42");
+    await userEvent.type(box("first_name"), "555");
+    await userEvent.type(phones[0]!, "555");
+    const numeric = screen.getAllByRole("textbox", { name: "phone_numeric" });
+    expect(numeric[0]).toBeDisabled();
+    expect(numeric[1]).toBeEnabled();
+    await userEvent.type(phones[1]!, "666");
+    await userEvent.selectOptions(types[1]!, "Home");
+    expect(screen.queryAllByRole("textbox", { name: "phone_ext" })).toHaveLength(0);
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => {
+      expect(submitted(calls)).toBeDefined();
+    });
+    const rows = "Individual1.0.joins.Phone";
+    expect(submitted(calls)).toHaveProperty(`${rows}.1.phone`, "666");
+    expect(submitted(calls)).not.toHaveProperty(`${rows}.1.phone_ext`);
+  });
+
+  it("notes an afreact condition whose @ names a row the element is not in", async () => {
+    renderForm(
+      form([
+        field("first_name"),
+        {
+          "#tag": "div",
+          "afreact-if": JSON.stringify([["[Individual1.0.Phone.@.phone]", "IS EMPTY"]]),
+          "#children": [field("nick_name")],
+        },
+      ]),
+    );
+    await screen.findByRole("textbox", { name: "first_name" });
+    expect(screen.queryByRole("textbox", { name: "nick_name" })).not.toBeInTheDocument();
+    expect(screen.getByText(/afreact-if/)).toBeInTheDocument();
+  });
+
   it("disables a field FormBuilder disabled, until an af-disabled condition decides", async () => {
     renderForm(
       form([

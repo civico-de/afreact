@@ -1,0 +1,9 @@
+{
+  "type": "form",
+  "title": "Afreact demo row rules",
+  "permission": [
+    "access CiviCRM"
+  ],
+  "confirmation_type": "show_confirmation_message",
+  "confirmation_message": "Contact saved."
+}

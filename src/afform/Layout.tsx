@@ -11,6 +11,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { checkConditions, parseConditions } from "./conditions";
+import { checkRowConditions, parseRowConditions, ROW_CONDITIONS } from "./rowConditions";
 import { interpolate, type ExpressionContext } from "./expressions";
 import { ClearButton, Field, fieldClasses, templateNote } from "./Field";
 import {
@@ -354,6 +355,41 @@ function evaluateConditions(attribute: string, data: FormData, name: string): Ev
   }
 }
 
+// deviation:row-conditions
+/** afreact's own attribute beside core's (ADR 0012), read in the row the element is drawn in. */
+function evaluateRowConditions(
+  node: ElementNode,
+  name: keyof typeof ROW_CONDITIONS,
+  data: FormData,
+  scope: Scope | null,
+): Evaluated | null {
+  const attr = ROW_CONDITIONS[name];
+  const attribute = node[attr];
+  if (typeof attribute !== "string") return null;
+  try {
+    return {
+      value: checkRowConditions(parseRowConditions(attribute), data, scope),
+    };
+  } catch (error) {
+    console.warn(`[afreact] ${attr} failed`, error);
+    return { error: conditionNote(attr, attribute) };
+  }
+}
+
+/** Core's af-if and afreact-if: the element shows while every condition it has holds. */
+function visibility(node: ElementNode, data: FormData, scope: Scope | null): Evaluated {
+  const results = [
+    typeof node["af-if"] === "string" ? evaluateConditions(node["af-if"], data, "af-if") : null,
+    evaluateRowConditions(node, "af-if", data, scope),
+  ].filter((result) => result !== null);
+  const failed = results.find((result) => "error" in result);
+  return (
+    failed ?? {
+      value: results.every((result) => "value" in result && result.value),
+    }
+  );
+}
+
 /**
  * afIf: the element renders while its conditions hold, and whatever it renders initialises
  * its data then. Once hidden again, its subtree renders off-document so every field inside
@@ -365,7 +401,7 @@ function Conditional({ node }: { node: ElementNode }) {
   const scope = useContext(ScopeContext);
   const hiddenWith = useContext(HiddenContext);
   const data = hiddenWith ?? form.data;
-  const result = evaluateConditions(String(node["af-if"]), data, "af-if");
+  const result = visibility(node, data, scope);
   const shown = "value" in result && result.value;
   const active = shown && hiddenWith === null;
   const [shownWith, setShownWith] = useState<FormData | null>(null);
@@ -701,7 +737,8 @@ function Repeat({ node, scope, itemScope, count }: RepeatProps) {
 }
 
 function FieldNode({ node }: { node: ElementNode }) {
-  const place = fieldPlace(node, useContext(ScopeContext));
+  const row = useContext(ScopeContext);
+  const place = fieldPlace(node, row);
   const hidden = useContext(HiddenContext);
   const filters = useSearchFieldset();
   const form = useForm();
@@ -722,7 +759,7 @@ function FieldNode({ node }: { node: ElementNode }) {
   }
   if (!scope || !isFieldDefn(defn)) return <Unsupported what={missingFieldNote(name)} />;
   if (hidden !== null) return <DroppedField scope={scope} name={name} defn={defn} />;
-  return <VisibleField node={node} scope={scope} name={name} defn={defn} />;
+  return <VisibleField node={node} scope={scope} row={row} name={name} defn={defn} />;
 }
 
 interface FieldNodeProps {
@@ -746,6 +783,10 @@ function conditionResult(node: ElementNode, form: FormState, attr: string): Eval
   const attribute = node[attr];
   return typeof attribute === "string" ? evaluateConditions(attribute, form.data, attr) : null;
 }
+
+const holds = (result: Evaluated | null) => !!result && "value" in result && result.value;
+const errorsOf = (...results: (Evaluated | null)[]) =>
+  results.flatMap((result) => (result && "error" in result ? [result.error] : []));
 
 /** afField's isDisabled(): an af-disabled condition, once read, replaces the defn's own flag. */
 function isDisabled(condition: Evaluated | null, defn: unknown): boolean {
@@ -849,16 +890,27 @@ function useOfferedValue(offered: unknown[] | null, scope: Scope, name: string) 
  * afField's live rules: af-required and af-disabled conditions, conditional options,
  * and a token default recalculated from other fields until the user leaves the field.
  */
-function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { node: ElementNode }) {
+/** `row` is the repeat row the field sits in, which its row conditions read; `scope` holds its value. */
+function VisibleField({
+  node,
+  scope,
+  row,
+  name,
+  defn: given,
+}: FieldNodeProps & { node: ElementNode; row: Scope | null }) {
   const form = useForm();
   const element = useRef<HTMLElement>(null);
   const required = conditionResult(node, form, "af-required");
   const disabled = conditionResult(node, form, "af-disabled");
+  const rowRequired = evaluateRowConditions(node, "af-required", form.data, row);
+  const rowDisabled = evaluateRowConditions(node, "af-disabled", form.data, row);
   const visible = visibleOptions(given, form.data);
+  const fieldDisabled = isDisabled(disabled, given) || holds(rowDisabled);
+  const coreRequired = required && "value" in required ? required.value : given.required;
   const defn: FieldDefn = {
     ...given,
     options: visible.options,
-    required: required && "value" in required ? required.value : given.required,
+    required: coreRequired === true || (holds(rowRequired) && !fieldDisabled),
   };
   const itemPath = useContext(ItemPathContext);
   const loop = useTokenDefault(given, scope, name, element);
@@ -866,13 +918,10 @@ function VisibleField({ node, scope, name, defn: given }: FieldNodeProps & { nod
   const value = getValue(form.data, scope, name);
   const unknown = [
     ...unknownFieldAttributes(node),
-    ...[required, disabled].flatMap((result) =>
-      result && "error" in result ? [result.error] : [],
-    ),
+    ...errorsOf(required, disabled, rowRequired, rowDisabled),
     ...visible.errors,
     ...(loop ? [loop] : []),
   ];
-  const fieldDisabled = isDisabled(disabled, given);
   // afField: a field that selects a record (autofill) is read-only when the entity forbids that action.
   const autofill = defn.input_attrs?.autofill;
   const readonly =

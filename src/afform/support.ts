@@ -6,6 +6,7 @@ import { columnNote, settingsOf, unsupportedFeatures } from "../search/rows";
 import { referencedTasks } from "../search/searchTasks";
 import { displayTypeOf, isDisplaySettings, type DisplaySettings } from "../search/types";
 import { parseConditions } from "./conditions";
+import { parseRowConditions, rowConditionTokens, ROW_CONDITIONS } from "./rowConditions";
 import { interpolate, routeTest, type RouteTest } from "./expressions";
 import { INPUT_TYPES, inputTypeNote, templateNote } from "./Field";
 import { entityRefProblem } from "./fields/autocomplete";
@@ -89,6 +90,7 @@ const HTML_TAGS = new Set([
 /** Directive attributes the renderer interprets itself; attributes it neither reads nor carries are reported. */
 const HANDLED = new Set([
   "af-if",
+  "afreact-if",
   "api-entities",
   "af-fieldset",
   "af-join",
@@ -119,6 +121,7 @@ const FIELD_ATTRIBUTES = new Set([
   "af-required",
   "af-disabled",
   "af-if",
+  ...Object.values(ROW_CONDITIONS),
 ]);
 /** Attributes of an af-field inside a search fieldset; `class` goes onto the field element. */
 const FILTER_ATTRIBUTES = new Set([
@@ -143,6 +146,7 @@ const SEARCH_ATTRIBUTES = new Set([
   "settings",
   "display-label",
   "af-if",
+  "afreact-if",
   "filters",
   "total-count",
   "api-entity",
@@ -229,7 +233,8 @@ export const SUBMIT_BUTTON_CONDITION = "afform.showSubmitButton";
 
 /** How the renderer treats an element, in the order Layout's Node() checks. */
 export function nodeKind(node: ElementNode): NodeKind {
-  if (typeof node["af-if"] === "string") return "conditional";
+  if (typeof node["af-if"] === "string" || typeof node["afreact-if"] === "string")
+    return "conditional";
   return ngIfKind(node);
 }
 
@@ -400,7 +405,15 @@ export function fieldAttributesNote(problems: string[], name: string): string {
 }
 
 /** A block element's own attributes; core's quick edit forms repeat the join's actions on it, inert. */
-const BLOCK_ATTRIBUTES = new Set(["#tag", "#children", "af-if", "af-title", "class", "actions"]);
+const BLOCK_ATTRIBUTES = new Set([
+  "#tag",
+  "#children",
+  "af-if",
+  "afreact-if",
+  "af-title",
+  "class",
+  "actions",
+]);
 
 /** Attributes on a block element the renderer neither handles nor carries over. */
 export function unknownBlockAttributes(node: ElementNode): string | null {
@@ -425,7 +438,11 @@ export function unknownSearchAttributes(node: ElementNode): string | null {
 
 export type SearchDisplayCheck =
   | { notes: string[]; filters: null }
-  | { notes: string[]; filters: DisplayFilters; settings: DisplaySettings | undefined };
+  | {
+      notes: string[];
+      filters: DisplayFilters;
+      settings: DisplaySettings | undefined;
+    };
 
 /**
  * The notes of a search display element, and whether its table renders (filters not null).
@@ -440,7 +457,10 @@ export function searchDisplayCheck(
   const notes = attributes ? [attributes] : [];
   const settings = node.settings;
   if (settings !== undefined && !isDisplaySettings(settings))
-    return { notes: [...notes, "search display settings without columns"], filters: null };
+    return {
+      notes: [...notes, "search display settings without columns"],
+      filters: null,
+    };
   // Without its own filters the display would show rows the form means to hide.
   const parsed = parseFiltersAttribute(node.filters);
   if ("error" in parsed) return { notes: [...notes, parsed.error], filters: null };
@@ -479,6 +499,8 @@ function conditionProblem(node: ElementNode, attribute: string): string[] {
 interface Scope {
   /** Inside an af-fieldset or af-join, where fields find their entity. */
   entity: boolean;
+  /** The entity and join whose row a token's `@` stands for. */
+  rows: { entity?: string; join?: string };
   /** Inside an af-repeat of join records, where is_primary becomes a radio. */
   repeated: boolean;
   /** Inside a search fieldset, where fields without entity are filters. */
@@ -489,6 +511,23 @@ interface Scope {
   tab: boolean;
   /** Inside af-form, where draft and reset buttons act on the form. */
   form: boolean;
+}
+
+/** An afreact condition that does not parse, or whose `@` names a row the element is not in. */
+function rowConditionProblem(node: ElementNode, attribute: string, scope: Scope): string[] {
+  const value = node[attribute];
+  if (typeof value !== "string") return [];
+  try {
+    const outside = rowConditionTokens(parseRowConditions(value)).some(
+      (token) =>
+        (token.index === "@" && token.entity !== scope.rows.entity) ||
+        (token.join?.index === "@" &&
+          (token.entity !== scope.rows.entity || token.join.name !== scope.rows.join)),
+    );
+    return outside ? [conditionNote(attribute, value)] : [];
+  } catch {
+    return [conditionNote(attribute, value)];
+  }
 }
 
 function filterFieldProblems(node: ElementNode): string[] {
@@ -522,6 +561,8 @@ function fieldProblems(node: ElementNode, scope: Scope): string[] {
     ...unknownFieldAttributes(node),
     ...conditionProblem(node, "af-required"),
     ...conditionProblem(node, "af-disabled"),
+    ...rowConditionProblem(node, ROW_CONDITIONS["af-required"], scope),
+    ...rowConditionProblem(node, ROW_CONDITIONS["af-disabled"], scope),
   ];
   const problems = unknown.length ? [fieldAttributesNote(unknown, name)] : [];
   // A repeat's is_primary is PrimaryField's radio, whatever its input type.
@@ -583,7 +624,10 @@ const childProblems = (node: ElementNode, scope: Scope) =>
 const KIND_PROBLEMS: Record<NodeKind, (node: ElementNode, scope: Scope) => string[]> = {
   // An unreadable condition shows its note instead of the element.
   conditional: (node, scope) => {
-    const unreadable = conditionProblem(node, "af-if");
+    const unreadable = [
+      ...conditionProblem(node, "af-if"),
+      ...rowConditionProblem(node, ROW_CONDITIONS["af-if"], scope),
+    ];
     return unreadable.length ? unreadable : KIND_PROBLEMS[ngIfKind(node)](node, scope);
   },
   submitCondition: (node, scope) => KIND_PROBLEMS[renderedKind(node)](node, scope),
@@ -593,7 +637,12 @@ const KIND_PROBLEMS: Record<NodeKind, (node: ElementNode, scope: Scope) => strin
   block: (node, scope) => [
     ...[unknownBlockAttributes(node)].filter((note) => note !== null),
     ...elementProblems(node),
-    ...childProblems(node, scope),
+    ...childProblems(
+      node,
+      typeof node["af-join"] === "string"
+        ? { ...scope, rows: { ...scope.rows, join: node["af-join"] } }
+        : scope,
+    ),
   ],
   form: (node, scope) => childProblems(node, { ...scope, form: true }),
   submit: childProblems,
@@ -616,7 +665,12 @@ const KIND_PROBLEMS: Record<NodeKind, (node: ElementNode, scope: Scope) => strin
   ],
   fieldset: (node, scope) => [
     ...elementProblems(node),
-    ...childProblems(node, { ...scope, entity: true, repeated: false }),
+    ...childProblems(node, {
+      ...scope,
+      entity: true,
+      repeated: false,
+      rows: { entity: String(node["af-fieldset"]) },
+    }),
   ],
   join: (node, scope) =>
     scope.entity
@@ -626,6 +680,7 @@ const KIND_PROBLEMS: Record<NodeKind, (node: ElementNode, scope: Scope) => strin
             ...scope,
             entity: true,
             repeated: node["af-repeat"] !== undefined,
+            rows: { ...scope.rows, join: String(node["af-join"]) },
           }),
         ]
       : [joinOutsideFieldsetNote(String(node["af-join"]))],
@@ -670,6 +725,7 @@ function layoutProblemsIn(nodes: LayoutNode[], scope: Scope): string[] {
 export function layoutProblems(layout: LayoutNode[], options?: Record<string, unknown>): string[] {
   return layoutProblemsIn(layout, {
     entity: false,
+    rows: {},
     repeated: false,
     filters: false,
     options,
@@ -701,4 +757,44 @@ export function taskDisplays(layout: LayoutNode[]): TaskDisplay[] {
       ? [{ search, display, referenced }, ...children]
       : children;
   });
+}
+
+export const ROW_CONDITIONS_NOTE =
+  "Uses afreact-if, afreact-required or afreact-disabled, which only React reads";
+
+export function hiddenRequiredNote(name: string): string {
+  return `${name} is required by core, also where afreact-if hides it`;
+}
+
+/** Whether a layout uses afreact's own conditions (ADR 0012), which Angular does not read. */
+export function usesRowConditions(layout: LayoutNode[]): boolean {
+  return layout.some(
+    (node) =>
+      isElement(node) &&
+      (Object.values(ROW_CONDITIONS).some((attr) => typeof node[attr] === "string") ||
+        usesRowConditions(node["#children"] ?? [])),
+  );
+}
+
+/** Fields under an afreact-if that core requires, which core's submit demands even while hidden. */
+function hiddenRequired(nodes: LayoutNode[], hidden: boolean): string[] {
+  return nodes.flatMap((node) => {
+    if (!isElement(node)) return [];
+    const inside = hidden || typeof node["afreact-if"] === "string";
+    const defn = node.defn;
+    if (node["#tag"] === "af-field" && inside && isFieldDefn(defn))
+      return defn.required || typeof node["af-required"] === "string"
+        ? [
+            hiddenRequiredNote(
+              typeof defn.label === "string" && defn.label ? defn.label : defn.name,
+            ),
+          ]
+        : [];
+    return hiddenRequired(node["#children"] ?? [], inside);
+  });
+}
+
+/** What the support report says of afreact's own conditions; none of it keeps React from the form. */
+export function rowConditionCautions(layout: LayoutNode[]): string[] {
+  return usesRowConditions(layout) ? [ROW_CONDITIONS_NOTE, ...hiddenRequired(layout, false)] : [];
 }

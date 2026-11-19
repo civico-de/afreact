@@ -6,7 +6,14 @@ import type { AfformDefinition, EditorMeta } from "../meta";
 import { textAttribute } from "../model";
 import type { ShallowElement } from "../tree";
 import { useNodeOps } from "./common";
-import { ConditionalMenuItem, fieldChoices, parseRule, withRules } from "./Conditional";
+import {
+  ConditionalMenuItem,
+  fieldChoices,
+  parseRule,
+  readRule,
+  rowScope,
+  withRules,
+} from "./Conditional";
 
 const META: EditorMeta = {
   gui: {
@@ -69,7 +76,17 @@ const FIELD: ShallowElement = {
   defn: "{required: true, label: 'Given name'}",
 };
 
-const form = (field: ShallowElement): AfformDefinition => ({
+const EMAIL: ShallowElement = {
+  "#tag": "div",
+  "af-join": "Email",
+  "#children": [{ "#tag": "af-field", name: "email" }],
+};
+
+const form = (
+  field: ShallowElement,
+  email: ShallowElement = EMAIL,
+  fieldset: Partial<ShallowElement> = {},
+): AfformDefinition => ({
   type: "form",
   title: "Test",
   layout: [
@@ -81,14 +98,11 @@ const form = (field: ShallowElement): AfformDefinition => ({
         {
           "#tag": "fieldset",
           "af-fieldset": "Individual1",
+          ...fieldset,
           "#children": [
             field,
             { "#tag": "af-field", name: "gender_id:name" },
-            {
-              "#tag": "div",
-              "af-join": "Email",
-              "#children": [{ "#tag": "af-field", name: "email" }],
-            },
+            email,
             { "#tag": "block-name" },
           ],
         },
@@ -124,6 +138,133 @@ describe("withRules", () => {
     expect(next["af-if"]).toBeUndefined();
     expect(next["af-disabled"]).toBe("flag");
     expect(next.defn).toBe(FIELD.defn);
+  });
+});
+
+// ADR 0012
+describe("afreact's own rules", () => {
+  const own = '[["[Individual1.0.Email.@.email]","IS NOT EMPTY"]]';
+  // deviation:row-conditions
+  it("writes a rule on the element's own row or comparing two fields to afreact's attribute", () => {
+    const node = { ...FIELD, "af-if": '([["a","=","1"]])' };
+    const row = withRules(node, {
+      "af-if": [["[Individual1.0.Email.@.email]", "=", '"x"']],
+    });
+    expect(row["af-if"]).toBeUndefined();
+    expect(row["afreact-if"]).toBe('[["[Individual1.0.Email.@.email]","=","x"]]');
+    const compared = withRules(FIELD, {
+      "af-required": [
+        ["Individual1[0][fields][first_name]", "=", '"[Individual1.0.last_name]"'],
+        ["OR", [["Individual1[0][joins][Email][1][email]", "IS EMPTY"]]],
+      ],
+    });
+    expect(compared["afreact-required"]).toBe(
+      '[["[Individual1.0.first_name]","=","[Individual1.0.last_name]"],["OR",[["[Individual1.0.Email.1.email]","IS EMPTY"]]]]',
+    );
+    expect(compared.defn).toBe("{label: 'Given name'}");
+  });
+
+  it("goes back to core's attribute once a rule no longer needs afreact's", () => {
+    const next = withRules({ ...FIELD, "afreact-if": own }, { "af-if": [["a", "=", "1"]] });
+    expect(next["afreact-if"]).toBeUndefined();
+    expect(next["af-if"]).toBe('([["a","=","1"]])');
+    expect(
+      withRules({ ...FIELD, "afreact-if": own }, { "af-if": [] })["afreact-if"],
+    ).toBeUndefined();
+  });
+
+  it("reads both attributes as one rule, core's data paths where no row is meant", () => {
+    const node = {
+      ...FIELD,
+      "af-if": '([["a","=","1"]])',
+      "afreact-if":
+        '[["[Individual1.0.first_name]","=",2],["[Individual1.0.Email.@.email]","IS EMPTY"]]',
+    };
+    expect(readRule(node, "af-if")).toEqual([
+      ["a", "=", "1"],
+      ["Individual1[0][fields][first_name]", "=", "2"],
+      ["[Individual1.0.Email.@.email]", "IS EMPTY"],
+    ]);
+    expect(readRule({ ...FIELD, "afreact-if": "[[1]]" }, "af-if")).toBeNull();
+  });
+
+  it("reads a single clause or group as a list of one, as the runtime does", () => {
+    const clause = '["[Individual1.0.first_name]","=",2]';
+    expect(readRule({ ...FIELD, "afreact-if": clause }, "af-if")).toEqual([
+      ["Individual1[0][fields][first_name]", "=", "2"],
+    ]);
+    expect(readRule({ ...FIELD, "afreact-if": `["NOT",[${clause}]]` }, "af-if")).toEqual([
+      ["NOT", [["Individual1[0][fields][first_name]", "=", "2"]]],
+    ]);
+  });
+
+  it("reads a required rule set in both attributes as either, as the runtime applies it", () => {
+    const node = {
+      ...FIELD,
+      "af-required": '([["a","=","1"]])',
+      "afreact-required":
+        '[["[Individual1.0.first_name]","=",2],["[Individual1.0.last_name]","=",3]]',
+    };
+    expect(readRule(node, "af-required")).toEqual([
+      [
+        "OR",
+        [
+          ["a", "=", "1"],
+          [
+            "AND",
+            [
+              ["Individual1[0][fields][first_name]", "=", "2"],
+              ["Individual1[0][fields][last_name]", "=", "3"],
+            ],
+          ],
+        ],
+      ],
+    ]);
+  });
+
+  it("offers the fields of the repeat an element sits in as this row's", () => {
+    const afform = form(FIELD, {
+      ...EMAIL,
+      "af-repeat": "Add",
+      "#children": [
+        { "#tag": "af-field", name: "email" },
+        { "#tag": "af-field", name: "location_type_id" },
+      ],
+    });
+    expect(rowScope(afform.layout, [0, 1, 0])).toBeNull();
+    const row = rowScope(afform.layout, [0, 1, 2, 1]);
+    expect(row).toEqual({
+      entity: "Individual1",
+      entityRepeated: false,
+      join: "Email",
+    });
+    const choices = fieldChoices({ afform, meta: META, entities: formEntities(afform, META) }, row);
+    expect(choices.options.filter((o) => String(o.id).startsWith("["))).toEqual([
+      {
+        id: "[Individual1.0.Email.@.email]",
+        label: "Email",
+        group: "Individual 1: Email, this row",
+      },
+      {
+        id: "[Individual1.0.Email.@.location_type_id]",
+        label: "location_type_id",
+        group: "Individual 1: Email, this row",
+      },
+    ]);
+  });
+
+  it("offers the entity's row inside a repeated join of a repeated fieldset", () => {
+    const afform = form(FIELD, { ...EMAIL, "af-repeat": "Add" }, { "af-repeat": "Add" });
+    const row = rowScope(afform.layout, [0, 1, 2, 0]);
+    expect(row).toEqual({
+      entity: "Individual1",
+      entityRepeated: true,
+      join: "Email",
+    });
+    const choices = fieldChoices({ afform, meta: META, entities: formEntities(afform, META) }, row);
+    const ids = choices.options.map((o) => String(o.id)).filter((id) => id.startsWith("["));
+    expect(ids).toContain("[Individual1.@.Email.@.email]");
+    expect(ids).toContain("[Individual1.@.first_name]");
   });
 });
 
@@ -261,6 +402,7 @@ function Entry({ api }: { api: EditorApi }) {
     <ul>
       <ConditionalMenuItem ops={ops} readOnlyField={false} />
       <li data-testid="af-if">{textAttribute(field, "af-if")}</li>
+      <li data-testid="afreact-if">{textAttribute(field, "afreact-if")}</li>
       <li data-testid="defn">{textAttribute(field, "defn")}</li>
     </ul>
   );
@@ -285,6 +427,24 @@ describe("ConditionalMenuItem", () => {
     );
     // Only af-required and af-disabled replace a static setting.
     expect(screen.getByTestId("defn").textContent).toBe(FIELD.defn);
+  });
+
+  it("compares with another field and writes that rule to afreact-if", async () => {
+    render(<Item />);
+    fireEvent.click(screen.getByRole("button", { name: /Edit Conditional Rules/ }));
+    const panel = screen.getAllByRole("tabpanel")[0]!;
+    fireEvent.click(within(panel).getByRole("checkbox", { name: "Compare with a field" }));
+    expect(
+      await within(panel).findByRole("combobox", {
+        name: "Field compared with Given name",
+      }),
+    ).toBeInTheDocument();
+    expect(within(panel).queryByRole("textbox", { name: "Value for Given name" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Apply Changes/ }));
+    expect(screen.getByTestId("af-if").textContent).toBe("");
+    expect(screen.getByTestId("afreact-if").textContent).toBe(
+      '[["[Individual1.0.first_name]","=","[Individual1.0.gender_id:name]"]]',
+    );
   });
 
   it("keeps a field picked when another change follows before the pick is reported", async () => {

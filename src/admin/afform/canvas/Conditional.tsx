@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { parseRowConditions, parseToken, ROW_CONDITIONS } from "../../../afform/rowConditions";
 import {
   allowedOperators,
   withOperator,
@@ -17,7 +18,7 @@ import { FieldValue } from "../FieldValue";
 import type { GuiField } from "../meta";
 import { textAttribute } from "../model";
 import { withoutAttributes } from "../nodes";
-import type { ShallowElement } from "../tree";
+import { isElement, nodeAt, type NodePath, type ShallowElement, type ShallowNode } from "../tree";
 import { MenuAction, type NodeOps } from "./common";
 
 export type Rule = "af-if" | "af-required" | "af-disabled";
@@ -59,7 +60,8 @@ const operators = (): Operator[] =>
     "IS NULL": ts("No Value"),
   }).map(([key, value]) => ({ key, value }));
 
-const hasRules = (node: ShallowElement) => RULES.some((rule) => !!textAttribute(node, rule));
+const hasRules = (node: ShallowElement) =>
+  RULES.some((rule) => !!textAttribute(node, rule) || !!textAttribute(node, ROW_CONDITIONS[rule]));
 
 /** afGuiConditionalMenu: the entry opening the conditional rules of an element. */
 export function ConditionalMenuItem({
@@ -110,23 +112,137 @@ export function parseRule(text: string | undefined): unknown[] | null {
   }
 }
 
-/** The element with its rules set: an empty rule goes, a set one replaces its static counterpart. */
+/** `Individual1[0][joins][Email][1][email]` as the token `[Individual1.0.Email.1.email]`. */
+const PATH = /^([A-Za-z0-9_]+)\[(\d+)\]\[fields\]\[([^\]]+)\]$/;
+const JOIN_PATH = /^([A-Za-z0-9_]+)\[(\d+)\]\[joins\]\[([A-Za-z0-9_]+)\]\[(\d+)\]\[([^\]]+)\]$/;
+
+export function pathToken(key: string): string {
+  const join = JOIN_PATH.exec(key);
+  if (join) return `[${join.slice(1).join(".")}]`;
+  const field = PATH.exec(key);
+  return field ? `[${field.slice(1).join(".")}]` : key;
+}
+
+/** A token as core's data path, or as it is where it names the element's own row (`@`). */
+function tokenPath(text: string): string {
+  const token = parseToken(text);
+  if (!token || token.index === "@" || token.join?.index === "@") return text;
+  const { entity, index, join, field } = token;
+  return join
+    ? `${entity}[${String(index)}][joins][${join.name}][${String(join.index)}][${field}]`
+    : `${entity}[${String(index)}][fields][${field}]`;
+}
+
+/** Maps every clause of a condition list, groups included. */
+function mapClauses(list: unknown[], map: (clause: unknown[]) => unknown[]): unknown[] {
+  return list.map((clause) => {
+    if (!Array.isArray(clause)) return clause;
+    return isClauseGroup(clause) ? [clause[0], mapClauses(clause[1], map)] : map(clause);
+  });
+}
+
+/** Whether a rule needs afreact's syntax: a field of the element's own row, or a field as value. */
+function usesRowSyntax(list: unknown[]): boolean {
+  return list.some((clause) => {
+    if (!Array.isArray(clause)) return false;
+    if (isClauseGroup(clause)) return usesRowSyntax(clause[1]);
+    const { value } = parseValue(clause[2]);
+    return parseToken(clause[0]) !== null || parseToken(value) !== null;
+  });
+}
+
+/** afreact's attribute as the dialog edits it: core's data paths and JSON text values. */
+function fromRowSyntax(text: string | undefined): unknown[] | null {
+  if (!text) return [];
+  try {
+    const list = parseRowConditions(text);
+    // A single clause or group stands for a list of one.
+    const clauses = list.every(Array.isArray) ? list : [list];
+    return mapClauses(clauses, ([head, op, ...value]) => [
+      tokenPath(String(head)),
+      op,
+      ...value.map((v) => JSON.stringify(v)),
+    ]);
+  } catch {
+    return null;
+  }
+}
+
+/** A rule as the dialog edits it, core's attribute and afreact's together, as both must hold. */
+export function readRule(node: ShallowElement, rule: Rule): unknown[] | null {
+  const core = parseRule(textAttribute(node, rule));
+  const own = fromRowSyntax(textAttribute(node, ROW_CONDITIONS[rule]));
+  if (!core || !own) return null;
+  // At runtime a required or disabled rule decides alone; both af-if rules must hold.
+  if (rule === "af-if" || !core.length || !own.length) return [...core, ...own];
+  const all = (clauses: unknown[]) => (clauses.length === 1 ? clauses[0] : ["AND", clauses]);
+  return [["OR", [all(core), all(own)]]];
+}
+
+/**
+ * The element with its rules set: an empty rule goes, a set one replaces its static counterpart.
+ * A rule that refers to the element's own row or compares two fields goes into afreact's attribute.
+ */
 export function withRules(
   node: ShallowElement,
   rules: Partial<Record<Rule, unknown[] | null>>,
 ): ShallowElement {
   let next = node;
-  for (const [rule, conditions] of Object.entries(rules)) {
-    if (conditions === null) continue;
+  for (const rule of RULES) {
+    const conditions = rules[rule];
+    if (conditions === undefined || conditions === null) continue;
+    const own = ROW_CONDITIONS[rule];
     if (!conditions.length) {
-      next = withoutAttributes(next, [rule]);
+      next = withoutAttributes(next, [rule, own]);
       continue;
     }
     // Not both `required` and `af-required`.
     if (rule !== "af-if") next = withoutDefnKey(next, rule.replace("af-", ""));
-    next = { ...next, [rule]: `(${JSON.stringify(conditions)})` };
+    // deviation:row-conditions
+    if (usesRowSyntax(conditions)) {
+      const tokens = mapClauses(conditions, ([head, op, ...value]) => [
+        pathToken(String(head)),
+        op,
+        ...value.map((v) => parseValue(v).value),
+      ]);
+      next = {
+        ...withoutAttributes(next, [rule]),
+        [own]: JSON.stringify(tokens),
+      };
+    } else {
+      next = {
+        ...withoutAttributes(next, [own]),
+        [rule]: `(${JSON.stringify(conditions)})`,
+      };
+    }
   }
   return next;
+}
+
+export interface RowScope {
+  entity: string;
+  /** The af-fieldset repeats, so `@` stands for its row. */
+  entityRepeated: boolean;
+  /** The repeated af-join the element sits in. */
+  join?: string;
+}
+
+/** The repeats around the element at `path`, whose rows `@` can name; null outside any. */
+export function rowScope(layout: ShallowNode[], path: NodePath): RowScope | null {
+  let scope = null as RowScope | null;
+  for (let depth = 1; depth < path.length; depth++) {
+    const node = nodeAt(layout, path.slice(0, depth));
+    if (!isElement(node)) continue;
+    const fieldset = textAttribute(node, "af-fieldset");
+    const join = textAttribute(node, "af-join");
+    if (fieldset)
+      scope = {
+        entity: fieldset,
+        entityRepeated: node["af-repeat"] !== undefined,
+      };
+    else if (join && scope && node["af-repeat"] !== undefined) scope = { ...scope, join };
+  }
+  return scope && (scope.entityRepeated || scope.join) ? scope : null;
 }
 
 interface FieldChoices {
@@ -146,10 +262,12 @@ const fieldLabel = (field: GuiField) => {
 // deviation:condition-fields-once
 export function fieldChoices(
   editor: Pick<EditorApi, "afform" | "meta" | "entities">,
+  row: RowScope | null = null,
 ): FieldChoices {
   const result: FieldChoices = { options: [], defns: {} };
   for (const entity of editor.entities) {
     const fields = entityFields(editor, entity);
+    if (row?.entity === entity.name) addRowChoices(result, editor, row, fields);
     for (const field of fields.fields) {
       const key = `${entity.name}[0][fields][${field.name}]`;
       result.defns[key] = field;
@@ -167,6 +285,35 @@ export function fieldChoices(
     }
   }
   return result;
+}
+
+/** The fields of the rows the element sits in, as tokens with `@`. */
+function addRowChoices(
+  result: FieldChoices,
+  editor: Pick<EditorApi, "meta" | "entities">,
+  row: RowScope,
+  fields: ReturnType<typeof entityFields>,
+) {
+  const entity = editor.entities.find((e) => e.name === row.entity);
+  const label = entity?.label ?? row.entity;
+  const index = row.entityRepeated ? "@" : "0";
+  const add = (key: string, field: GuiField, group: string) => {
+    if (key in result.defns) return;
+    result.defns[key] = field;
+    result.options.push({ id: key, label: fieldLabel(field), group });
+  };
+  if (row.join) {
+    const joinLabel = editor.meta.gui.entities[row.join]?.label ?? row.join;
+    const group = ts("%1: %2, this row", { 1: label, 2: joinLabel });
+    for (const join of fields.joins.filter((j) => j.entity === row.join))
+      for (const field of join.fields)
+        add(`[${row.entity}.${index}.${row.join}.@.${field.name}]`, field, group);
+  }
+  // Inside a repeated join too, the entity's fields read the row the join sits in.
+  if (row.entityRepeated) {
+    const group = ts("%1, this row", { 1: label });
+    for (const field of fields.fields) add(`[${row.entity}.@.${field.name}]`, field, group);
+  }
 }
 
 const conditionField = (field: GuiField | undefined): ConditionField | undefined =>
@@ -226,11 +373,11 @@ function ConditionalDialog({
   const editor = useEditor();
   const base = useId();
   const applicable = ops.node["#tag"] !== "af-field" || readOnlyField ? RULES.slice(0, 1) : RULES;
-  const [choices] = useState(() => fieldChoices(editor));
+  const [choices] = useState(() => fieldChoices(editor, rowScope(editor.afform.layout, ops.path)));
   const [conditions, setConditions] = useState(() =>
     Object.fromEntries(
       applicable.map((rule) => {
-        const parsed = parseRule(textAttribute(ops.node, rule));
+        const parsed = readRule(ops.node, rule);
         return [
           rule,
           parsed?.map((c) => (Array.isArray(c) ? fitClause(c, choices.defns) : c)) ?? null,
@@ -524,7 +671,14 @@ function ClauseRow({
           else onChange((c) => fitClause([String(next), ...c.slice(1)], choices.defns));
         }}
       />{" "}
-      <Condition id={id} clause={clause} field={field} name={name} onChange={onChange} />{" "}
+      <Condition
+        id={id}
+        clause={clause}
+        field={field}
+        name={name}
+        choices={choices}
+        onChange={onChange}
+      />{" "}
       <button
         type="button"
         className="btn btn-xs btn-danger-outline"
@@ -544,17 +698,20 @@ function Condition({
   clause,
   field,
   name,
+  choices,
   onChange,
 }: {
   id: string;
   clause: unknown[];
   field: GuiField | undefined;
   name: string;
+  choices: FieldChoices;
   onChange: (update: (clause: unknown[]) => unknown[]) => void;
 }) {
   const allowed = allowedOperators(conditionField(field), operators());
   const op = typeof clause[1] === "string" ? clause[1] : "";
   const { value, readable } = parseValue(clause[2]);
+  const compared = typeof value === "string" && parseToken(value) !== null ? value : null;
   const setValue = (next: unknown) => {
     onChange((c) => [c[0], c[1], JSON.stringify(next)]);
   };
@@ -579,7 +736,41 @@ function Condition({
           </option>
         ))}
       </select>{" "}
-      {!op.startsWith("IS ") && (
+      {!op.startsWith("IS ") && !between && (
+        <label className="afreact-compare-field">
+          <input
+            type="checkbox"
+            checked={compared !== null}
+            onChange={(event) => {
+              const first = choices.options.find((o) => o.id !== clause[0]);
+              setValue(event.target.checked && first ? pathToken(String(first.id)) : "");
+            }}
+          />{" "}
+          {ts("Compare with a field")}
+        </label>
+      )}{" "}
+      {compared !== null &&
+        !op.startsWith("IS ") &&
+        !between && (
+          // deviation:row-conditions
+          <Picker
+            id={`${id}-compared`}
+            label={ts("Field compared with %1", { 1: name })}
+            hiddenLabel
+            placeholder={ts("Field")}
+            className="collapsible-optgroups"
+            single
+            options={choices.options}
+            value={[
+              choices.options.find((o) => pathToken(String(o.id)) === compared)?.id ?? compared,
+            ]}
+            onChange={(picked) => {
+              const next = picked[0];
+              setValue(next === undefined ? "" : pathToken(String(next)));
+            }}
+          />
+        )}
+      {compared === null && !op.startsWith("IS ") && (
         <span className="form-group">
           <label htmlFor={`${id}-value`} className="sr-only">
             {between ? ts("From value for %1", { 1: name }) : ts("Value for %1", { 1: name })}
