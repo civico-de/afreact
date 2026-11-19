@@ -3,7 +3,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: afreact\n"
-"PO-Revision-Date: 2026-10-20 00:00+0000\n"
+"PO-Revision-Date: 2026-11-19 00:00+0000\n"
 "Last-Translator: civico GmbH\n"
 "Language-Team: German\n"
 "MIME-Version: 1.0\n"
@@ -35,3 +35,45 @@ msgstr "Nicht gezählt"
 
 msgid "Try again"
 msgstr "Erneut versuchen"
+
+msgid "Forms rendered with React"
+msgstr "Mit React gezeichnete Formulare"
+
+msgid "On their pages, contact summary tabs and blocks, event management tabs, case summary blocks, the contact actions popup and dashboard dashlets these forms render with React. All other forms stay Angular."
+msgstr "Diese Formulare werden mit React gezeichnet: auf ihren eigenen Seiten, in Reitern und Blöcken der Kontaktübersicht, in Reitern der Veranstaltungsverwaltung, in Blöcken der Fallübersicht, im Popup der Kontaktaktionen und in Dashlets. Alle anderen Formulare bleiben bei Angular."
+
+msgid "Builders opened with React"
+msgstr "Mit React geöffnete Editoren"
+
+msgid "Links to these builders open the React builder. Core's builder stays one link away at its classic address."
+msgstr "Links zu diesen Editoren öffnen den React-Editor. Der Original-Editor bleibt unter seiner klassischen Adresse erreichbar."
+
+msgid "No task settings for module \"%1\"."
+msgstr "Keine Aufgaben-Einstellungen für das Modul „%1“."
+
+msgid "Module \"%1\" is not enabled."
+msgstr "Das Modul „%1“ ist nicht aktiviert."
+
+msgid "Form \"%1\" does not exist or you may not open it."
+msgstr "Das Formular „%1“ existiert nicht, oder Sie dürfen es nicht öffnen."
+
+msgid "This form is placed where a record gives it its arguments. Choose one to show the form as it shows there."
+msgstr "Dieses Formular ist an einer Stelle platziert, an der ein Datensatz seine Argumente liefert. Wählen Sie einen aus, um das Formular so zu zeigen, wie es dort erscheint."
+
+msgid "Show"
+msgstr "Anzeigen"
+
+msgid "CiviCRM"
+msgstr "CiviCRM"
+
+msgid "React renderer support"
+msgstr "Unterstützung des React-Renderers"
+
+msgid "%1 must be a record ID."
+msgstr "%1 muss eine Datensatz-ID sein."
+
+msgid "SearchKit"
+msgstr "SearchKit"
+
+msgid "FormBuilder"
+msgstr "FormBuilder"
