@@ -95,7 +95,10 @@ const kitDeclarations: Plugin = {
 
 // A string literal never holds a raw line break, so text like "ts(" in code matches none.
 const LITERAL = String.raw`"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'`;
-const TS_CALL = new RegExp(String.raw`\bts\(\s*(${LITERAL})|\bplural:\s*(${LITERAL})`, "g");
+const TS_CALL = new RegExp(
+  String.raw`\bts\(\s*(${LITERAL})(?:\s*,\s*\{\s*plural:\s*(${LITERAL}))?`,
+  "g",
+);
 
 /** A quoted source literal's text. */
 const unquote = (literal: string): string =>
@@ -104,20 +107,21 @@ const unquote = (literal: string): string =>
     : String(JSON.parse(literal));
 
 /**
- * dist/strings.json lists the ts() texts of the sources: the minifier turns them into template
- * literals, which CiviCRM's string extraction does not read.
+ * dist/strings.json maps the ts() texts of the sources to their plural form or null: the minifier
+ * turns them into template literals, which CiviCRM's string extraction does not read.
  */
 const tsStrings = (): Plugin => {
-  const strings = new Set<string>();
+  const strings = new Map<string, string | null>();
   return {
     name: "afreact-ts-strings",
     // The sources as written, before JSX and TypeScript are compiled.
     enforce: "pre",
     transform(code, id) {
       if (!/\/src\/.*\.tsx?$/.test(id) || id.includes(".test.")) return null;
-      for (const match of code.matchAll(TS_CALL)) {
-        const literal = match[1] ?? match[2];
-        if (literal) strings.add(unquote(literal));
+      for (const [, text, plural] of code.matchAll(TS_CALL)) {
+        if (!text) continue;
+        const key = unquote(text);
+        strings.set(key, plural ? unquote(plural) : (strings.get(key) ?? null));
       }
       return null;
     },
@@ -125,7 +129,7 @@ const tsStrings = (): Plugin => {
       this.emitFile({
         type: "asset",
         fileName: "strings.json",
-        source: `${JSON.stringify([...strings].sort(), null, 1)}\n`,
+        source: `${JSON.stringify(Object.fromEntries([...strings].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))), null, 1)}\n`,
       });
     },
   };

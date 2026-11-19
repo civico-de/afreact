@@ -58,6 +58,13 @@ privately as security/core#249. React renders the titles as text.
 domain of the extension that ships the form, then in core's, as that fix does.
 `deviation:form-strings-extension-domain` (S97)
 
+**A plural message stays in English.** A `ts()` with `plural` and `count`, as
+in "%count tags removed.", finds neither form, because core looks both up as
+unrelated texts. Open PR
+[civicrm/civicrm-core#38172](https://github.com/civicrm/civicrm-core/pull/38172)
+adds `CRM_Utils_JS::translateStrings()`; afreact uses it where core has it.
+(C09)
+
 ## Drafts and submission
 
 **"Draft Saved" before any draft.** The React renderer keeps the button's own

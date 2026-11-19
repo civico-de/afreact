@@ -21,6 +21,8 @@ All notable changes to this extension are documented in this file. The format fo
 
 - Texts core translates in the SearchKit and FormBuilder catalogs show translated on every
   screen, such as a search display's result count on a form.
+- Plural messages such as "%count tags removed." show translated on a core that translates
+  them for its own screens (civicrm/civicrm-core#38172).
 
 ## [0.2.0] - 2026-11-18
 
