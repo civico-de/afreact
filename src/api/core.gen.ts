@@ -15,6 +15,8 @@ export type DirectiveAttribute =
   | "af-field af-disabled"
   | "af-field af-if"
   | "af-field af-required"
+  | "af-field afreact-disabled"
+  | "af-field afreact-required"
   | "af-field class"
   | "af-field defn"
   | "af-field name"
