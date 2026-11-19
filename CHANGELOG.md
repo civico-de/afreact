@@ -16,6 +16,8 @@ All notable changes to this extension are documented in this file. The format fo
 ### Changed
 
 - The manual lives in `docs/handbook/`. CiviCRM shows it with handbook 0.5.0 or newer.
+- Back-office forms show each fieldset as a block and each repeat item as a panel, and fields
+  side by side stand on shared columns in every section.
 
 ### Fixed
 

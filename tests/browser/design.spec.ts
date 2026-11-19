@@ -405,6 +405,115 @@ for (const stream of STREAMS)
         .toBeLessThanOrEqual((await box(range)).right + 0.5);
     });
 
+    // deviation:form-grid
+    test("fields side by side, in repeat items too, stand on the columns of the form's first row", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto(FORM);
+      const about = page.getByRole("group", { name: "About you" });
+      await expect(about).toBeVisible(LOAD);
+      await expect(page.locator(".afreact-form")).toHaveAttribute("aria-busy", "false", LOAD);
+      const starts = async (fields: Locator) =>
+        (await Promise.all((await fields.all()).map(box))).map(({ x }) => Math.round(x));
+      const columns = await starts(about.locator("> .af-layout-inline > af-field"));
+      expect(columns.length).toBe(3);
+      // A row that opens with a narrow field, in core's markup: the next field keeps its column.
+      await about.evaluate((fieldset) => {
+        const row = fieldset.appendChild(document.createElement("div"));
+        row.className = "af-container af-layout-inline";
+        row.id = "narrow-first";
+        for (const [type, label] of [
+          ["radio", "Yes"],
+          ["text", "Wide"],
+        ] as const) {
+          const field = row.appendChild(document.createElement("af-field"));
+          field.className = `af-field-type-${type}`;
+          const input = field.appendChild(document.createElement("input"));
+          input.type = type;
+          input.className = type === "text" ? "form-control" : "";
+          input.ariaLabel = label;
+        }
+      });
+      const address = about.locator("[af-repeat-item]").filter({ has: page.getByLabel("City") });
+      const inItems = await starts(about.locator("[af-repeat-item] .af-layout-inline > af-field"));
+      const stacked = await starts(
+        page.locator("fieldset.af-container > af-field:not(.af-field-type-hidden)"),
+      );
+      const [first = 0, second = 0] = columns;
+      expect(await starts(about.locator("#narrow-first > af-field"))).toEqual([first, second]);
+      // Each field starts a whole number of column steps from the first.
+      const step = second - first;
+      expect(step).toBeGreaterThan(0);
+      expect(inItems.length).toBeGreaterThan(6);
+      for (const x of [...inItems, ...stacked]) {
+        const steps = (x - first) / step;
+        expect(Math.abs(steps - Math.round(steps)) * step).toBeLessThanOrEqual(1);
+      }
+      // The item is a panel of its own around its fields, which keep the outer columns.
+      const [item, fieldset] = await Promise.all([box(address), box(about)]);
+      expect(item.x).toBeGreaterThan(fieldset.x);
+      expect(item.x).toBeLessThan(first);
+      const colours = await address.evaluate((element) => [
+        getComputedStyle(element).backgroundColor,
+        getComputedStyle(element.closest("fieldset")!).backgroundColor,
+      ]);
+      expect(colours[0]).not.toBe(colours[1]);
+    });
+
+    // deviation:form-grid
+    test("on a phone the form's fields stand one per row without a horizontal scroll", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 375, height: 800 });
+      await page.goto(FORM);
+      const about = page.getByRole("group", { name: "About you" });
+      await expect(about).toBeVisible(LOAD);
+      await expect(page.locator(".afreact-form")).toHaveAttribute("aria-busy", "false", LOAD);
+      const fields = await Promise.all(
+        (await about.locator(".af-layout-inline > af-field").all()).map(box),
+      );
+      expect(new Set(fields.map(({ x }) => Math.round(x))).size).toBe(1);
+      const fieldset = await box(about);
+      for (const field of fields) expect(field.right).toBeLessThanOrEqual(fieldset.right);
+      const overflow = await page
+        .locator(".afreact-form")
+        .evaluate((form) => form.scrollWidth - form.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+    });
+
+    for (const colorScheme of ["light", "dark"] as const)
+      // deviation:form-grid
+      test(`the form's blocks and repeat panels have no axe finding (${colorScheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(120_000);
+        await page.emulateMedia({ colorScheme });
+        await page.goto(FORM);
+        await expect(page.getByRole("group", { name: "About you" })).toBeVisible(LOAD);
+        await expect(page.locator(".afreact-form")).toHaveAttribute("aria-busy", "false", LOAD);
+        // The block's and the panel's backgrounds as axe writes colours.
+        const backgrounds = await page
+          .locator("fieldset.af-container [af-repeat-item]")
+          .first()
+          .evaluate((item) => {
+            const hex = (element: Element) => {
+              const probe = document.createElement("canvas").getContext("2d")!;
+              probe.fillStyle = getComputedStyle(element).backgroundColor;
+              return probe.fillStyle;
+            };
+            return [hex(item), hex(item.closest("fieldset")!)];
+          });
+        const findings = await axeFindings(page, ".afreact-form fieldset.af-container");
+        // Contrast pairs on the theme's own colours, such as Minetta's dark buttons (S258), stay the theme's.
+        const own = findings.filter(
+          (finding) =>
+            !finding.startsWith("color-contrast:") ||
+            backgrounds.some((background) => finding.includes(` on ${background},`)),
+        );
+        expect(own).toEqual([]);
+      });
+
     // deviation:form-inputs-one-width
     test("a form's single-line inputs and selects share one width, a date range two and the gap", async ({
       page,
