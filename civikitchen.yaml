@@ -25,6 +25,9 @@ policy:
   license: AGPL-3.0-or-later
   npm_license: AGPL-3.0-or-later
   copyright: 'civico GmbH'
+  untagged_versions:
+    - version: "0.1.0"
+      reason: "withdrawn before afreact went public; 0.2.0 is the first release"
   civicrm_floor_reasons:
     - version: "6.20"
       reason: "afreact supports the latest core release only (docs/adr/0011-latest-core-release-only.md)"
