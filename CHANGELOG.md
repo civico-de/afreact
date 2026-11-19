@@ -17,6 +17,11 @@ All notable changes to this extension are documented in this file. The format fo
 
 - The manual lives in `docs/handbook/`. CiviCRM shows it with handbook 0.5.0 or newer.
 
+### Fixed
+
+- Texts core translates in the SearchKit and FormBuilder catalogs show translated on every
+  screen, such as a search display's result count on a form.
+
 ## [0.2.0] - 2026-11-18
 
 ### Added

@@ -22,8 +22,14 @@ final class Strings {
   ];
 
   /**
+   * Core's catalogs for the screens the bundle renders: a form shows search displays, a builder
+   * previews forms; each screen's core module translates in its own domain.
+   */
+  private const CORE_DOMAINS = ['org.civicrm.afform', 'org.civicrm.search_kit', 'org.civicrm.afform_admin'];
+
+  /**
    * Adds the translations, in afreact's own first (l10n/), then in `$domain` where one is given,
-   * then in core's.
+   * then in core's catalogs for forms, searches and the form builder, then in core's own.
    */
   public static function add(?string $domain = NULL): void {
     // Each element on a page loads the assets.
@@ -34,7 +40,10 @@ final class Strings {
     \Civi::$statics[$key] = TRUE;
     $translations = [];
     foreach (self::texts() as $text) {
-      $translated = _ts($text, ['domain' => array_unique([E::LONG_NAME, $domain, NULL]), 'raw' => TRUE]);
+      $translated = _ts($text, [
+        'domain' => array_unique([E::LONG_NAME, $domain, ...self::CORE_DOMAINS, NULL]),
+        'raw' => TRUE,
+      ]);
       if (is_string($translated) && $translated !== $text) {
         $translations[$text] = $translated;
       }

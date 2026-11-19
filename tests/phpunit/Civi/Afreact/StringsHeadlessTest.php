@@ -45,4 +45,57 @@ class StringsHeadlessTest extends TestCase implements HeadlessInterface {
     $this->assertSame('Auswählen …', $strings['Select…'] ?? NULL);
   }
 
+  /**
+   * A search display on a form takes its texts from SearchKit's catalog, as core's does.
+   */
+  public function testAFormFindsTextsCoreTranslatesForItsOtherScreens(): void {
+    $dir = \CRM_Core_I18n::getResourceDir() . 'de_DE/LC_MESSAGES/';
+    $mo = $dir . 'search_kit.mo';
+    $this->assertFileDoesNotExist($mo);
+    $created = !is_dir($dir);
+    if ($created) {
+      mkdir($dir, 0o777, TRUE);
+    }
+    file_put_contents($mo, self::catalog(['%1 results' => '%1 Ergebnisse']));
+    // A fresh German translator, which looks for the catalog again.
+    unset(\Civi::$statics['CRM_Core_I18n']['singleton']['de_DE'], \Civi::$statics[Strings::class . ':']);
+    \CRM_Core_I18n::singleton()->setLocale(new Locale(['nominal' => 'de_DE', 'ts' => 'de_DE']));
+    try {
+      Strings::add();
+    }
+    finally {
+      \CRM_Core_I18n::singleton()->setLocale('en_US');
+      unlink($mo);
+      if ($created) {
+        rmdir($dir);
+        rmdir(dirname($dir));
+      }
+      unset(\Civi::$statics['CRM_Core_I18n']['singleton']['de_DE']);
+    }
+    $strings = \Civi::resources()->getSettings()['strings'] ?? [];
+    $this->assertIsArray($strings);
+    $this->assertSame('%1 Ergebnisse', $strings['%1 results'] ?? NULL);
+  }
+
+  /**
+   * A gettext catalog (.mo) of the given translations.
+   *
+   * @param array<string, string> $translations
+   */
+  private static function catalog(array $translations): string {
+    $translations = ['' => "Content-Type: text/plain; charset=UTF-8\n"] + $translations;
+    ksort($translations, SORT_STRING);
+    $count = count($translations);
+    $offset = 28 + (16 * $count);
+    $tables = ['', ''];
+    $data = '';
+    foreach ([array_keys($translations), array_values($translations)] as $side => $texts) {
+      foreach ($texts as $text) {
+        $tables[$side] .= pack('VV', strlen($text), $offset + strlen($data));
+        $data .= $text . "\0";
+      }
+    }
+    return pack('VVVVVVV', 0x9504_12DE, 0, $count, 28, 28 + (8 * $count), 0, 0) . $tables[0] . $tables[1] . $data;
+  }
+
 }
