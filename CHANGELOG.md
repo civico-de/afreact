@@ -23,6 +23,8 @@ All notable changes to this extension are documented in this file. The format fo
   screen, such as a search display's result count on a form.
 - Plural messages such as "%count tags removed." show translated on a core that translates
   them for its own screens (civicrm/civicrm-core#38172).
+- A form with row conditions no longer fails after an afreact upgrade until the caches are
+  cleared.
 
 ## [0.2.0] - 2026-11-18
 

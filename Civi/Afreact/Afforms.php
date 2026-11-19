@@ -7,6 +7,7 @@ namespace Civi\Afreact;
 use Civi\Afform\StringVisitor;
 use Civi\Angular\Manager;
 use Civi\Api4\Afform;
+use CRM_Afreact_ExtensionUtil as E;
 
 /**
  * Typed access to Afform records, core's Angular manager and its cache.
@@ -15,7 +16,7 @@ final class Afforms {
 
   /**
    * Caches a value that is the same for every user in core's Angular cache, which
-   * saving a form, custom field changes and cache flushes clear.
+   * saving a form, custom field changes and cache flushes clear; an afreact upgrade starts afresh.
    *
    * @template T
    * @param callable(): T $build
@@ -28,8 +29,7 @@ final class Afforms {
       'type' => ['*memory*', 'SqlGroup', 'ArrayCache'],
       'withArray' => 'fast',
     ]);
-    // The resource cache code changes on flush and carries the locale.
-    $key = 'afreact_' . md5($name . '_' . \CRM_Core_Resources::singleton()->getCacheCode());
+    $key = self::key($name, \CRM_Extension_System::singleton()->getMapper()->keyToInfo(E::LONG_NAME)->version);
     if ($cache->has($key)) {
       /** @var T */
       return $cache->get($key);
@@ -37,6 +37,14 @@ final class Afforms {
     $value = $build();
     $cache->set($key, $value);
     return $value;
+  }
+
+  /**
+   * The resource cache code changes on flush and carries the locale; the version keeps an older
+   * afreact's objects, which the current classes may not read, out of reach.
+   */
+  private static function key(string $name, ?string $version): string {
+    return 'afreact_' . md5(implode('_', [$name, (string) $version, \CRM_Core_Resources::singleton()->getCacheCode()]));
   }
 
   public static function angular(): Manager {
