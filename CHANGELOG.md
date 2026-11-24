@@ -6,6 +6,28 @@ All notable changes to this extension are documented in this file. The format fo
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-24
+
+### Fixed
+
+- Recognized CiviCRM 6.20.1's `<span ng-non-bindable>` wrapper inside `afform_admin`'s edit menu
+  so forms with edit menus render in React and are reported as supported on 6.20.1.
+- Evaluated `af-if` and `afreact-if` on `<af-tab>` and `<div crm-ui-tab>`, fell back to the first
+  visible tab when the active tab hides, restored the initial tab on browser Back, and parsed
+  `crm-ui-tab-set` URL fragments with query parameters.
+- Guarded property lookups in `conditions.ts` and `rowConditions.ts` with `Object.hasOwn`,
+  validated condition operands in the support report, and fixed `expressions.ts` parsing for
+  commas, braces, and escaped quotes in string literals.
+- Used `splitHash()` in `routeParams()`, preserved query values containing `?` in
+  `popupLocation()`, isolated `isOnlyElement()` per popup dialog, caught malformed percent-encoding
+  in builder routes and download filenames, prevented off-DOM mounting of hidden filter fields,
+  captchas and tabsets, and cleared appended error alerts on `ReactElement` reconnect.
+- Fixed `BatchDisplay` save-failure vs row-deletion race, duplicate Enter submissions in
+  `NewRecordDialog` and `CaseRoleDialog`, forced-close task resurrection in `MailingDialog`,
+  dependent option reloading in `LoadedSelect` and `NewRow`, parent-cycle handling in `buildTree()`
+  and `tagTree()`, stale selection clearing on `searchAgain()`, and same-page Shift-click range
+  selection.
+
 ## [0.3.1] - 2026-11-24
 
 ### Fixed
@@ -108,7 +130,8 @@ All notable changes to this extension are documented in this file. The format fo
   the renderer cannot draw in it, and a form notes any part it cannot draw instead of dropping it.
 - Markup and classes follow core's Angular templates, so the CiviCRM theme styles both alike.
 
-[Unreleased]: https://github.com/civico-de/afreact/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/civico-de/afreact/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/civico-de/afreact/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/civico-de/afreact/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/civico-de/afreact/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/civico-de/afreact/releases/tag/v0.2.0
