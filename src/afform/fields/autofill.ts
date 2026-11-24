@@ -89,7 +89,7 @@ export async function loadSelected(
         replaceRecord(data, place, { ...currentRecord(data, place), ...record }, false),
     };
   }
-  const loaded = firstPrefilled(item);
+  const loaded = firstPrefilled(item, scope.index);
   // Other entities the server filled from this record, e.g. by a relationship autofill.
   const others = result.filter((candidate) => candidate.name !== entity);
   const filled: Filled = {};

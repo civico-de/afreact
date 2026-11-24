@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense, useId, useState, type ReactNode } from "react";
-import { api4 } from "../../../api/civi";
+import { api4, errorMessage } from "../../../api/civi";
+import { crmAlert } from "../../../html";
 import { itemText, searchPage, type AutocompleteItem } from "../../../afform/fields/autocomplete";
 import { adminVars } from "../../vars";
 import { IconPicker } from "../../widgets/IconPicker";
@@ -1109,35 +1110,39 @@ function SubsearchColumn(props: ColumnEditing) {
       if (!name) delete c.subsearch.search;
     });
     if (!name) return;
-    const [found] = await api4<SearchInfo & { label: string }>("SavedSearch", "get", {
-      select: ["label", "api_entity", "api_params"],
-      where: [["name", "=", name]],
-    });
-    const displays = await api4<{ name: string }>("SearchDisplay", "get", {
-      select: ["name"],
-      where: [
-        ["saved_search_id.name", "=", name],
-        ["type", "IN", Object.keys(viewableDisplayTypes())],
-      ],
-    });
-    if (!found) return;
-    const base = getEntity(ctx.meta, ctx.search.api_entity);
-    const baseKey = base?.primary_key[0] ?? "id";
-    const defaults = found.api_params.select.flatMap((fieldName) => {
-      const field = getField(ctx.meta, fieldName, found);
-      return field?.fk_entity === base?.name ||
-        (field?.name === baseKey && field.entity === base?.name)
-        ? [{ subsearch_field: fieldName.split(":")[0], parent_field: baseKey }]
-        : [];
-    });
-    setNoIdFilter(!defaults.length);
-    editCol((c) => {
-      if (c.subsearch?.search !== name) return;
-      if ((c.label ?? "") === "") c.label = found.label;
-      if ((c.rewrite ?? "") === "") c.rewrite = found.label;
-      c.subsearch.display = displays[0]?.name ?? null;
-      c.subsearch.filters = defaults;
-    });
+    try {
+      const [found] = await api4<SearchInfo & { label: string }>("SavedSearch", "get", {
+        select: ["label", "api_entity", "api_params"],
+        where: [["name", "=", name]],
+      });
+      const displays = await api4<{ name: string }>("SearchDisplay", "get", {
+        select: ["name"],
+        where: [
+          ["saved_search_id.name", "=", name],
+          ["type", "IN", Object.keys(viewableDisplayTypes())],
+        ],
+      });
+      if (!found) return;
+      const base = getEntity(ctx.meta, ctx.search.api_entity);
+      const baseKey = base?.primary_key[0] ?? "id";
+      const defaults = found.api_params.select.flatMap((fieldName) => {
+        const field = getField(ctx.meta, fieldName, found);
+        return field?.fk_entity === base?.name ||
+          (field?.name === baseKey && field.entity === base?.name)
+          ? [{ subsearch_field: fieldName.split(":")[0], parent_field: baseKey }]
+          : [];
+      });
+      setNoIdFilter(!defaults.length);
+      editCol((c) => {
+        if (c.subsearch?.search !== name) return;
+        if ((c.label ?? "") === "") c.label = found.label;
+        if ((c.rewrite ?? "") === "") c.rewrite = found.label;
+        c.subsearch.display = displays[0]?.name ?? null;
+        c.subsearch.filters = defaults;
+      });
+    } catch (error) {
+      crmAlert(errorMessage(error), ts("Error"), "error");
+    }
   };
   return (
     <>

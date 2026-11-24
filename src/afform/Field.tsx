@@ -297,7 +297,12 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
           maxLength={attrs.maxlength}
           min={attrs.min}
           max={attrs.max}
-          step={numeric ? (attrs.step ?? 1) : undefined}
+          step={
+            numeric
+              ? (attrs.step ??
+                (defn.data_type === "Float" || defn.data_type === "Money" ? "any" : 1))
+              : undefined
+          }
           onChange={(event) => {
             // deviation:invalid-input-kept
             const text = event.target.value;
@@ -438,7 +443,15 @@ export function Field({ defn, value, onChange, disabled, operator }: FieldProps)
                   className="form-control"
                   title={ts("Select Value")}
                   aria-label={named(ts("Select Value"))}
-                  value={textValue(value)}
+                  value={textValue(
+                    defn.data_type === "Boolean"
+                      ? value === 1 || value === "1" || value === "true"
+                        ? true
+                        : value === 0 || value === "0" || value === "false"
+                          ? false
+                          : value
+                      : value,
+                  )}
                   onChange={(event) => {
                     onChange(
                       // deviation:boolean-select-cleared-null
@@ -635,7 +648,15 @@ function RadioGroup({ defn, value, onChange, disabled, labelId, helpId, invalid 
       >
         {fieldOptions(defn).map((option) => {
           const id = `${name}-${String(option.id)}`;
-          const checked = String(value) === String(option.id) && hasValue(value);
+          const normalized =
+            defn.data_type === "Boolean"
+              ? value === 1 || value === "1" || value === "true"
+                ? true
+                : value === 0 || value === "0" || value === "false"
+                  ? false
+                  : value
+              : value;
+          const checked = String(normalized) === String(option.id) && hasValue(normalized);
           return (
             <label
               key={String(option.id)}

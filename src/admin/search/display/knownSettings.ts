@@ -50,7 +50,7 @@ const CHART_KIT: Shape = {
     "actions button collapsible draggable editableRow headerCount limit pager placeholder sort tally toolbar",
   ),
   columns: any(
-    "axis color dataLabelColumnPrefix dataLabelFormatter dataLabelType datePrecision index isOrder key label name reduceType scaleType seriesType sourceDataType useRightAxis",
+    "axis color dataLabelColumnPrefix dataLabelDecimalPlaces dataLabelFormatter dataLabelMoneyFormatString dataLabelType datePrecision index isOrder key label name reduceType scaleType seriesType sourceDataType useRightAxis",
   ),
   format: {
     ...any(

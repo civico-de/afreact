@@ -44,6 +44,8 @@ interface ComboboxBase {
   /** Shows the list on mount, as select2 opens a dropdown's search. */
   initialOpen?: boolean;
   invalid?: boolean;
+  /** Identifies the remote search scope (e.g. dynamic target entity) so stale results are ignored. */
+  scopeKey?: string;
 }
 
 /** A server search after select2's wait, or a local list filtered at once, as select2 over `data`. */
@@ -58,6 +60,7 @@ export type ComboboxProps = ComboboxBase &
   );
 
 interface Results {
+  scopeKey: string;
   term: string;
   items: AutocompleteItem[];
   more: boolean;
@@ -68,6 +71,7 @@ interface Results {
 }
 
 const NO_RESULTS: Results = {
+  scopeKey: "",
   term: "",
   items: [],
   more: false,
@@ -198,18 +202,19 @@ export function Combobox(props: ComboboxProps) {
   });
   const { isOpen, highlightedIndex } = combobox;
   const searching = isOpen && term.length >= props.minLength;
+  const scopeKey = props.scopeKey ?? "";
 
   useEffect(() => {
     if (!searching || !isRemote) return undefined;
     let current = true;
     const timer = setTimeout(() => {
-      setResults({ ...NO_RESULTS, term, loading: true });
+      setResults({ ...NO_RESULTS, scopeKey, term, loading: true });
       load(term, { searchField: null, searchFields: [], previousIds: [] }).then(
         (page) => {
-          if (current) setResults({ ...NO_RESULTS, term, ...page });
+          if (current) setResults({ ...NO_RESULTS, scopeKey, term, ...page });
         },
         (error: unknown) => {
-          if (current) setResults({ ...NO_RESULTS, term, error: failure(error) });
+          if (current) setResults({ ...NO_RESULTS, scopeKey, term, error: failure(error) });
         },
       );
     }, SEARCH_DELAY_MS);
@@ -217,14 +222,18 @@ export function Combobox(props: ComboboxProps) {
       current = false;
       clearTimeout(timer);
     };
-  }, [searching, term, isRemote]);
+  }, [searching, term, isRemote, scopeKey]);
 
   function loadMore() {
-    const { context, more, loadingMore, term: searched } = results;
-    if (!more || loadingMore || !context || !remote) return;
+    const { context, more, loadingMore, term: searched, scopeKey: searchedScope } = results;
+    if (!more || loadingMore || !context || !remote || searchedScope !== scopeKey) return;
     setResults({ ...results, loadingMore: true });
     const update = (change: (previous: Results) => Results) => {
-      setResults((previous) => (previous.term === searched ? change(previous) : previous));
+      setResults((previous) =>
+        previous.term === searched && previous.scopeKey === searchedScope
+          ? change(previous)
+          : previous,
+      );
     };
     remote(searched, context).then(
       (page) => {
@@ -246,7 +255,8 @@ export function Combobox(props: ComboboxProps) {
     );
   }
 
-  const fresh = local !== null || (results.term === term && !results.loading);
+  const fresh =
+    local !== null || (results.term === term && results.scopeKey === scopeKey && !results.loading);
   const message = ((): [string, string] | null => {
     if (!isOpen) return null;
     if (!searching) return ["select2-no-results", ts("Enter search term or id...")];

@@ -182,6 +182,7 @@ export function FileField({ id, defn, value, onChange, disabled, describedBy }: 
   const remove = () => {
     if (input.current) input.current.value = "";
     uploads.pending.delete(key);
+    setRestored(null);
     uploads.changed();
     input.current?.focus();
   };

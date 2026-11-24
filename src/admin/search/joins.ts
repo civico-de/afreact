@@ -100,6 +100,8 @@ export function addJoin(
 const clauseUsesJoin = (clause: unknown, alias: string): boolean => {
   if (!Array.isArray(clause)) return false;
   if (typeof clause[0] === "string" && clause[0].startsWith(`${alias}.`)) return true;
+  if (clause[3] === true && typeof clause[2] === "string" && clause[2].startsWith(`${alias}.`))
+    return true;
   return Array.isArray(clause[1]) && clause[1].some((sub: unknown) => clauseUsesJoin(sub, alias));
 };
 

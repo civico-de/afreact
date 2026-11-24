@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { errorMessage } from "../../api/civi";
 import { Dialog } from "../widgets/Dialog";
 import type { AfformDefinition } from "./meta";
@@ -36,14 +36,18 @@ export function useMarkup(afform: AfformDefinition, apply: (layout: ShallowNode[
   const [asking, setAsking] = useState<((applied: boolean) => void) | null>(null);
   const unapplied = state.editing && state.html !== state.baseline;
 
+  const requestId = useRef(0);
   const refresh = () => {
+    const id = ++requestId.current;
     setState((current) => ({ ...current, loading: true }));
     convert(withoutMarks(afform.layout), "shallow", "html")
       .then((html) => {
+        if (id !== requestId.current) return;
         if (typeof html !== "string") throw new Error("Afform.convert returned no HTML.");
         setState((current) => ({ ...current, html, loading: false }));
       })
       .catch((failure: unknown) => {
+        if (id !== requestId.current) return;
         setState((current) => ({ ...current, loading: false }));
         crmAlert(errorMessage(failure), ts("Error"), "error");
       });

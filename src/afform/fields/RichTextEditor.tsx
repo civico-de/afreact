@@ -47,7 +47,10 @@ export function RichTextEditor({
     if (!target || !wysiwyg) return undefined;
     let mounted = true;
     wysiwyg.create(target).done(() => {
-      if (!mounted) return;
+      if (!mounted) {
+        wysiwyg.destroy(target);
+        return;
+      }
       ready.current = true;
       show(target);
     });

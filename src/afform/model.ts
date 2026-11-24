@@ -148,7 +148,11 @@ const isEntityItem = (value: unknown): value is EntityItem =>
   isRecord(value) && isRecord(value.fields);
 
 /** The first record of a prefill entry. */
-export function firstPrefilled(item: PrefillItem): EntityItem | undefined {
+export function firstPrefilled(item: PrefillItem, index?: number): EntityItem | undefined {
+  if (index !== undefined) {
+    const entry = Object.entries(item.values).find(([key]) => key === String(index))?.[1];
+    if (isEntityItem(entry)) return entry;
+  }
   return Object.values(item.values).find(isEntityItem);
 }
 
@@ -268,11 +272,12 @@ export function keepOffered(
   offered: unknown[],
 ): FormData {
   const current = getValue(data, scope, field);
+  const allowed = new Set(offered.map(String));
   if (Array.isArray(current)) {
-    const valid = current.filter((item) => offered.includes(item));
+    const valid = current.filter((item) => allowed.has(String(item)));
     return valid.length < current.length ? setValue(data, scope, field, valid) : data;
   }
-  return current === undefined || offered.includes(current)
+  return current === undefined || allowed.has(String(current))
     ? data
     : deleteValue(data, scope, field);
 }

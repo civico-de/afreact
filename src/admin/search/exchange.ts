@@ -146,6 +146,12 @@ export function parseImport(text: string, afformEnabled: boolean): ImportCheck {
       throw new Error(ts('Duplicate API entity "%1".', { 1: entity }));
     calls.push(call);
     const records = Array.isArray(params.records) ? params.records : [];
+    if (
+      !records.every(
+        (record) => typeof record === "object" && record !== null && !Array.isArray(record),
+      )
+    )
+      throw new Error(ts("Invalid JSON."));
     if (!records.length) continue;
     // A record without a name gets one from its label when saved, so it is always new.
     const names = records.flatMap((record) =>

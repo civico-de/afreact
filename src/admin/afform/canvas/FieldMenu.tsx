@@ -1,3 +1,4 @@
+import { ROW_CONDITIONS } from "../../../afform/rowConditions";
 import { toLiteral } from "../literal";
 import { useId, useState } from "react";
 import { EntityRef } from "../../search/SearchInput";
@@ -716,7 +717,8 @@ export function FieldMenu({ api, close }: { api: FieldApi; close: () => void }) 
           </MenuControls>
         )}
       {inputType === "EntityRef" && <EntityRefItems api={api} />}
-      {textAttribute(ops.node, "af-required") ? (
+      {textAttribute(ops.node, "af-required") ||
+      textAttribute(ops.node, ROW_CONDITIONS["af-required"]) ? (
         <MenuAction
           icon="fa-code-fork"
           onClick={() => {
@@ -738,7 +740,8 @@ export function FieldMenu({ api, close }: { api: FieldApi; close: () => void }) 
         </MenuCheck>
       )}
       {!readOnly &&
-        (textAttribute(ops.node, "af-disabled") ? (
+        (textAttribute(ops.node, "af-disabled") ||
+        textAttribute(ops.node, ROW_CONDITIONS["af-disabled"]) ? (
           <MenuAction
             icon="fa-code-fork"
             onClick={() => {

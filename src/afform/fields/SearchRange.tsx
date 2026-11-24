@@ -118,7 +118,11 @@ export function SearchRange({ id, labelId, defn, value, onChange, disabled }: Se
       {...input(bound)}
       className="form-control"
       type={numeric ? "number" : defn.input_type.toLowerCase()}
-      step={numeric ? (attrs.step ?? 1) : undefined}
+      step={
+        numeric
+          ? (attrs.step ?? (defn.data_type === "Float" || defn.data_type === "Money" ? "any" : 1))
+          : undefined
+      }
       min={numeric ? attrs.min : undefined}
       max={numeric ? attrs.max : undefined}
       placeholder={bound === "<=" ? attrs.placeholder2 : attrs.placeholder}

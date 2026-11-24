@@ -1,7 +1,13 @@
 import { containsNode, hasFields } from "../context";
 import type { EditorMeta } from "../meta";
 import { nodeType, shownChildren } from "../nodes";
-import { movedPath, type NodePath, type ShallowElement, type ShallowNode } from "../tree";
+import {
+  isElement,
+  movedPath,
+  type NodePath,
+  type ShallowElement,
+  type ShallowNode,
+} from "../tree";
 
 /** Where a container sits, as core's afGuiContainer knows it. */
 export interface ContainerScope {
@@ -51,19 +57,26 @@ const isFieldsetLike = (node: ShallowElement, meta: EditorMeta) => {
   return type === "fieldset" || type === "searchFieldset";
 };
 
+const holdsFieldset = (node: ShallowElement, meta: EditorMeta) =>
+  isFieldsetLike(node, meta) ||
+  containsNode(shownChildren(node, meta), meta, (child) => isFieldsetLike(child, meta));
+
 /**
  * editor.onDrop(): fields stay in their entity, fieldsets of either kind stay out of fieldsets.
  */
 export function allowed(source: DragSource, landing: Landing, meta: EditorMeta): boolean {
-  if (source.kind === "new")
-    return source.entity === null || landing.scope.dataEntity === source.entity;
+  if (source.kind === "new") {
+    if (source.entity !== null && landing.scope.dataEntity !== source.entity) return false;
+    return !(
+      landing.scope.inFieldset &&
+      isElement(source.node) &&
+      holdsFieldset(source.node, meta)
+    );
+  }
   if (source.scope.path.join() === landing.scope.path.join()) return true;
   if (hasFields(source.node, meta) && source.scope.dataEntity !== landing.scope.dataEntity)
     return false;
-  const fieldset =
-    isFieldsetLike(source.node, meta) ||
-    containsNode(shownChildren(source.node, meta), meta, (node) => isFieldsetLike(node, meta));
-  return !(fieldset && landing.scope.inFieldset);
+  return !(holdsFieldset(source.node, meta) && landing.scope.inFieldset);
 }
 
 /** Whether the landing leaves the dragged element where it shows: no drawn sibling in between. */

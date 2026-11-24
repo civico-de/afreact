@@ -97,7 +97,12 @@ function StateSelect({
   onChange: (value: string) => void;
 }) {
   const country = params[field.name.replace(STATE, COUNTRY)];
-  const countryId = typeof country === "string" && country ? country : null;
+  const countryId =
+    typeof country === "number"
+      ? String(country)
+      : typeof country === "string" && country
+        ? country
+        : null;
   const states = useQuery({
     queryKey: ["afreact", "checkout", "states", countryId],
     queryFn: () =>
@@ -348,12 +353,14 @@ export function CheckoutBlock({
   const settings = window.CRM.vars?.afreact?.afCheckout;
   const key = optionKey(env.values, env.entityData);
   const previous = useRef<string | null | undefined>(undefined);
-  // The details start empty, as afCheckoutBlock's watch empties them on init and on every switch.
+  // The details start empty, as afCheckoutBlock's watch empties them on every option switch.
   useEffect(() => {
     if (previous.current === key) return;
+    const initial = previous.current === undefined;
     previous.current = key;
+    if (initial && (!isParams(value) || Object.keys(value).length === 0)) return;
     onChange({});
-  }, [key, onChange]);
+  }, [key, onChange, value]);
   if (!settings) {
     return (
       <span className="crm-error" role="alert">

@@ -1048,6 +1048,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                   search.displays[displayIndex] &&
                   hasDisplayEditor(search.displays[displayIndex].type) && (
                     <DisplayEditor
+                      key={`${String(displayIndex)}:${search.displays[displayIndex].type}:${String(search.displays[displayIndex].id ?? "")}:${search.displays[displayIndex].name ?? ""}`}
                       ctx={{
                         meta,
                         search,
@@ -1084,6 +1085,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                   !hasDisplayEditor(search.displays[displayIndex].type) &&
                   hasPluginEditor(search.displays[displayIndex].type) && (
                     <PluginDisplayEditor
+                      key={`${String(displayIndex)}:${search.displays[displayIndex].type}:${String(search.displays[displayIndex].id ?? "")}:${search.displays[displayIndex].name ?? ""}`}
                       meta={meta}
                       search={search}
                       display={search.displays[displayIndex]}
@@ -1110,6 +1112,7 @@ function Editor({ meta: baseMeta, initial, create }: EditorProps) {
                   !hasDisplayEditor(search.displays[displayIndex].type) &&
                   hasPluginEditor(search.displays[displayIndex].type) && (
                     <PluginPreview
+                      key={`${String(displayIndex)}:${search.displays[displayIndex].type}:${String(search.displays[displayIndex].id ?? "")}:${search.displays[displayIndex].name ?? ""}`}
                       search={search}
                       display={search.displays[displayIndex]}
                       icon={typeOf(search.displays[displayIndex].type)?.icon}

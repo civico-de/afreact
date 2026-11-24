@@ -135,7 +135,7 @@ export function EntityRef({ id, defn, value, onChange, disabled, describedBy }: 
           <input id={id} className="form-control" disabled placeholder={attrs.placeholder} />
         }
       >
-        <Combobox {...props} />
+        <Combobox {...props} scopeKey={entity ?? ""} />
       </Suspense>
       {!multiple && ids.length > 0 && !off && (
         <ClearButton

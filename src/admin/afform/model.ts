@@ -268,7 +268,8 @@ export function removeEntity(afform: AfformDefinition, name: string): AfformDefi
  * deviation:remove-entity-references
  */
 export function entityReferences(afform: AfformDefinition, name: string): string[] {
-  const word = new RegExp(`(^|[^\\w])${name}($|[^\\w])`);
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const word = new RegExp(`(^|[^\\w])${escaped}($|[^\\w])`);
   const found: string[] = [];
   const visit = (nodes: ShallowNode[]) => {
     for (const node of nodes) {

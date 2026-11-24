@@ -563,6 +563,9 @@ function LoadedForm(props: LoadedFormProps) {
           error,
         });
     },
+    onSettled: (result) => {
+      if (!result?.response[0]?.redirect) submitting.current = false;
+    },
   });
   const snapshot = useMemo(() => JSON.stringify([data, fileChanges]), [data, fileChanges]);
   const [draftSaved, setDraftSaved] = useState(() => JSON.stringify([initial, 0]));
@@ -800,8 +803,10 @@ function LoadedForm(props: LoadedFormProps) {
     return message;
   }
 
+  const submitting = useRef(false);
+
   function submit() {
-    if (submitDisabled) return;
+    if (submitDisabled || submitting.current) return;
     const message = check();
     if (message !== null) {
       // As afForm: on CiviCRM screens a notification too, elsewhere only the browser's own.
@@ -809,6 +814,7 @@ function LoadedForm(props: LoadedFormProps) {
         crmAlert(message, ts("Form Error"));
       return;
     }
+    submitting.current = true;
     setEdits((count) => count + 1);
     const response = captchaResponse.current;
     // deviation:captcha-response-both-keys

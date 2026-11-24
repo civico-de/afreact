@@ -230,8 +230,8 @@ function encodeString(value: string): string {
   return `'${json.slice(1, -1).replaceAll('\\"', '"').replaceAll("'", "\\'")}'`;
 }
 
-/** A key as `CRM_Utils_JS::writeObject` writes it: bare unless it has a non-word character. */
-const encodeKey = (key: string) => (/\W/.test(key) ? encodeString(key) : key);
+/** A key as `CRM_Utils_JS::writeObject` writes it: bare only for a valid identifier. */
+const encodeKey = (key: string) => (/^[A-Za-z_$][\w$]*$/.test(key) ? key : encodeString(key));
 
 /** `value` in `CRM_Utils_JS::encode`'s notation, its raw parts as written. */
 export function encodeLiteral(value: Literal): string {

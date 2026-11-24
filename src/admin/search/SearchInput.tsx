@@ -531,7 +531,9 @@ function LocationInput(props: SearchInputProps) {
   const { id, value, onChange } = props;
   const unit = adminVars().searchAdmin?.defaultDistanceUnit ?? "km";
   const location: LocationValue = isLocation(value) ? value : { distance_unit: unit };
-  const [address, setAddress] = useState(location.address ?? "");
+  const storedAddress = location.address ?? "";
+  const [addressDraft, setAddressDraft] = useState<{ base: string; value: string } | null>(null);
+  const address = addressDraft?.base === storedAddress ? addressDraft.value : storedAddress;
   const [error, setError] = useState<string | null>(null);
   // The answer lands on the value as it is by then, and only while the address is still the same.
   const current = useRef({ location, onChange });
@@ -539,6 +541,7 @@ function LocationInput(props: SearchInputProps) {
     current.current = { location, onChange };
   });
   async function lookup(next: string) {
+    setAddressDraft(null);
     onChange({ ...location, address: next, geo_code_1: null, geo_code_2: null });
     setError(null);
     if (!next) return;
@@ -591,7 +594,7 @@ function LocationInput(props: SearchInputProps) {
         placeholder={ts("Street, City, State, Country")}
         value={address}
         onChange={(event) => {
-          setAddress(event.target.value);
+          setAddressDraft({ base: storedAddress, value: event.target.value });
         }}
         onBlur={() => void lookup(address)}
       />

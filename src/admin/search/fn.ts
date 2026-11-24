@@ -79,7 +79,9 @@ export function fnState(meta: SearchAdminMetadata, expr: string, search: SearchI
 export const addArg = (state: FnState, sqlType: string) => pushArg(state, sqlType);
 
 export function removeArg(state: FnState, index: number): FnState {
-  return { ...state, args: state.args.filter((_, i) => i !== index) };
+  const args = state.args.filter((_, i) => i !== index);
+  const fieldIndex = index < state.fieldIndex ? state.fieldIndex - 1 : state.fieldIndex;
+  return { ...state, args, fieldIndex };
 }
 
 export function setArg(state: FnState, index: number, change: Partial<ExprArg>): FnState {

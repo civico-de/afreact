@@ -281,6 +281,13 @@ export function CanvasDnd({ children }: { children: ReactNode }) {
       ts("Moving %1 was cancelled.", { 1: sourceOf(active)?.label ?? "" }),
   };
 
+  useEffect(
+    () => () => {
+      document.body.classList.remove("af-gui-dragging");
+    },
+    [],
+  );
+
   return (
     <DndContext
       sensors={sensors}
