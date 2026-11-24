@@ -6,6 +6,21 @@ All notable changes to this extension are documented in this file. The format fo
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-11-24
+
+### Fixed
+
+- Loaded FormBuilder plugin assets before running `BuilderReport::check('afform')` on
+  `civicrm/admin/afreact`, so panels declared via `$event->replaces` are recognized on the support
+  report.
+- Tracked shown filter fields in `SearchFieldset` by index rather than name so duplicate filter
+  names under mutually exclusive `af-if` conditions do not leak hidden field defaults or skip
+  visibility transitions.
+- Invalidated the cached `SearchParamSet.get` entry and cleared active selection when deleting the
+  currently open saved search in `ParamSets`.
+- Keyed `ChainSelect` option validation on the controlling value so an invalid prefilled value is
+  cleared even when the control field resolves to zero options.
+
 ## [0.3.2] - 2026-11-24
 
 ### Fixed
@@ -130,7 +145,8 @@ All notable changes to this extension are documented in this file. The format fo
   the renderer cannot draw in it, and a form notes any part it cannot draw instead of dropping it.
 - Markup and classes follow core's Angular templates, so the CiviCRM theme styles both alike.
 
-[Unreleased]: https://github.com/civico-de/afreact/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/civico-de/afreact/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/civico-de/afreact/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/civico-de/afreact/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/civico-de/afreact/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/civico-de/afreact/compare/v0.2.0...v0.3.0
