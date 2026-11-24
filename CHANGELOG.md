@@ -6,6 +6,30 @@ All notable changes to this extension are documented in this file. The format fo
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-24
+
+### Fixed
+
+- Guarded `Afform.submit` with a synchronous ref to prevent duplicate submissions or payments on
+  rapid double-submits, and stopped `CheckoutBlock` from marking untouched forms dirty on mount.
+- Prevented stale search results and cross-entity pagination races in dynamic `EntityRef`
+  comboboxes, and allowed decimals on `Float`/`Money` number inputs, numeric boolean values on
+  `Select`/`Radio`, numeric country IDs in checkout state pickers, and string/number ID matches
+  when filtering conditional options.
+- Cleaned up `RichTextEditor` instances that finish initializing after unmount, cleared restored
+  file names when removing a file during upload retry, and matched autofill prefill records by
+  row index.
+- Blocked dropping new fieldsets inside existing fieldsets in FormBuilder, showed conditional
+  required/disabled menu items for `afreact-required`/`afreact-disabled`, quoted empty and
+  digit-prefixed object keys, guarded the Markup tab against stale refresh responses, escaped
+  entity names in reference checks, and cleaned up drag body classes on unmount.
+- Keyed SearchKit display editors and previews per display so state and ChartKit initialization
+  do not leak across tabs, added ChartKit's `dataLabelDecimalPlaces` and
+  `dataLabelMoneyFormatString` to known settings, synced `LocationInput` address drafts on
+  external changes, handled errors in subsearch selection, checked RHS join/column references on
+  removal, validated import record objects, and updated `fieldIndex` when removing function
+  arguments.
+
 ## [0.3.0] - 2026-11-24
 
 ### Added
@@ -84,7 +108,8 @@ All notable changes to this extension are documented in this file. The format fo
   the renderer cannot draw in it, and a form notes any part it cannot draw instead of dropping it.
 - Markup and classes follow core's Angular templates, so the CiviCRM theme styles both alike.
 
-[Unreleased]: https://github.com/civico-de/afreact/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/civico-de/afreact/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/civico-de/afreact/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/civico-de/afreact/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/civico-de/afreact/releases/tag/v0.2.0
 [0.1.0]: https://github.com/civico-de/afreact/releases/tag/v0.1.0
