@@ -6,7 +6,8 @@ namespace Civi\Afreact;
 
 use Civi\Api4\Afform;
 use Civi\Api4\Afreact;
-use Civi\Api4\SearchDisplay;
+
+require_once __DIR__ . '/CoreDisplayRunner.php';
 
 /**
  * Samples what core sends the renderer for every form the installed extensions ship: field
@@ -99,35 +100,11 @@ final class CoreSamples {
     $type = ucfirst(substr($node['#tag'], strlen('crm-search-display-')));
     $this->shape->add("{$type}Settings", $node['settings']);
     try {
-      $this->shape->add("{$type}Run", $this->runDisplay($node, $form));
+      $this->shape->add("{$type}Run", CoreDisplayRunner::run($node, $form));
     }
     catch (\Throwable $e) {
       $this->failed[] = "{$form} {$node['search-name']}.{$node['display-name']}: {$e->getMessage()}";
     }
-  }
-
-  /**
-   * SearchDisplay.run as the renderer calls it, with the extras the result object carries.
-   *
-   * @param array<string, mixed> $node
-   * @return array<string, mixed>
-   */
-  private function runDisplay(array $node, string $form): array {
-    $result = SearchDisplay::run(checkPermissions: FALSE)
-      ->setSavedSearch($node['search-name'])
-      ->setDisplay($node['display-name'])
-      ->setAfform($form)
-      ->setReturn('page:1')
-      ->execute();
-    $extras = [
-      'toolbar' => $result->toolbar ?? NULL,
-      'editable' => $result->editable ?? NULL,
-      'labels' => $result->labels ?? NULL,
-      'subsearch' => $result->subsearch ?? NULL,
-    ];
-    return (
-      ['rows' => $result->getArrayCopy()] + array_filter($extras, static fn (mixed $extra): bool => $extra !== NULL)
-    );
   }
 
 }

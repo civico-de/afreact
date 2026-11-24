@@ -65,6 +65,15 @@ class RenderPageHeadlessTest extends TestCase implements HeadlessInterface {
     );
   }
 
+  public function testOptionsNeutralizesAngularInterpolation(): void {
+    $_GET['name'] = 'afformAfreactDemoContact';
+    $_GET['renderer'] = 'angular';
+    $_GET['options'] = '{"note":"{{1+1}}"}';
+    $html = RenderPage::render();
+    $this->assertStringNotContainsString('{{', $html);
+    $this->assertStringContainsString('\u007b\u007b1+1\u007d\u007d', $html);
+  }
+
   public function testAPlacedFormShowsForTheUsersOwnContactUntilAnotherIsPicked(): void {
     $own = $this->placedFormAndContact();
     \CRM_Core_Session::singleton()->set('userID', $own);

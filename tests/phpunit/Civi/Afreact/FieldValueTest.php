@@ -26,4 +26,28 @@ class FieldValueTest extends TestCase {
     $this->assertFalse($code->filledIn($values, new SubmittedRow('Individual1', 0, 'Phone', 0, TRUE)));
   }
 
+  public function testRowsInPreservesExtrasLocationForRepeatedFieldsetsAndJoins(): void {
+    $saved = [
+      'Individual1' => [
+        ['fields' => [], 'joins' => ['Phone' => [['phone' => '111']]]],
+        ['fields' => [], 'joins' => ['Phone' => [['phone' => '222']]]],
+      ],
+    ];
+    $values = new SubmittedValues([
+      'Individual1' => [['extras' => []], ['extras' => ['code' => 'x']]],
+      'extra' => [['fields' => ['code' => 'form']]],
+    ], $saved);
+    $code = new FieldValue('code', []);
+
+    $slotRows = (new SubmittedRow('Individual1', 0, slot: TRUE))->rowsIn($values);
+    $this->assertCount(2, $slotRows);
+    $this->assertFalse($code->filledIn($values, $slotRows[0]));
+    $this->assertTrue($code->filledIn($values, $slotRows[1]));
+
+    // A repeating join inside a repeated fieldset keeps extras at the form level, not per item.
+    $joinRows = (new SubmittedRow('Individual1', 0, 'Phone', NULL, TRUE))->rowsIn($values);
+    $this->assertCount(2, $joinRows);
+    $this->assertTrue($code->filledIn($values, $joinRows[0]));
+  }
+
 }

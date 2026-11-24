@@ -224,11 +224,16 @@ export function AngularIsland(props: AngularIslandProps) {
       scope.current = null;
       // A rebuild shows neither the old editor's state nor a preview from its injector.
       injected.current = null;
-      preview.current?.replaceChildren();
+      if (ng === undefined) {
+        preview.current?.replaceChildren();
+        root.remove();
+      } else {
+        if (preview.current) call(call(ng, "element", preview.current), "empty");
+        destroyIsland(ng, rootScope, root);
+      }
       setShown(null);
       setPreviewScope(null);
       setState("loading");
-      destroyIsland(ng, rootScope, root);
     };
   }, [type, columns]);
 

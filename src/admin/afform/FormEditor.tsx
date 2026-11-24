@@ -214,7 +214,6 @@ function Editor({
   const root = useRef<HTMLDivElement>(null);
   const changed = isDirty(history);
   const dirty = changed || !afform.name;
-  useLeaveGuard(changed);
 
   const latestAfform = useRef(afform);
   useEffect(() => {
@@ -235,6 +234,7 @@ function Editor({
   const markup = useMarkup(afform, (layout) => {
     change((state) => withLayout(state, layout, latestMeta.current));
   });
+  useLeaveGuard(changed || markup.unapplied);
 
   const entities = formEntities(afform, meta);
   const displays = afform.type === "search" ? searchDisplaysOnForm(afform, meta) : [];

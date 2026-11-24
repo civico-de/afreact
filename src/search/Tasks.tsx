@@ -787,11 +787,13 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
         <hr />
         {progress && (
           <div className="crm-search-task-progress">
-            {apiBatch.runMsg && (
+            {(apiBatch.runTitle || apiBatch.runMsg) && (
               <h5>
-                {apiBatch.runMsgPlural
-                  ? ts(apiBatch.runMsg, { plural: apiBatch.runMsgPlural, count: ids.length })
-                  : message(apiBatch.runMsg, ids.length)}
+                {apiBatch.runTitle
+                  ? apiBatch.runTitle(ids.length)
+                  : apiBatch.runMsgPlural && apiBatch.runMsg
+                    ? ts(apiBatch.runMsg, { plural: apiBatch.runMsgPlural, count: ids.length })
+                    : message(apiBatch.runMsg ?? "", ids.length)}
               </h5>
             )}
             <div className="progress">

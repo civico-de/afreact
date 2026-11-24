@@ -21,8 +21,9 @@ final class RowComparison {
       'IS EMPTY', 'IS NOT EMPTY' => RowValue::isEmpty($left) === $yes,
       'IS NULL', 'IS NOT NULL' => ($left === NULL) === $yes,
       'CONTAINS', 'NOT CONTAINS' => self::contains($left, $right) === $yes,
-      'IN', 'NOT IN' => (is_array($right) ? RowValue::includes($right, $left) : RowValue::equals($left, $right))
-        === $yes,
+      'IN', 'NOT IN' => (
+        is_array($right) && array_is_list($right) ? RowValue::includes($right, $left) : RowValue::equals($left, $right)
+      ) === $yes,
       'BETWEEN', 'NOT BETWEEN' => self::between($left, $right, $yes),
       'LIKE', 'NOT LIKE' => self::like($left, $right) === $yes,
       default => throw new \CRM_Core_Exception("Unknown operator {$operator}."),
@@ -30,7 +31,7 @@ final class RowComparison {
   }
 
   private static function contains(mixed $left, mixed $right): bool {
-    if (is_array($left)) {
+    if (is_array($left) && array_is_list($left)) {
       return RowValue::includes($left, $right);
     }
     if (is_string($left) && is_string($right)) {

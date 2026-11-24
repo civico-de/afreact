@@ -40,7 +40,7 @@ final class Strings {
     \Civi::$statics[$key] = TRUE;
     $translations = self::translate(
       self::texts(),
-      array_values(array_unique([E::LONG_NAME, $domain, ...self::CORE_DOMAINS, NULL])),
+      array_values(array_unique([E::LONG_NAME, ...($domain !== NULL ? [$domain] : []), ...self::CORE_DOMAINS, NULL])),
     );
     if ($translations !== []) {
       \Civi::resources()->addSetting(['strings' => $translations]);

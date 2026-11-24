@@ -39,7 +39,7 @@ parameters:
 	universalObjectCratesClasses:
 		- Civi\Core\Event\GenericHookEvent
 	bootstrapFiles:
-		- phpstanBootstrap.php
+		- /opt/civikitchen/toolbelt/phpstan-config/bootstrap.php
 	civikitchen:
 		# ck.sql.unknownTable checks `civicrm_`-prefixed table names in raw SQL
 		# against core's schema plus this repo's own (schema/, xml/schema/,

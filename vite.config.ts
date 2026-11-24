@@ -96,14 +96,16 @@ const kitDeclarations: Plugin = {
 // A string literal never holds a raw line break, so text like "ts(" in code matches none.
 const LITERAL = String.raw`"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'`;
 const TS_CALL = new RegExp(
-  String.raw`\bts\(\s*(${LITERAL})(?:\s*,\s*\{\s*plural:\s*(${LITERAL}))?`,
+  String.raw`\bts\(\s*(${LITERAL})(?:\s*,\s*\{[^}]*\bplural:\s*(${LITERAL}))?`,
   "g",
 );
+
+const ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t" };
 
 /** A quoted source literal's text. */
 const unquote = (literal: string): string =>
   literal.startsWith("'")
-    ? literal.slice(1, -1).replace(/\\(.)/g, "$1")
+    ? literal.slice(1, -1).replace(/\\(.)/g, (_, ch: string) => ESCAPES[ch] ?? ch)
     : String(JSON.parse(literal));
 
 /**

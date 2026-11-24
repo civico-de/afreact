@@ -84,10 +84,9 @@ back an entity the stored data lacks as its definition, which the React renderer
 ignores. `deviation:draft-extra-fields-restored` (S13)
 
 **A validate listener cannot see which record it validates.** The submit runs on
-the server, so the React renderer shares this. A fix would be small:
-`Submit::validate()` passes `$this->_entityIds` to the event, which gets
-`getEntityIds(string $entityName)` with the trait's logic. Not reported
-upstream. (S99)
+the server, so the React renderer shares this. Open PR
+[civicrm-core#38175](https://github.com/civicrm/civicrm-core/pull/38175) adds
+`getEntityIds(string $entityName)` to the event. (S99)
 
 **A failed save reports success.** The submit runs on the server and its answer
 is the same either way, so the React renderer shows the same success. A
@@ -167,15 +166,17 @@ searches". `deviation:param-sets-select-label` (S66)
 **A range slider is never disabled.** The React renderer disables it with the
 form. `deviation:range-slider-disabled` (S57)
 
-**A bound of 0 is dropped.** The React renderer keeps a bound of 0.
-`deviation:number-bound-zero`, [S23]. (S21)
+**A bound of 0 is dropped.** Open PR
+[civicrm-core#38176](https://github.com/civicrm/civicrm-core/pull/38176). The
+React renderer keeps a bound of 0.
+`deviation:number-bound-zero` (S21, S23)
 
 **A Location filter's inputs have no label.** The React renderer names the three
 as a group after the label, and each input "Distance", "Distance unit" and
 "Address". `deviation:location-inputs-labelled` (S65)
 
 **A saved Location filter loads as false.** The React renderer keeps the object,
-also from the URL. `deviation:location-filter-object-kept`, [S39]. (S40)
+also from the URL. `deviation:location-filter-object-kept` (S39, S40)
 
 **A reset drops the values the URL gave.** The React renderer fills them again
 on a reset. `deviation:reset-refills-route-values` (S110)
@@ -294,7 +295,7 @@ both renderers name it for an autocomplete (read from the code, not run).
 
 **A repeat shows more items at first than its maximum.** React opens with at
 most `max` items and marks a larger "Initially show" invalid.
-`deviation:repeat-default-within-max`, [S76]. (S75)
+`deviation:repeat-default-within-max` (S75, S76)
 
 ## File uploads
 
@@ -977,7 +978,7 @@ call is stored. `deviation:markup-keeps-ts-calls` (S77)
 **A display's filters cannot be read back once they hold a list, a time or a
 quote.** React splits only outside quotes and brackets and reads back everything
 it writes; `nodes.test.ts` covers the three values.
-`deviation:display-filters-read-back` (S78)
+Open PR [civicrm-core#38178](https://github.com/civicrm/civicrm-core/pull/38178). `deviation:display-filters-read-back` (S78)
 
 **A form with a negative menu order cannot be saved.** React takes any whole
 number and keeps what is typed, such as "-", until it is one.
@@ -991,11 +992,11 @@ and offers its input, labelled; a name the API does not know shows an error.
 
 **A display filter's backslashes double on every edit.** React reads string
 literals with AngularJS's escapes, for the editor and the form alike;
-`nodes.test.ts` covers it. `deviation:display-filter-escapes` (S78)
+`nodes.test.ts` covers it. Open PR [civicrm-core#38178](https://github.com/civicrm/civicrm-core/pull/38178). `deviation:display-filter-escapes` (S78)
 
 **A display filter named with a leading digit breaks the form.** React writes
 such names quoted, as `{'1abc': routeParams['2x']}`; `nodes.test.ts` covers it.
-`deviation:display-filter-digit-names` (S78)
+Open PR [civicrm-core#38178](https://github.com/civicrm/civicrm-core/pull/38178). `deviation:display-filter-digit-names` (S78)
 
 **Saving a form writes an empty `input_attrs` into fields' settings.** React
 reads without writing and saves the `defn` as stored;

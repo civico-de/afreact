@@ -49,11 +49,12 @@ final readonly class SubmittedRow {
     if ($this->entity === '') {
       return [$this];
     }
+    $extrasInSlot = $this->keepsExtras();
     $rows = [];
     foreach (array_keys(Record::array($submitted->saved(), $this->entity)) as $index) {
       $item = Record::array($submitted->saved(), $this->entity)[$index];
       foreach ($this->joinRows($item) as $joinIndex) {
-        $rows[] = new self($this->entity, (int) $index, $this->join, $joinIndex);
+        $rows[] = new self($this->entity, (int) $index, $this->join, $joinIndex, $extrasInSlot);
       }
     }
     return $rows;

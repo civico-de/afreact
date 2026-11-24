@@ -49,13 +49,21 @@ final readonly class CoreConditions {
 
   /**
    * afField's isDisabled(): an af-disabled condition replaces the definition's own flag.
+   * Multiple af-disabled lists are ORed, matching core Submit::preprocessDisabledFields().
    *
    * @param array<mixed> $defn
    */
   public function disables(array $defn): bool {
-    return Record::array($this->attributes, 'af-disabled') === []
-      ? ($defn['disabled'] ?? NULL) === TRUE
-      : $this->holds('af-disabled', FALSE);
+    $lists = Record::array($this->attributes, 'af-disabled');
+    if ($lists === []) {
+      return ($defn['disabled'] ?? NULL) === TRUE;
+    }
+    foreach ($lists as $conditions) {
+      if (is_array($conditions) && Submit::checkAfformConditional($conditions, $this->submitted)) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
   /**

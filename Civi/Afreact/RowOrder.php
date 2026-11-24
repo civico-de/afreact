@@ -19,7 +19,12 @@ final class RowOrder {
     if (is_string($a) && is_string($b)) {
       return (float) (strcmp($a, $b) <=> 0);
     }
-    return self::number($a) - self::number($b);
+    $x = self::number($a);
+    $y = self::number($b);
+    if (is_nan($x) || is_nan($y)) {
+      return NAN;
+    }
+    return (float) ($x <=> $y);
   }
 
   /**

@@ -216,10 +216,13 @@ function labelText(control: Control): string {
 }
 
 /** Required fields marked invalid by the renderer: an autocomplete without a value, only spaces. */
-const MISSING_MESSAGES = [ts("Please select a value."), ts("This field is required.")];
-
 function missingChoice(control: Control): boolean {
-  return control.validity.customError && MISSING_MESSAGES.includes(control.validationMessage);
+  return (
+    control.validity.customError &&
+    [ts("Please select a value."), ts("This field is required.")].includes(
+      control.validationMessage,
+    )
+  );
 }
 
 /** afForm's message for the first invalid input: a missing value, a too short text, or else. */
@@ -615,11 +618,12 @@ function LoadedForm(props: LoadedFormProps) {
   const prefill = useMutation({
     mutationFn: () => api4<PrefillItem>("Afform", "prefill", { name, args, fillMode: "form" }),
     onSuccess: (records) => {
-      const filled = prefilledData(form, latest.current, records, params);
+      const currentRoute = routeNow.current;
+      const filled = prefilledData(form, latest.current, records, currentRoute);
       setData(filled);
       setEdits((count) => count + 1);
       // What was typed meanwhile and kept is a change no draft holds yet.
-      const pristine = prefilledData(form, initial, records, params);
+      const pristine = prefilledData(form, initial, records, currentRoute);
       const kept = keyOrderFree(filled) !== keyOrderFree(pristine);
       setDraftSaved(JSON.stringify([kept ? pristine : filled, 0]));
       setPrefilled(true);
@@ -767,7 +771,7 @@ function LoadedForm(props: LoadedFormProps) {
     const next = fieldErrors(root.current);
     const same = (map: ReadonlyMap<string, string>) => JSON.stringify([...map]);
     setErrors((was) => (same(was) === same(next) ? was : next));
-  }, [data, failure]);
+  }, [data, failure, fileChanges]);
 
   // deviation:title-labels-cleared
   const title = titleWithLabels(form.title ?? "", labels) || "CiviCRM";
@@ -797,6 +801,7 @@ function LoadedForm(props: LoadedFormProps) {
   }
 
   function submit() {
+    if (submitDisabled) return;
     const message = check();
     if (message !== null) {
       // As afForm: on CiviCRM screens a notification too, elsewhere only the browser's own.

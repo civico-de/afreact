@@ -42,7 +42,15 @@ final class RenderPage {
     if (!$options instanceof \stdClass) {
       throw new \CRM_Core_Exception('The options parameter must be a JSON object.');
     }
-    return json_encode($options, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+    $encoded = json_encode($options, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+    // Neutralize AngularJS {{...}} interpolation inside string values when emitted into <crm-angular-js>.
+    return (
+      preg_replace_callback(
+        '/"(?:[^"\\\\]|\\\\.)*"/',
+        static fn (array $match): string => str_replace(['{', '}'], ['\u007b', '\u007d'], $match[0]),
+        $encoded,
+      ) ?? throw new \RuntimeException('Failed to encode options: ' . preg_last_error_msg())
+    );
   }
 
   public static function renderWith(string $name, string $renderer, ?string $options = NULL): string {

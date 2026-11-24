@@ -43,13 +43,18 @@ final class Placements extends AutoSubscriber {
     $forms = array_flip(Takeover::forms());
     $listed = static fn (array $block, int|string $name): ?string => isset($forms[$name]) ? (string) $name : NULL;
     $groups = (array) $e->blocks;
+    $swapped = FALSE;
     foreach ($groups as $key => $group) {
       $blocks = self::swapTemplates(Record::array($group, 'blocks'), 'tpl_file', $listed);
       if ($blocks !== NULL) {
         $groups[$key] = ['blocks' => $blocks] + (array) $group;
+        $swapped = TRUE;
       }
     }
     $e->blocks = $groups;
+    if ($swapped) {
+      Assets::load();
+    }
   }
 
   /**

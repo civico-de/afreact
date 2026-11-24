@@ -40,6 +40,10 @@ final class ConfirmationMessage extends AutoSubscriber {
     if (!$submit instanceof Submit || $submit->getActionName() !== 'submit' || !$result instanceof Result) {
       return;
     }
+    // Core 6.20.1+ encodes tokens itself via replaceTokens($text, $format); avoid double-escaping.
+    if ((new \ReflectionMethod($submit, 'replaceTokens'))->getNumberOfParameters() >= 2) {
+      return;
+    }
     $response = $result[0] ?? NULL;
     if (!is_array($response)) {
       return;

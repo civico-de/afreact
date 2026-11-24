@@ -310,7 +310,7 @@ export function useInlineEdit({
   };
 
   const saveNew = async (values: Record<string, unknown>) => {
-    if (!creating) return;
+    if (!creating || creating.busy) return;
     setNewRow({ ...creating, busy: true, error: undefined });
     setAnnouncement(ts("Saving…"));
     try {

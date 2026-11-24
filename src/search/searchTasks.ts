@@ -28,6 +28,8 @@ export interface ApiBatch {
   runMsg?: string;
   /** runMsg's plural with %count, where the dialog's heading counts the records. */
   runMsgPlural?: string;
+  /** Literal ts() call for pluralized progress headings so the build extracts both forms. */
+  runTitle?: (count: number) => string;
   successMsg?: string;
   /** The success alert's title; the task's "… Complete" when unset. */
   successTitle?: string;
@@ -314,6 +316,8 @@ export function caseBatch(values: Record<string, unknown>): ApiBatch {
     params: { records: [values] },
     runMsg: "Opening case...",
     runMsgPlural: "Opening %count cases...",
+    runTitle: (count: number) =>
+      ts("Opening case...", { plural: "Opening %count cases...", count }),
     successTitle: "Saved",
     summary: ({ rows }: BatchCounts) =>
       ts("Successfully opened 1 case.", {
@@ -341,6 +345,8 @@ export function grantBatch(values: Record<string, unknown>): ApiBatch {
     params: { records: [values] },
     runMsg: "Adding grant...",
     runMsgPlural: "Adding %count grants...",
+    runTitle: (count: number) =>
+      ts("Adding grant...", { plural: "Adding %count grants...", count }),
     successTitle: "Saved",
     summary: ({ rows }: BatchCounts) =>
       ts("Successfully added 1 grant.", {
@@ -435,7 +441,7 @@ export function caseRoleBatch(type: string, contactId: number): ApiBatch {
         ],
       },
     },
-    runMsg: "Adding roles...",
+    runMsg: ts("Adding roles..."),
     successTitle: "Saved",
     summary,
   };
@@ -494,10 +500,10 @@ export function updateBatch(values: Record<string, unknown>): ApiBatch {
   return {
     action: "update",
     params: { values },
-    runMsg: "Updating %1 %2...",
-    successMsg: "Successfully updated %1 %2.",
-    successTitle: "Saved",
-    errorMsg: "An error occurred while attempting to update %1 %2.",
+    runMsg: ts("Updating %1 %2..."),
+    successMsg: ts("Successfully updated %1 %2."),
+    successTitle: ts("Saved"),
+    errorMsg: ts("An error occurred while attempting to update %1 %2."),
   };
 }
 
@@ -597,7 +603,7 @@ export function tagBatch(action: "save" | "delete", entity: string, tagIds: numb
               ["tag_id", "IN", tagIds],
             ],
           },
-    runMsg: action === "save" ? "Adding tags..." : "Removing tags...",
+    runMsg: action === "save" ? ts("Adding tags...") : ts("Removing tags..."),
     successTitle: "Saved",
     summary,
     settled: true,
@@ -669,7 +675,7 @@ export function relationshipBatch(
     params: {
       defaults: { ...values, relationship_type_id: typeId, [`contact_id_${b}`]: contactId },
     },
-    runMsg: "Adding relationships...",
+    runMsg: ts("Adding relationships..."),
     successTitle: "Saved",
     summary,
   };
@@ -739,9 +745,9 @@ export function mailingBatch(groupId: number, mailingId: number): ApiBatch {
     action: "save",
     idField: "contact_id",
     params: { defaults: { group_id: groupId } },
-    runMsg: "Adding contacts...",
+    runMsg: ts("Adding contacts..."),
     successUrl: `civicrm/a#/mailing/${String(mailingId)}`,
-    errorMsg: "An error occurred while attempting to create mailing.",
+    errorMsg: ts("An error occurred while attempting to create mailing."),
   };
 }
 

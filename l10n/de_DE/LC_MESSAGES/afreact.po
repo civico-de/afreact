@@ -77,3 +77,12 @@ msgstr "SearchKit"
 
 msgid "FormBuilder"
 msgstr "FormBuilder"
+
+msgid "%1 is a required field."
+msgstr "%1 ist ein Pflichtfeld."
+
+msgid "React renderer settings"
+msgstr "Einstellungen des React-Renderers"
+
+msgid "Render every supported form with React"
+msgstr "Alle unterstützten Formulare mit React zeichnen"

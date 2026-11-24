@@ -40,7 +40,7 @@ final class AdminPage {
         $classic->addQuery(['name' => $name]);
       }
     }
-    self::load($builder);
+    self::load($builder, $route);
     return Chrome::page(sprintf(
       '<div id="bootstrap-theme" class="afreact-builder-page"><afreact-builder builder="%s" route="%s" classic="%s" core-version="%s"></afreact-builder></div>',
       Chrome::escape($builder),
@@ -67,51 +67,20 @@ final class AdminPage {
   /**
    * The bundles, and what plugins add for `$builder` ('' outside a builder page).
    */
-  public static function load(string $builder): void {
+  public static function load(string $builder, string $route = ''): void {
     Assets::load($builder);
-    $foreign = ForeignModules::of($builder);
+    $isAdminBuilder = !in_array($route, ['civicrm/admin/afform/submissions', 'civicrm/search'], TRUE);
+    $foreign = $isAdminBuilder ? ForeignModules::of($builder) : [];
     if ($foreign !== []) {
       Chrome::angular()->addModules($foreign);
     }
     \Civi::resources()->addVars('afreactAdmin', [
       'foreignModules' => $foreign,
-      'changedPartials' => BuilderReport::partials($builder),
+      'changedPartials' => $isAdminBuilder ? BuilderReport::partials($builder) : [],
     ]);
     \Civi::resources()->addModuleFile(E::LONG_NAME, 'dist/afreact-admin.js');
-    self::settings($builder);
+    AdminSettings::load($builder, $route);
     Strings::add(Strings::DOMAINS[$builder] ?? NULL);
-  }
-
-  /**
-   * What core's builder modules get from their settingsFactory, and the permissions they declare.
-   */
-  private static function settings(string $builder): void {
-    $modules = match ($builder) {
-      'search_kit' => [
-        'crmSearchAdmin' => 'searchAdmin',
-        'crmSearchTasks' => 'searchTasks',
-        'crmSearchDisplay' => 'searchDisplay',
-      ],
-      'afform' => ['afAdmin' => 'afAdmin', 'afGuiEditor' => 'afGuiEditor', 'crmMonaco' => 'monaco'],
-      default => [],
-    };
-    $angular = Afforms::angular();
-    $vars = [];
-    foreach ($modules as $module => $key) {
-      $definition = $angular->getModule($module);
-      $factory = $definition['settingsFactory'] ?? NULL;
-      $vars[$key] = is_callable($factory) ? $factory() : [];
-      \Civi::resources()->addPermissions(array_values(array_filter(
-        (array) ($definition['permissions'] ?? []),
-        'is_string',
-      )));
-    }
-    if ($builder === 'afform') {
-      // The canvas renders core's af-gui-* markup, styled by the editor module's stylesheet.
-      \Civi::resources()->addStyleFile('org.civicrm.afform_admin', 'ang/afGuiEditor.css');
-      $vars['attributeTypes'] = Afforms::cached('attributeTypes', static fn (): array => (new AttributeSchema())->attributeTypes());
-    }
-    \Civi::resources()->addVars('afreactAdmin', $vars);
   }
 
 }

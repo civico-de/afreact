@@ -413,7 +413,8 @@ function ResultDisplay({
         // A short first page has counted itself, as on the first search.
         if (client.getQueryState(countKey)?.dataUpdatedAt === before)
           void client.invalidateQueries({ queryKey: countKey });
-      });
+      })
+      .catch(() => undefined);
   };
   const onSearch = () => {
     // onClickSearchButton(): a click searches, counts and tallies again, also with the same filters.
