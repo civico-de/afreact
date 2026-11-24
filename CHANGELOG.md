@@ -6,6 +6,8 @@ All notable changes to this extension are documented in this file. The format fo
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-24
+
 ### Added
 
 - `afreact-if`, `afreact-required` and `afreact-disabled`: conditions on a field of the element's
@@ -22,11 +24,21 @@ All notable changes to this extension are documented in this file. The format fo
 ### Fixed
 
 - Texts core translates in the SearchKit and FormBuilder catalogs show translated on every
-  screen, such as a search display's result count on a form.
+  screen, such as a search display's result count on a form, and bulk-action progress messages are
+  extracted into the bundle's string list.
 - Plural messages such as "%count tags removed." show translated on a core that translates
   them for its own screens (civicrm/civicrm-core#38172).
 - A form with row conditions no longer fails after an afreact upgrade until the caches are
-  cleared.
+  cleared, and `afreact-required` on extra fields inside repeated fieldsets reads each item's
+  extras.
+- Confirmation messages are no longer double-escaped on CiviCRM 6.20.1 and later.
+- `civicrm/afreact/render` neutralizes AngularJS interpolation delimiters in `options`, and
+  non-admin routes (`civicrm/admin/afform/submissions`, `civicrm/search`) no longer expose
+  FormBuilder/SearchKit admin module settings.
+- ContactLayout blocks load the React bundle when no other taken-over form is on the page.
+- Required file fields clear their inline error text once a file is picked, the FormBuilder leave
+  guard warns on unapplied Markup edits, and back-office CSS handles nested repeat panels and
+  themes without Riverlea variables.
 
 ## [0.2.0] - 2026-11-18
 
@@ -72,6 +84,7 @@ All notable changes to this extension are documented in this file. The format fo
   the renderer cannot draw in it, and a form notes any part it cannot draw instead of dropping it.
 - Markup and classes follow core's Angular templates, so the CiviCRM theme styles both alike.
 
-[Unreleased]: https://github.com/civico-de/afreact/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/civico-de/afreact/compare/v0.1.0...v0.2.0
+[Unreleased]: https://github.com/civico-de/afreact/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/civico-de/afreact/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/civico-de/afreact/releases/tag/v0.2.0
 [0.1.0]: https://github.com/civico-de/afreact/releases/tag/v0.1.0
