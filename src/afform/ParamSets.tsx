@@ -239,6 +239,7 @@ interface ManageDialogProps {
 
 /** manageDialog: each set with its details, to open or delete. */
 function ManageDialog({ fieldset, sets, refresh, onClose }: ManageDialogProps) {
+  const client = useQueryClient();
   const write = useWrite();
   return (
     <Modal className="af-search-param-sets-manage" title={ts("Saved searches")} onClose={onClose}>
@@ -270,6 +271,10 @@ function ManageDialog({ fieldset, sets, refresh, onClose }: ManageDialogProps) {
                       onClick={() =>
                         void write.run(async () => {
                           await api4("SearchParamSet", "delete", { where: [["id", "=", set.id]] });
+                          await client.invalidateQueries({
+                            queryKey: ["SearchParamSet", "get", fieldset.formName, String(set.id)],
+                          });
+                          if (String(set.id) === fieldset.setId) fieldset.select(0);
                           await refresh();
                         })
                       }

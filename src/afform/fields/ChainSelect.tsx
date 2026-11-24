@@ -87,7 +87,7 @@ export function ChainSelect({
 
   // afField's validateValue() runs when the option ids change, starting from none.
   const ids = new Set(options.map((option) => String(option.id)));
-  const key = [...ids].join(",");
+  const key = chained ? `${JSON.stringify(controlValue)}:${[...ids].join(",")}` : "";
   const [validatedFor, setValidatedFor] = useState("");
   useEffect(() => {
     if (control === null || !settled || key === validatedFor) return;

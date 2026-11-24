@@ -19,10 +19,10 @@ final class SupportPage {
     \CRM_Utils_System::setTitle(E::ts('React renderer support'));
     // The builders' bundle and plugins, so the report asks the editors the builders have.
     AdminPage::load('search_kit');
-    $afform = self::afform();
-    if ($afform !== NULL) {
+    if (in_array('afform', Builders::available(), TRUE)) {
       Assets::load('afform');
     }
+    $afform = self::afform();
     return Chrome::page(sprintf(
       '<div id="bootstrap-theme" class="afreact-support-page"><afreact-support listed="%s" settings="%s"></afreact-support><afreact-builders-report report="%s" afform="%s"></afreact-builders-report></div>',
       Chrome::escape(json_encode(Takeover::forms(), JSON_THROW_ON_ERROR)),

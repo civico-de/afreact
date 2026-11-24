@@ -158,12 +158,11 @@ export function SearchFieldset({ node, formName, data = NO_DATA, children }: Sea
   const everyField = useMemo(() => filterFields(node["#children"] ?? []), [node]);
   // A filter under an af-if that fails neither starts with a value nor keeps one, as afIf.
   const shownKey = everyField
-    .filter((field) => holds(field, data))
-    .map((field) => field.name)
-    .join("\n");
+    .flatMap((field, index) => (holds(field, data) ? [String(index)] : []))
+    .join(",");
   const fields = useMemo(() => {
-    const shown = new Set(shownKey.split("\n"));
-    return everyField.filter((field) => shown.has(field.name));
+    const shown = new Set(shownKey ? shownKey.split(",") : []);
+    return everyField.filter((_, index) => shown.has(String(index)));
   }, [everyField, shownKey]);
   const name = useMemo(() => fieldsetName(node["#children"] ?? []), [node]);
   const cacheKey = `afform:${formName}${name}`;
@@ -223,15 +222,16 @@ export function SearchFieldset({ node, formName, data = NO_DATA, children }: Sea
   const [shownBefore, setShownBefore] = useState(shownKey);
   if (shownBefore !== shownKey) {
     setShownBefore(shownKey);
-    const before = new Set(shownBefore.split("\n"));
+    const before = new Set(shownBefore ? shownBefore.split(",") : []);
+    const now = new Set(shownKey ? shownKey.split(",") : []);
     dispatch({
       type: "shown",
-      shown: fields.filter((field) => !before.has(field.name)),
+      shown: everyField.filter((_, index) => now.has(String(index)) && !before.has(String(index))),
       // afIfDestroy leaves a display-only field's value.
       hidden: everyField.filter(
-        (field) =>
-          before.has(field.name) &&
-          !fields.includes(field) &&
+        (field, index) =>
+          before.has(String(index)) &&
+          !now.has(String(index)) &&
           field.defn.input_type !== "DisplayOnly",
       ),
       fieldsetName: name,
