@@ -13,8 +13,9 @@ export interface ExpressionContext {
 }
 
 const LITERAL = String.raw`'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"`;
+const OBJECT = String.raw`\{(?:\s*(?:(?:[A-Za-z_$][\w$]*|\d+|${LITERAL})\s*:\s*(?:${LITERAL}|-?\d+(?:\.\d+)?)\s*(?:,\s*)?)*)\}`;
 const CALL = new RegExp(
-  String.raw`^(?:::)?\s*(ts|crmUrl)\(\s*(${LITERAL})\s*(?:,\s*(\{[^}]*\}|${LITERAL})\s*)?\)$`,
+  String.raw`^(?:::)?\s*(ts|crmUrl)\(\s*(${LITERAL})\s*(?:,\s*(${OBJECT}|${LITERAL})\s*)?\)$`,
 );
 const PARAM = String.raw`routeParams\.(?<name>[A-Za-z_$][\w$]*)`;
 const EQUALS = String.raw`\s*(?<operator>[!=]==?)\s*`;
@@ -25,15 +26,21 @@ const ROUTE_TRUTH = new RegExp(String.raw`^(?<not>!?)\s*${PARAM}$`);
 const ROUTE_EQUALS = new RegExp(`^${PARAM}${EQUALS}${QUOTED}$`);
 const EQUALS_ROUTE = new RegExp(`^${QUOTED}${EQUALS}${PARAM}$`);
 const PAIR = new RegExp(
-  String.raw`^\s*(?:([A-Za-z_$][\w$]*|\d+)|(${LITERAL}))\s*:\s*(${LITERAL}|-?\d+(?:\.\d+)?)\s*$`,
+  String.raw`\s*(?:([A-Za-z_$][\w$]*|\d+)|(${LITERAL}))\s*:\s*(${LITERAL}|-?\d+(?:\.\d+)?)\s*(?:,|$)`,
+  "y",
 );
 
 /** A JS string literal in single or double quotes. */
 export function literal(text: string): string {
   const quote = text[0];
   const body = text.slice(1, -1);
-  // A single-quoted JS literal becomes a JSON one: its double quotes need escapes, \' does not.
-  const json = quote === "'" ? body.replaceAll('"', '\\"').replaceAll("\\'", "'") : body;
+  // A single-quoted JS literal becomes a JSON one: escape bare double quotes and unescape \'.
+  const json =
+    quote === "'"
+      ? body.replace(/\\(.)|(")/g, (match, escaped?: string, dbl?: string) =>
+          dbl ? '\\"' : escaped === "'" ? "'" : match,
+        )
+      : body;
   const value: unknown = JSON.parse(`"${json}"`);
   if (typeof value !== "string") throw new SyntaxError(`Not a string literal: ${text}`);
   return value;
@@ -42,15 +49,16 @@ export function literal(text: string): string {
 function objectLiteral(text: string): Record<string, string | number> {
   const inner = text.slice(1, -1).trim();
   if (inner === "") return {};
-  return Object.fromEntries(
-    inner.split(",").map((pair) => {
-      const match = PAIR.exec(pair);
-      if (!match) throw new SyntaxError(`Unsupported object literal ${text}`);
-      const key = match[1] ?? literal(match[2] ?? "''");
-      const value = match[3] ?? "";
-      return [key, /^['"]/.test(value) ? literal(value) : Number(value)];
-    }),
-  );
+  const entries: [string, string | number][] = [];
+  PAIR.lastIndex = 0;
+  while (PAIR.lastIndex < inner.length) {
+    const match = PAIR.exec(inner);
+    if (!match) throw new SyntaxError(`Unsupported object literal ${text}`);
+    const key = match[1] ?? literal(match[2] ?? "''");
+    const value = match[3] ?? "";
+    entries.push([key, /^['"]/.test(value) ? literal(value) : Number(value)]);
+  }
+  return Object.fromEntries(entries);
 }
 
 /** Core's ts(): the plural form past one, then %name replaced by the string and number values. */

@@ -59,7 +59,7 @@ export function evaluate(expression: unknown, data: FormData): unknown {
   let value: unknown = data;
   for (const match of text.matchAll(SEGMENT)) {
     const key = match[1] ?? match[2] ?? match[3] ?? match[4] ?? "";
-    value = isIndexable(value) ? value[key] : undefined;
+    value = isIndexable(value) && Object.hasOwn(value, key) ? value[key] : undefined;
   }
   return value;
 }
@@ -69,7 +69,10 @@ function equals(a: unknown, b: unknown): boolean {
   if (a === b || (Number.isNaN(a) && Number.isNaN(b))) return true;
   if (!isIndexable(a) || !isIndexable(b) || Array.isArray(a) !== Array.isArray(b)) return false;
   const keys = Object.keys(a);
-  return keys.length === Object.keys(b).length && keys.every((key) => equals(a[key], b[key]));
+  return (
+    keys.length === Object.keys(b).length &&
+    keys.every((key) => Object.hasOwn(b, key) && equals(a[key], b[key]))
+  );
 }
 
 function like(text: string, pattern: string): boolean {

@@ -5,7 +5,7 @@ import { parseFiltersAttribute, readsOptions, type DisplayFilters } from "../sea
 import { columnNote, settingsOf, unsupportedFeatures } from "../search/rows";
 import { referencedTasks } from "../search/searchTasks";
 import { displayTypeOf, isDisplaySettings, type DisplaySettings } from "../search/types";
-import { parseConditions } from "./conditions";
+import { checkConditions, parseConditions } from "./conditions";
 import { parseRowConditions, rowConditionTokens, ROW_CONDITIONS } from "./rowConditions";
 import { interpolate, routeTest, type RouteTest } from "./expressions";
 import { INPUT_TYPES, inputTypeNote, templateNote } from "./Field";
@@ -489,7 +489,7 @@ function conditionProblem(node: ElementNode, attribute: string): string[] {
   const value = node[attribute];
   if (typeof value !== "string") return [];
   try {
-    parseConditions(value);
+    checkConditions(parseConditions(value), {});
     return [];
   } catch {
     return [conditionNote(attribute, value)];

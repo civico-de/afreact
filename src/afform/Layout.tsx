@@ -205,8 +205,10 @@ const KIND_VIEWS: Record<NodeKind, (props: { node: ElementNode }) => ReactNode> 
   adminMenu: AdminMenu,
   adminListMenu: AdminListMenu,
   paramSets: ParamSets,
-  recaptcha: Recaptcha2,
-  turnstile: Turnstile,
+  recaptcha: ({ node }: { node: ElementNode }) =>
+    useContext(HiddenContext) !== null ? null : <Recaptcha2 node={node} />,
+  turnstile: ({ node }: { node: ElementNode }) =>
+    useContext(HiddenContext) !== null ? null : <Turnstile node={node} />,
   element: Element,
 };
 
@@ -248,15 +250,39 @@ function FormNode({ node }: { node: ElementNode }) {
 }
 
 function TabsetNode({ node }: { node: ElementNode }) {
-  const { formName, expressions, showSubmitButton, submitDisabled, draft } = useForm();
+  const hidden = useContext(HiddenContext);
+  const form = useForm();
+  const { formName, expressions, showSubmitButton, submitDisabled, draft } = form;
+  if (hidden !== null) return <Nodes nodes={node["#children"] ?? []} />;
+  // Filter out tabs whose af-if / afreact-if evaluates false, and render their fields under HiddenContext.
+  const rawChildren = node["#children"] ?? [];
+  const hiddenTabs: LayoutNode[] = [];
+  const visibleChildren = rawChildren.filter((child) => {
+    if (!isElement(child)) return true;
+    const result = conditionResult(child, form, "af-if");
+    if (result && "value" in result && !result.value) {
+      hiddenTabs.push(...(child["#children"] ?? []));
+      return false;
+    }
+    return true;
+  });
+  const visibleNode = hiddenTabs.length > 0 ? { ...node, "#children": visibleChildren } : node;
   // The draft handlers exist on a layout with an af-form, whose afFormCtrl shows the button.
   const submit = draft ? { shown: showSubmitButton, disabled: submitDisabled } : undefined;
   return (
-    <Tabset
-      {...{ node, formName, expressions, submit }}
-      nodes={(nodes) => <Nodes nodes={nodes} />}
-      element={(outer, children) => <Element node={outer}>{children}</Element>}
-    />
+    <>
+      <Tabset
+        node={visibleNode}
+        {...{ formName, expressions, submit }}
+        nodes={(nodes) => <Nodes nodes={nodes} />}
+        element={(outer, children) => <Element node={outer}>{children}</Element>}
+      />
+      {hiddenTabs.length > 0 && (
+        <HiddenContext.Provider value={form.data}>
+          <Nodes nodes={hiddenTabs} />
+        </HiddenContext.Provider>
+      )}
+    </>
   );
 }
 
@@ -746,6 +772,7 @@ function FieldNode({ node }: { node: ElementNode }) {
   const scope = place?.scope ?? null;
   const name = place?.name ?? String(node.name);
   if (filters && !scope) {
+    if (hidden !== null) return null;
     const required = conditionResult(node, form, "af-required");
     const disabled = conditionResult(node, form, "af-disabled");
     const rules = {

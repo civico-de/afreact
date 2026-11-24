@@ -61,11 +61,19 @@ export function MailingDialog({ task, ids, onCreated, onCancel }: MailingDialogP
   const count = recipients.data;
   const ready = !!name && !!count && !creating;
 
+  const closed = useRef(false);
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
   });
+  useEffect(
+    () => () => {
+      closed.current = true;
+    },
+    [],
+  );
 
   const create = async () => {
+    if (creating) return;
     setCreating(true);
     setError(null);
     title.current?.focus();
@@ -73,8 +81,10 @@ export function MailingDialog({ task, ids, onCreated, onCancel }: MailingDialogP
       const group = createdGroup(
         await api4<CreatedGroup>(...mailingGroupCall({ name, template_type: chosenType })),
       );
+      if (closed.current) return;
       onCreated(group.id, group.mailing.id);
     } catch (cause) {
+      if (closed.current) return;
       // deviation:mailing-group-failure-stays
       // Core alerts its own message and closes; React keeps the dialog with both messages.
       setError(

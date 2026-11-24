@@ -9,7 +9,10 @@ const DIALOG = ".ui-dialog-content";
 export function popupLocation(element: Element): { search: string; hash: string } | null {
   if (!element.closest(DIALOG)) return null;
   const urlHash = window.CRM.$(element).closest(DIALOG).data("urlHash");
-  const query = typeof urlHash === "string" && urlHash.includes("?") ? urlHash.split("?")[1] : "";
+  const query =
+    typeof urlHash === "string" && urlHash.includes("?")
+      ? urlHash.slice(urlHash.indexOf("?") + 1)
+      : "";
   return { search: "", hash: query ? `#?${query}` : "" };
 }
 

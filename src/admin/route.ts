@@ -14,7 +14,11 @@ export function matchRoute(pattern: Pattern, path: string): Record<string, strin
     const value = have[i] ?? "";
     if (part.startsWith(":")) {
       if (!value) return null;
-      params[part.slice(1)] = decodeURIComponent(value);
+      try {
+        params[part.slice(1)] = decodeURIComponent(value);
+      } catch {
+        return null;
+      }
     } else if (part !== value) return null;
   }
   return params;

@@ -48,9 +48,15 @@ export function toggleRow(
     const before = nearest(pageKeys, keys, position, -1);
     const after = nearest(pageKeys, keys, position, 1);
     const last = pageKeys.indexOf(keys.at(-1) ?? "");
-    if (after !== undefined && (before === undefined || after === last))
+    if (
+      after !== undefined &&
+      (before === undefined || after === last || (last >= 0 && last > position))
+    )
       added.push(...pageKeys.slice(position + 1, after));
-    else if (before !== undefined && (after === undefined || before === last))
+    else if (
+      before !== undefined &&
+      (after === undefined || before === last || (last >= 0 && last < position))
+    )
       added.push(...pageKeys.slice(before + 1, position));
   }
   const next = [...new Set([...added, key])];

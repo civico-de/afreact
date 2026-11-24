@@ -69,7 +69,11 @@ export function CaseRoleDialog({ task, ids, onSave, onCancel }: CaseRoleDialogPr
   });
   const existingCount = existing.data?.count ?? null;
   const ready =
-    !!chosen && contactId !== null && existingCount !== null && (!existingCount || !!mode);
+    !saving &&
+    !!chosen &&
+    contactId !== null &&
+    existingCount !== null &&
+    (!existingCount || !!mode);
 
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();

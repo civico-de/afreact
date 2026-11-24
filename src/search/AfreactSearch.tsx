@@ -399,6 +399,7 @@ function ResultDisplay({
       queryFn: () => fetchPage(number, toggles.nextParams),
     });
   const searchAgain = () => {
+    tasks.clearSelection();
     const before = client.getQueryState(countKey)?.dataUpdatedAt;
     void client.invalidateQueries({ queryKey: tallyKey });
     // Every page loads afresh when next shown, as core runs each page it shows.

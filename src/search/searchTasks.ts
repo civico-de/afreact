@@ -564,8 +564,21 @@ export function tagCalls(entity: string): { tags: ApiCall; tagsets: ApiCall } {
 export function tagTree(tags: TagRow[]): { tag: TagRow; depth: number }[] {
   const byParent = new Map<number | null, TagRow[]>();
   const known = new Set(tags.map((tag) => tag.id));
+  const parentOf = new Map<number, number>();
+  const createsCycle = (id: number, candidate: number): boolean => {
+    let cursor: number | undefined = candidate;
+    while (cursor !== undefined) {
+      if (cursor === id) return true;
+      cursor = parentOf.get(cursor);
+    }
+    return false;
+  };
   for (const tag of tags) {
-    const parent = tag.parent_id && known.has(tag.parent_id) ? tag.parent_id : null;
+    const parent =
+      tag.parent_id && known.has(tag.parent_id) && !createsCycle(tag.id, tag.parent_id)
+        ? tag.parent_id
+        : null;
+    if (parent !== null) parentOf.set(tag.id, parent);
     byParent.set(parent, [...(byParent.get(parent) ?? []), tag]);
   }
   const walk = (parent: number | null, depth: number): { tag: TagRow; depth: number }[] =>
@@ -775,7 +788,13 @@ export function downloadParams(
 /** The file name in a Content-Disposition header, as crmSearchTaskDownload reads it. */
 export function dispositionFileName(header: string | null): string | null {
   const utf8 = /filename\*=utf-8''([\w%\-.]+)(?:; ?|$)/i.exec(header ?? "");
-  if (utf8?.[1]) return decodeURIComponent(utf8[1]);
+  if (utf8?.[1]) {
+    try {
+      return decodeURIComponent(utf8[1]);
+    } catch {
+      // Fall back to ASCII filename or null on malformed percent-encoding.
+    }
+  }
   const ascii = /filename=(["']?)(.*?[^\\])\1(?:; ?|$)/.exec(header ?? "");
   return ascii?.[2] ?? null;
 }

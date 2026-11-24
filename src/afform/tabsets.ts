@@ -21,7 +21,17 @@ export const TABSET_ATTRIBUTES = new Set([
   "page-nav-buttons",
   "page-nav-submit-text",
 ]);
-const TAB_ATTRIBUTES = new Set(["#tag", "#children", "name", "title", "icon", "count"]);
+const TAB_ATTRIBUTES = new Set([
+  "#tag",
+  "#children",
+  "name",
+  "title",
+  "icon",
+  "count",
+  "af-if",
+  "afreact-if",
+  "af-if-destroy",
+]);
 /** What crmUiTab reads off its element; the element renders without them. */
 const UI_TAB_ATTRIBUTES = ["crm-ui-tab", "crm-title", "crm-icon", "count", "id"];
 

@@ -149,6 +149,7 @@ export function NewRecordDialog({
   });
 
   const submit = async () => {
+    if (saving) return;
     const contacts = skip ? ids.filter((id) => !holders.has(String(id))) : ids;
     // deviation:skipped-contacts-send-nothing
     if (!contacts.length) {

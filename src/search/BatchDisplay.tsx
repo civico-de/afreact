@@ -275,6 +275,7 @@ function BatchEditor({
     const records = all.filter((row) => unsaved.has(row._id));
     // Changes made while the save runs count as unsaved again.
     setUnsaved((before) => new Set([...before].filter((rowId) => !ids.includes(rowId))));
+    if (!records.length) return Promise.resolve(true);
     setSaving(true);
     const saved = api4(apiName, "save", { records }).then(
       () => {
@@ -283,7 +284,8 @@ function BatchEditor({
       },
       (error: unknown) => {
         // deviation:batch-save-failure-keeps-rows
-        markUnsaved(ids);
+        const alive = new Set(latest.current.map((row) => row._id));
+        markUnsaved(ids.filter((rowId) => alive.has(rowId)));
         setFailure(error);
         setImporting(false);
         return false;

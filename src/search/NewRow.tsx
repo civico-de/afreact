@@ -148,6 +148,7 @@ export function NewRow({ settings, edit, hidden }: NewRowProps) {
               kind={field.editor.kind}
               multiple={field.editor.multiple}
               value={values[field.key]}
+              rowData={values}
               disabled={creating.busy}
               errorId={creating.error ? errorId : undefined}
               onChange={(value) => {
@@ -168,6 +169,7 @@ interface NewCellProps {
   kind: Parameters<typeof Input>[0]["kind"];
   multiple: boolean;
   value: unknown;
+  rowData: Record<string, unknown>;
   disabled: boolean;
   errorId: string | undefined;
   onChange: (value: unknown) => void;
@@ -175,7 +177,7 @@ interface NewCellProps {
 
 /** One input of the new row, labelled by its column; a field that allows null may stay empty. */
 function NewCell(props: NewCellProps) {
-  const { id, label, info, kind, multiple, value, disabled, errorId, onChange } = props;
+  const { id, label, info, kind, multiple, value, rowData, disabled, errorId, onChange } = props;
   return (
     <div className="form-inline crm-search-display-editable-editing">
       <div className="form-group">
@@ -187,7 +189,7 @@ function NewCell(props: NewCellProps) {
             kind={kind}
             multiple={multiple}
             info={info}
-            row={{ key: "", columns: [] }}
+            row={{ key: "", columns: [], data: rowData }}
             value={value}
             nullable={false}
             labelId={`${id}-label`}

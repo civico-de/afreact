@@ -555,6 +555,10 @@ export function useTasks(options: TasksOptions) {
   return {
     /** For the header count and the pager. */
     selected: count,
+    clearSelection: () => {
+      pendingAll.current = null;
+      setChosen({ key: filtersKey, selection: NO_SELECTION });
+    },
     /** A row an edit took out of the result leaves the selection. deviation:edited-row-deselected */
     deselect: (key: Key) => {
       pendingAll.current?.gone.add(key);

@@ -7,11 +7,16 @@ import { isOnlyElement, storeFor, UrlState } from "./url/UrlState";
 
 onFirstDebugEntry(mountDebugDock);
 
+function ElementView({ render }: { render: () => React.ReactNode }) {
+  return <>{render()}</>;
+}
+
 /** Light-DOM custom element, so CiviCRM's theme styles the React output like any other markup. */
 export abstract class ReactElement extends HTMLElement {
   private root: Root | null = null;
 
   connectedCallback() {
+    this.replaceChildren();
     this.root = createRoot(this, {
       // React removes the whole tree on a render error; the element says so instead of going blank.
       onUncaughtError: (error) => {
@@ -28,7 +33,7 @@ export abstract class ReactElement extends HTMLElement {
     this.root.render(
       <QueryClientProvider client={queryClient}>
         <UrlState store={storeFor(this)} onlyElement={isOnlyElement(this)}>
-          {this.view()}
+          <ElementView render={() => this.view()} />
         </UrlState>
       </QueryClientProvider>,
     );
@@ -37,6 +42,7 @@ export abstract class ReactElement extends HTMLElement {
   disconnectedCallback() {
     this.root?.unmount();
     this.root = null;
+    this.replaceChildren();
     dropUnobserved(queryClient);
   }
 

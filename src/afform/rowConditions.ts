@@ -99,10 +99,16 @@ function rowIndex(token: Token, scope: Scope | null): { index: number; joinIndex
 /** A token's value, "" when the form holds none, as core's getTokenValue() answers. */
 export function tokenValue(token: Token, data: FormData, scope: Scope | null): unknown {
   const { index, joinIndex } = rowIndex(token, scope);
-  const item = data[token.entity]?.[index];
+  const items = Object.hasOwn(data, token.entity) ? data[token.entity] : undefined;
+  const item = items?.[index];
   if (!item) return "";
-  const values = token.join ? item.joins?.[token.join.name]?.[joinIndex ?? 0] : item.fields;
-  const value = values?.[token.field];
+  const joins = item.joins;
+  const joinRows =
+    token.join && joins && Object.hasOwn(joins, token.join.name)
+      ? joins[token.join.name]
+      : undefined;
+  const values = token.join ? joinRows?.[joinIndex ?? 0] : item.fields;
+  const value = values && Object.hasOwn(values, token.field) ? values[token.field] : undefined;
   return value === undefined ? "" : value;
 }
 

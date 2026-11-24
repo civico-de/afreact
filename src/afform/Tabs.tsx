@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { parseAsString, useQueryStates } from "nuqs";
+import { splitHash } from "../url/hash";
 import {
   createContext,
   createElement,
@@ -95,15 +96,23 @@ function useSelection(names: string[], node: ElementNode, formName: string): Sel
   const fromUrl = urlArg ? url[urlArg] : null;
   const remember = remembersSelection(node) === true;
   const cacheKey = `${formName}SelectedTab`;
-  const [chosen, setChosen] = useState(() => {
+  const [initial] = useState(() => {
     const remembered = remember ? window.CRM.cache?.get(cacheKey) : null;
     // crmUiTabSet's jQuery UI tabs open the tab whose id is the URL fragment.
-    const fragment = node["#tag"] === "af-tabset" ? null : window.location.hash.slice(1);
+    const fragment =
+      node["#tag"] === "af-tabset" ? null : splitHash(window.location.hash).path || null;
     const stored = typeof remembered === "string" ? remembered : null;
     // deviation:url-arg-over-selected-tab
     return initialTab(names, [fromUrl, selectedTabOf(node), stored, fragment]);
   });
-  const selected = fromUrl && names.includes(fromUrl) ? fromUrl : chosen;
+  const [chosen, setChosen] = useState(initial);
+  const previousFromUrl = useRef(fromUrl);
+  useEffect(() => {
+    if (previousFromUrl.current && !fromUrl) setChosen(initial);
+    previousFromUrl.current = fromUrl;
+  }, [fromUrl, initial]);
+  const candidate = fromUrl && names.includes(fromUrl) ? fromUrl : chosen;
+  const selected = candidate && names.includes(candidate) ? candidate : (names[0] ?? null);
   useEffect(() => {
     if (remember && selected) window.CRM.cache?.set(cacheKey, selected);
   }, [remember, cacheKey, selected]);

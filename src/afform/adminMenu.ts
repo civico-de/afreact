@@ -40,6 +40,10 @@ function textOf(nodes: LayoutNode[]): { text: string; emphasis: boolean }[] | nu
       const inner = textOf(node["#children"] ?? []);
       if (!inner || inner.some((part) => part.emphasis)) return null;
       parts.push({ text: inner.map((part) => part.text).join(""), emphasis: true });
+    } else if (node["#tag"] === "span") {
+      const inner = textOf(node["#children"] ?? []);
+      if (!inner) return null;
+      parts.push(...inner);
     } else if (node["#tag"] !== "i") return null;
   }
   return parts;

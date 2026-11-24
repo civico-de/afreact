@@ -1,3 +1,4 @@
+import { splitHash } from "../url/hash";
 import type { ElementNode, EntityItem, FormData, LayoutNode, Scope, Values } from "./types";
 import { isElement, isFieldDefn } from "./types";
 
@@ -99,7 +100,7 @@ function queryParams(query: string): Record<string, string> {
 export function routeParams(location: { hash: string }): Record<string, string> {
   // deviation:route-params-as-text
   // As afCore reads a popup's: a key without value is "", a repeated key keeps its last value.
-  return queryParams(location.hash.replace(/^#\/?\??/, ""));
+  return Object.fromEntries(splitHash(location.hash).params);
 }
 
 /**

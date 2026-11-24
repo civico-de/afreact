@@ -532,7 +532,14 @@ function BooleanInput({ value, labelId, common, onChange, multiple }: InputProps
 function LoadedSelect(props: InputProps) {
   const { info, row } = props;
   const loaded = useQuery({
-    queryKey: ["SearchDisplay", "editOptions", info.entity, info.value_key, row.key],
+    queryKey: [
+      "SearchDisplay",
+      "editOptions",
+      info.entity,
+      info.value_key,
+      row.key,
+      JSON.stringify(row.data ?? null),
+    ],
     queryFn: async () => {
       const [field] = await api4<{ options?: EditOption[] | false }>(info.entity, "getFields", {
         action: "update",

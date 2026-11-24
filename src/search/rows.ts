@@ -309,11 +309,25 @@ export function buildTree(rows: Row[], parentField: string | undefined): TreeIte
   const byKey = new Map(
     items.flatMap((item) => (item.row.key === undefined ? [] : [[String(item.row.key), item]])),
   );
+  const parentOf = new Map<TreeItem, TreeItem>();
+  const createsCycle = (item: TreeItem, candidate: TreeItem): boolean => {
+    let cursor: TreeItem | undefined = candidate;
+    while (cursor) {
+      if (cursor === item) return true;
+      cursor = parentOf.get(cursor);
+    }
+    return false;
+  };
   const roots: TreeItem[] = [];
   for (const item of items) {
     const parentKey = parentField ? keyText(item.row.data?.[parentField]) : null;
     const parent = parentKey === null ? undefined : byKey.get(parentKey);
-    (parent && parent !== item ? parent.children : roots).push(item);
+    if (parent && !createsCycle(item, parent)) {
+      parentOf.set(item, parent);
+      parent.children.push(item);
+    } else {
+      roots.push(item);
+    }
   }
   return roots;
 }

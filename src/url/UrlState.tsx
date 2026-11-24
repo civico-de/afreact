@@ -22,9 +22,13 @@ export function storeFor(element: Element): ParamStore {
   return memoryStore(typeof hash === "string" ? hash : "");
 }
 
-/** Whether `element` is the only afreact element on its page when it connects. */
+/** Whether `element` is the only afreact element sharing its store (popup or page) when it connects. */
 export function isOnlyElement(element: Element): boolean {
-  return [...element.ownerDocument.querySelectorAll(ELEMENTS)].every((other) => other === element);
+  const dialog = element.closest(".ui-dialog-content");
+  const scope = dialog ?? element.ownerDocument;
+  return [...scope.querySelectorAll(ELEMENTS)].every(
+    (other) => other === element || (!dialog && other.closest(".ui-dialog-content") !== null),
+  );
 }
 
 /** A snapshot getter that returns the same object while the parameters stay the same. */
