@@ -42,7 +42,8 @@ export function FunctionEditor({
   const state = fnState(meta, expr, search);
   const fieldArg = state.args[state.fieldIndex];
   const commit = (next: FnState) => {
-    onChange(writeExpr(next, mode));
+    const alias = / AS (\w+)$/.exec(expr)?.[1];
+    onChange(writeExpr(next, mode, alias === undefined ? undefined : { state, alias }));
   };
   const functions = availableFunctions(meta, state, expr, mode, search);
   const fieldLabel = fieldArg?.field?.label ?? "";

@@ -64,6 +64,53 @@ describe("function editor", () => {
     );
   });
 
+  // deviation:alias-names-flags
+  it("keeps an edited column's alias where core keeps it, so its references stay valid", () => {
+    const core = fnState(meta, "EXTRACT(YEAR FROM birth_date) AS EXTRACT_birth_date", search());
+    const previous = { state: core, alias: "EXTRACT_birth_date" };
+    expect(writeExpr(setArg(core, 0, { flag_before: "MONTH" }), "select", previous)).toBe(
+      "EXTRACT(MONTH FROM birth_date) AS EXTRACT_birth_date",
+    );
+    const otherField = setArg(core, 1, { value: "created_date" });
+    expect(writeExpr(otherField, "select", previous)).toBe(
+      "EXTRACT(YEAR FROM created_date) AS EXTRACT_YEAR_created_date",
+    );
+    // A name carrying the unit follows it, so a new column with the old unit cannot collide.
+    const named = { state: core, alias: "EXTRACT_YEAR_birth_date" };
+    expect(writeExpr(setArg(core, 0, { flag_before: "MONTH" }), "select", named)).toBe(
+      "EXTRACT(MONTH FROM birth_date) AS EXTRACT_MONTH_birth_date",
+    );
+  });
+
+  it("keeps the flag of an argument that takes a value out of the alias, also for zero", () => {
+    const dateAdd = {
+      name: "DATE_ADD",
+      title: "Add to date",
+      category: "date",
+      options: false,
+      data_type: "Date",
+      params: [
+        { max_expr: 1, min_expr: 1, must_be: ["SqlField"], label: "Date" },
+        {
+          max_expr: 1,
+          min_expr: 1,
+          must_be: ["SqlNumber"],
+          label: "Interval to add",
+          flag_before: { INTERVAL: "Add" },
+          flag_after: { DAY: "Days" },
+        },
+      ],
+    };
+    const withDateAdd = { ...meta, functions: [...meta.functions, dateAdd] };
+    const write = (expr: string) => writeExpr(fnState(withDateAdd, expr, search()), "select");
+    expect(write("DATE_ADD(birth_date, INTERVAL 0 DAY)")).toBe(
+      "DATE_ADD(birth_date, INTERVAL 0 DAY) AS DATE_ADD_birth_date",
+    );
+    expect(write("DATE_ADD(birth_date, INTERVAL 2 DAY)")).toBe(
+      "DATE_ADD(birth_date, INTERVAL 2 DAY) AS DATE_ADD_birth_date_2",
+    );
+  });
+
   it("adds arguments up to the maximum and removes only optional ones", () => {
     const concat = selectFunction(meta, fnState(meta, "display_name", search()), "CONCAT");
     expect(canAddArg(concat)).toBe(true);

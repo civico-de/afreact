@@ -152,8 +152,27 @@ function quote(value: string): string {
   return `"${escaped}"`;
 }
 
-/** writeExpr: the expression text, with `:label` and an alias for a column. */
-export function writeExpr(state: FnState, mode: FnMode): string {
+/** Core's alias parts are the value arguments; `flags` adds the flag-only ones. */
+function aliasOf(state: FnState, flags: boolean): string {
+  const parts = state.args.flatMap((a, index) =>
+    a.value && a.type !== null
+      ? [String(a.value)]
+      : flags && !getParam(state, index)?.max_expr && a.flag_before
+        ? [a.flag_before]
+        : [],
+  );
+  return createSqlName([state.fn?.name ?? "", ...parts].join("_").replace(/:/g, "_"));
+}
+
+/**
+ * writeExpr: the expression text, with `:label` and an alias for a column. An edited column
+ * (`previous`) keeps a core-made alias, one without flags, where core would keep it.
+ */
+export function writeExpr(
+  state: FnState,
+  mode: FnMode,
+  previous?: { state: FnState; alias: string },
+): string {
   const fnName = state.fn?.name ?? "";
   if (!fnName) return String(state.args[state.fieldIndex]?.value ?? "");
   const parts = state.args.map((arg, index) => {
@@ -178,19 +197,9 @@ export function writeExpr(state: FnState, mode: FnMode): string {
     if (state.fn?.options) expr += ":label";
     // deviation:alias-names-flags
     // A flag-only argument (EXTRACT's unit, a period) names the column, so two such columns differ.
-    const alias = [
-      fnName,
-      ...state.args.flatMap((a) =>
-        a.value && a.type !== null
-          ? [String(a.value)]
-          : !a.value && a.flag_before
-            ? [a.flag_before]
-            : [],
-      ),
-    ]
-      .join("_")
-      .replace(/:/g, "_");
-    expr += ` AS ${createSqlName(alias)}`;
+    const core = aliasOf(state, false);
+    const kept = previous?.alias === core && aliasOf(previous.state, false) === core;
+    expr += ` AS ${kept ? core : aliasOf(state, true)}`;
   }
   return expr;
 }

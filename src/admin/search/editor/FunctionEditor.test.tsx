@@ -24,4 +24,22 @@ describe("FunctionEditor", () => {
     await userEvent.tab();
     expect(onChange).toHaveBeenLastCalledWith('CONCAT(display_name, " - ")');
   });
+
+  // deviation:alias-names-flags
+  it("keeps a column's alias when only its unit changes, as core does", async () => {
+    const onChange = vi.fn<(expr: string) => void>();
+    render(
+      <FunctionEditor
+        meta={metadata}
+        search={search}
+        expr="EXTRACT(YEAR FROM birth_date) AS EXTRACT_birth_date"
+        mode="select"
+        onChange={onChange}
+      />,
+    );
+    await userEvent.selectOptions(screen.getByDisplayValue("Years"), "MONTH");
+    expect(onChange).toHaveBeenLastCalledWith(
+      "EXTRACT(MONTH FROM birth_date) AS EXTRACT_birth_date",
+    );
+  });
 });
