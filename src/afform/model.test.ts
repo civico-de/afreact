@@ -311,6 +311,15 @@ describe("keepOffered", () => {
     expect(getValue(keepOffered(data(2), scope, "tags", [1]), scope, "tags")).toBeUndefined();
     const offered = data(1);
     expect(keepOffered(offered, scope, "tags", [1])).toBe(offered);
+    expect(keepOffered(data("1"), scope, "tags", [1])).toEqual(data("1"));
+  });
+
+  it("drops a value that is no option at all, such as an object", () => {
+    expect(
+      getValue(keepOffered(data({ id: 1 }), scope, "tags", [1]), scope, "tags"),
+    ).toBeUndefined();
+    const yes = data(true);
+    expect(keepOffered(yes, scope, "tags", [true, false])).toBe(yes);
   });
 });
 

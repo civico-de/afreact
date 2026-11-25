@@ -791,7 +791,7 @@ function TaskDialog({ running, entity, runParams, onDone }: TaskDialogProps) {
         <hr />
         {progress && (
           <div className="crm-search-task-progress">
-            {(apiBatch.runTitle || apiBatch.runMsg) && (
+            {(apiBatch.runTitle ?? apiBatch.runMsg) && (
               <h5>
                 {apiBatch.runTitle
                   ? apiBatch.runTitle(ids.length)

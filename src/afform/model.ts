@@ -278,9 +278,11 @@ export function keepOffered(
     const valid = current.filter((item) => allowed.has(String(item)));
     return valid.length < current.length ? setValue(data, scope, field, valid) : data;
   }
-  return current === undefined || allowed.has(String(current))
-    ? data
-    : deleteValue(data, scope, field);
+  if (current === undefined) return data;
+  const kept =
+    (typeof current === "string" || typeof current === "number" || typeof current === "boolean") &&
+    allowed.has(String(current));
+  return kept ? data : deleteValue(data, scope, field);
 }
 
 /** Items a repeat iterates: entity items for a fieldset, join records for a join. */
