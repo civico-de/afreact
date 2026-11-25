@@ -413,9 +413,9 @@ version checks below the new floor go.
   React editor described it. The weekly runs on master and on the next
   release branch are there to meet such a change before its minor ships.
 - **Test runs.** Every push runs the unit and PHPUnit suites on civikitchen's
-  current image and, as a `matrix_images` leg, on the floor's .0
-  (`:standalone-6.20.0`). The browser suite, the parity tests included, runs
-  on both once a day for a main commit it has not tested yet, and by hand. A
+  current image, whose minor is the floor. The browser suite, the parity tests
+  included, runs there once a day for a main commit it has not tested yet, and
+  by hand. A
   weekly run, and the same run started by hand on the commit a release is
   tagged from, covers the latest minor at its newest patch
   (`:standalone-6.20`), the release branch of the next minor
