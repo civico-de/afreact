@@ -693,6 +693,12 @@ offered task is on. `deviation:tasks-all-enabled-by-name` (S213)
 moves the button as the server shows it. `deviation:legacy-add-button-as-shown`
 (S214)
 
+**Two function columns that differ only in a flag get the same alias.** Core
+names a function column after its field arguments, so `EXTRACT(YEAR FROM …)`
+and `EXTRACT(MONTH FROM …)` of one field collide and the search fails with
+"Duplicate alias". afreact puts a flag-only argument into the alias, such as
+the unit or a period. `deviation:alias-names-flags` (S261)
+
 **Editing a function changes its text arguments.** afreact reads and writes the
 argument as the server does, so an argument left alone is written back as it
 was. `deviation:function-string-escapes` (S215)

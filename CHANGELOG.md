@@ -6,6 +6,11 @@ All notable changes to this extension are documented in this file. The format fo
 
 ## [Unreleased]
 
+### Fixed
+
+- The SearchKit builder names a flag-only argument in a function column's alias, so
+  `EXTRACT(YEAR FROM …)` and `EXTRACT(MONTH FROM …)` of one field no longer collide.
+
 ## [0.3.3] - 2026-11-24
 
 ### Fixed

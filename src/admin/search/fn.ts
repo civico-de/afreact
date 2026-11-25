@@ -176,9 +176,17 @@ export function writeExpr(state: FnState, mode: FnMode): string {
   let expr = `${fnName === "e" ? "" : fnName}(${parts.join("")})`;
   if (mode === "select") {
     if (state.fn?.options) expr += ":label";
+    // deviation:alias-names-flags
+    // A flag-only argument (EXTRACT's unit, a period) names the column, so two such columns differ.
     const alias = [
       fnName,
-      ...state.args.filter((a) => a.value && a.type !== null).map((a) => String(a.value)),
+      ...state.args.flatMap((a) =>
+        a.value && a.type !== null
+          ? [String(a.value)]
+          : !a.value && a.flag_before
+            ? [a.flag_before]
+            : [],
+      ),
     ]
       .join("_")
       .replace(/:/g, "_");

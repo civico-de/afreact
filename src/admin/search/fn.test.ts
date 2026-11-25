@@ -49,6 +49,21 @@ describe("function editor", () => {
     expect(writeExpr(month, "select")).toBe("MONTH(birth_date):label AS MONTH_birth_date");
   });
 
+  // deviation:alias-names-flags
+  it("names a flag-only argument in the alias, so two units of the same field differ", () => {
+    const extract = selectFunction(meta, fnState(meta, "birth_date", search()), "EXTRACT");
+    expect(writeExpr(setArg(extract, 0, { flag_before: "YEAR" }), "select")).toBe(
+      "EXTRACT(YEAR FROM birth_date) AS EXTRACT_YEAR_birth_date",
+    );
+    expect(writeExpr(setArg(extract, 0, { flag_before: "MONTH" }), "select")).toBe(
+      "EXTRACT(MONTH FROM birth_date) AS EXTRACT_MONTH_birth_date",
+    );
+    const state = selectFunction(meta, fnState(meta, "display_name", search()), "GROUP_CONCAT");
+    expect(writeExpr(setArg(state, 0, { flag_before: "DISTINCT" }), "select")).toBe(
+      "GROUP_CONCAT(DISTINCT display_name) AS GROUP_CONCAT_display_name",
+    );
+  });
+
   it("adds arguments up to the maximum and removes only optional ones", () => {
     const concat = selectFunction(meta, fnState(meta, "display_name", search()), "CONCAT");
     expect(canAddArg(concat)).toBe(true);
